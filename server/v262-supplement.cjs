@@ -9,4 +9,4 @@ async function register({app,pool,permitted,csrf}){
  app.get('/api/v1/receipts/summary',{preHandler:permitted('receipt:review')},req=>I.transaction(pool,c=>summary(c,req)));
  for(const action of ['withdraw','revoke'])app.post('/api/v1/v262/lots/:id/'+action,{preHandler:[permitted('allocation:write'),csrf]},req=>B.mutate(pool,req,async c=>{const a=await require('./allocations.cjs').orderAccess(c,req,B.uuid(req.params.id)),allowed=['admin','logistics_manager','site_supervisor'].includes(req.user.role_code)||req.user.role_code==='logistics_operator'&&a.created_by===req.user.id;if(!allowed||action==='withdraw'&&a.created_by!==req.user.id)throw B.error(403,'只允许创建人撤回；普通操作员只能撤销自己创建的Lot');const b=req.body||{};const row=(await c.query('SELECT * FROM v262_preapproval_action($1,$2,$3,$4,$5)',[req.user.id,a.id,B.version(b.version),action,JSON.stringify(b)])).rows[0];await B.audit(c,req,'lot_'+action,'allocations',a.id,a,row);return row;}));
 }
-module.exports={enabled,receiptList,summary,eligibility,register};
+module.exports={enabled,receiptList,summary,eligibility,register,receiptScope};
