@@ -1,0 +1,14 @@
+node_modules/
+test-output/
+*.tar.gz
+*.zip
+.env
+.env.*
+!.env.example
+backups/
+.runtime/
+coverage/
+*.log
+*.dump
+*.backup
+uploads/

@@ -1,0 +1,3 @@
+ALTER TABLE workflow_attachments DROP CONSTRAINT workflow_attachments_kind_check;
+ALTER TABLE workflow_attachments ADD CHECK(kind IN('sample','weigh','stocktake','exception','adjustment'));
+DO $$ DECLARE def text;BEGIN SELECT pg_get_functiondef('stocktake_action(uuid,uuid,integer,text,jsonb)'::regprocedure) INTO def;def:=replace(def,$old$IF action='approve' AND((report->>'duplicates')$old$,$new$report:=report||jsonb_build_object('attachments',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'filename',filename,'sha256',sha256)) FROM workflow_attachments WHERE kind='stocktake' AND document_id=doc),'[]'::jsonb));IF action='approve' AND((report->>'duplicates')$new$);EXECUTE def;END $$;
