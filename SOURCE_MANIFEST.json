@@ -589,8 +589,8 @@
     },
     {
       "path": "dist/accounts-overview.css",
-      "sha256": "bd5f77d036be4debb8444f7ad9efb3208e1fbb4cf344247e5b10bb768a1ed6bd",
-      "bytes": 4254
+      "sha256": "92f8a4655b3de3e8321039c9ce8a3d8932f96aee9ae737538f6326b2fd154bbf",
+      "bytes": 4768
     },
     {
       "path": "dist/accounts-ui.js",
