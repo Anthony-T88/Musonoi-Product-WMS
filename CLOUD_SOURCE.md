@@ -1,9 +1,9 @@
-# V2.6.2 Codex cloud source snapshot
+# V2.6.2 云端源码
 
-Prepared 2026-10-30 from the current local working files, including current V2.6.2 account lifecycle, internationalization and overview changes. This is a source snapshot, not the old V2.5.5 Git HEAD.
+本仓库只提供当前Musonoi Project Product WMS V2.6.2的运行源码、必要迁移、当前测试和说明。入口文档是README.md。
 
-Includes frontend, backend, all 73 migration files through 065_v262_account_lock_order.sql, tests, documentation, lockfile and original stock-map PDF.
+默认分支main为同步目标。数据库、备份、.env、账号密码、业务附件、测试结果、运行缓存与依赖安装目录均不在源码包中。
 
-Excludes actual environment credentials, accounts/password handoff, database files and backups, uploads, runtime caches, test output, node_modules and prior Sites hosting configuration. Existing local data is unchanged.
+73条迁移及仍被当前服务调用的v26/v261模块是最新版依赖。源码同步不自动创建云端数据库、重设账号或部署业务环境。每个运行环境独立提供核实的数据库和受保护配置。
 
-Start with README.md, V2.6.2_HANDOFF.md and V2.6.2_SUPPLEMENT_RELEASE.md. The current start script targets a local TEST PostgreSQL database; cloud execution needs a separate TEST database and environment configuration. Uploading this source does not provision a cloud database or publish a running application. Do not run account resets, cleanup or seed scripts against existing business data.
+SOURCE_MANIFEST.json列出当前交付文件及SHA256，用于完整性核对。

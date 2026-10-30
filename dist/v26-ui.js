@@ -1,4 +1,4 @@
-/* V2.6 uses the existing page/router, API receipts and permission model. */
+/* Receipt workflow UI using the shared router and permission model. */
 'use strict';
 const V26={
  states:{PENDING:'待审核',REJECTED:'已驳回',PREPARED:'已备货',PARTIAL:'部分装车',FULFILLED:'全部出库',READY:'已审核/待离场',DEPARTED_PENDING:'已离场/待出库审批',DEPARTED_CORRECTION:'已离场/待纠正',OUTBOUND:'已出库'},

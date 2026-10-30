@@ -2,7 +2,7 @@ param(
  [ValidateSet('init','start','stop','status','backup','restore-test')][string]$Action = 'status',
  [string]$PgBin = 'E:\Odoo 19.0.20260601\PostgreSQL\bin',
  [string]$Archive = '',
- [string]$Database = 'musonoi_inventory_v25_test'
+ [string]$Database = 'musonoi_v26_development_test'
 )
 $ErrorActionPreference='Stop'
 if($Database -notmatch '^musonoi_[a-z0-9_]+_test$') { throw 'Only explicitly named local test databases are supported.' }

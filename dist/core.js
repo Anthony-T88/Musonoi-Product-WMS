@@ -1,7 +1,7 @@
-/* Pure demo domain and export functions; no database or remote requests. */
+/* Shared query and export utilities. Connected inventory comes from PostgreSQL. */
 (function(root){
   'use strict';
-  const data=typeof module!=='undefined'?require('./demo-data.js').data:(root.DemoInventory?.data||[]);
+  const data=[];
   function query(rows,f={},key='date',direction='desc'){
     const term=(f.search||'').trim().toLocaleLowerCase();
     if(f.start&&f.end&&f.start>f.end)return [];

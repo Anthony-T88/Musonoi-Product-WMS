@@ -80,7 +80,7 @@ async function build(options={}){
  await app.register(require('@fastify/static'),{root:path.join(cfg.root,'dist'),index:false});
  for(const route of ['/stock-map','/overview','/overview/*','/inventory','/inventory/*','/customers','/customers/*','/receipts','/receipts/*','/preparation','/preparation/*','/outbounds','/outbounds/*','/field','/field/*','/workbench','/workbench/*'])app.get(route,async(req,reply)=>{const permission=AccountPolicy.pagePermission(req.url.split('?')[0]);if(req.cookies.musonoi_session&&permission)await permitted(permission)(req);return reply.sendFile('index.html');});
  for(const legacy of ['/samples','/samples/*','/sampling','/sampling/*'])app.get(legacy,async(req,reply)=>reply.redirect('/preparation/history-sampling'));
- app.get('/',async(req,reply)=>reply.sendFile('index.html'));app.get('/demo',async(req,reply)=>reply.sendFile('index.html'));
+ app.get('/',async(req,reply)=>reply.sendFile('index.html'));app.get('/demo',async(req,reply)=>reply.redirect('/overview'));
  return app;
 }
 module.exports={build};

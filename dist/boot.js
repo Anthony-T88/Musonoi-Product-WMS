@@ -1,9 +1,7 @@
 'use strict';
 (async()=>{
  const el=id=>document.getElementById(id),load=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=location.protocol==='file:'?src:'/'+src;s.onload=resolve;s.onerror=()=>reject(Error('资源加载失败：'+src));document.head.append(s);});
- const demo=location.protocol==='file:'||location.pathname==='/demo';
- window.Connected=!demo;
- if(demo){document.getElementById('users-nav').hidden=true;await load('demo-data.js');await load('core.js');await load('app.js');return;}
+ window.Connected=true;
  el('login-panel').hidden=false;document.querySelector('.workspace').setAttribute('inert','');document.querySelector('.sidebar').setAttribute('inert','');
  document.querySelector('.demo-label').textContent='正在连接 PostgreSQL';document.querySelector('.demo-banner strong').textContent='正在读取服务端环境';document.querySelector('.demo-banner div>span').textContent='连接失败将显示错误，不会切换至模拟库存。';
  let started=false;

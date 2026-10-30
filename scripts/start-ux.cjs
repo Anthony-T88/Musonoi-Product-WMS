@@ -1,2 +1,0 @@
-// Explicit local preview; no .env edits, source uploads or public listener.
-const {config}=require('../server/config.cjs');const cfg=config();if(cfg.environment!=='test')throw Error('UX preview requires APP_ENV=test');const url=new URL(cfg.databaseUrl);url.pathname='/musonoi_ux_development_test';require('../server/app.cjs').build({config:{...cfg,databaseUrl:url.href}}).then(a=>a.listen({host:'127.0.0.1',port:cfg.port})).then(x=>console.log('V2.5-UX isolated local preview: '+x)).catch(e=>{console.error(e.message);process.exitCode=1;});
