@@ -16,7 +16,7 @@
 6. 已存在正式库升级前先停写，完成数据库和附件备份并恢复到独立库验证，再设置PRODUCTION_BACKUP_VERIFIED=yes执行增量迁移。程序拒绝TEST库转换为生产库，拒绝已执行迁移校验和变化。
 7. 启动应用：docker compose --env-file /private/wms.env -f deploy/compose.yaml up -d app。应用监听容器内部0.0.0.0:4174，宿主仅127.0.0.1:4174。替换deploy/nginx.conf.example中的域名和证书路径，验证Nginx配置后启用。
 8. HTTPS下检查/api/v1/health返回production与database=ok；核对安全Cookie、登录退出、各角色直接API、审批独立性、地图PDF、Excel导出导入、附件持久化、UTC+2业务时间和现场网络响应。
-9. 配置防火墙、磁盘告警、数据库与附件定时备份，实际执行首次任务并恢复到独立库验证。不能仅凭备份文件存在认定可恢复。确认后再正式开放业务。
+9. 配置防火墙、磁盘告警、数据库与附件定时备份，实际执行首次任务并恢复到独立库验证。不能仅凭备份文件存在认定可恢复。同时完成V3.5_PREFLIGHT.md列出的两项间接依赖中风险兼容性修补验证，确认后再正式开放业务。
 
 ## 版本与保护
 

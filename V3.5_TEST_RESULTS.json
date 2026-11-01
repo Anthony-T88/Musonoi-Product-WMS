@@ -1,12 +1,38 @@
 {
   "status": "PASS",
   "version": "3.5.0",
-  "checkedAt": "2026-11-01T17:40:13.160Z",
+  "checkedAt": "2026-11-01T17:46:37.538Z",
   "functionalChecks": 507,
   "historicalTables": 97,
   "migrations": 136,
   "databaseChanges": 0,
   "productionStatus": "NOT_DEPLOYED",
+  "dependencyAudit": {
+    "status": "REVIEW_REQUIRED",
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 2,
+      "high": 0,
+      "critical": 0
+    },
+    "advisories": [
+      {
+        "module": "minimatch",
+        "title": "minimatch has potential denial of service via globparts amplification",
+        "severity": "moderate",
+        "patchedVersions": ">=11.0.1",
+        "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      },
+      {
+        "module": "glob",
+        "title": "Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal",
+        "severity": "moderate",
+        "patchedVersions": ">=14.0.2",
+        "url": "https://github.com/advisories/GHSA-3g3m-2fjr-6pw4"
+      }
+    ]
+  },
   "dockerBuildExecuted": false,
   "pdfVisuallyInspected": true,
   "results": {
@@ -602,6 +628,32 @@
     "preflight": {
       "path": "test-output/v35/preflight.json",
       "status": "PASS",
+      "dependencyAudit": {
+        "status": "REVIEW_REQUIRED",
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 2,
+          "high": 0,
+          "critical": 0
+        },
+        "advisories": [
+          {
+            "module": "minimatch",
+            "title": "minimatch has potential denial of service via globparts amplification",
+            "severity": "moderate",
+            "patchedVersions": ">=11.0.1",
+            "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+          },
+          {
+            "module": "glob",
+            "title": "Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal",
+            "severity": "moderate",
+            "patchedVersions": ">=14.0.2",
+            "url": "https://github.com/advisories/GHSA-3g3m-2fjr-6pw4"
+          }
+        ]
+      },
       "version": "3.5.0",
       "checks": [
         "release version 3.5.0",
@@ -632,6 +684,7 @@
       ],
       "productionStatus": "NOT_DEPLOYED",
       "remaining": [
+        "间接依赖安全提示需在正式上线前完成兼容性修补和复核",
         "云服务器及域名尚未购买",
         "真实服务器Docker镜像构建、TLS证书、磁盘和防火墙验收待执行",
         "正式管理员及业务主数据初始化、真实服务器备份与恢复演练待执行"
@@ -671,7 +724,7 @@
         {
           "table": "audit_logs",
           "original": 224,
-          "current": 224,
+          "current": 228,
           "preserved": true
         },
         {
