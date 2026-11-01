@@ -1,6 +1,6 @@
 {
   "name": "musonoi-product-wms",
-  "version": "2.6.2",
+  "version": "3.5.0",
   "private": true,
   "scripts": {
     "start": "node scripts/start-v262.cjs",
@@ -8,18 +8,13 @@
     "test": "node tests/source-integrity.cjs",
     "db:migrate": "node scripts/db.cjs migrate",
     "db:diagnose": "node scripts/diagnose-receipts.cjs",
-    "test:accounts": "node tests/v262-accounts-overview.cjs",
-    "test:account-safety": "node tests/v262-account-safety.cjs",
-    "test:login-race": "node tests/v262-login-race.cjs",
-    "test:overview": "node tests/v262-overview-flow.cjs",
-    "test:flow": "node tests/v262-flow.cjs",
-    "test:negative": "node tests/v262-negative.cjs",
-    "test:recovery": "node tests/v262-release-recovery.cjs",
-    "test:compatibility": "node tests/v262-history.cjs",
-    "test:lot-safety": "node tests/v262-supplement-flow.cjs",
-    "test:browser": "node tests/v262-accounts-browser.cjs",
-    "test:i18n": "node tests/v262-i18n-audit.cjs",
-    "test:live-readonly": "node tests/v262-live-readonly.cjs"
+    "package:current": "node scripts/package-v35.cjs",
+    "preflight": "node scripts/preflight-v35.cjs",
+    "test:v35": "node tests/v35-flow.cjs",
+    "test:v35-language": "node tests/v35-language-api.cjs",
+    "test:v35-ui": "node tests/v35-ui.cjs",
+    "test:v35-packing": "node tests/v35-packing-footer.cjs",
+    "test:v35-template": "node tests/v35-template.cjs"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.5",
@@ -29,12 +24,17 @@
     "exceljs": "4.4.0",
     "fastify": "5.12.7",
     "jsqr": "1.4.0",
+    "jszip": "3.10.2",
     "pg": "8.23.1",
-    "qrcode": "1.5.4"
+    "pinyin-pro": "3.29.5",
+    "qrcode": "1.5.4",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "engines": {
     "node": ">=22"
   },
   "packageManager": "pnpm@11.25.0",
-  "description": "Musonoi Project Product WMS V2.6.2"
+  "description": "Musonoi Project Product WMS V3.5",
+  "license": "LicenseRef-Proprietary",
+  "author": "唐雷"
 }

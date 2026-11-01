@@ -1,0 +1,6 @@
+#v33-recommendation,#v33-count-snapshot,#v33-timeline,#v33-reverse{padding:20px;margin:18px 0;border:1px solid #c9dddd;border-radius:12px;background:#f7fbfa}
+#v33-recommendation h2,#v33-count-snapshot h2,#v33-timeline h2{margin:0 0 16px;font-size:19px;color:#155b59}
+#v33-recommendation .button,#v33-count-snapshot .button{margin:8px 8px 8px 0}
+#v33-reverse summary{cursor:pointer;font-weight:650;color:#155b59}
+#v33-count-snapshot details{margin:16px 0}#v33-reverse form{padding-top:16px}
+#v33-move input[type=checkbox]{width:20px;height:20px;min-height:20px}

@@ -1,0 +1,1234 @@
+{
+  "status": "PASS",
+  "version": "3.5.0",
+  "checkedAt": "2026-11-01T17:40:13.160Z",
+  "functionalChecks": 507,
+  "historicalTables": 97,
+  "migrations": 136,
+  "databaseChanges": 0,
+  "productionStatus": "NOT_DEPLOYED",
+  "dockerBuildExecuted": false,
+  "pdfVisuallyInspected": true,
+  "results": {
+    "flow": {
+      "path": "test-output/v35/api.json",
+      "status": "PASS",
+      "checks": [
+        "semantic headers and cancellation negation recognized automatically",
+        "repeated headers and kilogram capacity recognized",
+        "ambiguous different tables still require safe confirmation",
+        "cancellation takes precedence over duplicate active rows",
+        "/masters",
+        "/masters/customers",
+        "/contracts",
+        "/plans",
+        "new customer and contract creation timestamps are authoritative",
+        "/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch/import-preview",
+        "preview auto-detects layout and excludes cancelled vehicle",
+        "/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch",
+        "saved dispatch counts only active unique trucks",
+        "/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch/import-preview",
+        "/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch",
+        "updated sheet excludes existing cancellations without duplicate tonnage",
+        "/loading-plans/arrivals?sales_plan_id=4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca",
+        "yard list follows selected customer shipment vehicles",
+        "deny logistics_operator /loading-plans/arrivals/5d18abf6-653a-4728-89aa-0ddd3e62274d",
+        "deny logistics_field_operator /loading-plans/arrivals/5d18abf6-653a-4728-89aa-0ddd3e62274d",
+        "deny logistics_field_operator /loading-plans/arrivals/5d18abf6-653a-4728-89aa-0ddd3e62274d",
+        "/loading-plans/arrivals/5d18abf6-653a-4728-89aa-0ddd3e62274d",
+        "/loading-plans/arrivals/dc5e2ab7-1365-4bd2-a4d0-4a68f179a4fe",
+        "/loading-plans/arrivals/2bf17891-5906-4d4a-bf19-2c45bad58148",
+        "deny logistics_field_operator /loading-plans/arrivals/7aa5b542-830d-4003-b619-b0a4b5590fe1",
+        "/v34/todos",
+        "export supervisor receives arrived vehicle plan task",
+        "/receipts",
+        "short production batch input is normalized to canonical 3 digits",
+        "deny production_dept /receipts",
+        "/receipts/97c408ef-8a9e-485e-8c10-7f3ec212b975/submit",
+        "/receipts/97c408ef-8a9e-485e-8c10-7f3ec212b975/confirm",
+        "/v262/locations",
+        "all current location labels use two-digit slot suffix",
+        "/v261/lots",
+        "/v261/lots/f2671289-b574-49a5-8765-29268029afd8",
+        "deny logistics_field_operator /v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "deny logistics_field_operator /v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "deny logistics_field_operator /v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "deny logistics_field_operator /v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "deny logistics_field_operator /v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "/v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "/v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "/v262/lots/f2671289-b574-49a5-8765-29268029afd8/weigh",
+        "/v261/lots/f2671289-b574-49a5-8765-29268029afd8/submit",
+        "/v261/lots/f2671289-b574-49a5-8765-29268029afd8/approve",
+        "/v261/lots",
+        "/v261/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e",
+        "deny logistics_field_operator /v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "deny logistics_field_operator /v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "deny logistics_field_operator /v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "deny logistics_field_operator /v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "deny logistics_field_operator /v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "/v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "/v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "/v262/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/weigh",
+        "/v261/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/submit",
+        "/v261/lots/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e/approve",
+        "deny export_supervisor /loading-plans/unified",
+        "deny export_supervisor /loading-plans/unified",
+        "deny export_supervisor /loading-plans/unified",
+        "/loading-plans/unified",
+        "/loading-plans/unified",
+        "plan submission idempotency preserved",
+        "deny export_supervisor /loading-plans/unified",
+        "/loading-plans/unified/lots?sales_plan_id=4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca",
+        "whole Lot disappears from other plan choices",
+        "concurrent plans cannot lock the same entire Lot",
+        "/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch/import-preview",
+        "/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch",
+        "deny logistics_operator /v31/loads",
+        "/loading-plans/unified/available",
+        "cancelled dispatch vehicle excluded from future loading matches",
+        "/loading-plan-documents/b8a30005-20d6-43ba-beb8-55acffe0bdf3/cancel",
+        "/loading-plans/unified/lots?sales_plan_id=4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca",
+        "cancelled unmatched plan releases whole Lot for reuse",
+        "/customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book",
+        "deny logistics_operator /customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book",
+        "/customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book",
+        "customer transport book persists reusable information",
+        "/customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book/734a9884-5708-4374-a81d-64fecb4ea422",
+        "deny export_supervisor /customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book/734a9884-5708-4374-a81d-64fecb4ea422",
+        "deny logistics_operator /customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book/734a9884-5708-4374-a81d-64fecb4ea422",
+        "/customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book/734a9884-5708-4374-a81d-64fecb4ea422",
+        "/customers/6b20969c-239c-48cf-b2c7-90c8b1cef9f5/transport-book",
+        "deleted book hidden but retained in audit and database",
+        "/stock-map/pdf-data",
+        "PDF snapshot reuses live map API",
+        "deny production_dept /stock-map/pdf-data",
+        "/masters/customers",
+        "/customers/7edf3bc3-9a6a-42de-9db2-7a6692b67489/transport-book",
+        "transport book is isolated per customer",
+        "deny logistics_field_operator /loading-plans/arrivals/5d18abf6-653a-4728-89aa-0ddd3e62274d",
+        "/v31/loads",
+        "/v26/loads/6492497e-8d3b-40b6-aa7f-768acb73de5f/approve",
+        "/v26/loads/6492497e-8d3b-40b6-aa7f-768acb73de5f/depart",
+        "/v26/loads/6492497e-8d3b-40b6-aa7f-768acb73de5f/logistics-approve",
+        "/shipping/6492497e-8d3b-40b6-aa7f-768acb73de5f",
+        "arrival transport automatically feeds Packing List",
+        "/shipping/6492497e-8d3b-40b6-aa7f-768acb73de5f/packing-list",
+        "generated Packing List has no red fill marker",
+        "arrival plan and document generation never deduct inventory",
+        "/v26/loads/6492497e-8d3b-40b6-aa7f-768acb73de5f/manager-approve",
+        "final production approval still posts actual outbound",
+        "/bundles/MUS-2026-020-17935537181481",
+        "bundle detail reports matched loading number and formal posting time",
+        "no internal service errors"
+      ],
+      "errors": [],
+      "fixture": {
+        "database": "musonoi_v35_release_20261101_test",
+        "project": "35f70c61-95a5-4784-833f-50c671252d52",
+        "customer": "6b20969c-239c-48cf-b2c7-90c8b1cef9f5",
+        "plan": "4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca",
+        "load": "6492497e-8d3b-40b6-aa7f-768acb73de5f",
+        "lot": "f2671289-b574-49a5-8765-29268029afd8",
+        "availableLot": "e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e",
+        "slots": [
+          "e609fa55-25ad-4e05-9779-60dcb6dba317",
+          "5ced0229-7fa7-4d7b-b841-e9fdcbbca5ec"
+        ],
+        "arrivals": [
+          "bc704d5e-c167-421f-aeef-ff0cc3b1f391",
+          "8ebb5a29-9f3c-4834-a76c-6c62f607c130",
+          "c1b7d8ac-130d-4afd-808a-54036e9c99bc"
+        ],
+        "vehicles": [
+          "5d18abf6-653a-4728-89aa-0ddd3e62274d",
+          "dc5e2ab7-1365-4bd2-a4d0-4a68f179a4fe",
+          "2bf17891-5906-4d4a-bf19-2c45bad58148"
+        ],
+        "info": {
+          "trailer_one": "ACTUAL-TRL1",
+          "trailer_two": "ACTUAL-TRL2",
+          "driver_name": "Test Driver Fullname",
+          "passport_no": "TEST-PASSPORT",
+          "container_no": "TEST-CONTAINER",
+          "arrived_at": "2026-11-01T17:21:58.188Z"
+        }
+      }
+    },
+    "template": {
+      "path": "test-output/v35/template/template.json",
+      "status": "PASS",
+      "checks": 157,
+      "details": [
+        "1 one actual packing list",
+        "1 first and last bundles retained",
+        "1 bundle total",
+        "1 exact net total",
+        "1 exact gross total",
+        "1 dynamic total formula",
+        "1 no repeated packaging deduction",
+        "1 seals remain text",
+        "1 print area grows with detail",
+        "1 original print orientation",
+        "1 original print paperSize",
+        "1 original print printTitlesRow",
+        "1 original print fitToWidth",
+        "1 original print fitToHeight",
+        "1 original margins",
+        "1 original column widths",
+        "1 original title font",
+        "1 original detail borders",
+        "1 original merge structure",
+        "1 shipment uses business calendar date",
+        "1 literal XML-escaped customer",
+        "1 preview resolves original rich text",
+        "1 preview reconstructs merged outer borders",
+        "1 original logo bytes",
+        "1 no broken invoice references",
+        "1 no sample invoice issued",
+        "16 one actual packing list",
+        "16 first and last bundles retained",
+        "16 bundle total",
+        "16 exact net total",
+        "16 exact gross total",
+        "16 dynamic total formula",
+        "16 no repeated packaging deduction",
+        "16 seals remain text",
+        "16 print area grows with detail",
+        "16 original print orientation",
+        "16 original print paperSize",
+        "16 original print printTitlesRow",
+        "16 original print fitToWidth",
+        "16 original print fitToHeight",
+        "16 original margins",
+        "16 original column widths",
+        "16 original title font",
+        "16 original detail borders",
+        "16 original merge structure",
+        "16 shipment uses business calendar date",
+        "16 literal XML-escaped customer",
+        "16 preview resolves original rich text",
+        "16 preview reconstructs merged outer borders",
+        "16 original logo bytes",
+        "16 no broken invoice references",
+        "16 no sample invoice issued",
+        "17 one actual packing list",
+        "17 first and last bundles retained",
+        "17 bundle total",
+        "17 exact net total",
+        "17 exact gross total",
+        "17 dynamic total formula",
+        "17 no repeated packaging deduction",
+        "17 seals remain text",
+        "17 print area grows with detail",
+        "17 original print orientation",
+        "17 original print paperSize",
+        "17 original print printTitlesRow",
+        "17 original print fitToWidth",
+        "17 original print fitToHeight",
+        "17 original margins",
+        "17 original column widths",
+        "17 original title font",
+        "17 original detail borders",
+        "17 original merge structure",
+        "17 shipment uses business calendar date",
+        "17 literal XML-escaped customer",
+        "17 preview resolves original rich text",
+        "17 preview reconstructs merged outer borders",
+        "17 original logo bytes",
+        "17 no broken invoice references",
+        "17 no sample invoice issued",
+        "32 one actual packing list",
+        "32 first and last bundles retained",
+        "32 bundle total",
+        "32 exact net total",
+        "32 exact gross total",
+        "32 dynamic total formula",
+        "32 no repeated packaging deduction",
+        "32 seals remain text",
+        "32 print area grows with detail",
+        "32 original print orientation",
+        "32 original print paperSize",
+        "32 original print printTitlesRow",
+        "32 original print fitToWidth",
+        "32 original print fitToHeight",
+        "32 original margins",
+        "32 original column widths",
+        "32 original title font",
+        "32 original detail borders",
+        "32 original merge structure",
+        "32 shipment uses business calendar date",
+        "32 literal XML-escaped customer",
+        "32 preview resolves original rich text",
+        "32 preview reconstructs merged outer borders",
+        "32 original logo bytes",
+        "32 no broken invoice references",
+        "32 no sample invoice issued",
+        "100 one actual packing list",
+        "100 first and last bundles retained",
+        "100 bundle total",
+        "100 exact net total",
+        "100 exact gross total",
+        "100 dynamic total formula",
+        "100 no repeated packaging deduction",
+        "100 seals remain text",
+        "100 print area grows with detail",
+        "100 original print orientation",
+        "100 original print paperSize",
+        "100 original print printTitlesRow",
+        "100 original print fitToWidth",
+        "100 original print fitToHeight",
+        "100 original margins",
+        "100 original column widths",
+        "100 original title font",
+        "100 original detail borders",
+        "100 original merge structure",
+        "100 shipment uses business calendar date",
+        "100 literal XML-escaped customer",
+        "100 preview resolves original rich text",
+        "100 preview reconstructs merged outer borders",
+        "100 original logo bytes",
+        "100 no broken invoice references",
+        "100 no sample invoice issued",
+        "500 one actual packing list",
+        "500 first and last bundles retained",
+        "500 bundle total",
+        "500 exact net total",
+        "500 exact gross total",
+        "500 dynamic total formula",
+        "500 no repeated packaging deduction",
+        "500 seals remain text",
+        "500 print area grows with detail",
+        "500 original print orientation",
+        "500 original print paperSize",
+        "500 original print printTitlesRow",
+        "500 original print fitToWidth",
+        "500 original print fitToHeight",
+        "500 original margins",
+        "500 original column widths",
+        "500 original title font",
+        "500 original detail borders",
+        "500 original merge structure",
+        "500 shipment uses business calendar date",
+        "500 literal XML-escaped customer",
+        "500 preview resolves original rich text",
+        "500 preview reconstructs merged outer borders",
+        "500 original logo bytes",
+        "500 no broken invoice references",
+        "500 no sample invoice issued",
+        "500 rows preserve signature footer"
+      ]
+    },
+    "packingFooter": {
+      "path": "test-output/v35/packing-footer.json",
+      "status": "PASS",
+      "checks": [
+        "1 row and cell references agree false",
+        "1 commitment follows total within print area false",
+        "1 all signature labels retained false",
+        "1 total directly after last detail false",
+        "1 no footer row beyond print area false",
+        "1 row and cell references agree true",
+        "1 commitment follows total within print area true",
+        "1 all signature labels retained true",
+        "1 total directly after last detail true",
+        "1 no footer row beyond print area true",
+        "2 row and cell references agree false",
+        "2 commitment follows total within print area false",
+        "2 all signature labels retained false",
+        "2 total directly after last detail false",
+        "2 no footer row beyond print area false",
+        "2 row and cell references agree true",
+        "2 commitment follows total within print area true",
+        "2 all signature labels retained true",
+        "2 total directly after last detail true",
+        "2 no footer row beyond print area true",
+        "16 row and cell references agree false",
+        "16 commitment follows total within print area false",
+        "16 all signature labels retained false",
+        "16 total directly after last detail false",
+        "16 no footer row beyond print area false",
+        "16 row and cell references agree true",
+        "16 commitment follows total within print area true",
+        "16 all signature labels retained true",
+        "16 total directly after last detail true",
+        "16 no footer row beyond print area true",
+        "17 row and cell references agree false",
+        "17 commitment follows total within print area false",
+        "17 all signature labels retained false",
+        "17 total directly after last detail false",
+        "17 no footer row beyond print area false",
+        "17 row and cell references agree true",
+        "17 commitment follows total within print area true",
+        "17 all signature labels retained true",
+        "17 total directly after last detail true",
+        "17 no footer row beyond print area true",
+        "100 row and cell references agree false",
+        "100 commitment follows total within print area false",
+        "100 all signature labels retained false",
+        "100 total directly after last detail false",
+        "100 no footer row beyond print area false",
+        "100 row and cell references agree true",
+        "100 commitment follows total within print area true",
+        "100 all signature labels retained true",
+        "100 total directly after last detail true",
+        "100 no footer row beyond print area true",
+        "500 row and cell references agree false",
+        "500 commitment follows total within print area false",
+        "500 all signature labels retained false",
+        "500 total directly after last detail false",
+        "500 no footer row beyond print area false",
+        "500 row and cell references agree true",
+        "500 commitment follows total within print area true",
+        "500 all signature labels retained true",
+        "500 total directly after last detail true",
+        "500 no footer row beyond print area true"
+      ]
+    },
+    "language": {
+      "path": "test-output/v35/language-api.json",
+      "status": "PASS",
+      "checks": [
+        "/v34/lists/plans?search=YARD",
+        "sales list uses shipment month and sales detail route",
+        "sales planned and posted weights use existing progress model",
+        "/shipping/plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca",
+        "/shipping/6492497e-8d3b-40b6-aa7f-768acb73de5f",
+        "sales detail outbound number equals packing list number",
+        "/me/language",
+        "inventory Excel headings zh-CN",
+        "business bundle identifiers retained zh-CN",
+        "/me/language",
+        "receipt template follows language zh-CN",
+        "/v26/receipts/import-preview",
+        "localized receipt template accepted on reimport zh-CN",
+        "report export language zh-CN",
+        "/me/language",
+        "inventory Excel headings en",
+        "business bundle identifiers retained en",
+        "/me/language",
+        "receipt template follows language en",
+        "/v26/receipts/import-preview",
+        "localized receipt template accepted on reimport en",
+        "report export language en",
+        "/me/language",
+        "/masters",
+        "/v33/stocktakes",
+        "/v27/stocktakes/6d00aa7a-ecb0-41cd-8d76-60aef73912bc/start",
+        "/v33/stocktakes/6d00aa7a-ecb0-41cd-8d76-60aef73912bc/snapshot",
+        "/me/language",
+        "count template language zh-CN",
+        "/v33/stocktakes/6d00aa7a-ecb0-41cd-8d76-60aef73912bc/import-preview",
+        "count template reimport zh-CN",
+        "/me/language",
+        "count template language en",
+        "/v33/stocktakes/6d00aa7a-ecb0-41cd-8d76-60aef73912bc/import-preview",
+        "count template reimport en",
+        "/me/language",
+        "legacy report headings daily ",
+        "legacy report headings monthly ",
+        "legacy report headings allocations ",
+        "legacy report headings flows ",
+        "legacy report headings samples ",
+        "legacy report headings vehicles ",
+        "legacy report headings locations ",
+        "legacy report headings stocktakes ",
+        "legacy report headings exceptions ",
+        "private source not served /server/app.cjs",
+        "private source not served /.env",
+        "private source not served /.runtime/pg-password.txt",
+        "private source not served /db/migrations/001_foundation.sql",
+        "private source not served /SOURCE_MANIFEST.json",
+        "/me/language",
+        "historical packing list bytes immutable across language",
+        "no server errors"
+      ]
+    },
+    "browserRegression": {
+      "path": "test-output/v35/browser.json",
+      "status": "PASS",
+      "checks": [
+        "preparation context and quantities use readable cards",
+        "preparation approval explanation removed from page",
+        "approval note inside floating confirmation is optional",
+        "blank optional note permits supervisor approval",
+        "arrival and query are separate pages with navigation",
+        "arrived truck and sales plan are selected automatically",
+        "vehicle plate is controlled by registered arrival",
+        "Lot picker is a scrollable single-selection box",
+        "customer record book saves and selects export_license_no",
+        "customer record book saves and selects transporter",
+        "customer record book saves and selects destination",
+        "single-Lot arrived-vehicle plan saves from browser",
+        "arrival transport shown on plan details",
+        "file selection automatically previews and excludes cancellation",
+        "recognized sheet does not require manual row and column correction",
+        "browser dispatch import saves after automatic preview",
+        "field registration moves dispatched vehicle to waiting plan status",
+        "loading supervisor note removed from page",
+        "loading approval succeeds with note inside popup",
+        "popup approval note persists in audit history",
+        "short bundle input instantly shows canonical production batch",
+        "short production batch accepted by browser validation",
+        "customer and contract creation date columns visible",
+        "creation dates translate in English",
+        "actual Packing List preview contains no red fill marker",
+        "arrival table responsive 390",
+        "preparation cards responsive 390",
+        "arrival table responsive 768",
+        "preparation cards responsive 768",
+        "no browser runtime errors"
+      ],
+      "errors": [],
+      "fixture": {
+        "uiPlan": "ad1cf1f9-09ed-4438-86e9-0db02b7689aa",
+        "uiLoad": "50d76c7b-7acd-40af-9bef-aa8d39630cee"
+      }
+    },
+    "ui": {
+      "path": "test-output/v35/ui.json",
+      "status": "PASS",
+      "checks": [
+        "sales list shipment month and quantity columns",
+        "sales details keep sales menu selected",
+        "sales details show packing list number",
+        "old sales detail bookmark redirects to sales page",
+        "sales edit month label",
+        "both loading tabs visible /loading-plans",
+        "both loading tabs visible /loading-plans/query",
+        "loading tabs switch pages",
+        "system audit separated from document work history",
+        "audit heading switches to English",
+        "packing audit action translated",
+        "page scrolls while mouse is over receipt inputs",
+        "receipt table permits scroll chaining",
+        "PDF map download",
+        "packing list commitment visible in page preview",
+        "loading query responsive 390",
+        "loading query responsive 768",
+        "loading query responsive 1440",
+        "no browser runtime errors"
+      ],
+      "errors": []
+    },
+    "mapFixture": {
+      "path": "test-output/v35/map-fixture.json",
+      "status": "PASS",
+      "checks": [
+        "/receipts",
+        "/receipts/c93c1f8f-d2ff-40cd-af0f-2c06e1bac9d7/submit",
+        "/receipts/c93c1f8f-d2ff-40cd-af0f-2c06e1bac9d7/confirm",
+        "/v262/locations",
+        "/v261/lots",
+        "/v261/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1",
+        "/v261/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1/items/b31a7c63-3142-460f-a85e-23123cd3046a/sample-stage",
+        "/v261/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1",
+        "/v261/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1/items/b31a7c63-3142-460f-a85e-23123cd3046a/sample-stage",
+        "/v261/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1",
+        "/v262/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1/weigh",
+        "/v261/lots/f6a23274-8600-4ae3-96ea-9ce9f8500eb1/submit"
+      ],
+      "lot": "f6a23274-8600-4ae3-96ea-9ce9f8500eb1",
+      "lot_no": "RMM-CU-2026-03",
+      "location": "P1-01",
+      "customer": "Isolated Yard Customer"
+    },
+    "mapBrowser": {
+      "path": "test-output/v35/map-browser.json",
+      "status": "PASS",
+      "checks": [
+        "sample bundle highlighted during supervisor review",
+        "PDF draws lot number",
+        "PDF draws full customer name",
+        "PDF draws location number",
+        "departure approval button left aligned",
+        "no map or approval browser errors"
+      ],
+      "errors": []
+    },
+    "languageReadonly": {
+      "path": "test-output/v35/readonly.json",
+      "status": "PASS",
+      "checks": [
+        "fixed fields translated /loading-plans?tab=arrivals&shipment_month=2026-11",
+        "fixed fields translated /loading-plans/query",
+        "fixed fields translated /loading-plans/new?sales_plan_id=4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca",
+        "fixed fields translated /preparation/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e",
+        "fixed fields translated /customers",
+        "fixed fields translated /sales-plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch",
+        "registered transport stays controlled driver_name",
+        "registered transport stays controlled passport_no",
+        "registered transport stays controlled trailer_one",
+        "registered transport stays controlled trailer_two",
+        "registered transport stays controlled container_no",
+        "generated preview has no red fill"
+      ],
+      "remaining": {
+        "/loading-plans?tab=arrivals&shipment_month=2026-11": [],
+        "/loading-plans/query": [],
+        "/loading-plans/new?sales_plan_id=4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca": [],
+        "/preparation/e6b8cfb6-1c66-46c1-9da0-d3ede8b69b8e": [],
+        "/customers": [],
+        "/sales-plans/4ea9e3e8-27d6-429e-abf0-6f0a3b5c74ca/dispatch": []
+      }
+    },
+    "liveReadonly": {
+      "path": "test-output/v35/live.json",
+      "status": "PASS",
+      "checks": [
+        "live arrivals page opens admin",
+        "live version and feature admin",
+        "arrival write duties enforced admin",
+        "live map labels use padded codes",
+        "live archive date columns",
+        "new live plan requires arrived vehicle",
+        "live Lot selector is single selection",
+        "live transport record books",
+        "live new plan fields translate",
+        "live arrivals page opens logistics_field_operator",
+        "live version and feature logistics_field_operator",
+        "arrival write duties enforced logistics_field_operator",
+        "live arrivals page opens export_supervisor",
+        "live version and feature export_supervisor",
+        "arrival write duties enforced export_supervisor",
+        "live arrivals page opens logistics_operator",
+        "live version and feature logistics_operator",
+        "arrival write duties enforced logistics_operator",
+        "no live browser errors"
+      ],
+      "errors": [],
+      "businessReadOnly": true
+    },
+    "preflight": {
+      "path": "test-output/v35/preflight.json",
+      "status": "PASS",
+      "version": "3.5.0",
+      "checks": [
+        "release version 3.5.0",
+        "deployment component LICENSE",
+        "deployment component NOTICE",
+        "deployment component deploy/Dockerfile",
+        "deployment component deploy/compose.yaml",
+        "deployment component deploy/nginx.conf.example",
+        "deployment component scripts/production-db.cjs",
+        "deployment component server/release-integrity.cjs",
+        "deployment component dist/v35.js",
+        "deployment component dist/v35.css",
+        "application runs without root",
+        "production verifies release hashes",
+        "database not exposed; app port bound to loopback",
+        "database and attachments persistent",
+        "HTTPS configuration supplied",
+        "production refuses insecure origin",
+        "fresh production-mode schema rehearsal",
+        "all 136 migrations applied on empty rehearsal",
+        "no test records seeded users",
+        "no test records seeded customers",
+        "no test records seeded bundles",
+        "no test records seeded receipts",
+        "no test records seeded allocations",
+        "no test records seeded loading_orders",
+        "application DB role has no administrator capabilities"
+      ],
+      "productionStatus": "NOT_DEPLOYED",
+      "remaining": [
+        "云服务器及域名尚未购买",
+        "真实服务器Docker镜像构建、TLS证书、磁盘和防火墙验收待执行",
+        "正式管理员及业务主数据初始化、真实服务器备份与恢复演练待执行"
+      ],
+      "dockerBuildExecuted": false,
+      "cloudResourcesCreated": false
+    },
+    "preservation": {
+      "path": "test-output/v35/preservation.json",
+      "status": "PASS",
+      "source": "musonoi_restore_test_20261101191933318",
+      "checks": [
+        {
+          "table": "adjustment_lines",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "adjustment_steps",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "allocation_items",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "allocations",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "audit_logs",
+          "original": 224,
+          "current": 224,
+          "preserved": true
+        },
+        {
+          "table": "auth_policy_settings",
+          "original": 2,
+          "current": 2,
+          "preserved": true
+        },
+        {
+          "table": "backup_runs",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "batches",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "bundle_metadata_history",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "bundle_number_registry",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "bundles",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "consistency_runs",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "customer_contracts",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "customer_transport_book",
+          "original": 4,
+          "current": 4,
+          "preserved": true
+        },
+        {
+          "table": "customers",
+          "original": 2,
+          "current": 2,
+          "preserved": true
+        },
+        {
+          "table": "document_history",
+          "original": 16,
+          "current": 16,
+          "preserved": true
+        },
+        {
+          "table": "exception_rule_history",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "exception_rules",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "exception_steps",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "export_transport",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "fixed_accounts",
+          "original": 8,
+          "current": 8,
+          "preserved": true
+        },
+        {
+          "table": "idempotency_requests",
+          "original": 119,
+          "current": 119,
+          "preserved": true
+        },
+        {
+          "table": "inventory_events",
+          "original": 202,
+          "current": 202,
+          "preserved": true
+        },
+        {
+          "table": "inventory_exceptions",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "inventory_history",
+          "original": 458,
+          "current": 458,
+          "preserved": true
+        },
+        {
+          "table": "inventory_history_boundary",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "inventory_origins",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "inventory_reporting_epoch",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "inventory_revisions",
+          "original": 120,
+          "current": 120,
+          "preserved": true
+        },
+        {
+          "table": "label_events",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "label_job_items",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "label_jobs",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "loading_items",
+          "original": 39,
+          "current": 39,
+          "preserved": true
+        },
+        {
+          "table": "loading_order_lots",
+          "original": 4,
+          "current": 4,
+          "preserved": true
+        },
+        {
+          "table": "loading_orders",
+          "original": 4,
+          "current": 4,
+          "preserved": true
+        },
+        {
+          "table": "loading_plan_documents",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "loading_plan_groups",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "loading_plan_lot_locks",
+          "original": 2,
+          "current": 2,
+          "preserved": true
+        },
+        {
+          "table": "loading_plan_lots",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "loading_plan_match_history",
+          "original": 5,
+          "current": 5,
+          "preserved": true
+        },
+        {
+          "table": "loading_plan_matches",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "loading_weight_warning_settings",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "location_map_policy_history",
+          "original": 172,
+          "current": 172,
+          "preserved": true
+        },
+        {
+          "table": "locations",
+          "original": 172,
+          "current": 172,
+          "preserved": true
+        },
+        {
+          "table": "lot_bundle_releases",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "lot_location_claims",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "lot_work_history",
+          "original": 145,
+          "current": 145,
+          "preserved": true
+        },
+        {
+          "table": "lot_work_items",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "management_warning_settings",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "outbound_correction_steps",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "outbound_corrections",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "outbound_orders",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "outbound_steps",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "packing_list_documents",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "packing_list_revisions",
+          "original": 4,
+          "current": 4,
+          "preserved": true
+        },
+        {
+          "table": "packing_list_template_settings",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "packing_list_templates",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "permissions",
+          "original": 59,
+          "current": 59,
+          "preserved": true
+        },
+        {
+          "table": "projects",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "receipt_lines",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "receipts",
+          "original": 3,
+          "current": 3,
+          "preserved": true
+        },
+        {
+          "table": "reservations",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "role_permission_caps",
+          "original": 212,
+          "current": 212,
+          "preserved": true
+        },
+        {
+          "table": "role_permissions",
+          "original": 352,
+          "current": 352,
+          "preserved": true
+        },
+        {
+          "table": "roles",
+          "original": 17,
+          "current": 17,
+          "preserved": true
+        },
+        {
+          "table": "sales_dispatch_imports",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "sales_dispatch_vehicle_keys",
+          "original": 55,
+          "current": 55,
+          "preserved": true
+        },
+        {
+          "table": "sales_dispatch_vehicles",
+          "original": 55,
+          "current": 55,
+          "preserved": true
+        },
+        {
+          "table": "sales_plans",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "sampling_batches",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "sampling_items",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "schema_migrations",
+          "original": 136,
+          "current": 136,
+          "preserved": true
+        },
+        {
+          "table": "seal_number_registry",
+          "original": 30,
+          "current": 30,
+          "preserved": true
+        },
+        {
+          "table": "stock_adjustments",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stock_map_cells",
+          "original": 166,
+          "current": 166,
+          "preserved": true
+        },
+        {
+          "table": "stock_map_features",
+          "original": 12,
+          "current": 12,
+          "preserved": true
+        },
+        {
+          "table": "stock_map_regions",
+          "original": 5,
+          "current": 5,
+          "preserved": true
+        },
+        {
+          "table": "stock_map_source",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "stock_move_items",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stock_moves",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stocktake_observations",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stocktake_reconciliations",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stocktake_resolutions",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stocktake_snapshot",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stocktake_steps",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "stocktakes",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "storage_location_locks",
+          "original": 8,
+          "current": 8,
+          "preserved": true
+        },
+        {
+          "table": "system_info",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "user_scopes",
+          "original": 8,
+          "current": 8,
+          "preserved": true
+        },
+        {
+          "table": "users",
+          "original": 8,
+          "current": 8,
+          "preserved": true
+        },
+        {
+          "table": "vehicle_arrivals",
+          "original": 2,
+          "current": 2,
+          "preserved": true
+        },
+        {
+          "table": "warehouses",
+          "original": 1,
+          "current": 1,
+          "preserved": true
+        },
+        {
+          "table": "weighing_items",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "weighings",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "workflow_attachments",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        },
+        {
+          "table": "workflow_reviews",
+          "original": 28,
+          "current": 28,
+          "preserved": true
+        },
+        {
+          "table": "yards",
+          "original": 0,
+          "current": 0,
+          "preserved": true
+        }
+      ],
+      "allAccountHashesAndPermissionsUnchanged": true,
+      "allBusinessRowsUnchanged": true
+    }
+  }
+}

@@ -1,0 +1,9 @@
+'use strict';
+// Shared numeric hierarchy and code-based state styling. Labels remain in I18n.
+const UI={
+ number(value,unit=''){return `<strong class="stat-number">${esc(value)}<small>${unit}</small></strong>`;},
+ tone(code,domain='approval'){const shared={DRAFT:'neutral',PENDING:'pending',SUBMITTED:'pending',APPROVED:'success',CONFIRMED:'success',REJECTED:'danger',CANCELLED:'neutral',REVOKED:'neutral'};const domains={preparation:{WORKING:'info',RECTIFY:'danger',PREPARED:'success',PARTIAL:'info',FULFILLED:'info',LOCKED:'info',RELEASED:'neutral'},loading:{READY:'success',DEPARTED_PENDING:'pending',DEPARTED_CORRECTION:'danger',OUTBOUND:'info',DEPARTED:'info',LOADED:'info',REVERSED:'neutral'},sampling:{NOT_SAMPLED:'neutral',NOT_REQUIRED:'info',REQUIRED:'pending',COMPLETED:'success'},count:{IN_PROGRESS:'info',REVIEW:'pending',APPROVAL:'pending',ADJUSTMENTS:'info',COMPLETED:'info',OPEN:'info'},plan:{OPEN:'info',CLOSED:'neutral'},correction:{REQUESTED:'pending',AUTHORIZED:'success',RETURN_VERIFIED:'info',APPLIED:'info'},inventory:{IN_STOCK:'success',OUTBOUND:'info',ADJUSTED_OUT:'neutral'}};return domains[domain]?.[code]||shared[code]||'info';},
+ status(code,domain,label){return `<span class="status-pill tone-${this.tone(code,domain)}" data-state-code="${esc(code||'UNKNOWN')}" data-state-domain="${domain}">${esc(label||code||'待核查')}</span>`;},
+ sampling(r){const label=Inventory.samplingState(r),code={'未取样':'NOT_SAMPLED','无需取样':'NOT_REQUIRED','取样/待取样':'REQUIRED','完成取样':'COMPLETED'}[label]||'NOT_SAMPLED';return this.status(code,'sampling',label);},
+ inventory(r){const labels={IN_STOCK:'在库',OUTBOUND:'已出库',ADJUSTED_OUT:'已授权调整移出'};return this.status(r.physical_status,'inventory',labels[r.physical_status]||'待核查').replace(' data-state-code=',` data-i18n-key="inventory.state.${r.physical_status}" data-state-code=`);}
+};

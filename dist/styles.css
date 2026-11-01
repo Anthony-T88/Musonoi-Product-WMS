@@ -36,5 +36,5 @@ a.button{display:inline-flex;align-items:center;justify-content:center;text-deco
 /* V2.6.1 Lot work controls */
 #v261-picker input[type="checkbox"],#v261-detail-items input[type="checkbox"],#v261-stored,#v261-state-verified{width:20px;height:20px;min-height:20px;vertical-align:middle;}#v261-detail-items input[inputmode="decimal"]{min-width:110px;}#v261-lot-dialog,#v261-cancel-dialog{max-width:560px;width:calc(100% - 32px);padding:24px;border:1px solid #dbe2e6;border-radius:12px;} .v261-summary{padding:12px 18px;background:#f3f7f5;border-left:3px solid #39735a;margin:18px 0;}#v261-selection{overflow-wrap:anywhere;}#v261-detail-items+pre, #page-content pre{max-width:100%;overflow:auto;} .map-planned rect{stroke:#ad713c;stroke-width:2;stroke-dasharray:4 2;}
 
-/* V2.6.2 continuous weighing */
+/* V2.7.0 continuous weighing */
 .retired-filter{display:none!important}.v262-save-bar{position:sticky;bottom:0;z-index:3;display:flex;gap:16px;align-items:center;background:#f6f9fa;border:1px solid #d9e1e5;padding:12px;margin-top:12px}.v261-summary p{margin:8px 0}.v261-summary{min-height:180px}#v261-detail-items input[inputmode=decimal]{width:110px}#v261-detail-items input[data-v262-seal]{min-width:150px;max-width:220px}#v262-save-status{min-height:24px}#v261-detail-error{min-height:24px}

@@ -1,0 +1,11 @@
+ALTER TABLE sales_dispatch_vehicles ADD COLUMN capacity_tonnes numeric(12,4) CHECK(capacity_tonnes>0 AND capacity_tonnes<=1000);
+CREATE TABLE sales_dispatch_vehicle_keys(sales_plan_id uuid NOT NULL REFERENCES sales_plans(id),shipment_month text NOT NULL,truck_key text NOT NULL,vehicle_id uuid NOT NULL UNIQUE REFERENCES sales_dispatch_vehicles(id),PRIMARY KEY(sales_plan_id,shipment_month,truck_key));
+INSERT INTO sales_dispatch_vehicle_keys SELECT DISTINCT ON(d.sales_plan_id,d.shipment_month,upper(regexp_replace(v.truck_no,'[[:space:]-]+','','g'))) d.sales_plan_id,d.shipment_month,upper(regexp_replace(v.truck_no,'[[:space:]-]+','','g')),v.id FROM sales_dispatch_vehicles v JOIN sales_dispatch_imports d ON d.id=v.import_id ORDER BY d.sales_plan_id,d.shipment_month,upper(regexp_replace(v.truck_no,'[[:space:]-]+','','g')),d.created_at,v.source_row,v.id;
+GRANT SELECT,INSERT ON sales_dispatch_vehicle_keys TO musonoi_app;
+CREATE TABLE packing_list_templates(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),revision integer NOT NULL UNIQUE,content bytea NOT NULL,file_sha256 text NOT NULL,file_name text NOT NULL,created_by uuid NOT NULL REFERENCES users(id),created_at timestamptz NOT NULL DEFAULT now(),reason text NOT NULL);
+CREATE TABLE packing_list_template_settings(singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),active_template_id uuid REFERENCES packing_list_templates(id),version integer NOT NULL DEFAULT 1);
+INSERT INTO packing_list_template_settings(singleton) VALUES(true);
+GRANT SELECT,INSERT ON packing_list_templates TO musonoi_app;
+GRANT SELECT,UPDATE ON packing_list_template_settings TO musonoi_app;
+INSERT INTO permissions(code) VALUES('packing-template:write');
+INSERT INTO role_permissions(role_code,permission_code) SELECT code,'packing-template:write' FROM roles WHERE code IN('admin','logistics_manager','export_supervisor');

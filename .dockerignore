@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+.runtime
+backups
+test-output
+uploads
+node_modules
+*.zip
+*.dump
+*.backup
+*.log
+Commercial INV*.xls
+Map Copper Cathodes.pdf

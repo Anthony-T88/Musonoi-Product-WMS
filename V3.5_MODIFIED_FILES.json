@@ -1,0 +1,719 @@
+{
+  "version": "3.5.0",
+  "baseline": "2026-11-01-v34-interaction-completion-local-tested",
+  "files": [
+    {
+      "path": ".dockerignore",
+      "change": "added",
+      "sha256": "b14148cf9e2b1d577e8500d8bb7c08f537b2ebf6c172d57a094297296b29ac15"
+    },
+    {
+      "path": "API.md",
+      "change": "modified",
+      "sha256": "4417c017ecf67a7506bb730eb2cc2427173c650c1ad757eb78cf18bb4d78eb32"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "change": "modified",
+      "sha256": "9c7498494561c5508b370cc25c38b7824ae27a101ad6f1770844e8c56aa58f21"
+    },
+    {
+      "path": "CLOUD_SOURCE.md",
+      "change": "modified",
+      "sha256": "8bd17e402060cf962dae8662360a5af245806c325a76bb6a4ada3795e7377102"
+    },
+    {
+      "path": "DATABASE_REPORT.md",
+      "change": "modified",
+      "sha256": "288ca7252ea309d0889fb9f5bc92ecccc2778038c207ebe3a40e66d77644202b"
+    },
+    {
+      "path": "HANDOFF.md",
+      "change": "modified",
+      "sha256": "bf2cc391c8222d801ef260d12caa2cb58199296df015d0bcb2cf19ad1298a559"
+    },
+    {
+      "path": "LICENSE",
+      "change": "added",
+      "sha256": "cd2e97dfc5a00a97a52b4f0771c6b68c667e4faee2f4381584694e63f45f4f9b"
+    },
+    {
+      "path": "NOTICE",
+      "change": "added",
+      "sha256": "8c205c7e3edd4da5905f9b41df1f7525ab1d0c7d8a9fb654aad3dd63328cd948"
+    },
+    {
+      "path": "README.md",
+      "change": "modified",
+      "sha256": "6f42143339ec45f30f49433c19ccb3eb8ad1e05a6882808b08938dfd82a37077"
+    },
+    {
+      "path": "RELEASE.md",
+      "change": "modified",
+      "sha256": "8c856d7c40c0d729a341f11b2ae430770c7871853366af494926adba2f9cd0de"
+    },
+    {
+      "path": "RUNBOOK.md",
+      "change": "modified",
+      "sha256": "c8b27774b7fd16b69236792cd3ad633bb83f02a4c60b14eadd8a072559c4c45c"
+    },
+    {
+      "path": "V3.5_IMPLEMENTATION.md",
+      "change": "added",
+      "sha256": "60d263115bb6350f6e241b94a861b01a1f51ad4e6550869217437aa9bd43c05e"
+    },
+    {
+      "path": "V3.5_PREFLIGHT.md",
+      "change": "added",
+      "sha256": "e28bdb729b1336d359de243c90ca6bd518c5370fe4397b938d03ac412fdc621e"
+    },
+    {
+      "path": "V3.5_TEST_RESULTS.json",
+      "change": "added",
+      "sha256": "38c4d685e91a353d48990b3bb6f29c97a0edc217b4941f47d868b4fa7c2da925"
+    },
+    {
+      "path": "VALIDATION.md",
+      "change": "modified",
+      "sha256": "4897cf3a51e0ecd35d02c58b6ffa944b1b1129ea22a02ef8f5d3aa4e15e05055"
+    },
+    {
+      "path": "db/MIGRATIONS.md",
+      "change": "modified",
+      "sha256": "9e698007f051900a2c6ef7fb22c1dfb9a84ecffea5e5e242272661559f01fc7e"
+    },
+    {
+      "path": "deploy/Dockerfile",
+      "change": "added",
+      "sha256": "99595e3c9e268fb8bf022d86796b5a43bee572eb0f7bb16dc4532aa052298cb2"
+    },
+    {
+      "path": "deploy/compose.yaml",
+      "change": "added",
+      "sha256": "4772392afe22e184a502c8233cc975c95bd976227398cf2316aa8426c1a37ed6"
+    },
+    {
+      "path": "deploy/environment.example",
+      "change": "added",
+      "sha256": "cd44b30660425cd0fa80a5f806e5c2f9ab061b30784abd7510eb3767f0cabe45"
+    },
+    {
+      "path": "deploy/nginx.conf.example",
+      "change": "added",
+      "sha256": "aaee02dc050dc708ca9f46281a014804f70d52fa9ce8a9fb3d8b51c75d63af86"
+    },
+    {
+      "path": "dist/app.js",
+      "change": "modified",
+      "sha256": "5a6c0c19e836d679a665eb1888156c11a4752b0dc57bf6c1fc83f0616f4c0960"
+    },
+    {
+      "path": "dist/audit-labels.js",
+      "change": "added",
+      "sha256": "87d5f86d02751c09381a213a9409829db433fdff5523df7d68f29550708f2b1e"
+    },
+    {
+      "path": "dist/boot.js",
+      "change": "modified",
+      "sha256": "bb777912e2fd434954a94e4c3740a3098e6658c1205897e2cf05359b75783263"
+    },
+    {
+      "path": "dist/bundle-number.js",
+      "change": "modified",
+      "sha256": "8513a12c11d6154368e23fcd2ae5a2d69c036c045b3a806ef3f17f3a5cb5a29c"
+    },
+    {
+      "path": "dist/business-time.js",
+      "change": "modified",
+      "sha256": "2bc29d2e5a9d68c22e3c5a72fcc2d2d793c5610ab2e2974b85d85b6a5aff9a50"
+    },
+    {
+      "path": "dist/core.js",
+      "change": "modified",
+      "sha256": "a206fc6cb1c52b73fa601f5af6a3a4d9351b50944e18cffc71d70545ce280832"
+    },
+    {
+      "path": "dist/customers-ui.js",
+      "change": "modified",
+      "sha256": "6b8499fc6f940f2669c9793e8d94a4b0ba262c3377cd8005e53c4291fc95173d"
+    },
+    {
+      "path": "dist/employee-identity.js",
+      "change": "modified",
+      "sha256": "7d2f5d03aca8b69f172ab012d346d91108025485a8fc273b6adc2de06143b48b"
+    },
+    {
+      "path": "dist/history-ui.js",
+      "change": "modified",
+      "sha256": "36c2b8e18203155720c96d9f9e5e7b81479ba111e53e5c7b7cfde97dd6206c54"
+    },
+    {
+      "path": "dist/i18n-v262.js",
+      "change": "modified",
+      "sha256": "e68fc772b7d82205071c247c39cbf5024bd66fc35cd659405e7e94d994cbdb89"
+    },
+    {
+      "path": "dist/i18n-v27.js",
+      "change": "modified",
+      "sha256": "96006c5765eef88be7babaaddec5d15e57fac8f490879c79e4e8bd2361cdc105"
+    },
+    {
+      "path": "dist/i18n-v31.js",
+      "change": "modified",
+      "sha256": "5f54b31a81fa0d48243ae4ecd597cf68382e72e67caa7f16b9561b1b51865e34"
+    },
+    {
+      "path": "dist/i18n-v32.js",
+      "change": "modified",
+      "sha256": "7824ac142e5a3b5a13df95e2fc5dc94c6e5a467bbab971c5c1be3609e77fd8ac"
+    },
+    {
+      "path": "dist/i18n-v33.js",
+      "change": "modified",
+      "sha256": "f55b79fd28b3b2aece0ab899a6ea7352ca6aacd52a543003005ada9053bcc78b"
+    },
+    {
+      "path": "dist/i18n-v34.js",
+      "change": "modified",
+      "sha256": "60397a9f53d55013362360ea2b5d79eec3faa3393d4007a019c36d584594e65c"
+    },
+    {
+      "path": "dist/index.html",
+      "change": "modified",
+      "sha256": "f4f3aec4fdf66b080315e791cf90c756e8aa432d4dd62e59a409d6d3d058f146"
+    },
+    {
+      "path": "dist/interaction-completion.js",
+      "change": "modified",
+      "sha256": "774bb21231cd029263875e22c3a1d6b7c990f14bf2de04c6e264426221c324e8"
+    },
+    {
+      "path": "dist/management-labels.js",
+      "change": "modified",
+      "sha256": "9d86e8d77ba8f62b470260d2f2db84288acbe30a86a9192256ea3a1d2ba6c4e9"
+    },
+    {
+      "path": "dist/offline.html",
+      "change": "modified",
+      "sha256": "55cc13a8cbba5ca805f336ae96edd44b0f52889e242dcb099a93a547437e02ab"
+    },
+    {
+      "path": "dist/overview-ui.js",
+      "change": "modified",
+      "sha256": "ad7d5571a24b7d8f62c403b5752a16b7ed8dfcfe84afd9658bb7def77f83d1d5"
+    },
+    {
+      "path": "dist/router.js",
+      "change": "modified",
+      "sha256": "5b9c0fb23f4a0914e19ba0dc8d7f52192e0c7014aec77fdffc73ed2a24550e5e"
+    },
+    {
+      "path": "dist/sw.js",
+      "change": "modified",
+      "sha256": "33c6b586f48d028220ac79252d8023bae7ed81ae2725d45ad6ef15b55bddfeb0"
+    },
+    {
+      "path": "dist/task-notifications.js",
+      "change": "modified",
+      "sha256": "ecca47e02f90457ec767a7ca2e98e9f01fb2bd0e54c68ae48cf39b6eff4fc319"
+    },
+    {
+      "path": "dist/tonnes.js",
+      "change": "modified",
+      "sha256": "bfd018fc82fe38808d9d3fb58835d9e9178a487e8c38a9a740536622821543d8"
+    },
+    {
+      "path": "dist/ui.js",
+      "change": "modified",
+      "sha256": "3f76d0f9ebe2feb800f1375b283bdf42fc1b7e24db5cf5c252bbd0525ff2ed6d"
+    },
+    {
+      "path": "dist/v262-supplement.js",
+      "change": "modified",
+      "sha256": "d9e5fc0baabaab941841cfac1f063344a0ca21d6b7df857279b2d4af90cc9724"
+    },
+    {
+      "path": "dist/v265-ui.js",
+      "change": "modified",
+      "sha256": "5183c345eb1c425bc0c09f8098d06363633edcbf59eafdbaeb7e7a6a4c873621"
+    },
+    {
+      "path": "dist/v27-reliability.js",
+      "change": "modified",
+      "sha256": "844d8041eb48dea3a581151b9dd3f5a4bf665f68c67ad5b3c25d66bf76aa0ead"
+    },
+    {
+      "path": "dist/v27-stocktaking.js",
+      "change": "modified",
+      "sha256": "bf3dec3be16e892ea24314e52cd94a81786777b5c178cb1e7761f0ab2ea99e3e"
+    },
+    {
+      "path": "dist/v27-ui.js",
+      "change": "modified",
+      "sha256": "db330c2332510a4406f1c9873644cfc2968cd578b34202e1d78a7b59f5cd4857"
+    },
+    {
+      "path": "dist/v271-map.js",
+      "change": "modified",
+      "sha256": "88fcce0a0b0c0640f72afc6528915bd3559c1415501a6633abde00bb8a3b7e0f"
+    },
+    {
+      "path": "dist/v272-ui.js",
+      "change": "modified",
+      "sha256": "e6e4106b1c1d6e87e39aae1d8718a5605dff0591c6d7e634ad60935e987cd283"
+    },
+    {
+      "path": "dist/v30-ui.js",
+      "change": "modified",
+      "sha256": "c9f55cde662166333815b80b34115135e27a0f57a233a5b1d2be9500225451a6"
+    },
+    {
+      "path": "dist/v31-header.js",
+      "change": "modified",
+      "sha256": "0c9c8d53fd3f75b10b04db8f048acce75db9d7f37abcabe616baa3052a793ddc"
+    },
+    {
+      "path": "dist/v31-outbound-center.js",
+      "change": "modified",
+      "sha256": "35f0e1b72fcac495ce84e368523788847834961e5c9174ee846cf4c059ea1990"
+    },
+    {
+      "path": "dist/v31-plan-access.js",
+      "change": "modified",
+      "sha256": "a2a7d466fb4629972019d79e585975d76def3c13bb0305d5f1a22ead574047a8"
+    },
+    {
+      "path": "dist/v31-sales.js",
+      "change": "modified",
+      "sha256": "d81602b5b09369b63bc30aa30ea8fa39b45a5682240ed1e88eb7affcfb18629f"
+    },
+    {
+      "path": "dist/v31-single-plan.js",
+      "change": "modified",
+      "sha256": "be204c4161eebd875f70378d5c5c3480dbd8886eba46c1c55e7fa9af60e7c5a3"
+    },
+    {
+      "path": "dist/v31-ui.js",
+      "change": "modified",
+      "sha256": "ce61cc47e6c1e09e89a1dec907408c466d869aa6dc5545e5b1434cbf6980fde3"
+    },
+    {
+      "path": "dist/v32-ui.js",
+      "change": "modified",
+      "sha256": "938160f0471ebb3b23533df6287ebdab186006d0e475515f4048088d00e1a4dc"
+    },
+    {
+      "path": "dist/v33-ui.js",
+      "change": "modified",
+      "sha256": "1fabe4c8f8e9f215d8b2521a320d3105b9fa8c20a1be76bf08b81d892f2bd22b"
+    },
+    {
+      "path": "dist/v34-ui.js",
+      "change": "modified",
+      "sha256": "5e918b1f52d71477ad1beb0c31e2f4170162732fec63ffe1ca111c4c697585f1"
+    },
+    {
+      "path": "dist/v35.css",
+      "change": "added",
+      "sha256": "b7a6486367b84a619887cbe76ca7651d1d3105efbf77ee4ad3bc90a2e28f6f5b"
+    },
+    {
+      "path": "dist/v35.js",
+      "change": "added",
+      "sha256": "e91a920768d838bba87bdc6603e7e43a59990426e5936eacc2235ebb51bdf130"
+    },
+    {
+      "path": "dist/vehicle-arrivals.js",
+      "change": "modified",
+      "sha256": "44e111db7907ada51c3ee43d769b0e01adfef697b314b5d99b7895a9ee8f019d"
+    },
+    {
+      "path": "package.json",
+      "change": "modified",
+      "sha256": "f929480ddedbc4a2fab78c681c99425fa4cc558028516f26adaabea66772f777"
+    },
+    {
+      "path": "scripts/package-v35.cjs",
+      "change": "added",
+      "sha256": "d815c73cc95e814f3afa5cae567dc4c5ab66ad082dad613c386694c4b2e55df3"
+    },
+    {
+      "path": "scripts/preflight-v35.cjs",
+      "change": "added",
+      "sha256": "c2a831d728bf6e458012e307a6099f4a692aa078d7d0c5e870b862818f899da6"
+    },
+    {
+      "path": "scripts/production-db.cjs",
+      "change": "added",
+      "sha256": "a9aa5cc6baf6489f73213e0953974e98359d1e14637193135ff98b375c00b14c"
+    },
+    {
+      "path": "scripts/release-files-v35.cjs",
+      "change": "added",
+      "sha256": "383c0502828149ae4e7a683dc5857b9b335179f8600d7f670d3d023160d3d670"
+    },
+    {
+      "path": "scripts/report-v35.cjs",
+      "change": "added",
+      "sha256": "447c20e10f40913eb9fd7d6aaded41c8eeae4634596efb1006fcead31680d731"
+    },
+    {
+      "path": "scripts/start-v262.cjs",
+      "change": "modified",
+      "sha256": "a17a8c5265b66c0d9e82d3e8edf395155d28f101aab2c9d5a9dfe1f8925a120c"
+    },
+    {
+      "path": "server/app.cjs",
+      "change": "modified",
+      "sha256": "c6d51bf4872954e18241cfb019ee09e26a447e3e6eb605037fb6646284ca8dac"
+    },
+    {
+      "path": "server/config.cjs",
+      "change": "modified",
+      "sha256": "96821064bae804389c32dc2b732df1708e074bc698e428d547a1929645ebef79"
+    },
+    {
+      "path": "server/export-language.cjs",
+      "change": "added",
+      "sha256": "bfb0e0609f0a5bda98afbca3d162b2f503be6e791af59941140156a34b9c37c6"
+    },
+    {
+      "path": "server/export-shipping.cjs",
+      "change": "modified",
+      "sha256": "0978cd006246db7d5f5a5e0bbaf29f70396b448d1e5e993e9acbeef45ff9ee40"
+    },
+    {
+      "path": "server/inventory-depth.cjs",
+      "change": "modified",
+      "sha256": "6173acd87069e665500ce95811f2d5351d7134b6b9989361c2b291a224292887"
+    },
+    {
+      "path": "server/management.cjs",
+      "change": "modified",
+      "sha256": "3a90f1ce172f7a5e03807a71c6b81c8fd5756a0c9a1843b314c65ff252145278"
+    },
+    {
+      "path": "server/packing-list.cjs",
+      "change": "modified",
+      "sha256": "9b19e75d15499ba53a2e07119754d857952709823c1acce63f850b1b732b8083"
+    },
+    {
+      "path": "server/receipt-import.cjs",
+      "change": "modified",
+      "sha256": "6ba36594fc986fb1c2217420afc06b62ab55778649b9915a153be4881b820f0d"
+    },
+    {
+      "path": "server/release-integrity.cjs",
+      "change": "added",
+      "sha256": "8cec66b3ffb8b58e1dfbd7c385cdc5e9aaa9c28d11dee918a6cc000b36b18ff0"
+    },
+    {
+      "path": "server/stocktakes.cjs",
+      "change": "modified",
+      "sha256": "d5999f07c6243fb0b7147d270437d7edfac5bb7f985205c20ded29e9035380c8"
+    },
+    {
+      "path": "server/v26.cjs",
+      "change": "modified",
+      "sha256": "71a3f111e3238e131cfdc9eae218e4310fab350941f7003e1b151dfda311145e"
+    },
+    {
+      "path": "templates/packing-list/README.md",
+      "change": "modified",
+      "sha256": "cd89bf4173c6e0c11c58bc4cc332829f59fda993831796f23f891f6c68f3075b"
+    },
+    {
+      "path": "tests/source-integrity.cjs",
+      "change": "modified",
+      "sha256": "6c4e696b37d96da8f05e5fe544c9e569bcfb1bd5e96aad3358c52d3d98caad2a"
+    },
+    {
+      "path": "tests/v35-browser-regression.cjs",
+      "change": "added",
+      "sha256": "6a3ce59f72e9d3dab319acb2eae6ba09adf161455a84ebd7de3a30d2483cbe62"
+    },
+    {
+      "path": "tests/v35-flow.cjs",
+      "change": "added",
+      "sha256": "ae36c8d3e544babbdca0ebe60f39ca6b16df17089a65c5b2ee2363d74aa6fd58"
+    },
+    {
+      "path": "tests/v35-language-api.cjs",
+      "change": "added",
+      "sha256": "1d327178aaada36c974dce8e81382a26a429bf5818f46d9bfa8125f04c0f3f4a"
+    },
+    {
+      "path": "tests/v35-live.cjs",
+      "change": "added",
+      "sha256": "99d8428a38bdfd109a76cf75e1bc7056f88a0e76721456ef020c4c9091b42a50"
+    },
+    {
+      "path": "tests/v35-map-browser.cjs",
+      "change": "added",
+      "sha256": "8f48df6930e68264961373bc7b90b2d57b43ba5401da11f943352320b91c312c"
+    },
+    {
+      "path": "tests/v35-map-fixture.cjs",
+      "change": "added",
+      "sha256": "b8347801a7ad1e8d2277c2ebc0bfcada0e53c1294b9869d4580a947c87dcd791"
+    },
+    {
+      "path": "tests/v35-packing-footer.cjs",
+      "change": "added",
+      "sha256": "e8b902be40f17b2ffc610d8c40e5663b6df3995615863ef6b797766ec523eacc"
+    },
+    {
+      "path": "tests/v35-preservation.cjs",
+      "change": "added",
+      "sha256": "c43516efac07d530258d8c5faa2ca400c54a9564fb69db58d6d2de94c04a8640"
+    },
+    {
+      "path": "tests/v35-readonly.cjs",
+      "change": "added",
+      "sha256": "2d9e31c1362c9b355feb68226d2d1b57031329f813a6f0b1979b761c9d7bcc75"
+    },
+    {
+      "path": "tests/v35-template.cjs",
+      "change": "added",
+      "sha256": "5d4d7df8560cc2b5d1d08e65f0e613f23f9371def6214de3dfb61d4c8fb5f291"
+    },
+    {
+      "path": "tests/v35-ui.cjs",
+      "change": "added",
+      "sha256": "160a94f07582623bd1705557f221787d6fcf06af181b15ccd0cda65f9b70293f"
+    }
+  ],
+  "excludedPreviousReleaseFiles": [
+    "Map Copper Cathodes.pdf",
+    "V2.7.2_OPTIMIZATION.md",
+    "V2.7.2_PREAUDIT.md",
+    "V2.7.2_PROGRESS.md",
+    "V2.7.2_REDUNDANCY_REVIEW.md",
+    "V2.7.2_TEST_RESULTS.json",
+    "V3.0_FUNCTIONAL_OPTIMIZATION.md",
+    "V3.0_FUNCTIONAL_TEST_RESULTS.json",
+    "V3.0_IMPLEMENTATION.md",
+    "V3.0_INVENTORY_DETAILS.md",
+    "V3.0_MAP_DISPLAY.md",
+    "V3.0_PRELAUNCH.md",
+    "V3.0_PRELAUNCH_TEST_RESULTS.json",
+    "V3.0_REMAINDER_INVENTORY.md",
+    "V3.0_TEST_RESULTS.json",
+    "V3.1_IMPLEMENTATION.md",
+    "V3.1_LOGISTICS_PACKING.md",
+    "V3.1_LOGISTICS_PACKING_TEST_RESULTS.json",
+    "V3.1_OPTIMIZATION.md",
+    "V3.1_OPTIMIZATION_TEST_RESULTS.json",
+    "V3.1_OUTBOUND_CENTER.md",
+    "V3.1_OUTBOUND_CENTER_TEST_RESULTS.json",
+    "V3.1_PLAN_ACCESS.md",
+    "V3.1_PLAN_ACCESS_TEST_RESULTS.json",
+    "V3.1_SALES_DISPATCH.md",
+    "V3.1_SALES_DISPATCH_TEST_RESULTS.json",
+    "V3.1_SINGLE_PLAN.md",
+    "V3.1_SINGLE_PLAN_TEST_RESULTS.json",
+    "V3.1_TEST_RESULTS.json",
+    "V3.2_IMPLEMENTATION.md",
+    "V3.2_MODIFIED_FILES.json",
+    "V3.2_TEST_RESULTS.json",
+    "V3.3_IMPLEMENTATION.md",
+    "V3.3_MODIFIED_FILES.json",
+    "V3.3_TEST_RESULTS.json",
+    "V3.4_ACCOUNT_TASKS.md",
+    "V3.4_ACCOUNT_TASKS_MODIFIED_FILES.json",
+    "V3.4_ACCOUNT_TASKS_TEST_RESULTS.json",
+    "V3.4_DATABASE_CHANGES.md",
+    "V3.4_IMPLEMENTATION.md",
+    "V3.4_INTERACTION_COMPLETION.md",
+    "V3.4_INTERACTION_COMPLETION_DATABASE.md",
+    "V3.4_INTERACTION_COMPLETION_MODIFIED_FILES.json",
+    "V3.4_INTERACTION_COMPLETION_TEST_RESULTS.json",
+    "V3.4_INTERACTION_MODIFIED_FILES.json",
+    "V3.4_INTERACTION_OPTIMIZATION.md",
+    "V3.4_INTERACTION_TEST_RESULTS.json",
+    "V3.4_MODIFIED_FILES.json",
+    "V3.4_TEST_RESULTS.json",
+    "V3.4_YARD_DATABASE_CHANGES.md",
+    "V3.4_YARD_MODIFIED_FILES.json",
+    "V3.4_YARD_TEST_RESULTS.json",
+    "V3.4_YARD_WORKFLOW.md",
+    "db/stock-map-layout.json",
+    "scripts/audit-v27.cjs",
+    "scripts/digitize-stock-map.py",
+    "scripts/inspect-v262-supplement.cjs",
+    "scripts/package-v31.cjs",
+    "scripts/package-v32.cjs",
+    "scripts/package-v33.cjs",
+    "scripts/package-v34-account-tasks.cjs",
+    "scripts/package-v34-completion.cjs",
+    "scripts/package-v34-interaction.cjs",
+    "scripts/package-v34-yard.cjs",
+    "scripts/package-v34.cjs",
+    "scripts/prelaunch-production-account.cjs",
+    "scripts/prelaunch-test-reset.cjs",
+    "scripts/prepare-v27-regression.cjs",
+    "scripts/prepare-v34-operator-accounts.cjs",
+    "scripts/report-v34-account-tasks.cjs",
+    "scripts/report-v34-completion.cjs",
+    "scripts/report-v34-interaction.cjs",
+    "scripts/report-v34-yard.cjs",
+    "scripts/run-v27-regression.ps1",
+    "scripts/validate-account-upgrade.cjs",
+    "templates/packing-list/original.xls",
+    "tests/prelaunch-api.cjs",
+    "tests/prelaunch-browser.cjs",
+    "tests/prelaunch-live-browser.cjs",
+    "tests/prelaunch-live.cjs",
+    "tests/prelaunch-reset-guards.cjs",
+    "tests/v262-account-safety.cjs",
+    "tests/v262-accounts-browser.cjs",
+    "tests/v262-accounts-overview.cjs",
+    "tests/v262-flow.cjs",
+    "tests/v262-history.cjs",
+    "tests/v262-i18n-audit.cjs",
+    "tests/v262-live-readonly.cjs",
+    "tests/v262-login-race.cjs",
+    "tests/v262-negative.cjs",
+    "tests/v262-overview-flow.cjs",
+    "tests/v262-release-recovery.cjs",
+    "tests/v262-supplement-flow.cjs",
+    "tests/v265-account-safety.cjs",
+    "tests/v265-accounts-browser.cjs",
+    "tests/v265-accounts-overview.cjs",
+    "tests/v265-concurrency.cjs",
+    "tests/v265-constraints.cjs",
+    "tests/v265-exports.cjs",
+    "tests/v265-flow.cjs",
+    "tests/v265-i18n-audit.cjs",
+    "tests/v265-live-readonly.cjs",
+    "tests/v265-login-race.cjs",
+    "tests/v265-ui.cjs",
+    "tests/v27-account-safety.cjs",
+    "tests/v27-accounts-browser.cjs",
+    "tests/v27-accounts-overview.cjs",
+    "tests/v27-backup-failure.ps1",
+    "tests/v27-browser-audit.cjs",
+    "tests/v27-concurrency.cjs",
+    "tests/v27-constraints.cjs",
+    "tests/v27-corrections.cjs",
+    "tests/v27-differences.cjs",
+    "tests/v27-flow.cjs",
+    "tests/v27-foundation.cjs",
+    "tests/v27-i18n-audit.cjs",
+    "tests/v27-live-data.cjs",
+    "tests/v27-live-readonly.cjs",
+    "tests/v27-login-race.cjs",
+    "tests/v27-map-long-labels.cjs",
+    "tests/v27-read-concurrency.cjs",
+    "tests/v27-regression-flow.cjs",
+    "tests/v27-regression-negative.cjs",
+    "tests/v27-regression-recovery.cjs",
+    "tests/v27-regression-supplement.cjs",
+    "tests/v27-stocktake-movements.cjs",
+    "tests/v27-stocktakes.cjs",
+    "tests/v27-ui.cjs",
+    "tests/v271-browser.cjs",
+    "tests/v271-live-data.cjs",
+    "tests/v271-live-readonly.cjs",
+    "tests/v271-stats.cjs",
+    "tests/v272-browser.cjs",
+    "tests/v272-data-preservation.cjs",
+    "tests/v272-live-readonly.cjs",
+    "tests/v272-optimization.cjs",
+    "tests/v272-permissions.cjs",
+    "tests/v272-tree.cjs",
+    "tests/v30-browser.cjs",
+    "tests/v30-data-preservation.cjs",
+    "tests/v30-functional-api.cjs",
+    "tests/v30-functional-browser.cjs",
+    "tests/v30-functional-db-guards.cjs",
+    "tests/v30-functional-preservation.cjs",
+    "tests/v30-live-readonly.cjs",
+    "tests/v30-map-batches.cjs",
+    "tests/v30-map-controls-browser.cjs",
+    "tests/v30-remainder-browser.cjs",
+    "tests/v30-remainder-contracts.cjs",
+    "tests/v30-remainder-preservation.cjs",
+    "tests/v30-shipping.cjs",
+    "tests/v30-template.cjs",
+    "tests/v31-browser.cjs",
+    "tests/v31-center-browser.cjs",
+    "tests/v31-center-live.cjs",
+    "tests/v31-center-preservation.cjs",
+    "tests/v31-constraints.cjs",
+    "tests/v31-corrections.cjs",
+    "tests/v31-dispatch-history.cjs",
+    "tests/v31-header-api.cjs",
+    "tests/v31-header-browser.cjs",
+    "tests/v31-header-preservation.cjs",
+    "tests/v31-live-browser.cjs",
+    "tests/v31-loading-plans.cjs",
+    "tests/v31-logistics-packing-api.cjs",
+    "tests/v31-logistics-packing-browser.cjs",
+    "tests/v31-logistics-packing-fixture.cjs",
+    "tests/v31-logistics-packing-live.cjs",
+    "tests/v31-logistics-packing-preservation.cjs",
+    "tests/v31-outbound-center.cjs",
+    "tests/v31-plan-access-api.cjs",
+    "tests/v31-plan-access-browser.cjs",
+    "tests/v31-plan-access-fixture.cjs",
+    "tests/v31-plan-access-live.cjs",
+    "tests/v31-plan-access-preservation.cjs",
+    "tests/v31-preservation.cjs",
+    "tests/v31-sales-browser.cjs",
+    "tests/v31-sales-dispatch.cjs",
+    "tests/v31-sales-live.cjs",
+    "tests/v31-sales-preservation.cjs",
+    "tests/v31-single-plan-api.cjs",
+    "tests/v31-single-plan-browser.cjs",
+    "tests/v31-single-plan-live.cjs",
+    "tests/v31-single-plan-preservation.cjs",
+    "tests/v31-single-plan-rules.cjs",
+    "tests/v32-browser-fixture.cjs",
+    "tests/v32-browser.cjs",
+    "tests/v32-correction-browser.cjs",
+    "tests/v32-corrections.cjs",
+    "tests/v32-fixture.cjs",
+    "tests/v32-inventory-control.cjs",
+    "tests/v32-live.cjs",
+    "tests/v32-multi-lot.cjs",
+    "tests/v32-preservation.cjs",
+    "tests/v33-browser.cjs",
+    "tests/v33-guards.cjs",
+    "tests/v33-inventory-depth.cjs",
+    "tests/v33-live.cjs",
+    "tests/v33-preservation.cjs",
+    "tests/v34-account-tasks-api.cjs",
+    "tests/v34-account-tasks-browser.cjs",
+    "tests/v34-account-tasks-live.cjs",
+    "tests/v34-account-tasks-preservation.cjs",
+    "tests/v34-browser.cjs",
+    "tests/v34-completion-book-browser.cjs",
+    "tests/v34-completion-browser.cjs",
+    "tests/v34-completion-extra-browser.cjs",
+    "tests/v34-completion-flow.cjs",
+    "tests/v34-completion-live.cjs",
+    "tests/v34-completion-preservation.cjs",
+    "tests/v34-completion-readonly.cjs",
+    "tests/v34-completion-template.cjs",
+    "tests/v34-dispatch-smart.cjs",
+    "tests/v34-interaction-detail.cjs",
+    "tests/v34-interaction-layout.cjs",
+    "tests/v34-interaction-live.cjs",
+    "tests/v34-interaction-preservation.cjs",
+    "tests/v34-interaction-regression.cjs",
+    "tests/v34-interaction-template.cjs",
+    "tests/v34-live.cjs",
+    "tests/v34-management.cjs",
+    "tests/v34-preservation.cjs",
+    "tests/v34-readonly.cjs",
+    "tests/v34-sales-plan-route.cjs",
+    "tests/v34-temporal.cjs",
+    "tests/v34-yard-browser.cjs",
+    "tests/v34-yard-live.cjs",
+    "tests/v34-yard-preservation.cjs",
+    "tests/v34-yard-readonly.cjs",
+    "tests/v34-yard-workflow.cjs"
+  ],
+  "localHistoricalFilesRetained": true
+}

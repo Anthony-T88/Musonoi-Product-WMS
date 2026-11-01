@@ -32,5 +32,6 @@
       'xl/worksheets/sheet1.xml':`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="14" customWidth="1"/><col min="2" max="5" width="26" customWidth="1"/><col min="6" max="9" width="17" customWidth="1"/></cols><sheetData>${sheet}</sheetData><autoFilter ref="A1:I${rows.length+1}"/></worksheet>`
     });
   }
-  const api={data,query,totals,csv,xlsx,matrix};root.Inventory=api;if(typeof module!=='undefined')module.exports=api;
+  function samplingState(r){if(r.sample_required===true)return ['RETURNED','WEIGHED'].includes(r.lot_sample_stage)?'完成取样':'取样/待取样';if(r.sample_required===false)return '无需取样';return r.sample==='已取样'?'完成取样':r.sample==='取样中'?'取样/待取样':'未取样';}
+  const api={data,query,totals,csv,xlsx,matrix,samplingState};root.Inventory=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

@@ -6,7 +6,8 @@ if(fs.existsSync(path.join(root,'.env')))process.loadEnvFile(path.join(root,'.en
 function config(){
  const environment=process.env.APP_ENV||'test';
  if(!['test','production'].includes(environment))throw Error('APP_ENV must be test or production');
+ if(environment==='production'&&(!process.env.APP_ORIGIN||!process.env.APP_ORIGIN.startsWith('https://')))throw Error('Production requires an explicit HTTPS APP_ORIGIN');
  if(!process.env.DATABASE_URL)throw Error('DATABASE_URL is required; there is no mock fallback');
- return {root,environment,databaseUrl:process.env.DATABASE_URL,host:'127.0.0.1',port:Number(process.env.PORT||4174),secure:environment==='production'||(process.env.APP_ORIGIN||'').startsWith('https://'),origin:process.env.APP_ORIGIN||'http://127.0.0.1:4174'};
+ return {root,environment,databaseUrl:process.env.DATABASE_URL,host:process.env.HOST||'127.0.0.1',port:Number(process.env.PORT||4174),secure:environment==='production'||(process.env.APP_ORIGIN||'').startsWith('https://'),origin:process.env.APP_ORIGIN||'http://127.0.0.1:4174'};
 }
 module.exports={root,config};

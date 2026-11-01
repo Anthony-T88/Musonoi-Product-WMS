@@ -448,3 +448,42 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 区=Region
 格=Cells
 `.trim().split('\n').map(x=>{const i=x.indexOf('=');return [x.slice(0,i),x.slice(i+1)];})));
+
+Object.assign(TRANSLATIONS.en,{
+  "吨": "MT",
+  "新建备货单": "New Lot Preparation",
+  "新建入库单": "New Inbound Order",
+  "已知库存净重": "Known Inventory Net Weight",
+  "本期正式出库批次数": "Outbound Batches This Period",
+  "本期正式出库捆包数": "Outbound Bundles This Period",
+  "批": "batches",
+  "溢短装（%）": "Quantity Tolerance (%)",
+  "备货月份": "Preparation Month",
+  "计划备货批次数量": "Planned Lot Count",
+  "允许最大净重": "Maximum Allowed Net Weight",
+  "最低允许净重": "Minimum Allowed Net Weight",
+  "当前累计有效净重": "Effective Net Weight",
+  "尚未出库的有效分配净重": "Assigned Net Weight Awaiting Outbound",
+  "已正式出库净重": "Posted Outbound Net Weight",
+  "剩余可用净重额度": "Remaining Net Weight Allowance",
+  "已使用Lot数量": "Used Lot Count",
+  "剩余可创建Lot数量": "Remaining Lot Count",
+  "重量尚未完全确定": "Weight Is Not Yet Fully Known",
+  "请补齐计划控制字段": "Complete the Plan Control Fields",
+  "装车待审核": "Loading Pending Review",
+  "正式出库待审批": "Pending Final Outbound Approval",
+  "已驳回/待整改": "Rejected / Rectification Required",
+  "编号冲突，请核对以下记录": "Number conflict; check the following records",
+  "编号验证暂不可用，请重新检查": "Number validation unavailable; please check again",
+  "销售计划数量超限，已保留真实检斤数据": "Sales plan quantity exceeded; actual weighing data has been retained",
+  "符合完成条件": "Eligible for Completion",
+  "尚不符合完成条件": "Not Yet Eligible for Completion",
+  "当前筛选": "Current Filter"
+});
+
+Object.assign(TRANSLATIONS.en,{'已释放净重':'Released Net Weight','修改入库草稿':'Edit Inbound Draft','装车':'Loading','出库':'Outbound','待主管审核':'Pending Supervisor Review','计划净重':'Planned Net Weight'});
+Object.assign(TRANSLATIONS.en,{'计划目标净重（吨，最多四位小数）':'Planned Net Weight (MT, up to 4 decimal places)'});
+
+Object.assign(TRANSLATIONS.en,{'未完成检斤为交叉指标，不参与阶段状态合计。':'Weighing incomplete is a cross-cutting measure, excluded from stage totals.'});
+
+Object.assign(TRANSLATIONS.en,{"库存视图":"Inventory View","当前在库":"Current Inventory","全部历史":"All History","Lot编号":"Lot Number","正式货位总数":"Total Formal Locations","已占用正式货位数":"Occupied Formal Locations","空闲正式货位数":"Free Formal Locations","临时堆存区":"Temporary Storage Area","全屏查看":"Full Screen","完整地图":"Fit Complete Map","客户高亮":"Highlight Customer","货位状态":"Location Status","Lot编号定位":"Find Lot","客户备货统计":"Customer Preparation Summary","活跃备货单数量":"Active Lots","备货锁定净重（吨）":"Locked Net Weight (MT)","已装车待出库净重（吨）":"Loaded / Pending Outbound Net Weight (MT)","当前备货合计净重（吨）":"Current Prepared Net Weight (MT)","捆未完成检斤":"bundles awaiting weighing","当前授权范围无活跃备货":"No active preparation in the authorized scope","仅当前有效分配及已装车待正式出库；未知重量单独提示，历史已出库不计入。":"Current active assignment and loaded goods awaiting final outbound only; unknown weights are flagged; historical outbound is excluded.","当前有效Lot":"Current Active Lot","规划锁定不等于本货位实物；已装车货物不重复计入原货位。":"Planned assignment differs from physical storage; loaded goods are excluded from their previous location."});

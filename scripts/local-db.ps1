@@ -26,7 +26,7 @@ switch($Action) {
  'start' {
   & (Join-Path $PgBin 'pg_ctl.exe') -D $dataPath status *> $null
   if($LASTEXITCODE -eq 0) { Write-Output 'Project PostgreSQL is already running.'; break }
-  Invoke-Pg 'pg_ctl.exe' @('-D',$dataPath,'-l',(Join-Path $runtimePath 'postgres.log'),'-o','-h 127.0.0.1 -p 55432','-w','start')
+  Invoke-Pg 'pg_ctl.exe' @('-D',$dataPath,'-l',(Join-Path $runtimePath 'postgres.log'),'-o','-h 127.0.0.1 -p 55432','-t','600','-w','start')
  }
  'stop' { Invoke-Pg 'pg_ctl.exe' @('-D',$dataPath,'-m','fast','-w','stop') }
  'status' { Invoke-Pg 'pg_ctl.exe' @('-D',$dataPath,'status') }
