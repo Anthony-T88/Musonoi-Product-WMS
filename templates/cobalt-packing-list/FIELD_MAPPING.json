@@ -1,0 +1,47 @@
+{
+  "template": "Commercial INV+PL RMM-CO-09-2026.xlsx",
+  "sheet": "PL",
+  "approval": "user explicitly confirmed PL-only layout and omitted metal/grade fields",
+  "sha256": "669728e8b9534f6182511a8f24c4c67439815e3d458ad64cde2a709e7dfafdfb",
+  "fields": {
+    "E3": "co_outbounds.snapshot.plan.packing_list_no",
+    "E4": "immutable co_preparations.preparation_batch_no",
+    "E5": "co_outbounds.snapshot.contract.contract_no",
+    "E6": "co_outbounds.snapshot.plan.export_license_no",
+    "E7": "frozen departure.departed_at in Africa/Lubumbashi; original template date display",
+    "E8": "approved template country-of-origin constant",
+    "E9": "frozen contract.terms_of_sale; absent in current contract schema, so blank",
+    "E14": "frozen order.transport_snapshot.transporter",
+    "E15": "frozen plan.destination",
+    "A22": "frozen customer.name",
+    "A24": "frozen customer.address/email/phone",
+    "E22": "frozen transport.truck_no",
+    "E23": "frozen transport.trailer_one",
+    "E24": "frozen transport.trailer_two or blank",
+    "E25": "frozen transport.driver_name",
+    "E26": "frozen transport.passport_no",
+    "E27": "frozen transport.container_no or blank",
+    "A30:A(n+29)": "sequential display index",
+    "B30:B(n+29)": "approved Cobalt Hydroxide description",
+    "C30:D(n+29)": "co_outbound_bags.bag_snapshot.bag_no, original merged Bag No field",
+    "E30:E(n+29)": "frozen seal_no as text, retaining leading zeroes",
+    "F30:F(n+29)": "frozen actual_net_kg, no recalculation",
+    "G30:G(n+29)": "frozen actual_gross_kg",
+    "F(n+30)": "frozen whole-batch actual_net_kg total",
+    "G(n+30)": "frozen whole-batch actual_gross_kg total"
+  },
+  "notPrinted": [
+    "cobalt_grade_pct",
+    "arecoms_input",
+    "production_batch_code"
+  ],
+  "notPrintedRetained": "batch metal and grade retained in immutable archive snapshot; production linkage retained per bag",
+  "precision": {
+    "arecomsRaw": "original V3.9 manual text preserved exactly",
+    "arecomsManagement": "four decimal display only",
+    "arecomsFile": "not printed because original PL has no field",
+    "weightsRaw": "frozen source values retained; spreadsheet uses original kg units",
+    "weightsDisplay": "original template detail/general and whole-kg total display; no source rounding"
+  },
+  "layout": "original field order, merged headers, logo, certification and blank signature areas; expand rows, preserve A4 portrait, repeat row29 and fit width with automatic page count"
+}

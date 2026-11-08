@@ -1,0 +1,7 @@
+{
+  "approvedByUser": true,
+  "approvedDate": "2026-11-02",
+  "scope": "Four stocktake sections; original input and audit fields preserved",
+  "sha256": "09088b3e1bb4c386d0da542c0e4e731a4b343a44998db282f33a2da127cfad3d",
+  "runtime": "Existing data queries and ExcelJS; sample values are not used for business data"
+}

@@ -1,0 +1,7 @@
+{
+  "approvedByUser": true,
+  "approvedDate": "2026-11-02",
+  "scope": "Nine professional report sections",
+  "sha256": "f8f651fd108f8bef7192565187581adfcfa89360aee922130c0be9c06ee95a6d",
+  "runtime": "Existing data queries and ExcelJS; sample values are not used for business data"
+}

@@ -1,0 +1,9 @@
+:root{--loading-filters469-ready:1}
+html[data-release-ui="46"] .r9-document-filter{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:14px!important;align-items:end!important;min-width:0}
+html[data-release-ui="46"] .r9-document-filter>.form-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;min-width:0;margin:0!important;width:100%}
+html[data-release-ui="46"] .r9-document-filter label{min-width:0!important;margin:0!important;display:grid!important;gap:8px}
+html[data-release-ui="46"] .r9-document-filter :is(input,select){width:100%!important;min-width:0!important;box-sizing:border-box}
+html[data-release-ui="46"] .r9-document-filter .r9-filter-actions{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:6px!important;margin:0!important;padding:0!important;white-space:nowrap;min-width:0}
+html[data-release-ui="46"] .r9-document-filter .r9-filter-actions .button{display:inline-flex!important;align-items:center;justify-content:center;white-space:nowrap!important;width:auto!important;min-width:0!important;flex:0 1 auto!important;padding:10px 9px!important;font-size:12px!important;box-sizing:border-box}
+@media(max-width:850px){html[data-release-ui="46"] .r9-document-filter{grid-template-columns:minmax(0,1fr)}html[data-release-ui="46"] .r9-document-filter .r9-filter-actions{justify-content:flex-end!important}html[data-release-ui="46"] .r9-document-filter>.form-grid{gap:8px!important}}
+@media(max-width:420px){html[data-release-ui="46"] .r9-document-filter>.form-grid{grid-template-columns:minmax(0,1fr)!important}html[data-release-ui="46"] .r9-document-filter .r9-filter-actions .button{font-size:11px!important;padding:9px 6px!important}}

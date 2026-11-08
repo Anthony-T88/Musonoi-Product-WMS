@@ -1,0 +1,9 @@
+# Maintenance-only private file. Never mount in app container.
+DATABASE_OWNER_URL=postgresql://migration_owner:URL_ENCODED_OWNER_SECRET@private-db.example.internal:5432/musonoi_production
+APP_DB_PASSWORD=REPLACE_WITH_UNIQUE_APP_SECRET_AT_LEAST_24_CHARACTERS
+DB_ALLOWED_HOSTS=private-db.example.internal
+DB_EXPECTED_NAME=musonoi_production
+PRODUCTION_BACKUP_VERIFIED=no
+
+# Default16. Change to17 only after real PG17 compatibility acceptance.
+DB_EXPECTED_MAJOR=16

@@ -1,0 +1,172 @@
+:root{--ui46-styles-ready:1;--wms-body-size:14px;--wms-control-size:14px;--wms-space:8px;}
+/* V4.6: approved all-page design. Every rule is screen-only and excludes the
+   copper stock-map page, which retains the exact V4.5.2 presentation. */
+@media screen{
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]){--u46-green:#267344;--u46-ink:#1d2228;--u46-muted:#748078;--u46-line:#e5e8eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei UI','Microsoft YaHei',sans-serif;color:var(--u46-ink);background:#f6f7f9;font-size:14px;-webkit-font-smoothing:antialiased}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .workspace{background:#f6f7f9}
+html[data-release-ui="46"] body .sidebar{background:#f0f2f4;border-right:1px solid #e0e4e8;padding:22px 16px 14px;box-shadow:none}
+html[data-release-ui="46"] body .sidebar .brand{gap:7px;padding-bottom:20px;border:0}
+html[data-release-ui="46"] body .sidebar .brand-logo{width:146px;max-height:135px;object-fit:contain;background:white;padding:3px;border-radius:5px;mix-blend-mode:normal}
+html[data-release-ui="46"] body .brand-system{font-size:16px;font-weight:650;color:#253029;letter-spacing:0;white-space:nowrap}
+html[data-release-ui="46"] body .brand-project{font-size:12px;color:#758177}
+html[data-release-ui="46"] body .sidebar .project-label{color:#929b9f;font-size:10px;letter-spacing:1px}
+html[data-release-ui="46"] body .sidebar nav{gap:4px}
+html[data-release-ui="46"] body .sidebar nav>a{padding:7px 12px;gap:12px;color:#56636a;border-radius:8px;font-size:13px;font-weight:450;min-height:var(--ux10-nav-row,38px)}
+html[data-release-ui="46"] body .sidebar nav>a.nav-active{background:#e0eddc;color:#265e35;font-weight:650}
+html[data-release-ui="46"] body .product-switch{border:1px solid #cfd7dc;border-radius:8px;padding:3px;background:#fafbfc}
+html[data-release-ui="46"] body .product-switch button[aria-pressed=true]{background:#347b43;color:white}
+html[data-release-ui="46"] body .topbar{min-height:62px;background:white;border-bottom:1px solid var(--u46-line);box-shadow:none;padding:12px 30px}
+html[data-release-ui="46"] body .top-actions{gap:13px;font-size:12px}
+html[data-release-ui="46"] body .top-actions :is(.text-button,#signed-user,.system-language){font-size:11px;color:#6b777f}
+html[data-release-ui="46"] body .top-actions .task-trigger{background:#eef4ea;color:#58724e;border-color:#e0e9d9;box-shadow:none}
+html[data-release-ui="46"] body :is(main,.dashboard){padding:30px 30px 18px;min-width:0}
+html[data-release-ui="46"] body .page-heading{margin-bottom:24px;align-items:center;gap:20px}
+html[data-release-ui="46"] body .page-heading h1{font-size:32px;font-weight:650;color:#1d2228;letter-spacing:-.8px;line-height:1.3}
+html[data-release-ui="46"] body .eyebrow{font-size:10px;letter-spacing:1.3px;font-weight:500;color:#7f8d83}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .business-page-panel{padding:0;background:transparent;border:0;box-shadow:none;border-radius:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.button,button.primary,button.secondary){min-height:38px;border-radius:7px;padding:9px 14px;font-size:12px;font-weight:500;box-shadow:0 1px 1px #20312403;white-space:nowrap}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.button.primary,button.primary){background:#267344;border:1px solid #267344;color:white}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.button.primary,button.primary):hover{background:#1e6239;border-color:#1e6239}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.button.secondary,button.secondary){background:#fff;border:1px solid #d2d9df;color:#4d5963}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.button.compact,.compact){min-height:29px;padding:5px 9px;font-size:11px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border:1px solid #d8dee3;border-radius:7px;background:#fff;color:#34443d;box-shadow:0 1px 1px #15232903;font-family:inherit;font-size:12px;min-height:38px;padding:9px 11px;max-width:100%}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(input,select,textarea):focus-visible{outline:2px solid #548d5d55;outline-offset:2px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(label,.filters label){font-size:12px;color:#52635b;font-weight:400}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .form-grid{gap:21px 24px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.panel,.ui46-card,.ui46-table-card,.co-report-section,.v34-overview-section){border:1px solid #e5e8eb;border-radius:12px;box-shadow:none;background:white;margin-bottom:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-card{padding:22px;min-width:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-card>.ui46-card{padding:0;border:0;box-shadow:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-section-title{font-size:18px;font-weight:620;letter-spacing:-.3px;line-height:1.5;margin:0 0 20px;color:#25332b}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(h2,.panel-heading h2){font-size:18px;font-weight:620;letter-spacing:-.3px;color:#25332b}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) h3{font-size:15px;font-weight:600;color:#435747}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.business-toolbar,.co-actions){gap:9px;align-items:center;margin:18px 0;flex-wrap:wrap}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.filters,.filter-form,.co-stock-filter,.ui46-filter){padding:17px 18px;background:white;border:1px solid #e5e8eb;border-radius:10px;margin-bottom:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.business-table,.table-scroll,.account-table-scroll,.v34-table-wrap){border:1px solid #e5e8eb;border-radius:9px;background:#fff;max-width:100%;overflow:auto}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.business-table,.table-scroll,.account-table-scroll,.v34-table-wrap) table{font-size:12px;font-variant-numeric:tabular-nums}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.business-table,.table-scroll,.account-table-scroll,.v34-table-wrap) th{font-size:11px;font-weight:500;padding:13px 12px;white-space:nowrap;background:#f5f7f8;color:#6c7982;border-bottom:1px solid #e7ebee}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.business-table,.table-scroll,.account-table-scroll,.v34-table-wrap) td{font-size:var(--wms-body-size);padding:16px 12px;white-space:nowrap;vertical-align:middle;line-height:1.5;border-bottom:1px solid #edf0f2;color:#3e4d45}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.business-table,.table-scroll,.account-table-scroll,.v34-table-wrap) td a:not(.button){color:#377442;font-size:11px;font-weight:500}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.v34-state,.status-pill,.co-state,.op-badge){padding:4px 8px;border:0;border-radius:5px;font-size:11px;font-weight:500;background:#edf4e9;color:#377242;white-space:nowrap}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.attention,.status-pending,.op-badge.pending){background:#fff4dd;color:#93652d}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.rejected,.status-rejected){background:#fbeeee;color:#a45050}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.muted,.status-muted,.op-badge.muted){background:#f1f3f5;color:#83909a}
+/* Center statistics everywhere outside the protected copper map. */
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.metric,.map-metric,.v34-kpi,.co-stock-metrics article,.op-stats>a,.co-metric,.co-execution-metric,.yard-kpi){text-align:center;align-items:center;justify-items:center;justify-content:center;min-width:0;box-shadow:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.metric,.map-metric,.v34-kpi,.co-stock-metrics article,.op-stats>a) :is(span,strong,small,p){text-align:center;width:auto;max-width:100%;margin-left:auto;margin-right:auto}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.v34-kpi,.metric,.co-stock-metrics article){padding:20px;border-color:#e5e8eb;border-radius:12px;display:flex;flex-direction:column;gap:7px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.v34-kpi strong,.metric strong,.co-stock-metrics strong,.op-stats strong){font-size:28px;line-height:1.25;font-weight:620;letter-spacing:-.7px;font-variant-numeric:tabular-nums}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.v34-kpi>span,.metric>span,.co-stock-metrics article>span,.op-stats>a>span){font-size:12px;color:#76818b;white-space:nowrap}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .v34-card-arrow{display:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .v34-overview-section>.v34-kpi-grid .v34-kpi{padding:12px 15px;border-radius:0;justify-content:flex-start}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-charts{gap:20px;grid-template-columns:minmax(0,1.35fr) minmax(330px,1fr)}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-chart{padding:22px;border-color:#e5e8eb;border-radius:12px;box-shadow:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-chart h2{font-size:18px;color:#25332b}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-ring-total{font-size:22px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-workspace{padding:0;border:0;background:transparent}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-split{gap:20px;grid-template-columns:minmax(0,1fr) 340px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-heading{margin-bottom:20px;min-height:38px;align-items:center}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-heading>p{font-size:11px;color:#748078}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats{gap:0;border:1px solid #e5e8eb;border-radius:12px;background:white;padding:20px 4px;margin-bottom:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a{border:0;border-radius:0;padding:0 14px;background:white;display:flex;flex-direction:column;gap:9px;position:relative;box-shadow:none;min-height:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a+a{border-left:1px solid #e6e9ec}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a[aria-current=true]:after{content:'';width:38px;height:3px;position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);border-radius:2px;background:#4e8655}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-filter{padding:17px 18px;margin-bottom:20px;border-radius:10px;gap:12px;background:white;border-color:#e5e8eb}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-list-pane{border:1px solid #e5e8eb;border-radius:12px;background:#fff;overflow:hidden}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-list-meta{padding:16px 15px;color:#829087;min-height:54px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-table th{font-size:11px;font-weight:500;padding:13px 12px;color:#6c7982;background:#f5f7f8}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-table td{padding:17px 12px;font-size:var(--wms-body-size);line-height:1.5;border-color:#edf0f2}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-table tr[aria-selected=true] td{background:#eef5e9}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-table tr[aria-selected=true] td:first-child{box-shadow:inset 3px 0 #78a16d}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-preview{border:1px solid #dfe7df;border-radius:12px;background:#fff}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-preview-head{padding:20px;border-color:#e6ebe6}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-preview-body{padding:19px 20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-preview-head h2{font-size:16px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-preview-footer{padding:17px 20px;border-color:#e8ece8}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-flow-label{font-size:9px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-flow-person{font-size:8px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start;min-width:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-layout.ui46-single-column{grid-template-columns:minmax(0,1fr)}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.ui46-main-column,.ui46-side-column){min-width:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.ui46-main-column,.ui46-side-column)>.business-toolbar:first-child{margin-top:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-summary-list{margin:0;font-size:12px;display:block}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-summary-list>div{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-bottom:1px solid #edf0f2;min-width:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-summary-list dt{font-size:11px;color:#72816f;min-width:0;max-width:50%;font-weight:400;line-height:1.6;white-space:normal}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-summary-list dd{font-size:11px;color:#435744;text-align:right;margin:0;min-width:0;overflow-wrap:anywhere;font-weight:450;line-height:1.6}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-guidance{font-size:12px;color:#829078;line-height:1.9;margin:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dl.ui46-summary-data{padding:22px;border:1px solid #e5e8eb;border-radius:12px;background:#fff;display:grid;grid-template-columns:minmax(100px,.65fr) minmax(0,1fr) minmax(100px,.65fr) minmax(0,1fr);gap:0;margin:0 0 20px;align-items:stretch}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dl.ui46-summary-data :is(dt,dd){padding:13px 10px;border-bottom:1px solid #edf0f2;margin:0;min-width:0;font-size:12px;overflow-wrap:anywhere}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dl.ui46-summary-data dt{color:#809077;font-size:11px;font-weight:400}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-action-card :is(form,.user-form,.business-toolbar){padding:0;border:0;box-shadow:none;background:transparent;margin-bottom:0}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-action-card :is(.form-grid,.business-toolbar){display:flex;flex-direction:column;align-items:stretch;gap:12px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.ux10-workflow,.ui46-flow){padding:22px;background:#fff;border:1px solid #e5e8eb;border-radius:12px;margin-bottom:20px;box-shadow:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ux10-flow-circle{width:28px;height:28px;border-radius:50%;font-size:11px;border-color:#d8e1d6;background:white;color:#96a28f}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ux10-workflow .done .ux10-flow-circle{background:#6f9c61;border-color:#6f9c61;color:white}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ux10-workflow .current .ux10-flow-circle{background:#fff;border:2px solid #6f9c61;color:#427434;box-shadow:0 0 0 4px #edf4e8}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ux10-flow-line{height:2px;background:#e1e7e2}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ux10-flow-label{font-size:12px;font-weight:500;color:#455c41}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs{display:flex;align-items:center;gap:22px;flex-wrap:wrap;border-bottom:1px solid #dfe5e8;margin:4px 0 22px;padding:0 4px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs button{background:transparent;border:0;border-radius:0;padding:11px 0 15px;position:relative;color:#82909a;font-size:12px;white-space:nowrap;cursor:pointer}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs button[aria-selected=true]{color:#2c6e3e;font-weight:600}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs button[aria-selected=true]:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:2px;background:#387c45}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-section{padding:22px;background:#fff;border:1px solid #e5e8eb;border-radius:12px;margin-bottom:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-section[hidden]{display:none!important}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .co-overview-page>.co-stock-metrics{margin-bottom:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .dialog-notice{background:#f5f8f2;border:1px solid #e1eadb;border-radius:7px;padding:15px 18px;color:#738369;line-height:1.8;font-size:11px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dialog{border:1px solid #d9dfdc;border-radius:15px;background:white;box-shadow:0 25px 70px #27322a25;max-width:calc(100vw - 32px)}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dialog::backdrop{background:#35404955;backdrop-filter:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .dialog-header{padding:22px 26px;border-bottom:1px solid #e8ece9;background:white}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #dialog-content{padding:24px 26px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) footer{font-size:10px;color:#9ca6a0;border-color:#e8ece5}
+html[data-release-ui="46"] #login-panel:not([hidden]){display:grid;grid-template-columns:1.07fr 1fr;align-items:stretch;justify-content:stretch;padding:0;background:#fafbf9;backdrop-filter:none;overflow:auto}
+html[data-release-ui="46"] .ui46-login-intro{display:flex;flex-direction:column;justify-content:space-between;padding:60px 70px;background:#eef2eb;position:relative;overflow:hidden}
+html[data-release-ui="46"] .ui46-login-intro>img{width:190px;height:165px;object-fit:contain;mix-blend-mode:normal;position:relative;z-index:1}
+html[data-release-ui="46"] .ui46-login-intro>div{position:relative;z-index:1;margin:60px 0}
+html[data-release-ui="46"] .ui46-login-intro>div>span{font-size:10px;letter-spacing:2px;color:#8b9d83}
+html[data-release-ui="46"] .ui46-login-intro h2{font-size:49px;line-height:1.45;letter-spacing:1px;font-weight:500;color:#2f4b32;margin:28px 0 20px}
+html[data-release-ui="46"] .ui46-login-intro p{font-size:18px;letter-spacing:3px;color:#81917a}
+html[data-release-ui="46"] .ui46-login-intro>small{font-size:11px;color:#9caa93}
+html[data-release-ui="46"] .ui46-login-intro:after{content:'';width:650px;height:650px;border:1px solid #dbe4d5;border-radius:50%;position:absolute;right:-230px;bottom:-410px;box-shadow:0 0 0 60px #e7ede2,0 0 0 61px #dbe4d5,0 0 0 121px #dbe4d5}
+html[data-release-ui="46"] .ui46-brand-flow{display:flex;align-items:center;gap:16px;color:#859879;font-size:12px;margin-top:48px}
+html[data-release-ui="46"] .ui46-brand-flow>b{font-weight:400}
+html[data-release-ui="46"] .ui46-brand-flow>i{width:30px;border-top:1px solid #b1c0a7}
+html[data-release-ui="46"] #login-panel .login-card{width:100%;max-width:520px;margin:auto;align-self:center;border:0;box-shadow:none;background:transparent;border-radius:0;padding:42px 60px;backdrop-filter:none}
+html[data-release-ui="46"] .login-card>.login-logo{display:none}
+html[data-release-ui="46"] .login-card h1{font-size:28px;font-weight:600;letter-spacing:-.6px;color:#23362a;text-align:left}
+html[data-release-ui="46"] .login-card .login-project{text-align:left;font-size:13px;margin-top:12px;color:#8a9881}
+html[data-release-ui="46"] .login-card .login-version{justify-content:flex-start;color:#96a18d;font-size:11px;margin-top:12px}
+html[data-release-ui="46"] #login-form{margin-top:28px;gap:23px}
+html[data-release-ui="46"] #login-form label{text-align:left;color:#65785b;font-size:12px}
+html[data-release-ui="46"] #login-form input{height:45px;background:white;border:1px solid #d8e1d1;border-radius:7px;padding:11px 13px;color:#3c5430;font-size:13px}
+html[data-release-ui="46"] #login-form>.button{height:45px;margin-top:7px;background:#267344;color:white;border:1px solid #267344;border-radius:7px}
+html[data-release-ui="46"] #login-safety-note,html[data-release-ui="46"] #login-environment{font-size:11px;text-align:left;color:#8d9c83;line-height:1.8}
+html[data-release-ui="46"] .login-card .copyright-notice{font-size:10px;color:#a1ad98;margin-top:28px}
+html:not([data-release-ui="46"]) .ui46-login-intro{display:none!important}
+@media(max-width:1400px){html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:24px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a{padding:8px 12px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a[aria-current=true]:after{bottom:-8px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-charts{grid-template-columns:minmax(0,1fr) minmax(300px,1fr)}}
+@media(max-width:1180px){html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-charts{grid-template-columns:minmax(0,1fr)}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-layout{grid-template-columns:minmax(0,1fr) 290px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dl.ui46-summary-data{grid-template-columns:minmax(90px,.6fr) minmax(0,1fr)}}
+@media(max-height:780px) and (min-width:901px){html[data-release-ui="46"] body .sidebar{padding:12px}html[data-release-ui="46"] body .sidebar .brand-logo{width:76px;max-height:74px}html[data-release-ui="46"] body .sidebar .brand{padding-bottom:7px;gap:3px}html[data-release-ui="46"] body .sidebar nav{gap:2px}html[data-release-ui="46"] body .sidebar nav>a{font-size:12px;padding:4px 9px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui452-appearance{padding:4px}}
+@media(max-height:650px) and (min-width:901px){html[data-release-ui="46"] body .sidebar .brand-logo{width:45px;max-height:45px}html[data-release-ui="46"] body .sidebar .brand-project{display:none}}
+@media(max-width:1050px){html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.op-split,.ui46-layout){grid-template-columns:minmax(0,1fr)}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-side-column{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-list-scroll{max-height:none!important}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-preview{max-height:none!important}}
+@media(max-width:900px){html[data-release-ui="46"] body :is(main,.dashboard){padding:22px 16px}html[data-release-ui="46"] body .topbar{padding:10px 16px}html[data-release-ui="46"] body .page-heading h1{font-size:26px}html[data-release-ui="46"] .ui46-login-intro{padding:36px}html[data-release-ui="46"] .ui46-login-intro h2{font-size:35px}html[data-release-ui="46"] #login-panel .login-card{padding:36px}}
+@media(max-width:600px){html[data-release-ui="46"] body .page-heading h1{font-size:24px}html[data-release-ui="46"] body .page-heading{align-items:flex-start}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-side-column{display:block}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.ui46-card,.ui46-report-section){padding:17px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs{gap:18px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.form-grid,.filter-grid){grid-template-columns:minmax(0,1fr)}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a{border-left:0}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats>a>span{font-size:11px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats strong{font-size:25px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-summary-data{padding:17px}html[data-release-ui="46"] #login-panel:not([hidden]){display:flex;align-items:center;min-height:100dvh}html[data-release-ui="46"] .ui46-login-intro{display:none}html[data-release-ui="46"] #login-panel .login-card{padding:30px;max-width:430px}html[data-release-ui="46"] .login-card>.login-logo{display:block;width:110px;height:100px;object-fit:contain;margin:0 0 28px}html[data-release-ui="46"] #dialog-content{padding:20px}html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ux10-flow-label{font-size:10px}}
+}
+@media print{.ui46-login-intro,.ui46-side-column,.ui46-report-tabs{display:none!important}.ui46-layout{display:block!important}.ui46-report-section[hidden]{display:block!important}}
+@media screen{
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content.ui46-content{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content :is(.ux10-sales,.co-page,.co-sales-page,.co-reports-page){padding:0;background:transparent;border:0;box-shadow:none}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs{display:flex!important;flex-direction:row!important;align-items:center!important}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs button{width:auto!important;flex:0 0 auto!important;min-width:0!important;border:0;background:transparent}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-report-tabs button[aria-pressed=true]{color:#2c6e3e;font-weight:600;box-shadow:inset 0 -3px #387c45}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-main-column .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.yard-counts>*,.shipping-kpis>*,.v261-summary>*,.receipt-bundle-total,.co-report-metrics>*,.co-metrics article){text-align:center;align-items:center;justify-content:center}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.yard-counts,.shipping-kpis,.co-report-metrics){gap:16px;margin-bottom:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) :is(.yard-counts>*,.shipping-kpis>*,.co-report-metrics>*){background:white;border:1px solid #e5e8eb;border-radius:12px;padding:20px}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-overview-tabs button{cursor:pointer}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-overview-group[hidden]{display:none!important}
+@media(max-width:600px){html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .ui46-main-column .form-grid{grid-template-columns:minmax(0,1fr)}}
+}@media screen and (min-width:901px){
+html[data-release-ui="46"] body .sidebar nav{gap:2px;min-height:0;overflow:hidden}
+html[data-release-ui="46"] body .sidebar nav>a{flex:1 1 0!important;height:auto!important;min-height:0!important;max-height:35px;line-height:1.25;overflow:hidden;padding-top:4px;padding-bottom:4px}
+}
+@media screen and (min-width:901px) and (max-height:650px){
+html[data-release-ui="46"] body .sidebar nav>a{padding-top:2px;padding-bottom:2px;line-height:1.15}
+}@media screen and (min-width:1401px){html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .op-stats-4{grid-template-columns:repeat(4,minmax(0,1fr))}}@media screen{html[data-release-ui="46"]:lang(en) body .product-switch button{font-size:11px;letter-spacing:-.15px;padding-left:2px;padding-right:2px;white-space:nowrap;min-width:0}}

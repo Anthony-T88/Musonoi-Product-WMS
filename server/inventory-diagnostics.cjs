@@ -1,0 +1,18 @@
+'use strict';
+// Shared read-only inventory diagnostics for the overview warning centre.
+const checks=[
+ ['DUPLICATE_BUNDLE','HIGH',"SELECT v265_bundle_key(bundle_no) entity,jsonb_agg(bundle_no) evidence FROM bundles GROUP BY v265_bundle_key(bundle_no) HAVING count(*)>1"],
+ ['HISTORICAL_SEAL_CONFLICT','HIGH',"SELECT seal_key entity,sources evidence FROM seal_number_registry WHERE conflicted"],
+ ['DOUBLE_RESERVATION','CRITICAL',"SELECT bundle_id::text entity,jsonb_agg(allocation_id) evidence FROM reservations WHERE released_at IS NULL GROUP BY bundle_id HAVING count(*)>1"],
+ ['OUTBOUND_STILL_RESERVED','CRITICAL',"SELECT b.bundle_no entity,jsonb_build_object('reservation',r.id) evidence FROM bundles b JOIN reservations r ON r.bundle_id=b.id AND r.released_at IS NULL WHERE b.physical_status='OUTBOUND'"],
+ ['WEIGHT_RULE_MISMATCH','HIGH',"SELECT bundle_no entity,jsonb_build_object('gross_weight',gross_weight,'net_weight',net_weight,'packaging_weight',packaging_weight) evidence FROM bundles WHERE gross_weight IS NOT NULL AND(net_weight IS DISTINCT FROM gross_weight-0.0025 OR packaging_weight IS DISTINCT FROM 0.0025)"],
+ ['FORMAL_CUSTOMER_MIX','HIGH',"SELECT l.code entity,jsonb_agg(DISTINCT coalesce(p.customer_id,b.customer_id)) evidence FROM bundles b JOIN locations l ON l.id=b.location_id LEFT JOIN reservations r ON r.bundle_id=b.id AND r.released_at IS NULL LEFT JOIN allocations a ON a.id=r.allocation_id LEFT JOIN sales_plans p ON p.id=a.plan_id WHERE l.map_usage='FORMAL' AND b.physical_status='IN_STOCK' AND NOT EXISTS(SELECT 1 FROM loading_items li JOIN loading_orders lo ON lo.id=li.loading_id WHERE li.bundle_id=b.id AND li.active AND lo.status='LOADED') GROUP BY l.id HAVING count(DISTINCT coalesce(p.customer_id,b.customer_id))>1"],
+ ['FORMAL_LOT_OVERLAP','CRITICAL',"SELECT location_id::text entity,jsonb_agg(allocation_id) evidence FROM lot_location_claims WHERE released_at IS NULL GROUP BY location_id HAVING count(DISTINCT allocation_id)>1"],
+ ['PLAN_OVER_LIMIT','HIGH',"SELECT code entity,v265_plan_progress(id) evidence FROM sales_plans WHERE(v265_plan_progress(id)->>'over_limit')::boolean"],
+ ['PLAN_CONTROLS_MISSING','WARNING',"SELECT code entity,jsonb_build_object('quantity_tolerance',quantity_tolerance,'preparation_month',preparation_month,'planned_lot_count',planned_lot_count) evidence FROM sales_plans WHERE status='OPEN' AND(quantity_tolerance IS NULL OR preparation_month IS NULL)"],
+ ['EFFECTIVE_DOUBLE_OUTBOUND','CRITICAL',"SELECT li.bundle_id::text entity,jsonb_agg(l.id) evidence FROM loading_items li JOIN loading_orders l ON l.id=li.loading_id WHERE l.workflow_state='OUTBOUND' AND NOT EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='RETURN_OUTBOUND' AND cr.status='APPLIED') GROUP BY li.bundle_id HAVING count(DISTINCT l.id)>1"],
+ ['POSTED_LOAD_ASSOCIATION','CRITICAL',"SELECT l.code entity,jsonb_build_object('vehicle_no',l.vehicle_no,'allocation_id',l.allocation_id) evidence FROM loading_orders l WHERE l.workflow_state='OUTBOUND' AND(l.manager_at IS NULL OR l.actual_departed_at IS NULL OR nullif(trim(l.vehicle_no),'') IS NULL OR NOT EXISTS(SELECT 1 FROM loading_items WHERE loading_id=l.id))"],
+ ['UNPOSTED_ADJUSTMENT_LINK','HIGH',"SELECT a.code entity,jsonb_build_object('stocktake',a.stocktake_id) evidence FROM stock_adjustments a JOIN stocktakes t ON t.id=a.stocktake_id WHERE t.phase='COMPLETED' AND a.status<>'APPLIED'"],
+ ['CLOSED_PLAN_NOT_FULFILLED','HIGH',"SELECT code entity,v265_plan_progress(id) evidence FROM sales_plans WHERE status='CLOSED' AND NOT(v265_plan_progress(id)->>'completion_eligible')::boolean"]
+];
+module.exports={checks};

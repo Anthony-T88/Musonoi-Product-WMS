@@ -1,0 +1,6 @@
+# Production now uses the managed-database configuration:
+#   deploy/compose.production.yaml (deploy/compose.yaml is a safe identical alias)
+# Use production.paths.example for Compose paths, plus separate
+# production.app.example and production.owner.example PRIVATE files.
+# Preproduction uses preproduction.settings.example and its own Compose project.
+# Do not combine owner and runtime application secrets in one env file.

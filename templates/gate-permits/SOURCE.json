@@ -1,0 +1,101 @@
+{
+  "revision": "2026-11-04-original-format-restored",
+  "templates": [
+    {
+      "product_code": "CU_CATHODE",
+      "file": "copper.xlsx",
+      "source_filename": "RMM-CU-2026-750, T869EHG.xlsx",
+      "source_sha256": "93e1154f52e976e34313b407982410ff6e6a4092777521a7dfc1610d7a7bddfa",
+      "template_sha256": "3796fb1c41268cc789be6f1a62f04f77e0b10ff1fb46f464ec892f70a2df1d26",
+      "sheet": "Sheet1 (2)",
+      "print_area": "A1:G13",
+      "paper_size": "A4",
+      "orientation": "landscape",
+      "fields": {
+        "business_date": "D2",
+        "document_no": "G2",
+        "truck_no": "B3",
+        "driver_name": "F3",
+        "packing_list_no": "C5",
+        "quantity": "D5",
+        "sheets": "E5",
+        "net_kg": "F5",
+        "remark": "G5",
+        "total_quantity": "D6",
+        "total_sheets": "E6",
+        "total_net_kg": "F6"
+      },
+      "dynamic_cells": [
+        "D2",
+        "G2",
+        "B3",
+        "F3",
+        "C5",
+        "D5",
+        "E5",
+        "F5",
+        "G5",
+        "D6",
+        "E6",
+        "F6"
+      ],
+      "signature_cells": [
+        "B9",
+        "D9:E9",
+        "G9",
+        "B11",
+        "D11:E11",
+        "G11"
+      ]
+    },
+    {
+      "product_code": "CO_HYDROXIDE",
+      "file": "cobalt.xlsx",
+      "source_filename": "RM-CO-08-2026 ACT3434.xlsx",
+      "source_sha256": "f78a7fe3196d163d498f79f105839f05d6fabac5045a84b000174201fde2b07d",
+      "template_sha256": "c5e4bd58187e3710fce5db705cdf6e7660a31b8d05b6d05393f4e76972623847",
+      "sheet": "Sheet1 (2)",
+      "print_area": "A1:G13",
+      "paper_size": "A4",
+      "orientation": "landscape",
+      "fields": {
+        "business_date": "D2",
+        "document_no": "G2",
+        "truck_no": "B3",
+        "driver_name": "F3",
+        "packing_list_no": "C5",
+        "quantity": "D5",
+        "sheets": null,
+        "net_kg": "F5",
+        "remark": "G5",
+        "total_quantity": "D6",
+        "total_sheets": null,
+        "total_net_kg": "F6"
+      },
+      "dynamic_cells": [
+        "D2",
+        "G2",
+        "B3",
+        "F3",
+        "C5",
+        "D5",
+        "F5",
+        "G5",
+        "D6",
+        "F6"
+      ],
+      "signature_cells": [
+        "B9",
+        "D9:E9",
+        "G9",
+        "B11",
+        "D11:E11",
+        "G11"
+      ]
+    }
+  ],
+  "original_files_untouched": true,
+  "sample_business_values_removed": true,
+  "applicant_signature_blank": true,
+  "layout_changes": "Original reference styles, colors, merges, drawings and Excel print settings retained; six original signature rules retained. Creator identity remains in audit only."
+}

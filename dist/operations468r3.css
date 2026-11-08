@@ -1,0 +1,14 @@
+:root{--op468r3-styles-ready:1}
+.o468r3-arrival{padding:24px;background:#fff;border:1px solid #e0e7df;border-radius:12px;min-width:0}
+html[data-release-ui="46"] .o468r3-context.lot-context-grid{display:grid!important;grid-template-columns:2fr 1fr 1fr;gap:0!important;padding:0 0 22px;margin:0 0 24px!important;border-bottom:1px solid #e0e7df}
+.o468r3-context article{display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:8px;padding:8px 18px;min-width:0;border:0;border-right:1px solid #e0e7df;background:transparent!important;box-shadow:none!important;border-radius:0!important;font-size:13px;color:#748078}
+.o468r3-context article:last-child{border-right:0}.o468r3-context article strong{font-size:15px;color:#263d30;font-weight:550;overflow-wrap:anywhere}
+.o468r3-form{display:block!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;margin:0!important}
+.o468r3-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px;min-width:0}.o468r3-group{min-width:0}.o468r3-group+.o468r3-group{padding-left:26px;border-left:1px solid #e0e7df}
+.o468r3-group>.p46-card-title{font-size:16px!important;margin:0 0 18px!important}.o468r3-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;min-width:0}
+.o468r3-fields>label{display:grid!important;gap:8px!important;margin:0!important;min-width:0;font-size:13px!important;color:#718076}.o468r3-fields input,.o468r3-fields select,.o468r3-fields textarea{width:100%;min-width:0;font-size:14px!important;min-height:42px;border:1px solid #dce5dd;border-radius:7px;padding:9px 11px;background:#fff;color:#263d30;box-sizing:border-box}.o468r3-fields textarea{min-height:84px}.o468r3-wide{grid-column:1/-1}
+.o468r3-footer{margin-top:24px;padding-top:20px;border-top:1px solid #e0e7df;display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap}.o468r3-footer .business-toolbar{margin:0}.o468r3-footer>.error{flex-basis:100%;margin:0}.o468r3-footer>.error:empty{display:none}.o468r3-history{margin-top:20px;font-size:13px;line-height:1.7}.o468r3-history>summary{color:#316d4b}
+@media(max-width:1050px){.o468r3-columns{grid-template-columns:1fr;gap:22px}.o468r3-group+.o468r3-group{padding-left:0;padding-top:22px;border-left:0;border-top:1px solid #e0e7df}}
+@media(max-width:600px){.o468r3-arrival{padding:18px}html[data-release-ui="46"] .o468r3-context.lot-context-grid{grid-template-columns:1fr 1fr;gap:16px 0!important}.o468r3-context article:first-child{grid-column:1/-1;border-right:0;padding-bottom:16px;border-bottom:1px solid #e0e7df}.o468r3-fields{grid-template-columns:1fr}.o468r3-fields input{font-size:16px!important}.o468r3-footer .business-toolbar{justify-content:flex-end;gap:9px}}
+/* Decorative zoom stays inside the artwork region; the language-independent
+   rows above keep the same image scale in Chinese and English. */

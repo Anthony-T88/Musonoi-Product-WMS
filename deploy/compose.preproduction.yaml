@@ -1,0 +1,53 @@
+# Isolated TEST environment; never pass production env files to this configuration.
+name: musonoi-preproduction-pg16
+services:
+  database:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: musonoi_owner
+      POSTGRES_DB: musonoi_preproduction_test
+      POSTGRES_PASSWORD: ${PREPRODUCTION_OWNER_PASSWORD:?Use a unique TEST-only password}
+      TZ: Africa/Lubumbashi
+    volumes: ['test-database:/var/lib/postgresql/data']
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U musonoi_owner -d musonoi_preproduction_test']
+      interval: 5s
+      retries: 20
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      APP_ENV: test
+      DEPLOYMENT_TIER: preproduction
+      DATABASE_URL: postgresql://musonoi_app:${PREPRODUCTION_APP_PASSWORD_URLENCODED:?URL-encoded TEST app password}@database:5432/musonoi_preproduction_test
+      DB_ALLOWED_HOSTS: database
+      DB_EXPECTED_NAME: musonoi_preproduction_test
+      APP_ORIGIN: http://127.0.0.1:4184
+      HOST: 0.0.0.0
+      PORT: 4174
+      VERIFY_SOURCE_INTEGRITY: '1'
+    ports: ['127.0.0.1:4184:4174']
+    volumes: ['test-uploads:/app/uploads']
+    depends_on:
+      database:
+        condition: service_healthy
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      APP_ENV: test
+      DEPLOYMENT_TIER: preproduction
+      DATABASE_OWNER_URL: postgresql://musonoi_owner:${PREPRODUCTION_OWNER_PASSWORD_URLENCODED:?URL-encoded TEST owner password}@database:5432/musonoi_preproduction_test
+      APP_DB_PASSWORD: ${PREPRODUCTION_APP_PASSWORD:?Unique TEST app password}
+      DB_ALLOWED_HOSTS: database
+      DB_EXPECTED_NAME: musonoi_preproduction_test
+    command: [node, scripts/preproduction-db.cjs]
+    depends_on:
+      database:
+        condition: service_healthy
+    profiles: [maintenance]
+volumes:
+  test-database:
+  test-uploads:

@@ -1,0 +1,1 @@
+DO $$ DECLARE def text;BEGIN SELECT pg_get_functiondef('adjustment_create(uuid,uuid,uuid,text,jsonb,uuid)'::regprocedure) INTO def;def:=replace(def,$old$FROM adjustment_lines WHERE adjustment_id=reverses AND bundle_no=no AND kind='LOSS'$old$,$new$FROM adjustment_lines al WHERE al.adjustment_id=reverses AND al.bundle_no=no AND al.kind='LOSS'$new$);EXECUTE def;END $$;

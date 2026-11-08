@@ -1,12 +1,14 @@
 # Musonoi Product WMS 4.6.9-r2
 
-本仓库只保留本次 r2 运行源码交付包与加密数据库备份。
+当前仓库以普通源码文件交付 4.6.9-r2，可直接浏览 server、dist、db、scripts、templates、deploy 目录。
 
-- 袋级库存采用批次展开清单，保留筛选、分页、实际货位调整、历史与 Excel 导出。
-- 权限采用横向勾选框，25个业务模块、67项权限，初审和终审独立设置。
-- 代码包内保留当前程序依赖的完整172条数据库迁移，未包含旧版发布包或旧版报告。
+- 氢氧化钴袋级库存采用批次展开清单，保留筛选、分页、实际货位调整、历史与 Excel 导出。
+- 账户权限采用横向勾选框，25 个业务模块、67 项权限，初审和终审独立设置。
+- 保留当前运行依赖的完整 172 条数据库迁移。
 
-数据库来自本机 TEST，保留业务历史和账户；公开仓库只提供 AES-256-GCM 加密文件。密钥单独交付，未上传。该备份不是空白生产库。
+运行需要 Node.js 22 以上、pnpm 11.25.0、PostgreSQL 及私有环境配置。安装依赖后运行 pnpm test 核验源码，pnpm start 启动本机 TEST；目标环境部署使用 pnpm start:configured，并完成目标环境验收。
 
-解密：node decrypt-database.cjs 数据库.enc 本地私钥.json 输出.dump
-再使用 PostgreSQL pg_restore 恢复到新建的独立数据库。应用运行需要 Node.js 22以上、pnpm 11.25.0、PostgreSQL和私有环境配置；部署前完成目标环境验收。
+数据库来自本机 TEST，保留业务历史和账户。仓库仅提供 AES-256-GCM 加密备份 Musonoi-Database-V4.6.9-R2.dump.enc；解密密钥单独保存在本机，未上传。
+
+解密：node decrypt-database.cjs 数据库.enc 本地私钥.json 新输出.dump
+使用 PostgreSQL pg_restore 恢复到新建独立数据库。验证结果见 VALIDATION.json，文件校验见 RELEASE_MANIFEST.json。

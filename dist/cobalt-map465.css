@@ -1,0 +1,2 @@
+
+.map465-grid:has(#co-map-detail[hidden]){grid-template-columns:minmax(0,1fr)}#co-map-detail[hidden]{display:none!important}

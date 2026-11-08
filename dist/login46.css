@@ -1,0 +1,88 @@
+/* Login copy, artwork and controls occupy separate grid cells. */
+@media screen{
+#login-panel.login46[data-login-layout="reference"]:not([hidden]){--login46-side:clamp(32px,3.4vw,64px);display:grid!important;grid-template-columns:minmax(0,1fr) minmax(330px,440px);grid-template-rows:max-content max-content minmax(0,1fr) 22px;align-items:start;justify-items:stretch;gap:24px clamp(36px,4.5vw,80px);min-height:100dvh;padding:24px var(--login46-side) 18px;background:#fff!important;background-image:none!important;backdrop-filter:none!important;overflow-x:hidden;overflow-y:auto;color:#262626;isolation:isolate}
+#login-panel.login46[data-login-layout="reference"] .login46-head{position:relative;inset:auto;grid-column:1/-1;grid-row:1;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;z-index:3;pointer-events:none}
+#login-panel.login46[data-login-layout="reference"] .login46-head>.login-logo{display:block!important;width:136px;height:125px;max-width:22vw;object-fit:contain;margin:0;padding:0;background:#fff;mix-blend-mode:normal}
+#login-panel.login46[data-login-layout="reference"] .login46-languages{display:flex;align-items:center;gap:14px;padding-top:12px;pointer-events:auto;white-space:nowrap}
+#login-panel.login46[data-login-layout="reference"] .login46-language-label{font-size:12px;font-weight:450;color:#73737b;letter-spacing:0}
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices{display:flex;align-items:center;gap:14px;font-size:14px}
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices:before{content:'/';order:1;color:#a1a1a8;font-weight:400}
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices>button{display:inline-flex;align-items:center;width:auto;height:auto;min-width:0;border:0;background:transparent;padding:5px 0;box-shadow:none;color:#77777d;font:inherit;cursor:pointer}
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices>button:last-child{order:2}
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices>button[aria-pressed=true]{color:#242426;font-weight:600}
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices>button:focus-visible{outline:2px solid #7b7b80;outline-offset:5px;border-radius:3px}
+#login-panel.login46[data-login-layout="reference"] .login46-brand{grid-column:1;grid-row:2;position:relative;z-index:2;min-width:0;margin:0;padding:0;align-self:start;pointer-events:none}
+#login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:clamp(36px,3vw,52px);font-weight:650;letter-spacing:-.035em;line-height:1.22;color:#242426;text-align:left;margin:0 0 16px;max-width:760px;text-wrap:balance;overflow-wrap:normal;word-break:normal}
+html[lang="en"] #login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:clamp(34px,2.65vw,48px);max-width:650px;letter-spacing:-.025em}
+#login-panel.login46[data-login-layout="reference"] .login46-brand>.login-project{font-size:clamp(22px,1.8vw,30px);font-weight:500;letter-spacing:.015em;line-height:1.4;text-align:left;color:#626268;margin:0 0 5px}
+#login-panel.login46[data-login-layout="reference"] .login46-products{font-size:clamp(13px,1.1vw,17px);letter-spacing:.035em;color:#73737b;margin:0;line-height:1.65}
+#login-panel.login46[data-login-layout="reference"] .login46-art{position:relative;grid-column:1;grid-row:3;align-self:end;min-height:0;width:calc(100% + var(--login46-side));height:auto;margin-left:calc(-1 * var(--login46-side));background:none;pointer-events:none;z-index:0}
+#login-panel.login46[data-login-layout="reference"]>.login-card{grid-column:2;grid-row:2/4;position:relative;z-index:2;align-self:start;display:block;width:100%;max-width:none!important;padding:0!important;margin:0!important;border:0!important;border-radius:0;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;text-align:left;min-width:0}
+#login-panel.login46[data-login-layout="reference"] .login46-welcome{margin:0 0 28px}
+#login-panel.login46[data-login-layout="reference"] .login46-welcome>h2{font-size:clamp(32px,2.6vw,42px);font-weight:650;line-height:1.25;letter-spacing:-.025em;color:#262628;margin:0}
+#login-panel.login46[data-login-layout="reference"] #login-form{display:flex;flex-direction:column;gap:22px;margin:0;padding:0;width:100%;max-width:none}
+#login-panel.login46[data-login-layout="reference"] #login-form>label{display:flex;flex-direction:column;gap:9px;color:#38383d;font-size:15px;font-weight:500;letter-spacing:0;margin:0;min-width:0;text-align:left;line-height:1.5}
+#login-panel.login46[data-login-layout="reference"] #login-form input{display:block;width:100%;height:56px;border:1px solid transparent;border-radius:11px;background:#f2f2f3;color:#29292d;box-shadow:none;padding:14px 18px;font-size:16px;letter-spacing:0;min-width:0;max-width:100%;outline:none;line-height:1.5}
+#login-panel.login46[data-login-layout="reference"] #login-form input::placeholder{color:#929296;opacity:1}
+#login-panel.login46[data-login-layout="reference"] #login-form input:focus{border-color:#a8a8ad;background:#f7f7f8;box-shadow:0 0 0 3px #00000006}
+#login-panel.login46[data-login-layout="reference"] #login-form input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px #f2f2f3 inset;-webkit-text-fill-color:#29292d}
+#login-panel.login46[data-login-layout="reference"] .login46-password-row{display:block;position:relative;width:100%;min-width:0}
+#login-panel.login46[data-login-layout="reference"] #login-password{padding-right:60px}
+#login-panel.login46[data-login-layout="reference"] .login46-password-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:38px;height:38px;padding:7px;border:0;border-radius:8px;background:transparent;color:#6d6d72;box-shadow:none;cursor:pointer}
+#login-panel.login46[data-login-layout="reference"] .login46-password-toggle:hover{background:#e5e5e8}
+#login-panel.login46[data-login-layout="reference"] .login46-password-toggle:focus-visible{outline:2px solid #8a8a90;outline-offset:1px}
+#login-panel.login46[data-login-layout="reference"] .login46-password-toggle>svg{width:24px;height:24px;pointer-events:none}
+#login-panel.login46[data-login-layout="reference"] .login46-eye-slash{display:none}
+#login-panel.login46[data-login-layout="reference"] .login46-password-toggle[aria-pressed=true] .login46-eye-slash{display:block}
+#login-panel.login46[data-login-layout="reference"] #login-error{min-height:0;font-size:13px;line-height:1.6;color:#b7443c;margin:-6px 0;padding:0;letter-spacing:0}
+#login-panel.login46[data-login-layout="reference"] #login-error:empty{display:none}
+#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]{display:flex;align-items:center;justify-content:center;gap:18px;width:100%;height:58px;margin:10px 0 0;padding:12px 20px;border:1px solid #2c2c2e!important;border-radius:11px;background:#2c2c2e!important;color:#fff!important;box-shadow:none;font-size:20px;letter-spacing:.06em;font-weight:500;cursor:pointer}
+#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]:hover{background:#19191b!important}
+#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]:focus-visible{outline:2px solid #85858b;outline-offset:4px}
+#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]:disabled{opacity:.5;cursor:wait}
+#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]>svg{width:26px;height:24px;pointer-events:none}
+#login-panel.login46[data-login-layout="reference"] :is(#login-environment,#login-safety-note){font-size:12px;line-height:1.6;color:#77777d;margin:8px 0;text-align:left}
+#login-panel.login46[data-login-layout="reference"] :is(#login-environment,#login-safety-note):empty{display:none}
+#login-panel.login46[data-login-layout="reference"] .login-card>.system-language{display:none!important}
+#login-panel.login46[data-login-layout="reference"] .login46-footer{grid-column:1/-1;grid-row:4;position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;z-index:2;color:#71717b;font-size:12px;line-height:1.6;margin-top:4px}
+#login-panel.login46[data-login-layout="reference"] .login46-footer>.copyright-notice{font:inherit;color:inherit;letter-spacing:0;margin:0;text-align:left}
+#login-panel.login46[data-login-layout="reference"] .login46-footer>.login-version{display:block;flex:0 0 auto;font:inherit;color:inherit;line-height:inherit;letter-spacing:0;margin:0;text-align:right}
+#login-panel.login46[data-login-layout="reference"] .login46-footer .login-version>span:first-child{display:none}
+@media(max-height:800px) and (min-width:901px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){padding-top:18px;grid-template-rows:max-content max-content minmax(0,1fr) 22px;row-gap:20px}#login-panel.login46[data-login-layout="reference"] .login46-head{top:auto}#login-panel.login46[data-login-layout="reference"] .login46-head>.login-logo{width:112px;height:103px}#login-panel.login46[data-login-layout="reference"] .login46-art{min-height:0}#login-panel.login46[data-login-layout="reference"] .login46-welcome{margin-bottom:24px}#login-panel.login46[data-login-layout="reference"] #login-form{gap:20px}#login-panel.login46[data-login-layout="reference"] #login-form input{height:52px}#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]{height:54px}}
+@media(max-width:1100px) and (min-width:901px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){grid-template-columns:minmax(0,1fr) 350px;column-gap:34px}#login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:36px}html[lang="en"] #login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:34px}}
+@media(max-width:900px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){--login46-side:28px;grid-template-columns:minmax(0,1fr);grid-template-rows:max-content max-content minmax(0,1fr) 22px;row-gap:30px;padding-top:18px;padding-bottom:28px;min-height:100dvh;align-content:start}#login-panel.login46[data-login-layout="reference"] .login46-head{top:auto}#login-panel.login46[data-login-layout="reference"] .login46-head>.login-logo{width:112px;height:103px;max-width:none}#login-panel.login46[data-login-layout="reference"] .login46-languages{gap:12px;padding-top:7px}#login-panel.login46[data-login-layout="reference"] .login46-brand,#login-panel.login46[data-login-layout="reference"]>.login-card{width:100%;max-width:480px!important;justify-self:center;grid-column:1}#login-panel.login46[data-login-layout="reference"] .login46-brand{grid-row:2}#login-panel.login46[data-login-layout="reference"] .login46-brand>h1,html[lang="en"] #login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:32px;line-height:1.25;margin-bottom:12px}#login-panel.login46[data-login-layout="reference"] .login46-brand>.login-project{font-size:23px}#login-panel.login46[data-login-layout="reference"] .login46-products{font-size:13px}#login-panel.login46[data-login-layout="reference"] .login46-art{display:none}#login-panel.login46[data-login-layout="reference"]>.login-card{grid-row:3}#login-panel.login46[data-login-layout="reference"] .login46-welcome{margin-bottom:23px}#login-panel.login46[data-login-layout="reference"] .login46-welcome>h2{font-size:30px}#login-panel.login46[data-login-layout="reference"] #login-form{gap:20px}#login-panel.login46[data-login-layout="reference"] #login-form>label{font-size:14px}#login-panel.login46[data-login-layout="reference"] #login-form input{height:52px}#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]{height:54px;font-size:19px;margin-top:8px}#login-panel.login46[data-login-layout="reference"] .login46-footer{grid-column:1;grid-row:4;max-width:480px;width:100%;justify-self:center;font-size:11px;margin-top:4px;gap:12px;align-items:flex-end}#login-panel.login46[data-login-layout="reference"] .login46-footer>.copyright-notice{max-width:80%}}
+@media(max-width:600px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){--login46-side:24px;padding-top:18px}#login-panel.login46[data-login-layout="reference"] .login46-head>.login-logo{width:90px;height:83px}#login-panel.login46[data-login-layout="reference"] .login46-languages{flex-direction:column;align-items:flex-end;gap:3px;padding-top:5px}#login-panel.login46[data-login-layout="reference"] .login46-language-label{font-size:11px}#login-panel.login46[data-login-layout="reference"] .login46-language-choices{gap:12px;font-size:13px}#login-panel.login46[data-login-layout="reference"] .login46-brand>h1,html[lang="en"] #login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:29px}}
+}
+
+@media screen{#login-panel.login46[data-login-layout="reference"] .login46-geology{display:block;width:100%;height:auto;max-width:100%;object-fit:contain;position:relative;z-index:1}#login-panel.login46[data-login-layout="reference"] .login46-art{overflow:visible}#login-panel.login46[data-login-layout="reference"] .login46-footer{align-self:end;background:transparent}}
+
+/* One layout owner: the logo reserves its own row at every width. */
+@media screen{
+body:has(#login-panel:not([hidden])){overflow:auto;}
+#login-panel.login46[data-login-layout="reference"]:not([hidden]){box-sizing:border-box;height:100dvh;min-height:640px;row-gap:18px;overflow-x:hidden;overflow-y:auto;align-content:stretch;}
+#login-panel.login46[data-login-layout="reference"] .login46-brand>h1{max-width:100%;margin-bottom:10px;}
+#login-panel.login46[data-login-layout="reference"] .login46-art{min-height:0;height:100%;align-self:start;display:flex;align-items:flex-start;}
+#login-panel.login46[data-login-layout="reference"] .login46-geology{max-height:100%;height:100%;object-position:left top;}
+#login-panel.login46[data-login-layout="reference"] .login46-footer{margin:0;align-self:center;}
+#login-panel .login46-registration{display:flex;justify-content:center;align-items:center;gap:12px;border:1px solid #e1e7e2;border-radius:10px;background:#fafcf9;padding:11px 14px;margin-top:18px;font-size:14px;color:#356b47;}
+#login-panel .login46-registration::after{content:'↗';font-size:18px;line-height:1;}
+#login-panel .login46-registration:hover{background:#f0f6ef;border-color:#bfd0c0;text-decoration:none;}
+@media(max-width:900px){#login-panel.login46[data-login-layout="reference"] .login46-art{display:none;}#login-panel.login46[data-login-layout="reference"]:not([hidden]){grid-template-rows:max-content max-content minmax(0,1fr) 22px;row-gap:16px;}#login-panel.login46[data-login-layout="reference"] .login46-head>.login-logo{width:90px;height:83px;}}
+@media(max-height:740px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){padding-top:12px;padding-bottom:12px;row-gap:12px;min-height:600px;}#login-panel.login46[data-login-layout="reference"] .login46-head>.login-logo{width:80px;height:74px;}#login-panel.login46[data-login-layout="reference"] .login46-brand>h1,html[lang="en"] #login-panel.login46[data-login-layout="reference"] .login46-brand>h1{font-size:25px;margin-bottom:6px;}#login-panel.login46[data-login-layout="reference"] .login46-brand>.login-project{font-size:20px;}#login-panel.login46[data-login-layout="reference"] .login46-welcome{margin-bottom:14px;}#login-panel.login46[data-login-layout="reference"] .login46-welcome>h2{font-size:27px;}#login-panel.login46[data-login-layout="reference"] #login-form{gap:12px;}#login-panel.login46[data-login-layout="reference"] #login-form input{height:44px;}#login-panel.login46[data-login-layout="reference"] #login-form>button[type=submit]{height:46px;margin-top:4px;}#login-panel .login46-registration{margin-top:12px;padding:9px 14px;}}
+}
+
+/* Both languages reserve the same title row; the artwork's remaining row
+   therefore has identical dimensions and position when language changes. */
+@media screen and (min-width:901px){
+ #login-panel.login46[data-login-layout="reference"]:not([hidden]){--login46-copy-height:190px;grid-template-rows:max-content var(--login46-copy-height) minmax(0,1fr) 22px}
+}
+@media screen and (min-width:901px) and (max-height:800px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){--login46-copy-height:166px}}
+@media screen and (min-width:901px) and (max-height:740px){#login-panel.login46[data-login-layout="reference"]:not([hidden]){--login46-copy-height:120px}}
+
+
+/* The full artwork uses its natural aspect ratio. One sizing owner; no zoom crop. */
+@media screen and (min-width:901px){
+ #login-panel.login46[data-login-layout="reference"]:not([hidden]){grid-template-columns:minmax(0,1fr) clamp(330px,24vw,430px);column-gap:clamp(28px,2vw,42px)}
+ #login-panel.login46[data-login-layout="reference"] .login46-art{display:block;height:100%;align-self:stretch;overflow:visible;clip-path:none}
+ #login-panel.login46[data-login-layout="reference"] .login46-geology{position:absolute;left:0;right:0;bottom:0;margin:0 auto;width:min(100%,calc((100dvh - 220px)*2));height:auto;max-width:none;max-height:none;object-fit:fill;object-position:center;transform:none;transform-origin:center}
+}

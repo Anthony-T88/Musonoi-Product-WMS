@@ -1,0 +1,10 @@
+# APP-ONLY private file. No owner credentials. No URL query/ssl parameters.
+DATABASE_URL=postgresql://musonoi_app:URL_ENCODED_APP_SECRET@private-db.example.internal:5432/musonoi_production
+APP_ORIGIN=https://warehouse.example.com
+DB_ALLOWED_HOSTS=private-db.example.internal
+DB_EXPECTED_NAME=musonoi_production
+DB_POOL_MAX=10
+DB_CONNECT_TIMEOUT_MS=5000
+
+# Default16. Change to17 only after real PG17 compatibility acceptance.
+DB_EXPECTED_MAJOR=16

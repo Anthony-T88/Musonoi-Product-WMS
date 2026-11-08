@@ -1,0 +1,50 @@
+/* Shared controls and readable text. SVG map geometry and canvas labels are untouched. */
+@media screen{
+body.database-mode :is(.p46-root,.c461-page,.r463-page,.b461-root) :is(.button,a.button,button.button){font-family:inherit;font-size:14px!important;line-height:1.45;font-weight:550;min-height:38px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+body.database-mode :is(.p46-root,.c461-page,.r463-page,.b461-root) .button>span{font:inherit!important}
+body.database-mode :is(.c461-table,.r463-table,.op-table,.s46-table,.p46-table) {font-size:14px!important}
+body.database-mode #page-content :is(td,th){font-size:14px!important;line-height:1.55}
+body.database-mode :is(.c461-filter,.r463-filter,.op-filter,.s46-field-grid,.b461-form-section) label{font-size:14px!important}
+body.database-mode :is(.c461-subtitle,.r463-note,.op-note,.p46-muted,.s46-muted,.b461-muted,.b461-field-hint){font-size:13px!important;line-height:1.65}
+body.database-mode :is(.r463-table,.c461-table,.op-table) small{font-size:12px!important;line-height:1.45}
+.r463-categories a small,.r463-stat small,.c461-stats span,.r463-stat span{font-size:12px!important}
+.ux10-workflow .ux10-flow-label,.op-flow .op-flow-label{font-size:13px!important;line-height:1.5;white-space:normal;overflow:visible;text-overflow:clip}
+.ux10-workflow .ux10-flow-person,.op-flow .op-flow-person{font-size:12px!important;line-height:1.5;white-space:normal;overflow:visible;text-overflow:clip;word-break:normal;min-height:3em}
+.ux10-workflow ol li,.op-flow ol li{min-width:0;align-items:center;text-align:center}
+/* No design review codes appear in operational pages. */
+:is(.c461-code,.s46-page-code,.b461-page-code,.p46-page-code,.s46-tile-code){display:none!important}
+#stock-map-detail{min-width:0;overflow-x:hidden;padding:22px!important;box-sizing:border-box}
+#stock-map-detail>h2{font-size:23px;line-height:1.4;overflow-wrap:anywhere}
+#stock-map-detail>p{font-size:13px;line-height:1.65}
+#stock-map-detail>dl{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(0,1.1fr);gap:0;margin:18px 0;font-size:14px}
+#stock-map-detail>dl>dt,#stock-map-detail>dl>dd{margin:0;padding:11px 0;border-bottom:1px solid #e7ece8;min-width:0;overflow-wrap:anywhere}
+#stock-map-detail>dl>dt{color:#718077}#stock-map-detail>dl>dd{text-align:right;color:#263b2d;font-variant-numeric:tabular-nums}
+.map-bundle-cards{display:grid;gap:14px;margin-top:20px;min-width:0}
+.map-bundle-card{min-width:0;border:1px solid #e1e8e2;border-radius:12px;background:#fff;padding:16px;text-align:left}
+.map-bundle-card>header{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #edf1ee;padding-bottom:12px;margin-bottom:8px}
+.map-bundle-card>header>a{color:#286d44;font-size:15px;line-height:1.5;font-weight:650;overflow-wrap:anywhere;min-width:0;flex:1 1 160px}
+.map-bundle-card .status-pill{font-size:12px;white-space:normal;line-height:1.5}
+.map-bundle-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;margin:12px 0 0}
+.map-bundle-card dl>div{min-width:0}.map-bundle-card dt{font-size:12px;color:#78877d;margin:0 0 5px}.map-bundle-card dd{font-size:14px;line-height:1.5;color:#304437;margin:0;overflow-wrap:anywhere}
+#v33-map-move,#v33-slot-move{display:inline-flex!important;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:12px 20px!important;font-size:15px!important;font-weight:650!important;border:1px solid #246c40!important;background:#267344!important;color:#fff!important;border-radius:10px;box-shadow:0 3px 10px #26734420;text-decoration:none}
+#v33-map-move:before,#v33-slot-move:before{content:'⇄';font-size:22px;line-height:1}#v33-slot-move{width:100%;margin:18px 0 6px;box-sizing:border-box}
+.v31-card-month{display:flex;justify-content:space-between;gap:14px;font-size:12px;color:#7b887e;margin:8px 0 4px}.v31-card-month strong{font-weight:550;color:#455c4b;font-size:13px}
+/* Keep batch facts in their own aligned row rather than the action toolbar. */
+.lot-context-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;align-items:stretch}
+.lot-context-grid>article{display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:18px;background:#f8faf8;border:1px solid #e4ebe5;border-radius:10px;min-width:0}
+.lot-context-grid>article>span{font-size:13px;color:#78857c}.lot-context-grid>article>strong{font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+html[data-release-ui="46"] .p46-root .lot-context-grid.p46-context{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important}
+html[data-release-ui="46"] .p46-root .lot-context-grid.p46-context>article{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px!important;border:1px solid #e4ebe5;border-radius:10px;background:#f8faf8!important}
+html[data-release-ui="46"] .p46-root .lot-context-grid.p46-context>article>span{font-size:13px!important}
+html[data-release-ui="46"] .p46-root .lot-context-grid.p46-context>article>strong{font-size:15px!important;text-align:left!important}
+#v262-summary.v261-summary{display:block!important;padding:18px;border:1px solid #e3eae4;background:#fff;border-radius:12px;margin:18px 0;min-height:0!important;line-height:1.65;font-size:14px}
+#v262-summary>.lot-metric-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:0!important;width:100%;margin:0;padding:0!important;min-width:0}
+#v262-summary>.lot-metric-grid>article{display:flex!important;flex-direction:column;gap:10px;justify-content:center;min-width:0;padding:18px 12px!important;border:0!important;border-radius:0!important;text-align:center}
+#v262-summary>.lot-metric-grid>article>span{font-size:13px!important;line-height:1.5;color:#738579}
+#v262-summary>.lot-metric-grid>article>strong{font-size:23px!important;line-height:1.4;color:#294a35;font-variant-numeric:tabular-nums}
+#v262-summary>.lot-summary-detail{display:block!important;border:0!important;border-top:1px solid #e6ece7!important;border-radius:0;margin:10px 0 0;padding:14px 0 0!important;text-align:left!important}
+.r4-loading-hint{flex:1 0 100%;width:100%;margin:14px 0 0!important;padding:12px 16px;border-top:1px solid #e4ebe5;color:#748278;font-size:13px;line-height:1.65;box-sizing:border-box}
+.op-filter:has(select[name=customer_id]){grid-template-columns:minmax(180px,1.5fr) minmax(120px,1fr) minmax(140px,1fr) auto}
+@media(max-width:1100px){.op-filter:has(select[name=customer_id]){grid-template-columns:repeat(2,minmax(0,1fr))}.lot-context-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:600px){.map-bundle-card dl,.lot-context-grid,html[data-release-ui="46"] .p46-root .lot-context-grid.p46-context{grid-template-columns:minmax(0,1fr)!important}#v262-summary>.lot-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.op-filter:has(select[name=customer_id]){grid-template-columns:minmax(0,1fr)}}
+}

@@ -125,11 +125,11 @@
   },
   "delivery": {
     "status": "PASS",
-    "zipFiles": 536,
+    "format": "ordinary files",
+    "sourceFiles": 535,
     "noPrivateFiles": true,
     "noKeyOrCredentialPatterns": true,
-    "actualDecryptionHelperVerified": true,
-    "publicationHashesVerified": true
+    "actualDecryptionHelperVerified": true
   },
   "service": {
     "status": "PASS",

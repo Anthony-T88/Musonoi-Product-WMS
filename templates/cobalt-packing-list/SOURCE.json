@@ -1,0 +1,12 @@
+{
+  "source": "Commercial INV+PL RMM-CO-09-2026.xlsx",
+  "sha256": "669728e8b9534f6182511a8f24c4c67439815e3d458ad64cde2a709e7dfafdfb",
+  "sheet": "PL",
+  "approvedBy": "explicit user confirmation in V4.4 development chat",
+  "approvedOn": "2026-11-04",
+  "fieldsAndOrder": "original PL retained",
+  "arecoms": "not printed; original manually confirmed value retained only in management and archive snapshot",
+  "terms": "stored contract terms only; blank when absent",
+  "invoice": "not generated; sample INV and sample transaction fields removed from output",
+  "pagination": "A4 portrait, fit width, automatic page count, repeat original row29 headers"
+}

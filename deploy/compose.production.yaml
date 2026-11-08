@@ -1,0 +1,50 @@
+name: musonoi-production
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file: ["${PRODUCTION_APP_ENV_FILE:?Private app-only environment file required}"]
+    environment:
+      APP_ENV: production
+      DEPLOYMENT_TIER: production
+      HOST: 0.0.0.0
+      PORT: 4174
+      DB_TLS_CA_FILE: /run/secrets/db-ca.pem
+      VERIFY_SOURCE_INTEGRITY: '1'
+      TZ: Africa/Lubumbashi
+    ports: ['127.0.0.1:4174:4174']
+    volumes:
+      - uploads:/app/uploads
+      - ${DB_CA_FILE:?Managed database CA required}:/run/secrets/db-ca.pem:ro
+    restart: unless-stopped
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file: ["${PRODUCTION_OWNER_ENV_FILE:?Private owner-only environment file required}"]
+    environment:
+      APP_ENV: production
+      DEPLOYMENT_TIER: production
+      DB_TLS_CA_FILE: /run/secrets/db-ca.pem
+    volumes:
+      - ${DB_CA_FILE:?Managed database CA required}:/run/secrets/db-ca.pem:ro
+    command: [node, scripts/production-db.cjs]
+    profiles: [maintenance]
+  bootstrap:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file: ["${PRODUCTION_OWNER_ENV_FILE:?Private owner-only environment file required}"]
+    environment:
+      APP_ENV: production
+      DEPLOYMENT_TIER: production
+      DB_TLS_CA_FILE: /run/secrets/db-ca.pem
+    volumes:
+      - ${DB_CA_FILE:?Managed database CA required}:/run/secrets/db-ca.pem:ro
+      - ${BOOTSTRAP_CONFIG_FILE:-./bootstrap.example.json}:/run/secrets/bootstrap.json:ro
+      - ${BOOTSTRAP_PASSWORD_FILE:-./bootstrap-password.private}:/run/secrets/admin-password:ro
+    command: [node, scripts/production-bootstrap.cjs, --config, /run/secrets/bootstrap.json, --password-file, /run/secrets/admin-password]
+    profiles: [bootstrap]
+volumes:
+  uploads:

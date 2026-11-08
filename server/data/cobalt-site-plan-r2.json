@@ -1,0 +1,3415 @@
+{
+  "key": "MUSONOI_CO_20261107_R2",
+  "source_sha256": "90a65cf26d41f16f1a8dc90e558a6f18bc4010a57c0960a2bf5a3928ace10884",
+  "source_offset": [
+    19,
+    55
+  ],
+  "scale": 10,
+  "bounds": [
+    0,
+    0,
+    7400,
+    3920
+  ],
+  "zones": [
+    {
+      "code": "A",
+      "name": "钴仓库区",
+      "source_label": "COBALT WAREHOUSE",
+      "count": 33,
+      "kind": "用户确认数量",
+      "bounds": [
+        38,
+        190,
+        168,
+        341
+      ],
+      "view": [
+        29,
+        164,
+        181,
+        352
+      ],
+      "note": "保留图中两侧堆放带、中央作业通道、装卸侧入口及下侧出口。按你确认的数量：左12、右12、下左7、下右2，共33位。"
+    },
+    {
+      "code": "B",
+      "name": "露天堆场区",
+      "source_label": "STOCK OPEN SPACE",
+      "count": 52,
+      "kind": "用户确认数量",
+      "bounds": [
+        227,
+        181,
+        414,
+        309
+      ],
+      "view": [
+        222,
+        153,
+        419,
+        313
+      ],
+      "note": "绕开图中的 Mine Building、Basin 和作业通道，按建筑左20、下4、右8、上20，共52位排布。左侧按2列各10位，上侧按4排各5位，转弯与通道留空。"
+    },
+    {
+      "code": "C",
+      "name": "散装大仓区",
+      "source_label": "COBALT BULK WAREHOUSE STOCK",
+      "count": 8,
+      "kind": "用户确认保留",
+      "bounds": [
+        228,
+        317,
+        389,
+        378
+      ],
+      "view": [
+        222,
+        309,
+        397,
+        384
+      ],
+      "note": "沿用大仓位置；原图未给出内部固定分隔，双排8位保持上一版位置和编号。"
+    },
+    {
+      "code": "T",
+      "name": "临时库区",
+      "source_label": "TEMPORARY STORAGE POINTS",
+      "count": 0,
+      "kind": "备货人员按现场位置添加",
+      "bounds": [
+        19,
+        55,
+        759,
+        447
+      ],
+      "view": [
+        19,
+        55,
+        759,
+        447
+      ],
+      "note": "替换原D备选固定区。不预设固定货位；备货人员点击地图空白处、填写说明并关联实际备货批次；移走后结束占用并保留历史。"
+    }
+  ],
+  "locations": [
+    {
+      "code": "CO-A-01",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第1位",
+      "source_rect": [
+        41,
+        207.0,
+        83,
+        213.1
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1520.0,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-02",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第2位",
+      "source_rect": [
+        41,
+        214.45,
+        83,
+        220.54999999999998
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1594.5,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-03",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第3位",
+      "source_rect": [
+        41,
+        221.9,
+        83,
+        228.0
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1669.0,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-04",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第4位",
+      "source_rect": [
+        41,
+        229.35,
+        83,
+        235.45
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1743.5,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-05",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第5位",
+      "source_rect": [
+        41,
+        236.8,
+        83,
+        242.9
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1818.0,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-06",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第6位",
+      "source_rect": [
+        41,
+        244.25,
+        83,
+        250.35
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1892.5,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-07",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第7位",
+      "source_rect": [
+        41,
+        251.7,
+        83,
+        257.8
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 1967.0,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-08",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第8位",
+      "source_rect": [
+        41,
+        259.15,
+        83,
+        265.25
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 2041.5,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-09",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第9位",
+      "source_rect": [
+        41,
+        266.6,
+        83,
+        272.70000000000005
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 2116.0,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-10",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第10位",
+      "source_rect": [
+        41,
+        274.05,
+        83,
+        280.15000000000003
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 2190.5,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-11",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第11位",
+      "source_rect": [
+        41,
+        281.5,
+        83,
+        287.6
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 2265.0,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-12",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图左堆放带",
+      "relative_position": "由图上方向下第12位",
+      "source_rect": [
+        41,
+        288.95,
+        83,
+        295.05
+      ],
+      "draft_coordinates": {
+        "x": 220,
+        "y": 2339.5,
+        "width": 420,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-13",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第1位",
+      "source_rect": [
+        121,
+        202.0,
+        163,
+        208.4
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1470.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-14",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第2位",
+      "source_rect": [
+        121,
+        209.8,
+        163,
+        216.20000000000002
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1548.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-15",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第3位",
+      "source_rect": [
+        121,
+        217.6,
+        163,
+        224.0
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1626.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-16",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第4位",
+      "source_rect": [
+        121,
+        225.4,
+        163,
+        231.8
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1704.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-17",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第5位",
+      "source_rect": [
+        121,
+        233.2,
+        163,
+        239.6
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1782.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-18",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第6位",
+      "source_rect": [
+        121,
+        241.0,
+        163,
+        247.4
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1860.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-19",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第7位",
+      "source_rect": [
+        121,
+        248.8,
+        163,
+        255.20000000000002
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 1938.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-20",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第8位",
+      "source_rect": [
+        121,
+        256.6,
+        163,
+        263.0
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 2016.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-21",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第9位",
+      "source_rect": [
+        121,
+        264.4,
+        163,
+        270.79999999999995
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 2094.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-22",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第10位",
+      "source_rect": [
+        121,
+        272.2,
+        163,
+        278.59999999999997
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 2172.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-23",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第11位",
+      "source_rect": [
+        121,
+        280.0,
+        163,
+        286.4
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 2250.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-24",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图右堆放带",
+      "relative_position": "由图上方向下第12位",
+      "source_rect": [
+        121,
+        287.8,
+        163,
+        294.2
+      ],
+      "draft_coordinates": {
+        "x": 1020,
+        "y": 2328.0,
+        "width": 420,
+        "height": 64.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-25",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第1位",
+      "source_rect": [
+        41.0,
+        312,
+        46.15,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 220.0,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-26",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第2位",
+      "source_rect": [
+        47.45,
+        312,
+        52.6,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 284.5,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-27",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第3位",
+      "source_rect": [
+        53.9,
+        312,
+        59.05,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 349.0,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-28",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第4位",
+      "source_rect": [
+        60.35,
+        312,
+        65.5,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 413.5,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-29",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第5位",
+      "source_rect": [
+        66.8,
+        312,
+        71.95,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 478.0,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-30",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第6位",
+      "source_rect": [
+        73.25,
+        312,
+        78.4,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 542.5,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-31",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下左堆放带",
+      "relative_position": "由图左向右第7位",
+      "source_rect": [
+        79.7,
+        312,
+        84.85000000000001,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 607.0,
+        "y": 2570,
+        "width": 51.5,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-32",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下右堆放带",
+      "relative_position": "由图左向右第1位",
+      "source_rect": [
+        129,
+        312,
+        145,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 1100,
+        "y": 2570,
+        "width": 160,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-A-33",
+      "zone": "A",
+      "zone_name": "钴仓库区",
+      "relative_group": "图下右堆放带",
+      "relative_position": "由图左向右第2位",
+      "source_rect": [
+        148,
+        312,
+        164,
+        336
+      ],
+      "draft_coordinates": {
+        "x": 1290,
+        "y": 2570,
+        "width": 160,
+        "height": 240
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-01",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第1位",
+      "source_rect": [
+        232,
+        202,
+        253,
+        210.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 1470,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-02",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第2位",
+      "source_rect": [
+        232,
+        212,
+        253,
+        220.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 1570,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-03",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第3位",
+      "source_rect": [
+        232,
+        222,
+        253,
+        230.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 1670,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-04",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第4位",
+      "source_rect": [
+        232,
+        232,
+        253,
+        240.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 1770,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-05",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第5位",
+      "source_rect": [
+        232,
+        242,
+        253,
+        250.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 1870,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-06",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第6位",
+      "source_rect": [
+        232,
+        252,
+        253,
+        260.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 1970,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-07",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第7位",
+      "source_rect": [
+        232,
+        262,
+        253,
+        270.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 2070,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-08",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第8位",
+      "source_rect": [
+        232,
+        272,
+        253,
+        280.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 2170,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-09",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第9位",
+      "source_rect": [
+        232,
+        282,
+        253,
+        290.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 2270,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-10",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第1列，上起第10位",
+      "source_rect": [
+        232,
+        292,
+        253,
+        300.3
+      ],
+      "draft_coordinates": {
+        "x": 2130,
+        "y": 2370,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-11",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第1位",
+      "source_rect": [
+        256,
+        202,
+        277,
+        210.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 1470,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-12",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第2位",
+      "source_rect": [
+        256,
+        212,
+        277,
+        220.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 1570,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-13",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第3位",
+      "source_rect": [
+        256,
+        222,
+        277,
+        230.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 1670,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-14",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第4位",
+      "source_rect": [
+        256,
+        232,
+        277,
+        240.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 1770,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-15",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第5位",
+      "source_rect": [
+        256,
+        242,
+        277,
+        250.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 1870,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-16",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第6位",
+      "source_rect": [
+        256,
+        252,
+        277,
+        260.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 1970,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-17",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第7位",
+      "source_rect": [
+        256,
+        262,
+        277,
+        270.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 2070,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-18",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第8位",
+      "source_rect": [
+        256,
+        272,
+        277,
+        280.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 2170,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-19",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第9位",
+      "source_rect": [
+        256,
+        282,
+        277,
+        290.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 2270,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-20",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑左侧",
+      "relative_position": "图左起第2列，上起第10位",
+      "source_rect": [
+        256,
+        292,
+        277,
+        300.3
+      ],
+      "draft_coordinates": {
+        "x": 2370,
+        "y": 2370,
+        "width": 210,
+        "height": 83.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-21",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑下侧",
+      "relative_position": "由图左向右第1位",
+      "source_rect": [
+        290,
+        291,
+        306.7,
+        303
+      ],
+      "draft_coordinates": {
+        "x": 2710,
+        "y": 2360,
+        "width": 167.0,
+        "height": 120
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-22",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑下侧",
+      "relative_position": "由图左向右第2位",
+      "source_rect": [
+        309,
+        291,
+        325.7,
+        303
+      ],
+      "draft_coordinates": {
+        "x": 2900,
+        "y": 2360,
+        "width": 167.0,
+        "height": 120
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-23",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑下侧",
+      "relative_position": "由图左向右第3位",
+      "source_rect": [
+        328,
+        291,
+        344.7,
+        303
+      ],
+      "draft_coordinates": {
+        "x": 3090,
+        "y": 2360,
+        "width": 167.0,
+        "height": 120
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-24",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑下侧",
+      "relative_position": "由图左向右第4位",
+      "source_rect": [
+        347,
+        291,
+        363.7,
+        303
+      ],
+      "draft_coordinates": {
+        "x": 3280,
+        "y": 2360,
+        "width": 167.0,
+        "height": 120
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-25",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第1位",
+      "source_rect": [
+        369,
+        244.0,
+        402,
+        250.1
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 1890.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-26",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第2位",
+      "source_rect": [
+        369,
+        251.5,
+        402,
+        257.6
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 1965.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-27",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第3位",
+      "source_rect": [
+        369,
+        259.0,
+        402,
+        265.1
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 2040.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-28",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第4位",
+      "source_rect": [
+        369,
+        266.5,
+        402,
+        272.6
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 2115.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-29",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第5位",
+      "source_rect": [
+        369,
+        274.0,
+        402,
+        280.1
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 2190.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-30",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第6位",
+      "source_rect": [
+        369,
+        281.5,
+        402,
+        287.6
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 2265.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-31",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第7位",
+      "source_rect": [
+        369,
+        289.0,
+        402,
+        295.1
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 2340.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-32",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑右侧",
+      "relative_position": "由图上方向下第8位",
+      "source_rect": [
+        369,
+        296.5,
+        402,
+        302.6
+      ],
+      "draft_coordinates": {
+        "x": 3500,
+        "y": 2415.0,
+        "width": 330,
+        "height": 61.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-33",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第1排，图左起第1位",
+      "source_rect": [
+        290,
+        190.0,
+        309.6,
+        200.5
+      ],
+      "draft_coordinates": {
+        "x": 2710,
+        "y": 1350.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-34",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第1排，图左起第2位",
+      "source_rect": [
+        312,
+        190.0,
+        331.6,
+        200.5
+      ],
+      "draft_coordinates": {
+        "x": 2930,
+        "y": 1350.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-35",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第1排，图左起第3位",
+      "source_rect": [
+        334,
+        190.0,
+        353.6,
+        200.5
+      ],
+      "draft_coordinates": {
+        "x": 3150,
+        "y": 1350.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-36",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第1排，图左起第4位",
+      "source_rect": [
+        356,
+        190.0,
+        375.6,
+        200.5
+      ],
+      "draft_coordinates": {
+        "x": 3370,
+        "y": 1350.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-37",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第1排，图左起第5位",
+      "source_rect": [
+        378,
+        190.0,
+        397.6,
+        200.5
+      ],
+      "draft_coordinates": {
+        "x": 3590,
+        "y": 1350.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-38",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第2排，图左起第1位",
+      "source_rect": [
+        290,
+        202.5,
+        309.6,
+        213.0
+      ],
+      "draft_coordinates": {
+        "x": 2710,
+        "y": 1475.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-39",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第2排，图左起第2位",
+      "source_rect": [
+        312,
+        202.5,
+        331.6,
+        213.0
+      ],
+      "draft_coordinates": {
+        "x": 2930,
+        "y": 1475.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-40",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第2排，图左起第3位",
+      "source_rect": [
+        334,
+        202.5,
+        353.6,
+        213.0
+      ],
+      "draft_coordinates": {
+        "x": 3150,
+        "y": 1475.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-41",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第2排，图左起第4位",
+      "source_rect": [
+        356,
+        202.5,
+        375.6,
+        213.0
+      ],
+      "draft_coordinates": {
+        "x": 3370,
+        "y": 1475.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-42",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第2排，图左起第5位",
+      "source_rect": [
+        378,
+        202.5,
+        397.6,
+        213.0
+      ],
+      "draft_coordinates": {
+        "x": 3590,
+        "y": 1475.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-43",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第3排，图左起第1位",
+      "source_rect": [
+        290,
+        215.0,
+        309.6,
+        225.5
+      ],
+      "draft_coordinates": {
+        "x": 2710,
+        "y": 1600.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-44",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第3排，图左起第2位",
+      "source_rect": [
+        312,
+        215.0,
+        331.6,
+        225.5
+      ],
+      "draft_coordinates": {
+        "x": 2930,
+        "y": 1600.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-45",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第3排，图左起第3位",
+      "source_rect": [
+        334,
+        215.0,
+        353.6,
+        225.5
+      ],
+      "draft_coordinates": {
+        "x": 3150,
+        "y": 1600.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-46",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第3排，图左起第4位",
+      "source_rect": [
+        356,
+        215.0,
+        375.6,
+        225.5
+      ],
+      "draft_coordinates": {
+        "x": 3370,
+        "y": 1600.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-47",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第3排，图左起第5位",
+      "source_rect": [
+        378,
+        215.0,
+        397.6,
+        225.5
+      ],
+      "draft_coordinates": {
+        "x": 3590,
+        "y": 1600.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-48",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第4排，图左起第1位",
+      "source_rect": [
+        290,
+        227.5,
+        309.6,
+        238.0
+      ],
+      "draft_coordinates": {
+        "x": 2710,
+        "y": 1725.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-49",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第4排，图左起第2位",
+      "source_rect": [
+        312,
+        227.5,
+        331.6,
+        238.0
+      ],
+      "draft_coordinates": {
+        "x": 2930,
+        "y": 1725.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-50",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第4排，图左起第3位",
+      "source_rect": [
+        334,
+        227.5,
+        353.6,
+        238.0
+      ],
+      "draft_coordinates": {
+        "x": 3150,
+        "y": 1725.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-51",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第4排，图左起第4位",
+      "source_rect": [
+        356,
+        227.5,
+        375.6,
+        238.0
+      ],
+      "draft_coordinates": {
+        "x": 3370,
+        "y": 1725.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-B-52",
+      "zone": "B",
+      "zone_name": "露天堆场区",
+      "relative_group": "建筑上侧",
+      "relative_position": "上起第4排，图左起第5位",
+      "source_rect": [
+        378,
+        227.5,
+        397.6,
+        238.0
+      ],
+      "draft_coordinates": {
+        "x": 3590,
+        "y": 1725.0,
+        "width": 196.0,
+        "height": 105.0
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-01",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图上排",
+      "relative_position": "由图左向右第1位",
+      "source_rect": [
+        235,
+        322,
+        270,
+        341
+      ],
+      "draft_coordinates": {
+        "x": 2160,
+        "y": 2670,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-02",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图上排",
+      "relative_position": "由图左向右第2位",
+      "source_rect": [
+        273,
+        322,
+        308,
+        341
+      ],
+      "draft_coordinates": {
+        "x": 2540,
+        "y": 2670,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-03",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图上排",
+      "relative_position": "由图左向右第3位",
+      "source_rect": [
+        311,
+        322,
+        346,
+        341
+      ],
+      "draft_coordinates": {
+        "x": 2920,
+        "y": 2670,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-04",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图上排",
+      "relative_position": "由图左向右第4位",
+      "source_rect": [
+        349,
+        322,
+        384,
+        341
+      ],
+      "draft_coordinates": {
+        "x": 3300,
+        "y": 2670,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-05",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图下排",
+      "relative_position": "由图左向右第1位",
+      "source_rect": [
+        235,
+        353,
+        270,
+        372
+      ],
+      "draft_coordinates": {
+        "x": 2160,
+        "y": 2980,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-06",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图下排",
+      "relative_position": "由图左向右第2位",
+      "source_rect": [
+        273,
+        353,
+        308,
+        372
+      ],
+      "draft_coordinates": {
+        "x": 2540,
+        "y": 2980,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-07",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图下排",
+      "relative_position": "由图左向右第3位",
+      "source_rect": [
+        311,
+        353,
+        346,
+        372
+      ],
+      "draft_coordinates": {
+        "x": 2920,
+        "y": 2980,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    },
+    {
+      "code": "CO-C-08",
+      "zone": "C",
+      "zone_name": "散装大仓区",
+      "relative_group": "图下排",
+      "relative_position": "由图左向右第4位",
+      "source_rect": [
+        349,
+        353,
+        384,
+        372
+      ],
+      "draft_coordinates": {
+        "x": 3300,
+        "y": 2980,
+        "width": 350,
+        "height": 190
+      },
+      "review_status": "PENDING",
+      "active": false,
+      "capacity_bags": null,
+      "capacity_mt": null,
+      "assigned_batch": null
+    }
+  ],
+  "shapes": [
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 19,
+      "y": 55,
+      "w": 740,
+      "h": 392,
+      "fill": "#f8faf7",
+      "stroke": "#e7ece6",
+      "width": 0.6,
+      "dash": false,
+      "rx": 4,
+      "code": null
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          354,
+          112
+        ],
+        [
+          730,
+          112
+        ]
+      ],
+      "stroke": "#c9dbde",
+      "width": 11,
+      "arrow": true
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          514,
+          112
+        ],
+        [
+          514,
+          64
+        ]
+      ],
+      "stroke": "#c9dbde",
+      "width": 8,
+      "arrow": true
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          709,
+          334
+        ],
+        [
+          709,
+          112
+        ]
+      ],
+      "stroke": "#c9dbde",
+      "width": 8,
+      "arrow": true
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          410,
+          268
+        ],
+        [
+          709,
+          268
+        ]
+      ],
+      "stroke": "#c9dbde",
+      "width": 7,
+      "arrow": false
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          209,
+          380
+        ],
+        [
+          209,
+          434
+        ],
+        [
+          692,
+          434
+        ]
+      ],
+      "stroke": "#c9dbde",
+      "width": 8,
+      "arrow": true
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 345,
+      "y": 57.5,
+      "w": 147.5,
+      "h": 14.5,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 418.75,
+      "y": 63.88,
+      "text": "实验室",
+      "size": 4,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 418.75,
+      "y": 68.68,
+      "text": "LABORATORY",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 532,
+      "y": 57,
+      "w": 158,
+      "h": 15,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 611.0,
+      "y": 63.6,
+      "text": "选厂仓库（不编候选位）",
+      "size": 3.8,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 611.0,
+      "y": 68.4,
+      "text": "CONCENTRATOR WAREHOUSE",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 648,
+      "y": 106,
+      "w": 35,
+      "h": 12,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 665.5,
+      "y": 113.2,
+      "text": "冶炼设施",
+      "size": 3.3,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 569,
+      "y": 131.5,
+      "w": 31,
+      "h": 24.7,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 584.5,
+      "y": 142.368,
+      "text": "浸出罐",
+      "size": 3.7,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 584.5,
+      "y": 147.168,
+      "text": "LEACH TANKS",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 414,
+      "y": 173,
+      "w": 276,
+      "h": 71,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 552.0,
+      "y": 204.24,
+      "text": "工艺厂房 / PLANT",
+      "size": 7,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 552.0,
+      "y": 209.04000000000002,
+      "text": "工艺设施区域，本稿不设置库存货位",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 335,
+      "y": 161,
+      "w": 187,
+      "h": 12,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 428.5,
+      "y": 168.2,
+      "text": "矿料输送机 / MINE CONVEYOR",
+      "size": 3.5,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 532,
+      "y": 161,
+      "w": 158,
+      "h": 12,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 611.0,
+      "y": 168.2,
+      "text": "球磨 / 浮选设施",
+      "size": 3.5,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 584,
+      "y": 223,
+      "w": 68,
+      "h": 22,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 618.0,
+      "y": 235.2,
+      "text": "沉降设施 / DECANTOR",
+      "size": 3.5,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 389,
+      "y": 319,
+      "w": 128,
+      "h": 47,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 453.0,
+      "y": 339.68,
+      "text": "钴干燥设备",
+      "size": 5,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 453.0,
+      "y": 344.48,
+      "text": "Co DRYER",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 522,
+      "y": 278,
+      "w": 107,
+      "h": 24,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 575.5,
+      "y": 288.56,
+      "text": "钴过滤设备",
+      "size": 4.5,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 575.5,
+      "y": 293.36,
+      "text": "Co FILTER",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 545,
+      "y": 329.5,
+      "w": 80,
+      "h": 93,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 585.0,
+      "y": 370.42,
+      "text": "燃料储罐区域",
+      "size": 4.4,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 585.0,
+      "y": 375.22,
+      "text": "Co PROCESS FUEL TANK",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 450.8,
+      "y": 386,
+      "w": 66.5,
+      "h": 36,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 484.05,
+      "y": 401.84,
+      "text": "工艺办公室",
+      "size": 4,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 484.05,
+      "y": 406.64,
+      "text": "Co PROCESS OFFICE",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 272.8,
+      "y": 403.4,
+      "w": 103,
+      "h": 17.6,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 324.3,
+      "y": 411.144,
+      "text": "出口商务办公室",
+      "size": 3.7,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 324.3,
+      "y": 415.944,
+      "text": "EXPORT OFFICE",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 425.6,
+      "y": 295.3,
+      "w": 27.4,
+      "h": 13.3,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 439.3,
+      "y": 303.15,
+      "text": "电气室",
+      "size": 3.1,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 524,
+      "y": 258,
+      "text": "外围历史堆放点本稿暂不编位",
+      "size": 4.2,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 457,
+      "y": 430,
+      "text": "场内道路 / 通道保留",
+      "size": 4.5,
+      "color": "#5d7e89",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": "A",
+      "type": "rect",
+      "x": 38,
+      "y": 190,
+      "w": 130,
+      "h": 151,
+      "fill": "#edf4e7",
+      "stroke": "#71945e",
+      "width": 1.0,
+      "dash": false,
+      "rx": 2,
+      "code": null
+    },
+    {
+      "zone": "A",
+      "zone_header": true,
+      "type": "text",
+      "x": 103,
+      "y": 170,
+      "text": "A · 钴仓库区",
+      "size": 5.1,
+      "color": "#71945e",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": "A",
+      "zone_header": true,
+      "type": "text",
+      "x": 103,
+      "y": 175.2,
+      "text": "33个候选位 · 数量已确认",
+      "size": 3.2,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": "B",
+      "type": "rect",
+      "x": 227,
+      "y": 181,
+      "w": 187,
+      "h": 128,
+      "fill": "#eaf2f5",
+      "stroke": "#6b95a7",
+      "width": 1.0,
+      "dash": false,
+      "rx": 2,
+      "code": null
+    },
+    {
+      "zone": "B",
+      "zone_header": true,
+      "type": "text",
+      "x": 304,
+      "y": 163,
+      "text": "B · 露天堆场区",
+      "size": 5.1,
+      "color": "#6b95a7",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": "B",
+      "zone_header": true,
+      "type": "text",
+      "x": 304,
+      "y": 168.2,
+      "text": "52个候选位 · 数量已确认",
+      "size": 3.2,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": "C",
+      "type": "rect",
+      "x": 228,
+      "y": 317,
+      "w": 161,
+      "h": 61,
+      "fill": "#f0efea",
+      "stroke": "#9a947e",
+      "width": 1.0,
+      "dash": false,
+      "rx": 2,
+      "code": null
+    },
+    {
+      "zone": "C",
+      "zone_header": true,
+      "type": "text",
+      "x": 307,
+      "y": 313,
+      "text": "C · 散装大仓区",
+      "size": 5.1,
+      "color": "#9a947e",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": "C",
+      "zone_header": true,
+      "type": "text",
+      "x": 307,
+      "y": 318.2,
+      "text": "8个候选位 · 数量已确认",
+      "size": 3.2,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 88,
+      "y": 196,
+      "w": 30,
+      "h": 108,
+      "fill": "#ffffff",
+      "stroke": "#e4eae4",
+      "width": 0.35,
+      "dash": false,
+      "rx": 0,
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 39,
+      "y": 299,
+      "w": 128,
+      "h": 10,
+      "fill": "#ffffff",
+      "stroke": "#e4eae4",
+      "width": 0.35,
+      "dash": false,
+      "rx": 0,
+      "code": null
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          99,
+          208
+        ],
+        [
+          99,
+          303
+        ],
+        [
+          68,
+          303
+        ]
+      ],
+      "stroke": "#b2c7cd",
+      "width": 1.8,
+      "arrow": true
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          99,
+          303
+        ],
+        [
+          143,
+          303
+        ]
+      ],
+      "stroke": "#b2c7cd",
+      "width": 1.8,
+      "arrow": true
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 104,
+      "y": 252,
+      "text": "作业通道",
+      "size": 3.2,
+      "color": "#7c9298",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 39,
+      "y": 190,
+      "w": 16,
+      "h": 13,
+      "fill": "#f4e7ed",
+      "stroke": "#ccb4c3",
+      "width": 0.5,
+      "dash": false,
+      "rx": 0,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 47,
+      "y": 196,
+      "text": "接收门",
+      "size": 2.7,
+      "color": "#886f7d",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 77,
+      "y": 193,
+      "text": "出口2 / 磅位",
+      "size": 2.7,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 141,
+      "y": 193,
+      "text": "出口1",
+      "size": 2.7,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 126,
+      "y": 340,
+      "text": "出口3",
+      "size": 2.8,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          40,
+          187
+        ],
+        [
+          40,
+          181
+        ],
+        [
+          173,
+          181
+        ]
+      ],
+      "stroke": "#b2c7cd",
+      "width": 5,
+      "arrow": true
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 110,
+      "y": 181,
+      "text": "道路 / 装卸区",
+      "size": 3.5,
+      "color": "#597c88",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          393,
+          177
+        ],
+        [
+          405,
+          177
+        ],
+        [
+          408,
+          187
+        ],
+        [
+          408,
+          265
+        ]
+      ],
+      "stroke": "#b2c7cd",
+      "width": 4,
+      "arrow": true
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          390,
+          177
+        ],
+        [
+          213,
+          177
+        ]
+      ],
+      "stroke": "#b2c7cd",
+      "width": 3.2,
+      "arrow": true
+    },
+    {
+      "type": "poly",
+      "points": [
+        [
+          282,
+          249
+        ],
+        [
+          282,
+          302
+        ],
+        [
+          276,
+          306
+        ]
+      ],
+      "stroke": "#b2c7cd",
+      "width": 1.5,
+      "arrow": true
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 288.2,
+      "y": 256.8,
+      "w": 42,
+      "h": 26.5,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 309.2,
+      "y": 268.46000000000004,
+      "text": "矿区建筑",
+      "size": 3.5,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 309.2,
+      "y": 273.26000000000005,
+      "text": "MINE BUILDING",
+      "size": 2.8,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 337,
+      "y": 274,
+      "w": 22,
+      "h": 10,
+      "fill": "#ecefeb",
+      "stroke": "#c9d1ca",
+      "width": 0.6,
+      "dash": false,
+      "rx": 1.5,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 348.0,
+      "y": 278.4,
+      "text": "水池",
+      "size": 2.7,
+      "color": "#6c7970",
+      "bold": true,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 348.0,
+      "y": 282.5,
+      "text": "BASIN",
+      "size": 2.5,
+      "color": "#909a94",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    },
+    {
+      "zone": null,
+      "type": "rect",
+      "x": 232,
+      "y": 343,
+      "w": 154,
+      "h": 8,
+      "fill": "#ffffff",
+      "stroke": "#e2e6e0",
+      "width": 0.3,
+      "dash": false,
+      "rx": 0,
+      "code": null
+    },
+    {
+      "zone": null,
+      "zone_header": false,
+      "type": "text",
+      "x": 309,
+      "y": 348,
+      "text": "内部通道（位置与宽度待确认）",
+      "size": 3.4,
+      "color": "#7c8981",
+      "bold": false,
+      "anchor": "middle",
+      "code": null
+    }
+  ]
+}

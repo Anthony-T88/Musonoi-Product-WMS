@@ -1,0 +1,6 @@
+# Compose interpolation file only; no real secrets in this example.
+PRODUCTION_APP_ENV_FILE=/etc/musonoi/app.env
+PRODUCTION_OWNER_ENV_FILE=/etc/musonoi/owner.env
+DB_CA_FILE=/etc/musonoi/managed-db-ca.pem
+BOOTSTRAP_CONFIG_FILE=/etc/musonoi/bootstrap.json
+BOOTSTRAP_PASSWORD_FILE=/etc/musonoi/first-admin-password

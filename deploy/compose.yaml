@@ -1,0 +1,11 @@
+# Compatibility entry point. Production settings are maintained in one file.
+name: musonoi-production
+services:
+  app:
+    extends: {file: compose.production.yaml, service: app}
+  migrate:
+    extends: {file: compose.production.yaml, service: migrate}
+  bootstrap:
+    extends: {file: compose.production.yaml, service: bootstrap}
+volumes:
+  uploads:
