@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "states": [
+    "Cu start",
+    "Cu submit-review",
+    "Cu review",
+    "Cu approve",
+    "Co reject",
+    "Co approve"
+  ],
+  "syntheticOnly": true
+}

@@ -1,0 +1,45 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),http=require('node:http'),{Client,Pool}=require('pg'),E=require('./environment.cjs'),Lease=require('../../server/authorization-lease.cjs');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+test('isolated authorization pools, cancellation, recovery and execution plans',async t=>{
+ const f=E.fixture(),owner=new Client(E.options(f.database));await owner.connect();
+ const config=require('../../server/database-connection.cjs').connection(f.appCfg),pools=[new Pool({...config,max:10}),new Pool({...config,max:10,application_name:'musonoi-authorization-rc2'})];let app;
+ const metrics={syntheticOnly:true,maximumApplicationConnections:20,maximumPerInstanceConfigured:60,ownerConnectionsExcluded:1,concurrency:[],plans:[],checks:[]};
+ const check=(name,fn)=>t.test(name,async()=>{try{await fn();metrics.checks.push({name,status:'PASS'});}catch(e){metrics.checks.push({name,status:'FAIL'});throw e;}});
+ try{
+ const waits=[[],[]];for(const [i,p]of pools.entries()){const connect=p.connect.bind(p);p.connect=function(cb){const start=performance.now();if(cb)return connect((e,c,release)=>{waits[i].push(performance.now()-start);cb(e,c,release);});return connect().then(c=>{waits[i].push(performance.now()-start);return c;});};}
+ app=await require('../../server/app.cjs').build({config:f.appCfg,pool:pools[0],authorizationPool:pools[1]});const a=f.accounts.find(a=>a.role==='admin'),r=await app.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);const headers={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};
+ const write=(name,key=crypto.randomUUID())=>app.inject({method:'POST',url:'/api/v1/masters/warehouses',headers:{...headers,'idempotency-key':key},payload:{project_id:f.project,code:name,name,active:true}});
+ const percentile=(a,p)=>Number([...a].sort((a,b)=>a-b)[Math.max(0,Math.ceil(a.length*p)-1)]?.toFixed(3)||0);
+ for(const n of [10,24,50])await check(n+' concurrent authorized business writes complete with both pools drained',async()=>{
+  waits.forEach(a=>a.length=0);const elapsed=[],start=performance.now(),salt=crypto.randomBytes(4).toString('hex').toUpperCase();const responses=await Promise.all(Array.from({length:n},async(_,i)=>{const s=performance.now(),r=await write('RC2-'+salt+'-'+i);elapsed.push(performance.now()-s);return r;}));const total=performance.now()-start;
+  assert(responses.every(r=>r.statusCode===200),responses.find(r=>r.statusCode!==200)?.body);assert.equal(new Set(responses.map(r=>r.json().id)).size,n);assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code LIKE $1',['RC2-'+salt+'-%'])).rows[0].n,n);
+  assert.equal(pools[1].waitingCount,0);assert.equal(pools[1].idleCount,pools[1].totalCount);metrics.concurrency.push({requests:n,totalMs:Number(total.toFixed(3)),requestsPerSecond:Number((1000*n/total).toFixed(2)),requestP50Ms:percentile(elapsed,.5),requestP95Ms:percentile(elapsed,.95),businessPoolWaitP95Ms:percentile(waits[0],.95),authorizationPoolWaitP95Ms:percentile(waits[1],.95)});
+ });
+ await check('duplicate submission preserves one business row and one result',async()=>{const code='RC2-DUP-'+crypto.randomBytes(4).toString('hex').toUpperCase(),key=crypto.randomUUID(),rs=await Promise.all([write(code,key),write(code,key)]);assert.deepEqual(rs[0].json(),rs[1].json());assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,1);});
+ await check('pool exhaustion has a finite queue timeout and later requests recover',async()=>{const p=new Pool({...config,max:1,connectionTimeoutMillis:500});try{const held=await p.connect();await assert.rejects(()=>p.connect(),/timeout|connection/i);held.release();assert.equal((await p.query('SELECT 1 n')).rows[0].n,1);assert.equal(p.waitingCount,0);}finally{await p.end();}});
+ await check('cancelled lease queued behind a manager is returned after lock acquisition',async()=>{
+  await owner.query('BEGIN');await owner.query('SELECT pg_advisory_xact_lock(21002)');const req={raw:{aborted:false}},pending=Lease.acquire(req,pools[1]);await wait(80);req.authorizationCancelled=true;await owner.query('ROLLBACK');await assert.rejects(()=>pending,{code:'AUTHORIZATION_CANCELLED'});assert.equal(pools[1].idleCount,pools[1].totalCount);
+ });
+ await check('database lock timeout rolls back lease and next request succeeds',async()=>{
+  await owner.query('BEGIN');await owner.query('SELECT pg_advisory_xact_lock(21002)');try{await assert.rejects(()=>Lease.acquire({},pools[1]),{code:'55P03'});}finally{await owner.query('ROLLBACK');}const req={};await Lease.acquire(req,pools[1]);await Lease.release(req);assert.equal(pools[1].idleCount,pools[1].totalCount);
+ });
+ await check('database query timeout does not retain an authorization lease',async()=>{const req={},c=await Lease.acquire(req,pools[1]);await c.query("SET LOCAL statement_timeout='30ms'");await assert.rejects(()=>c.query('SELECT pg_sleep(1)'),{code:'57014'});await Lease.release(req);assert.equal(pools[1].idleCount,pools[1].totalCount);});
+ await check('terminated database connection is destroyed and a fresh lease can proceed',async()=>{
+  const req={},client=await Lease.acquire(req,pools[1]);client.once('error',()=>{});const pid=(await client.query('SELECT pg_backend_pid() pid,current_database() name')).rows[0];assert.equal(pid.name,f.database);await owner.query('SELECT pg_terminate_backend($1)',[pid.pid]);await wait(50);await Lease.release(req).catch(()=>{});assert.equal(req.authorizationLease,null);const next={};await Lease.acquire(next,pools[1]);await Lease.release(next);assert.equal(pools[1].idleCount,pools[1].totalCount);
+ });
+ await check('observed authorization loss rolls back the pending business row before commit',async()=>{
+  const req={method:'POST',url:'/api/v1/rc2-disconnect-proof',headers:{'idempotency-key':crypto.randomUUID()},body:{},raw:{},user:{id:a.id}},client=await Lease.acquire(req,pools[1]),code='RC2-LOST-'+crypto.randomBytes(4).toString('hex').toUpperCase();
+  try{await assert.rejects(()=>require('../../server/business-common.cjs').mutate(pools[0],req,async work=>{const row=(await work.query('INSERT INTO warehouses(project_id,code,name) VALUES($1,$2,$2) RETURNING id',[f.project,code])).rows[0],pid=(await client.query('SELECT pg_backend_pid() pid')).rows[0].pid;await owner.query('SELECT pg_terminate_backend($1)',[pid]);await wait(50);return row;}),{code:'AUTHORIZATION_CONNECTION_LOST'});assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,0);}finally{await Lease.release(req).catch(()=>{});}
+ });
+ await check('real HTTP cancellation before authorization prevents business write',async()=>{
+  await app.listen({host:'127.0.0.1',port:0});const port=app.server.address().port,code='RC2-CANCEL-'+crypto.randomBytes(4).toString('hex').toUpperCase();await owner.query('BEGIN');await owner.query('SELECT pg_advisory_xact_lock(21002)');
+  const req=http.request({host:'127.0.0.1',port,path:'/api/v1/masters/warehouses',method:'POST',headers:{...headers,'content-type':'application/json','idempotency-key':crypto.randomUUID()}},res=>res.resume());req.on('error',()=>{});req.end(JSON.stringify({project_id:f.project,code,name:code,active:true}));
+  for(let i=0;i<100;i++){const q=await owner.query("SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE a.datname=$1 AND a.application_name='musonoi-authorization-rc2' AND NOT l.granted",[f.database]);if(q.rowCount)break;if(i===99)throw Error('No cancelled request lock waiter');await wait(10);}req.destroy();await wait(50);await owner.query('ROLLBACK');
+  for(let i=0;i<100&&pools[1].idleCount!==pools[1].totalCount;i++)await wait(20);assert.equal(pools[1].idleCount,pools[1].totalCount);assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,0);
+ });
+ await check('representative UUID lookup execution plans retain primary key index',async()=>{
+  await owner.query('BEGIN');try{await owner.query("INSERT INTO projects(code,name) SELECT 'RC2-PLAN-'||g,'Synthetic plan benchmark' FROM generate_series(1,5000) g");await owner.query('ANALYZE projects');for(const predicate of ['id::text=$1','id=$1::uuid']){const plan=(await owner.query('EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) SELECT to_jsonb(t) FROM projects t WHERE '+predicate,[f.project])).rows[0]['QUERY PLAN'][0];metrics.plans.push({predicate,plan});}assert.match(JSON.stringify(metrics.plans.at(-1).plan),/Index Scan|Bitmap Index Scan/);}finally{await owner.query('ROLLBACK');}
+ });
+ }finally{await owner.query('ROLLBACK').catch(()=>{});await app?.close();for(const p of pools)await p.end();await owner.end();metrics.status=metrics.checks.every(x=>x.status==='PASS')?'PASS':'FAIL';E.save('rc2-pool-results.json',metrics);}
+});

@@ -1,0 +1,138 @@
+✔ dispatch weight units, decimal comma and exact four-place tonne precision (0.9465ms)
+✔ loading order recognises multilingual weight headings and excludes trailer numbers (1.9829ms)
+✔ formula weight cells are rejected rather than treated as dispatch capacity (0.1696ms)
+✔ independent review rejects both document creator and submitter regardless of role (0.4403ms)
+✔ Docker uses explicit sources, default deny context and final sensitive-file exclusions (2.0189ms)
+✔ database target boundaries, owner separation and TLS bypass remain enforced (1.0445ms)
+✔ maintenance apply requires an explicit database confirmation (19.6521ms)
+✔ Fastify fix is installed and accepts streaming responses (152.0856ms)
+✔ release migration baseline accepts the reviewed chain and known historical filename gaps (0.522ms)
+✔ applied migrations must be a checksum-matching prefix; unknown versions and holes fail closed (0.7657ms)
+✔ missing, injected, edited SQL and reordered baseline are rejected before any database query (65.1135ms)
+✔ 172 exact signatures and function snapshots reject silent replacement drift and overloads (1.5557ms)
+✔ co matching review catalog only offers the approved site supervisor role (2.6526ms)
+✔ cancelled request cannot retain an authorization lease (0.2622ms)
+✔ rollback failure destroys rather than recycles a leased connection (0.199ms)
+✔ only exact configured immediate proxies can supply a single client IP (3.6483ms)
+✔ every literal application audit entity has an explicit reviewed scope policy (5.8431ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 548.9093
+▶ isolated migration, initialization, business permission and concurrency acceptance
+  ✔ empty schema dry-run rolls back every table; release apply, repeat and backup precondition (1995.6543ms)
+  ✔ bootstrap requires reviewed map, verified backup; dry-run/apply/retry preserve identities (127.7294ms)
+  ✔ 138-entry old schema upgrades incrementally; database holes and checksum changes are rejected (1028.3537ms)
+  ✔ preproduction CLI dry-run and confirmed apply use the same verified migration chain (338.4883ms)
+  ✔ 172 refuses a drifted prerequisite function, rolls back, then applies once with exact snapshots (989.8188ms)
+  ✔ concurrent migrations serialize: exactly one applies, the other is an idempotent retry (965.5244ms)
+  ✔ both products: configurable admin review, revocation, two independent sales and closure stages (541.6833ms)
+  ✔ native cobalt intake: exact weights/seals, no self-review, final receipt and bounded stock history (120.0502ms)
+✔ isolated migration, initialization, business permission and concurrency acceptance (8347.7186ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8443.9802
+▶ first batch management security regressions
+  ✔ restricted role manager cannot add account management to its own role (24.1803ms)
+  ✔ restricted account listing excludes outside administrators and multi-project targets (6.0801ms)
+  ✔ restricted account manager cannot reset an outside administrator password (4.646ms)
+  ✔ restricted account manager cannot promote itself to administrator (3.8415ms)
+  ✔ scoped audit list and count exclude another project (4.4873ms)
+  ✔ scoped audit details deny another project by ID (2.5378ms)
+  ✔ legacy audit endpoint uses the same project isolation (1.934ms)
+  ✔ ordinary operators have no management access; system administrator retains audit access (5.3056ms)
+  ✔ system administrator account options retain every current built-in role (7.6211ms)
+  ✔ restricted role creation and editing succeed only within the live permission ceiling (12.1629ms)
+  ✔ own role, built-in roles and roles assigned outside the full scope cannot be changed (15.3936ms)
+  ✔ restricted account creation cannot assign administrator, stronger roles or outside scopes (74.0558ms)
+  ✔ full target containment protects all account lifecycle endpoints, including multi-project users (30.2099ms)
+  ✔ allowed account create, edit, reset, soft-delete and restore preserve identity and audit history (112.3633ms)
+  ✔ registration queue and review are system-administrator-only; concurrent review commits once (56.0057ms)
+  ✔ audit scope snapshots resist forged metadata and later actor/project reassignment (8.6874ms)
+  ✔ audit scope attribution treats valid uppercase UUIDs as the same authorized project (2.6699ms)
+  ✔ unknown and system audit events stay administrator-only; history cannot be rewritten (4.1136ms)
+  ✔ warehouse audit access requires exact warehouse coverage and project-wide records stay hidden (54.5717ms)
+  ✔ customer audit access does not expose another product/customer in the same project (51.2327ms)
+  ✔ all scope fragments must be authorized; partial coverage of a multi-project event is insufficient (4.4007ms)
+  ✔ permission and scope changes revoke every affected session without logging out unrelated users (107.5012ms)
+  ✔ a queued management request rechecks its session after password/session revocation (45.4818ms)
+  ✔ an ordinary write waiting for authorization cannot use revoked permission (113.8029ms)
+  ✔ an in-flight write finishes before revocation commits; no old session survives the boundary (172.9987ms)
+  ✔ more concurrent writes than the pool size complete without authorization-pool starvation (229.7752ms)
+  ✔ language preference is ordered safely and does not revoke normal sessions (8.6032ms)
+  ✔ role-code gates cannot be acquired by assigning another built-in role with matching raw grants (73.1307ms)
+  ✔ case changes in UUID text cannot bypass the own-role change prohibition (3.2424ms)
+  ✔ catalog built-in roles remain protected when historical built_in flags are false (72.1515ms)
+  ✔ 172-to-173 upgrade preserves every historical account, grant, scope, session and audit row (1793.7384ms)
+✔ first batch management security regressions (5592.7168ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5679.562
+✔ native copper receipt, preparation, sampling, weighing and formal outbound (1833.2803ms)
+▶ native cobalt match independence, cancellation, rematch, formal outbound and reports
+  ✔ two independent sales approvals and a dispatch arrival feed the loading plan (144.5812ms)
+  ✔ native preparation preserves exact ARECOMS precision and final receipt independence (190.7197ms)
+  ✔ matching requires current versions and a complete independent preparation (66.509ms)
+  ✔ administrator with raw historical grant is denied; supervisor needs permission and correct version (97.0026ms)
+  ✔ formal outbound alone deducts inventory after independent load, logistics and production approvals (118.7396ms)
+✔ native cobalt match independence, cancellation, rematch, formal outbound and reports (1679.2164ms)
+▶ queued management cannot strand cobalt and gate work behind its own authorization lease
+  ✔ intake (120.4384ms)
+  ✔ sales (136.9003ms)
+  ✔ stock (72.8018ms)
+  ✔ gate (422.4218ms)
+✔ queued management cannot strand cobalt and gate work behind its own authorization lease (776.1304ms)
+▶ isolated authorization pools, cancellation, recovery and execution plans
+  ✔ 10 concurrent authorized business writes complete with both pools drained (179.2086ms)
+  ✔ 24 concurrent authorized business writes complete with both pools drained (45.7404ms)
+  ✔ 50 concurrent authorized business writes complete with both pools drained (78.4622ms)
+  ✔ duplicate submission preserves one business row and one result (3.9357ms)
+  ✔ pool exhaustion has a finite queue timeout and later requests recover (528.9161ms)
+  ✔ cancelled lease queued behind a manager is returned after lock acquisition (89.5587ms)
+  ✔ database lock timeout rolls back lease and next request succeeds (5014.8621ms)
+  ✔ database query timeout does not retain an authorization lease (41.2157ms)
+  ✔ terminated database connection is destroyed and a fresh lease can proceed (61.6287ms)
+  ✔ observed authorization loss rolls back the pending business row before commit (63.5873ms)
+  ✔ real HTTP cancellation before authorization prevents business write (102.4016ms)
+  ✔ representative UUID lookup execution plans retain primary key index (27.8592ms)
+✔ isolated authorization pools, cancellation, recovery and execution plans (6996.5686ms)
+▶ second batch isolated reliability acceptance
+  ✔ unknown ARECOMS remains NULL on stock and map summary (50.4727ms)
+  ✔ legacy confirmed zero and empty ARECOMS projections remain distinct without changing stored business values (24.6745ms)
+  ✔ real cobalt stocktake audit resolves authoritative project and warehouse (192.8712ms)
+  ✔ trusted nginx separates twenty concurrent staff client addresses (538.5977ms)
+  ✔ untrusted forwarding spoof cannot bypass login limit (229.9613ms)
+  ✔ trusted proxy rejects chains rather than accepting forged forwarding hops (2.4948ms)
+✔ second batch isolated reliability acceptance (1796.8327ms)
+✔ native copper and cobalt stocktake submissions, independent review and retained histories (1307.1662ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14864.9558
+✔ real browser: current cobalt stock, independent permissions and both languages at desktop/mobile widths (6962.4333ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7251.446

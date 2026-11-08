@@ -1,0 +1,136 @@
+▶ queued management cannot strand cobalt and gate work behind its own authorization lease
+  ✖ intake (609.7163ms)
+  ✖ sales (651.0514ms)
+  ✖ stock (586.1618ms)
+  ✖ gate (906.5722ms)
+✖ queued management cannot strand cobalt and gate work behind its own authorization lease (2781.2616ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2855.8818
+
+✖ failing tests:
+
+test at tests\release\lock-order.cjs:6:148
+✖ intake (609.7163ms)
+  error: canceling statement due to lock timeout
+      at [WORKTREE]\node_modules\.pnpm\pg@8.23.1\node_modules\pg\lib\client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async mutation ([WORKTREE]\server\cobalt.cjs:11:469)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:9:147)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:6:140)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    length: 104,
+    severity: 'ERROR',
+    code: '55P03',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'postgres.c',
+    line: '3389',
+    routine: 'ProcessInterrupts'
+  }
+
+test at tests\release\lock-order.cjs:6:148
+✖ sales (651.0514ms)
+  error: canceling statement due to lock timeout
+      at [WORKTREE]\node_modules\.pnpm\pg@8.23.1\node_modules\pg\lib\client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async mutation ([WORKTREE]\server\cobalt-sales.cjs:10:460)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:9:147)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:6:140)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    length: 104,
+    severity: 'ERROR',
+    code: '55P03',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'postgres.c',
+    line: '3389',
+    routine: 'ProcessInterrupts'
+  }
+
+test at tests\release\lock-order.cjs:6:148
+✖ stock (586.1618ms)
+  error: canceling statement due to lock timeout
+      at [WORKTREE]\node_modules\.pnpm\pg@8.23.1\node_modules\pg\lib\client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async mutate ([WORKTREE]\server\cobalt-stock.cjs:9:456)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:9:147)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:6:140)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    length: 104,
+    severity: 'ERROR',
+    code: '55P03',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'postgres.c',
+    line: '3389',
+    routine: 'ProcessInterrupts'
+  }
+
+test at tests\release\lock-order.cjs:6:148
+✖ gate (906.5722ms)
+  error: canceling statement due to lock timeout
+      at [WORKTREE]\node_modules\.pnpm\pg@8.23.1\node_modules\pg\lib\client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async mutate ([WORKTREE]\server\gate-permits.cjs:13:387)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:9:147)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\lock-order.cjs:6:140)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    length: 104,
+    severity: 'ERROR',
+    code: '55P03',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'postgres.c',
+    line: '3389',
+    routine: 'ProcessInterrupts'
+  }

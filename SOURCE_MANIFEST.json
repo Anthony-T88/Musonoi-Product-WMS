@@ -1,7 +1,7 @@
 {
-  "version": "4.6.9-r3-rc1",
-  "revision": "4.6.9-r3-rc1",
-  "auditRevision": "batch1-security-20261108",
+  "version": "4.6.9-r3-rc2",
+  "revision": "4.6.9-r3-rc2",
+  "auditRevision": "batch2-reliability-20261108",
   "files": [
     {
       "path": ".dockerignore",
@@ -9,7 +9,7 @@
     },
     {
       "path": ".env.example",
-      "sha256": "fec63038ff999e56577906fe1b95d5a4045ffecd5b16e0d289af62cb918d1248"
+      "sha256": "6e830b89d435527d5a26a4cb4f57d56b088574b7e5067d0e679e5f5774cdaa88"
     },
     {
       "path": "AUDIT_REMEDIATION.md",
@@ -25,7 +25,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "ee5c39a2a2ce056f305d691e0aaf365665e0272ef90b31802acbfa35be59befd"
+      "sha256": "b998c06941e5083d23fc70c514e9d262b4849da41573eda2548e64546c809dd3"
     },
     {
       "path": "db/MIGRATIONS.md",
@@ -33,7 +33,7 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "sha256": "3078656ff5c67805c38f8a73e000b6a1523ad694836ff0f057165ffcd948a66c"
+      "sha256": "634e4649ee7d1ca97b94cedc94e0b5de21363cb4856a51f66757d1d344800620"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -732,6 +732,10 @@
       "sha256": "98cfc7ada7546320c491a277eec8e27b2285c9c4584018857137ba060b386e03"
     },
     {
+      "path": "db/migrations/174_r3_reliable_audit_entity_scopes.sql",
+      "sha256": "7f26f3a2492531c0a4218586a2d2d2bc37b88b49c0c5edfa5afed460ce062759"
+    },
+    {
       "path": "db/rollback/139_v38_cobalt_empty_only.sql",
       "sha256": "768972b2ee295719bc993981cc6fc3b1786eadafa3f586afb2f921b43fcc0b80"
     },
@@ -817,7 +821,7 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "sha256": "aaee02dc050dc708ca9f46281a014804f70d52fa9ce8a9fb3d8b51c75d63af86"
+      "sha256": "2230257b9cddffb1dd287af44d8268aa37bb19d48950988561c0b78f4b52797f"
     },
     {
       "path": "deploy/preproduction.settings.example",
@@ -1093,7 +1097,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "4c3dd47083a0fd0f2a41a92922d294450b14e403e7fe93f6bc70a41576653d62"
+      "sha256": "cb66ae881942d1cfdd4e168e047fd7b8993a584fafd98f3de284657f1fd643e1"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1265,7 +1269,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "bd77c191c2407cc2b0faf3ea1ff97505da593021c28c297d82239bbb420cbfac"
+      "sha256": "3fa464461f7192d6faf677b794a15af917c55202572d126991fd016c7f62cb3f"
     },
     {
       "path": "dist/reports463.js",
@@ -1305,7 +1309,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "c23c2f7d6c8314b25e8b55d41d902159a42d0e66d23ffdebe3d213e712ce531c"
+      "sha256": "cce37cfff3d3f1c5d475ab8642580a99e81ebe144b911abf4648ba6db3384075"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1593,7 +1597,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "c05b149a56df21ffb2fa94ae80a14d38aab0b00d7df50d5c7d21df0cd5975a8b"
+      "sha256": "1ea219089b8fcdc033c4b5910483067ecdc14a1b57e33fa67faa29b900266926"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -1629,7 +1633,7 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "sha256": "0bb028e6342f538feb8cfd9aeb59f0ee48feb00d5fd2c8aa7382625709c7c884"
+      "sha256": "cda973d4aa1ab4edc0a70806b3311807feeb152bfed2c8c1edf062a963164c89"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -1665,7 +1669,7 @@
     },
     {
       "path": "server/app.cjs",
-      "sha256": "19f19021945b4a8b17b1ade4bf5cd46e9ca27d2b49fa769d85c71a6d49533634"
+      "sha256": "32c2a95316751970f72da7ed9d4b27e539fe6f3eacd77994efac875cc1755045"
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -1685,7 +1689,7 @@
     },
     {
       "path": "server/authorization-lease.cjs",
-      "sha256": "19c1379ba61df81592b6c959fced8d55351186959f4b43e55ffb5ce90011b7bb"
+      "sha256": "60a37d05add80a8baf500cc239f1895566e88d3075690c91a5837fa61972875d"
     },
     {
       "path": "server/bundle-history.cjs",
@@ -1697,7 +1701,7 @@
     },
     {
       "path": "server/business-common.cjs",
-      "sha256": "063a9e84c6de2fa81f05f4a3d78e147c9d2819b2aedd57e29dece9ca857a0711"
+      "sha256": "29070d3ddc03d86ee3d190b5d9fbd53f6aaef37f10fe9d0929fb97eea53d2e83"
     },
     {
       "path": "server/business-time.cjs",
@@ -1737,15 +1741,15 @@
     },
     {
       "path": "server/cobalt-reports.cjs",
-      "sha256": "bb842a04e95cce0403007b966bbbd57da026e48d25431db41e0088a4ece9b862"
+      "sha256": "af0c93bf717db27e295f604ed9cb046602e00f6555525d0781027aa4b904e2e9"
     },
     {
       "path": "server/cobalt-sales.cjs",
-      "sha256": "2140cf300e32f617a947f9804b8c8e45372104a63b023ccb8ed303be976b73a3"
+      "sha256": "3e8e4a66c3cfd94901fe7c1de22ce4d0e30cdf3cdf595a77a2514a013dbf737e"
     },
     {
       "path": "server/cobalt-stock.cjs",
-      "sha256": "ac16590818ebae8202b618f3215c08e20215b7e66de9b2f67b64c3ca9f359b74"
+      "sha256": "c92dd08e4206387c3fb80541eab3d3c15881c19d433111f458853602ef4740cd"
     },
     {
       "path": "server/cobalt-stocktaking.cjs",
@@ -1757,7 +1761,7 @@
     },
     {
       "path": "server/cobalt.cjs",
-      "sha256": "4677ef45ac79cdf06de7abdab5a7151dfdb824a16f9ff6bc6c22eda900ba172c"
+      "sha256": "398dc7d63ea5991e160167a593d2be8aa1ae4ff56abfb9e45da02389638513de"
     },
     {
       "path": "server/cobalt461.cjs",
@@ -1769,7 +1773,7 @@
     },
     {
       "path": "server/config.cjs",
-      "sha256": "cfda854c8dd75005e1fc45b9d2a22190a72f7d4a0284daecd92e59028ec2cf77"
+      "sha256": "bc9f84c51e1898d87b9f1222c043529b79c56d91f73d42130953246a4b9359b8"
     },
     {
       "path": "server/contracts.cjs",
@@ -1813,7 +1817,7 @@
     },
     {
       "path": "server/gate-permits.cjs",
-      "sha256": "bdadbb9a732ca8658282c0f59e6cf9097ff41ea6dd06dfc41553c8e0c97b73ab"
+      "sha256": "19c8ea38193df57353ce0c056d467b208385ffca0743f658517388e879b5bc6e"
     },
     {
       "path": "server/gate-printers.cjs",
@@ -1969,7 +1973,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "0b7c0f8fe40426be6c80e7087d20d5f5caaf9c29ca9a7c284e250f2903694dd7"
+      "sha256": "8464cc5124bc74b740d2cda70a872e9226e29a7be14d38b2c2349848e4a914f5"
     },
     {
       "path": "server/report-periods.cjs",
@@ -2030,6 +2034,10 @@
     {
       "path": "server/stocktakes.cjs",
       "sha256": "d5999f07c6243fb0b7147d270437d7edfac5bb7f985205c20ded29e9035380c8"
+    },
+    {
+      "path": "server/trusted-proxy.cjs",
+      "sha256": "dfe9a7170308e78a774436c8326c591c0264983a121c850b04809dfdab9c0de8"
     },
     {
       "path": "server/ui-page-response.cjs",
@@ -2113,7 +2121,7 @@
     },
     {
       "path": "server/workflow-permissions.cjs",
-      "sha256": "07544a90ea8b52a83145e94960badd89494b5247146bcd9ae19d3362de2e8786"
+      "sha256": "d84c4607a3b928c444d56ab5ba576172bafaf7040b7f5942c7918b565275a7b9"
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
@@ -2188,24 +2196,60 @@
       "sha256": "61022cfba93771cad67e3f67195525e0458547912a1f65407cd13eba6342ea09"
     },
     {
+      "path": "tests/release/ci-setup.cjs",
+      "sha256": "a0d6943e881b14d36560a0d88cd0cfb16c5a6a42bc73434a0bbca2a6d3514a25"
+    },
+    {
+      "path": "tests/release/copper-core.cjs",
+      "sha256": "fcc4f17a134b29a6b6fc6f545e2775f40a1b6ba4490d177e480265c1f3edcf73"
+    },
+    {
+      "path": "tests/release/core-flows.cjs",
+      "sha256": "8f5f6391e4314c0378d0fc211da6fdc786fec8b09bdcfa6424a4ad03c7b5bd3d"
+    },
+    {
       "path": "tests/release/database.test.cjs",
-      "sha256": "486bbef65b952dca882d3a65c50724c635901ecf9e6ae6c94af0fcf2403b66e7"
+      "sha256": "1596ad3a63a30bd33410308f4c770309b5e1657b04bbae8c34f782c45bc5e9ef"
     },
     {
       "path": "tests/release/deployment.test.cjs",
       "sha256": "5b66e0e157d452ebeccc9efceb4e69977db8948823e3702bfd361906d7d12335"
     },
     {
+      "path": "tests/release/docker-acceptance.cjs",
+      "sha256": "72602b03e5d6a229d3dc1a3af284be81b7a340b2554fc1178d58279d7a3dfee5"
+    },
+    {
       "path": "tests/release/environment.cjs",
-      "sha256": "16cb72bafab01499731dd3b5e117df9cf2e5485d4cc0f932d25c8a01009c1a15"
+      "sha256": "36ab7796491cac2175b43c4d6b0bdd9925475f77ccc251ca3a3ef84c27b8e5f5"
     },
     {
       "path": "tests/release/fixtures/172-functions.json",
       "sha256": "3f1f7c24939bbde441d338e5d95aab063fbd844555fdb855c5dc9e7cb876a846"
     },
     {
+      "path": "tests/release/fixtures/rc2-audit-entity-matrix.json",
+      "sha256": "c3200b30492e1862977098ec4c92bae98b44f420b388d4d0a10655b454493b24"
+    },
+    {
+      "path": "tests/release/lock-order.cjs",
+      "sha256": "19e3a8d92897123269dcb0f27354c04c33039d70028b61dc8dee16a366dcd47b"
+    },
+    {
       "path": "tests/release/migrations.test.cjs",
-      "sha256": "f7d59bafd8dd54991bbf2e574e4bc20035d4209476f36800a49444d5eeb5bc02"
+      "sha256": "e4740031f4e6ed8cb00a5d5ef3beda6172c24b8d65e9437cbdf5c510974eacff"
+    },
+    {
+      "path": "tests/release/pool-reliability.cjs",
+      "sha256": "446acf7188472062b0152aa74fd6a1e44bc8f5e17c4d76d0137825e2124f9bbc"
+    },
+    {
+      "path": "tests/release/reliability-unit.test.cjs",
+      "sha256": "894daf2e54dceb3265ee93cbc53c3af1e84f7bf68ede4571aed6ec8f7bb84b4a"
+    },
+    {
+      "path": "tests/release/reliability.test.cjs",
+      "sha256": "a07f7bd2c269d8713a8e1a9b0e0d903160823b7477d6315ba84c02e5e5d76844"
     },
     {
       "path": "tests/release/security-baseline.cjs",
@@ -2213,11 +2257,19 @@
     },
     {
       "path": "tests/release/security.test.cjs",
-      "sha256": "f2225e26cac5c7ff43dec45b0d071fbe6d08d88b57a6f781b1ecb224da27f3f3"
+      "sha256": "719cfe0d6ce0b04dfba4aa3e9f887a840b4bffc6bb14a0a009b605c1d8bb8ded"
+    },
+    {
+      "path": "tests/release/source-check.cjs",
+      "sha256": "6c448cab92b61401cfdbc391971555f5635955a607589769d45c2100cff261bc"
+    },
+    {
+      "path": "tests/release/stocktake-core.cjs",
+      "sha256": "755a43b34066a512e21c3ac70a0eb2b284a022649d8703adb84e73bf7ca9644e"
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "b3ff63b42024056159381887af6715694972112506a926e9cd2f63637f46bfd4"
+      "sha256": "1822afe2fc489ae86d2a897ca59ae589984492ef9f6e74f0075d9be9b0472983"
     }
   ]
 }

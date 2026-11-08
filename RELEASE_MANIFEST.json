@@ -1,9 +1,9 @@
 {
   "format": 2,
-  "version": "4.6.9-r3-rc1",
-  "status": "candidate awaiting review",
-  "runtimeRequiredMigrations": 173,
-  "sourceFiles": 554,
+  "version": "4.6.9-r3-rc2",
+  "status": "Draft candidate; local acceptance passed; CI and Docker require actual workflow result",
+  "runtimeRequiredMigrations": 174,
+  "sourceFiles": 567,
   "keyIncluded": false,
   "encryptedDatabaseBackup": {
     "path": "Musonoi-Database-V4.6.9-R2.dump.enc",
@@ -23,8 +23,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 467,
-      "sha256": "fec63038ff999e56577906fe1b95d5a4045ffecd5b16e0d289af62cb918d1248"
+      "bytes": 669,
+      "sha256": "6e830b89d435527d5a26a4cb4f57d56b088574b7e5067d0e679e5f5774cdaa88"
     },
     {
       "path": ".gitattributes",
@@ -32,9 +32,14 @@
       "sha256": "5fba520964ec06d3425fdbf9ec7eecc4507619d1c7ab80f78be6f02b78e84231"
     },
     {
+      "path": ".github/workflows/rc2-reliability.yml",
+      "bytes": 2423,
+      "sha256": "21da311746059249e00620ea1485d4bf3c61415a1a15a173120d553bcd37b6fa"
+    },
+    {
       "path": ".gitignore",
-      "bytes": 231,
-      "sha256": "a47c9be8bf93cd72264c52a7d064e75988a11365793ae5d7384451910ae1b855"
+      "bytes": 263,
+      "sha256": "46eee76154bac34619a0fcc823bdf5ece010e8ba5a67d40fb776cf0d0495c0f8"
     },
     {
       "path": "AUDIT_REMEDIATION.md",
@@ -58,13 +63,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 1449,
-      "sha256": "ee5c39a2a2ce056f305d691e0aaf365665e0272ef90b31802acbfa35be59befd"
+      "bytes": 1594,
+      "sha256": "b998c06941e5083d23fc70c514e9d262b4849da41573eda2548e64546c809dd3"
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "bytes": 79584,
-      "sha256": "b1e6894dd79858f2df9b9c47808294697565275faac785d07da02c3dc33bcf5d"
+      "bytes": 81513,
+      "sha256": "a9b4e2a419ace38268ca4e4f7efa4333f6c197f73b0e39a3e24b0e7737677d37"
     },
     {
       "path": "VALIDATION.json",
@@ -78,8 +83,8 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "bytes": 25753,
-      "sha256": "3078656ff5c67805c38f8a73e000b6a1523ad694836ff0f057165ffcd948a66c"
+      "bytes": 25912,
+      "sha256": "634e4649ee7d1ca97b94cedc94e0b5de21363cb4856a51f66757d1d344800620"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -952,6 +957,11 @@
       "sha256": "98cfc7ada7546320c491a277eec8e27b2285c9c4584018857137ba060b386e03"
     },
     {
+      "path": "db/migrations/174_r3_reliable_audit_entity_scopes.sql",
+      "bytes": 9903,
+      "sha256": "7f26f3a2492531c0a4218586a2d2d2bc37b88b49c0c5edfa5afed460ce062759"
+    },
+    {
       "path": "db/rollback/139_v38_cobalt_empty_only.sql",
       "bytes": 1588,
       "sha256": "768972b2ee295719bc993981cc6fc3b1786eadafa3f586afb2f921b43fcc0b80"
@@ -1063,8 +1073,8 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "bytes": 918,
-      "sha256": "aaee02dc050dc708ca9f46281a014804f70d52fa9ce8a9fb3d8b51c75d63af86"
+      "bytes": 967,
+      "sha256": "2230257b9cddffb1dd287af44d8268aa37bb19d48950988561c0b78f4b52797f"
     },
     {
       "path": "deploy/preproduction.settings.example",
@@ -1409,7 +1419,7 @@
     {
       "path": "dist/index.html",
       "bytes": 15905,
-      "sha256": "4c3dd47083a0fd0f2a41a92922d294450b14e403e7fe93f6bc70a41576653d62"
+      "sha256": "cb66ae881942d1cfdd4e168e047fd7b8993a584fafd98f3de284657f1fd643e1"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1624,7 +1634,7 @@
     {
       "path": "dist/release.js",
       "bytes": 134,
-      "sha256": "bd77c191c2407cc2b0faf3ea1ff97505da593021c28c297d82239bbb420cbfac"
+      "sha256": "3fa464461f7192d6faf677b794a15af917c55202572d126991fd016c7f62cb3f"
     },
     {
       "path": "dist/reports463.js",
@@ -1674,7 +1684,7 @@
     {
       "path": "dist/sw.js",
       "bytes": 2754,
-      "sha256": "c23c2f7d6c8314b25e8b55d41d902159a42d0e66d23ffdebe3d213e712ce531c"
+      "sha256": "cce37cfff3d3f1c5d475ab8642580a99e81ebe144b911abf4648ba6db3384075"
     },
     {
       "path": "dist/system46-pages.js",
@@ -2032,6 +2042,141 @@
       "sha256": "3286db6b68f1bfcf9f15152c122497904f2982d0c9992e828288721ebddd123a"
     },
     {
+      "path": "docs/reliability-r3-rc2/CHANGED_FILES.txt",
+      "bytes": 2303,
+      "sha256": "5283075fbdfebca45a60717ecc17dc01805a2a49bebaa7038e0cf594cca621f2"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/REPORT.txt",
+      "bytes": 8346,
+      "sha256": "fed08c22f39af888e3108e6b6e22f21e949d8a2286749c1bfb69c27ff47941c9"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/ROLLBACK.txt",
+      "bytes": 1140,
+      "sha256": "f2fc4f1a7d35ca741a2f3a5edb4046e86651c71ba288f9a875d471086cd15012"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/SOURCE_CHANGES.patch",
+      "bytes": 196993,
+      "sha256": "af2d92a0393835fa978bf98390677b7d4fcb627b3cd09a15f5339f8476e37f7f"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/TEST_RESULTS.json",
+      "bytes": 17070,
+      "sha256": "e5fd37251480c1082dba681f780ac8b8b8c3297c469c158ecd2561da06dac06d"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/audit-entity-matrix.csv",
+      "bytes": 7343,
+      "sha256": "e0e440f8b56a158215fd8526fc2841097eb64b7e4624d8dfa12c4972d75ac366"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/audit-entity-matrix.json",
+      "bytes": 11341,
+      "sha256": "c3200b30492e1862977098ec4c92bae98b44f420b388d4d0a10655b454493b24"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/database-results.json",
+      "bytes": 176,
+      "sha256": "dcde6800fe865682acba694f5867afb577179ddabbda85b5cb293a3eb8366492"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/local-acceptance.log",
+      "bytes": 9614,
+      "sha256": "639954c4f3a04bd8176e4ca56fedfa4df7eeedec573ce1256fc9299cdae481a2"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/migration-checkpoint.log",
+      "bytes": 3300,
+      "sha256": "19cbbc3ae5f9070dd3d39e4660c6da32b868094f275a5a9005faa26e79e00796"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/rc2-copper-results.json",
+      "bytes": 310,
+      "sha256": "8c4f8849a403cf77b12656498f7d3c560c7532062ea257be5424f8db202473c4"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/rc2-core-results.json",
+      "bytes": 763,
+      "sha256": "248f20cd25d96830aee467440c2761da4f5da5074486afa73d9c12736fe85dfe"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/rc2-lock-order-results.json",
+      "bytes": 301,
+      "sha256": "d323320e8f61c6f6409f12ee98a862d267589ebee0afb87b84bc4835ba9f3593"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/rc2-pool-results.json",
+      "bytes": 5432,
+      "sha256": "c0965ddf473a2945fd43eb0f3a2f76ee4716f3d798b76d4c8a3e0bad145402f3"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/rc2-reliability-results.json",
+      "bytes": 853,
+      "sha256": "11f490d2c6d9ca8239d9b575e9ccf5bb35d5af7ea42e3a2ec21b33f73f029741"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/rc2-stocktake-results.json",
+      "bytes": 175,
+      "sha256": "20b34387fd7eed8f623320c22ab1197c18cefdeaa306b59864d79d4d6445018d"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/red-api.log",
+      "bytes": 5034,
+      "sha256": "7d1da36f5cc731f08c8ef7066221d9407c7010d48b45418fbe103ee93c7f81e1"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/red-db-disconnect.log",
+      "bytes": 9882,
+      "sha256": "6b2d28fe7000aa6dadc451987d6964f72f09074f1c248d9696ca9d10c1c32e4f"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/red-lock-order.log",
+      "bytes": 5041,
+      "sha256": "c677bf3296181cceb5bb12badc3f57938f658aa1f27bd53e6532ec2024e32224"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/red-unit.log",
+      "bytes": 3599,
+      "sha256": "ffb8e8bd1408bfe740530208f776688e8bc11b78e8819ef1882ef4d5c30cf54e"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/runner-integration.json",
+      "bytes": 108,
+      "sha256": "27e33c852cafa2c01fc30f3891041f120a21082ab1410096dc90a83e7b34a99d"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/runner-reliability.json",
+      "bytes": 108,
+      "sha256": "447504974b35b8ee95d247a55cae1fc38d06fa5019cde96c15f09a4593f44163"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/runner-security.json",
+      "bytes": 105,
+      "sha256": "4ec4f9aa868f9ee1738ca96d3229f8e22954adf4f772707fc1df7d87a12e8011"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/runner-ui.json",
+      "bytes": 99,
+      "sha256": "9b052359f8bff1995ab49af44234626acd970feb6f3d67d976ab36c04183e0a7"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/runner-unit.json",
+      "bytes": 101,
+      "sha256": "b1ad799c62a839c7311efd8d9f560222b19bd2b6d067316065e73a1f01a9acf6"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/security-results.json",
+      "bytes": 4319,
+      "sha256": "765ad3fce589acaaa3be4c203a8286618e7c1b0b01dad2a1aa762d86a9bd4c19"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/ui-results.json",
+      "bytes": 1428,
+      "sha256": "7e0cad934c28103cf63147d83ade1bf6e8ecf580fa8168553dc1516e8d34ff13"
+    },
+    {
       "path": "docs/security-r3-rc1/ACCEPTANCE.log",
       "bytes": 5984,
       "sha256": "f4bee953e4e5b6f64e394d1ecf4f3197669c18212d210f3567072b53f1fc8035"
@@ -2094,7 +2239,7 @@
     {
       "path": "package.json",
       "bytes": 1286,
-      "sha256": "c05b149a56df21ffb2fa94ae80a14d38aab0b00d7df50d5c7d21df0cd5975a8b"
+      "sha256": "1ea219089b8fcdc033c4b5910483067ecdc14a1b57e33fa67faa29b900266926"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -2138,8 +2283,8 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "bytes": 1418,
-      "sha256": "0bb028e6342f538feb8cfd9aeb59f0ee48feb00d5fd2c8aa7382625709c7c884"
+      "bytes": 1799,
+      "sha256": "cda973d4aa1ab4edc0a70806b3311807feeb152bfed2c8c1edf062a963164c89"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -2183,8 +2328,8 @@
     },
     {
       "path": "server/app.cjs",
-      "bytes": 28625,
-      "sha256": "19f19021945b4a8b17b1ade4bf5cd46e9ca27d2b49fa769d85c71a6d49533634"
+      "bytes": 28944,
+      "sha256": "32c2a95316751970f72da7ed9d4b27e539fe6f3eacd77994efac875cc1755045"
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -2208,8 +2353,8 @@
     },
     {
       "path": "server/authorization-lease.cjs",
-      "bytes": 745,
-      "sha256": "19c1379ba61df81592b6c959fced8d55351186959f4b43e55ffb5ce90011b7bb"
+      "bytes": 1858,
+      "sha256": "60a37d05add80a8baf500cc239f1895566e88d3075690c91a5837fa61972875d"
     },
     {
       "path": "server/bundle-history.cjs",
@@ -2223,8 +2368,8 @@
     },
     {
       "path": "server/business-common.cjs",
-      "bytes": 3853,
-      "sha256": "063a9e84c6de2fa81f05f4a3d78e147c9d2819b2aedd57e29dece9ca857a0711"
+      "bytes": 4003,
+      "sha256": "29070d3ddc03d86ee3d190b5d9fbd53f6aaef37f10fe9d0929fb97eea53d2e83"
     },
     {
       "path": "server/business-time.cjs",
@@ -2273,18 +2418,18 @@
     },
     {
       "path": "server/cobalt-reports.cjs",
-      "bytes": 24961,
-      "sha256": "bb842a04e95cce0403007b966bbbd57da026e48d25431db41e0088a4ece9b862"
+      "bytes": 24958,
+      "sha256": "af0c93bf717db27e295f604ed9cb046602e00f6555525d0781027aa4b904e2e9"
     },
     {
       "path": "server/cobalt-sales.cjs",
-      "bytes": 25533,
-      "sha256": "2140cf300e32f617a947f9804b8c8e45372104a63b023ccb8ed303be976b73a3"
+      "bytes": 25636,
+      "sha256": "3e8e4a66c3cfd94901fe7c1de22ce4d0e30cdf3cdf595a77a2514a013dbf737e"
     },
     {
       "path": "server/cobalt-stock.cjs",
-      "bytes": 24406,
-      "sha256": "ac16590818ebae8202b618f3215c08e20215b7e66de9b2f67b64c3ca9f359b74"
+      "bytes": 25123,
+      "sha256": "c92dd08e4206387c3fb80541eab3d3c15881c19d433111f458853602ef4740cd"
     },
     {
       "path": "server/cobalt-stocktaking.cjs",
@@ -2298,8 +2443,8 @@
     },
     {
       "path": "server/cobalt.cjs",
-      "bytes": 16102,
-      "sha256": "4677ef45ac79cdf06de7abdab5a7151dfdb824a16f9ff6bc6c22eda900ba172c"
+      "bytes": 16205,
+      "sha256": "398dc7d63ea5991e160167a593d2be8aa1ae4ff56abfb9e45da02389638513de"
     },
     {
       "path": "server/cobalt461.cjs",
@@ -2313,8 +2458,8 @@
     },
     {
       "path": "server/config.cjs",
-      "bytes": 1060,
-      "sha256": "cfda854c8dd75005e1fc45b9d2a22190a72f7d4a0284daecd92e59028ec2cf77"
+      "bytes": 1106,
+      "sha256": "bc9f84c51e1898d87b9f1222c043529b79c56d91f73d42130953246a4b9359b8"
     },
     {
       "path": "server/contracts.cjs",
@@ -2368,8 +2513,8 @@
     },
     {
       "path": "server/gate-permits.cjs",
-      "bytes": 16372,
-      "sha256": "bdadbb9a732ca8658282c0f59e6cf9097ff41ea6dd06dfc41553c8e0c97b73ab"
+      "bytes": 16475,
+      "sha256": "19c8ea38193df57353ce0c056d467b208385ffca0743f658517388e879b5bc6e"
     },
     {
       "path": "server/gate-printers.cjs",
@@ -2563,8 +2708,8 @@
     },
     {
       "path": "server/release.cjs",
-      "bytes": 212,
-      "sha256": "0b7c0f8fe40426be6c80e7087d20d5f5caaf9c29ca9a7c284e250f2903694dd7"
+      "bytes": 213,
+      "sha256": "8464cc5124bc74b740d2cda70a872e9226e29a7be14d38b2c2349848e4a914f5"
     },
     {
       "path": "server/report-periods.cjs",
@@ -2640,6 +2785,11 @@
       "path": "server/stocktakes.cjs",
       "bytes": 6161,
       "sha256": "d5999f07c6243fb0b7147d270437d7edfac5bb7f985205c20ded29e9035380c8"
+    },
+    {
+      "path": "server/trusted-proxy.cjs",
+      "bytes": 828,
+      "sha256": "dfe9a7170308e78a774436c8326c591c0264983a121c850b04809dfdab9c0de8"
     },
     {
       "path": "server/ui-page-response.cjs",
@@ -2743,8 +2893,8 @@
     },
     {
       "path": "server/workflow-permissions.cjs",
-      "bytes": 10633,
-      "sha256": "07544a90ea8b52a83145e94960badd89494b5247146bcd9ae19d3362de2e8786"
+      "bytes": 10729,
+      "sha256": "d84c4607a3b928c444d56ab5ba576172bafaf7040b7f5942c7918b565275a7b9"
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
@@ -2837,9 +2987,24 @@
       "sha256": "61022cfba93771cad67e3f67195525e0458547912a1f65407cd13eba6342ea09"
     },
     {
+      "path": "tests/release/ci-setup.cjs",
+      "bytes": 1661,
+      "sha256": "a0d6943e881b14d36560a0d88cd0cfb16c5a6a42bc73434a0bbca2a6d3514a25"
+    },
+    {
+      "path": "tests/release/copper-core.cjs",
+      "bytes": 5543,
+      "sha256": "fcc4f17a134b29a6b6fc6f545e2775f40a1b6ba4490d177e480265c1f3edcf73"
+    },
+    {
+      "path": "tests/release/core-flows.cjs",
+      "bytes": 10773,
+      "sha256": "8f5f6391e4314c0378d0fc211da6fdc786fec8b09bdcfa6424a4ad03c7b5bd3d"
+    },
+    {
       "path": "tests/release/database.test.cjs",
       "bytes": 14810,
-      "sha256": "486bbef65b952dca882d3a65c50724c635901ecf9e6ae6c94af0fcf2403b66e7"
+      "sha256": "1596ad3a63a30bd33410308f4c770309b5e1657b04bbae8c34f782c45bc5e9ef"
     },
     {
       "path": "tests/release/deployment.test.cjs",
@@ -2847,9 +3012,14 @@
       "sha256": "5b66e0e157d452ebeccc9efceb4e69977db8948823e3702bfd361906d7d12335"
     },
     {
+      "path": "tests/release/docker-acceptance.cjs",
+      "bytes": 4915,
+      "sha256": "72602b03e5d6a229d3dc1a3af284be81b7a340b2554fc1178d58279d7a3dfee5"
+    },
+    {
       "path": "tests/release/environment.cjs",
-      "bytes": 6128,
-      "sha256": "16cb72bafab01499731dd3b5e117df9cf2e5485d4cc0f932d25c8a01009c1a15"
+      "bytes": 6148,
+      "sha256": "36ab7796491cac2175b43c4d6b0bdd9925475f77ccc251ca3a3ef84c27b8e5f5"
     },
     {
       "path": "tests/release/fixtures/172-functions.json",
@@ -2857,9 +3027,34 @@
       "sha256": "3f1f7c24939bbde441d338e5d95aab063fbd844555fdb855c5dc9e7cb876a846"
     },
     {
+      "path": "tests/release/fixtures/rc2-audit-entity-matrix.json",
+      "bytes": 11341,
+      "sha256": "c3200b30492e1862977098ec4c92bae98b44f420b388d4d0a10655b454493b24"
+    },
+    {
+      "path": "tests/release/lock-order.cjs",
+      "bytes": 1808,
+      "sha256": "19e3a8d92897123269dcb0f27354c04c33039d70028b61dc8dee16a366dcd47b"
+    },
+    {
       "path": "tests/release/migrations.test.cjs",
-      "bytes": 3353,
-      "sha256": "f7d59bafd8dd54991bbf2e574e4bc20035d4209476f36800a49444d5eeb5bc02"
+      "bytes": 3354,
+      "sha256": "e4740031f4e6ed8cb00a5d5ef3beda6172c24b8d65e9437cbdf5c510974eacff"
+    },
+    {
+      "path": "tests/release/pool-reliability.cjs",
+      "bytes": 9004,
+      "sha256": "446acf7188472062b0152aa74fd6a1e44bc8f5e17c4d76d0137825e2124f9bbc"
+    },
+    {
+      "path": "tests/release/reliability-unit.test.cjs",
+      "bytes": 2850,
+      "sha256": "894daf2e54dceb3265ee93cbc53c3af1e84f7bf68ede4571aed6ec8f7bb84b4a"
+    },
+    {
+      "path": "tests/release/reliability.test.cjs",
+      "bytes": 6356,
+      "sha256": "a07f7bd2c269d8713a8e1a9b0e0d903160823b7477d6315ba84c02e5e5d76844"
     },
     {
       "path": "tests/release/security-baseline.cjs",
@@ -2868,13 +3063,24 @@
     },
     {
       "path": "tests/release/security.test.cjs",
-      "bytes": 24574,
-      "sha256": "f2225e26cac5c7ff43dec45b0d071fbe6d08d88b57a6f781b1ecb224da27f3f3"
+      "bytes": 24935,
+      "sha256": "719cfe0d6ce0b04dfba4aa3e9f887a840b4bffc6bb14a0a009b605c1d8bb8ded"
+    },
+    {
+      "path": "tests/release/source-check.cjs",
+      "bytes": 1052,
+      "sha256": "6c448cab92b61401cfdbc391971555f5635955a607589769d45c2100cff261bc"
+    },
+    {
+      "path": "tests/release/stocktake-core.cjs",
+      "bytes": 3504,
+      "sha256": "755a43b34066a512e21c3ac70a0eb2b284a022649d8703adb84e73bf7ca9644e"
     },
     {
       "path": "tests/release/ui.test.cjs",
       "bytes": 5946,
-      "sha256": "b3ff63b42024056159381887af6715694972112506a926e9cd2f63637f46bfd4"
+      "sha256": "1822afe2fc489ae86d2a897ca59ae589984492ef9f6e74f0075d9be9b0472983"
     }
-  ]
+  ],
+  "fixedBaseline": "28988c4b814d1120414effc787c9566bf91c022f"
 }

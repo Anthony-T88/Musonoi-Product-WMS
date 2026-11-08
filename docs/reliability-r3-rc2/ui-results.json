@@ -1,0 +1,84 @@
+{
+  "status": "PASS",
+  "shapes": [
+    {
+      "page": "stock",
+      "language": "zh-CN",
+      "width": 1440
+    },
+    {
+      "page": "stock",
+      "language": "zh-CN",
+      "width": 768
+    },
+    {
+      "page": "stock",
+      "language": "zh-CN",
+      "width": 390
+    },
+    {
+      "page": "stock",
+      "language": "zh-CN",
+      "width": 320
+    },
+    {
+      "page": "stock",
+      "language": "en",
+      "width": 1440
+    },
+    {
+      "page": "stock",
+      "language": "en",
+      "width": 768
+    },
+    {
+      "page": "stock",
+      "language": "en",
+      "width": 390
+    },
+    {
+      "page": "stock",
+      "language": "en",
+      "width": 320
+    },
+    {
+      "page": "permissions",
+      "language": "zh-CN",
+      "width": 1440
+    },
+    {
+      "page": "permissions",
+      "language": "zh-CN",
+      "width": 390
+    },
+    {
+      "page": "permissions",
+      "language": "zh-CN",
+      "width": 320
+    },
+    {
+      "page": "permissions",
+      "language": "en",
+      "width": 1440
+    },
+    {
+      "page": "permissions",
+      "language": "en",
+      "width": 390
+    },
+    {
+      "page": "permissions",
+      "language": "en",
+      "width": 320
+    }
+  ],
+  "permissionCheckboxes": 66,
+  "permissionModules": 25,
+  "managementViews": [
+    "admin-registration-entry",
+    "limited-account-manager",
+    "limited-role-manager"
+  ],
+  "errors": [],
+  "workingDatabaseWrites": 0
+}

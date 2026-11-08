@@ -14,3 +14,5 @@ node_modules/
 
 # Sanitized, intentionally public audit test evidence.
 !docs/security-r3-rc1/*.log
+
+!docs/reliability-r3-rc2/*.log

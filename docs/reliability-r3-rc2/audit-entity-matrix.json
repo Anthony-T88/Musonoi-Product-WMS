@@ -1,0 +1,317 @@
+{
+  "defaultPolicy": "ADMIN_ONLY",
+  "historicalBackfill": false,
+  "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
+  "entries": [
+    {
+      "entity": "allocations",
+      "policy": "AUTHORITATIVE",
+      "basis": "plan_id -> sales_plans + planned location warehouse"
+    },
+    {
+      "entity": "batches",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "bundles",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_customer_profiles",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_dispatch_vehicles",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_loading_orders",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales plan project/customer/warehouse + same preparation scope required"
+    },
+    {
+      "entity": "co_loading_plans",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales plan project/customer/warehouse + same preparation scope required"
+    },
+    {
+      "entity": "co_locations",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_outbounds",
+      "policy": "AUTHORITATIVE",
+      "basis": "order_id -> co_loading_orders"
+    },
+    {
+      "entity": "co_packing_templates",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "co_preparations",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_sales_contracts",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_sales_plans",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_stocktakes",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative task project and warehouse; customer-wide"
+    },
+    {
+      "entity": "co_vehicle_arrivals",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "co_zones",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "customer_contracts",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "customer_transport_book",
+      "policy": "AUTHORITATIVE",
+      "basis": "customer_id -> customers"
+    },
+    {
+      "entity": "customers",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "exception_rules",
+      "policy": "AUTHORITATIVE",
+      "basis": "UUID project_id primary key"
+    },
+    {
+      "entity": "fixed_edit_load",
+      "policy": "AUTHORITATIVE",
+      "basis": "loading_orders"
+    },
+    {
+      "entity": "gate_permits",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative copper load or cobalt order scope"
+    },
+    {
+      "entity": "gate_printers",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "inventory_exceptions",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "label_jobs",
+      "policy": "AUTHORITATIVE",
+      "basis": "all label_job_items -> bundles; empty/unknown stays admin-only"
+    },
+    {
+      "entity": "loading_orders",
+      "policy": "AUTHORITATIVE",
+      "basis": "project/customer + every loading_items original location warehouse"
+    },
+    {
+      "entity": "loading_plan_documents",
+      "policy": "AUTHORITATIVE",
+      "basis": "group_id -> loading_plan_groups"
+    },
+    {
+      "entity": "loading_plan_groups",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales_plan_id -> sales_plans"
+    },
+    {
+      "entity": "locations",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "management_warning_settings",
+      "policy": "AUTHORITATIVE",
+      "basis": "UUID project_id primary key"
+    },
+    {
+      "entity": "outbound_corrections",
+      "policy": "AUTHORITATIVE",
+      "basis": "loading_id -> loading_orders; all original warehouses"
+    },
+    {
+      "entity": "outbound_orders",
+      "policy": "AUTHORITATIVE",
+      "basis": "loading_id -> loading_orders; all original warehouses"
+    },
+    {
+      "entity": "packing_list_templates",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "projects",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "receipts",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "registration_requests",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "reports",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "reservations",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "roles",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "sales_dispatch",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales_dispatch_imports"
+    },
+    {
+      "entity": "sales_dispatch_imports",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales_plan_id -> sales_plans"
+    },
+    {
+      "entity": "sales_dispatch_vehicles",
+      "policy": "AUTHORITATIVE",
+      "basis": "import_id -> sales_dispatch_imports"
+    },
+    {
+      "entity": "sales_plan_close",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales_plans or co_sales_plans; exactly one UUID match"
+    },
+    {
+      "entity": "sales_plan_review",
+      "policy": "AUTHORITATIVE",
+      "basis": "sales_plans or co_sales_plans; exactly one UUID match"
+    },
+    {
+      "entity": "sales_plans",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "sampling_batches",
+      "policy": "AUTHORITATIVE",
+      "basis": "project/customer + every sampling item bundle warehouse"
+    },
+    {
+      "entity": "settings",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "stock_adjustments",
+      "policy": "AUTHORITATIVE",
+      "basis": "exception scope + all before/after adjustment line scopes"
+    },
+    {
+      "entity": "stock_balance",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "stock_moves",
+      "policy": "AUTHORITATIVE",
+      "basis": "project/customer + all source and target warehouses"
+    },
+    {
+      "entity": "stocktakes",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative task project and warehouse; customer-wide"
+    },
+    {
+      "entity": "users",
+      "policy": "ADMIN_ONLY",
+      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
+    },
+    {
+      "entity": "v26_allocation_action",
+      "policy": "AUTHORITATIVE",
+      "basis": "allocations"
+    },
+    {
+      "entity": "v26_create_load",
+      "policy": "AUTHORITATIVE",
+      "basis": "loading_orders"
+    },
+    {
+      "entity": "v26_load_action",
+      "policy": "AUTHORITATIVE",
+      "basis": "loading_orders"
+    },
+    {
+      "entity": "v26_register_positions",
+      "policy": "AUTHORITATIVE",
+      "basis": "allocations"
+    },
+    {
+      "entity": "v26_resubmit_load",
+      "policy": "AUTHORITATIVE",
+      "basis": "loading_orders"
+    },
+    {
+      "entity": "v26_submit",
+      "policy": "AUTHORITATIVE",
+      "basis": "allocations"
+    },
+    {
+      "entity": "vehicle_arrivals",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "warehouses",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    },
+    {
+      "entity": "weighings",
+      "policy": "AUTHORITATIVE",
+      "basis": "project/customer + every weighing item bundle warehouse"
+    },
+    {
+      "entity": "yards",
+      "policy": "AUTHORITATIVE",
+      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
+    }
+  ]
+}

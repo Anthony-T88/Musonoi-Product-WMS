@@ -1,0 +1,549 @@
+{
+  "fixedBaseline": "28988c4b814d1120414effc787c9566bf91c022f",
+  "release": "4.6.9-r3-rc2",
+  "localOnly": true,
+  "dockerLocal": "NOT_RUN_NO_ENGINE",
+  "githubCi": "PENDING_ACTUAL_RUN",
+  "checkedAt": "2026-11-08T20:38:38.129Z",
+  "evidence": {
+    "database-results.json": {
+      "status": "PASS",
+      "database": "musonoi_audit_0e90f65d44_test",
+      "migrations": 174,
+      "productionDatabaseWrites": 0,
+      "workingDatabaseWrites": 0,
+      "fastify": "5.12.8"
+    },
+    "rc2-copper-results.json": {
+      "status": "PASS",
+      "steps": [
+        "sales plan two independent approvals",
+        "unique bundle, independent receipt review",
+        "exclusive location and gross minus 2.5kg net weight",
+        "independent loading, logistics and final production approval; final outbound deduction"
+      ],
+      "syntheticOnly": true
+    },
+    "rc2-core-results.json": {
+      "checks": [
+        {
+          "name": "two independent sales approvals and a dispatch arrival feed the loading plan",
+          "status": "PASS"
+        },
+        {
+          "name": "native preparation preserves exact ARECOMS precision and final receipt independence",
+          "status": "PASS"
+        },
+        {
+          "name": "matching requires current versions and a complete independent preparation",
+          "status": "PASS"
+        },
+        {
+          "name": "administrator with raw historical grant is denied; supervisor needs permission and correct version",
+          "status": "PASS"
+        },
+        {
+          "name": "formal outbound alone deducts inventory after independent load, logistics and production approvals",
+          "status": "PASS"
+        }
+      ],
+      "status": "PASS",
+      "syntheticOnly": true
+    },
+    "rc2-lock-order-results.json": {
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "intake",
+          "status": "PASS"
+        },
+        {
+          "name": "sales",
+          "status": "PASS"
+        },
+        {
+          "name": "stock",
+          "status": "PASS"
+        },
+        {
+          "name": "gate",
+          "status": "PASS"
+        }
+      ],
+      "syntheticOnly": true
+    },
+    "rc2-pool-results.json": {
+      "syntheticOnly": true,
+      "maximumApplicationConnections": 20,
+      "maximumPerInstanceConfigured": 60,
+      "ownerConnectionsExcluded": 1,
+      "concurrency": [
+        {
+          "requests": 10,
+          "totalMs": 176.941,
+          "requestsPerSecond": 56.52,
+          "requestP50Ms": 103.797,
+          "requestP95Ms": 176.766,
+          "businessPoolWaitP95Ms": 117.758,
+          "authorizationPoolWaitP95Ms": 44.048
+        },
+        {
+          "requests": 24,
+          "totalMs": 45.433,
+          "requestsPerSecond": 528.25,
+          "requestP50Ms": 27.927,
+          "requestP95Ms": 43.815,
+          "businessPoolWaitP95Ms": 0.018,
+          "authorizationPoolWaitP95Ms": 28.082
+        },
+        {
+          "requests": 50,
+          "totalMs": 78.088,
+          "requestsPerSecond": 640.3,
+          "requestP50Ms": 42.505,
+          "requestP95Ms": 75.97,
+          "businessPoolWaitP95Ms": 0.024,
+          "authorizationPoolWaitP95Ms": 56.268
+        }
+      ],
+      "plans": [
+        {
+          "predicate": "id::text=$1",
+          "plan": {
+            "Plan": {
+              "Node Type": "Seq Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "projects",
+              "Alias": "t",
+              "Startup Cost": 0,
+              "Total Cost": 139.6,
+              "Plan Rows": 25,
+              "Plan Width": 32,
+              "Actual Startup Time": 0.043,
+              "Actual Total Time": 1.265,
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Filter": "((id)::text = 'f185ee78-8f74-4f01-90b9-12fea789db12'::text)",
+              "Rows Removed by Filter": 5001,
+              "Shared Hit Blocks": 52,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning": {
+              "Shared Hit Blocks": 31,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 1.472,
+            "Triggers": [],
+            "Execution Time": 1.283
+          }
+        },
+        {
+          "predicate": "id=$1::uuid",
+          "plan": {
+            "Plan": {
+              "Node Type": "Index Scan",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Scan Direction": "Forward",
+              "Index Name": "projects_pkey",
+              "Relation Name": "projects",
+              "Alias": "t",
+              "Startup Cost": 0.28,
+              "Total Cost": 8.3,
+              "Plan Rows": 1,
+              "Plan Width": 32,
+              "Actual Startup Time": 0.008,
+              "Actual Total Time": 0.008,
+              "Actual Rows": 1,
+              "Actual Loops": 1,
+              "Index Cond": "(id = 'f185ee78-8f74-4f01-90b9-12fea789db12'::uuid)",
+              "Rows Removed by Index Recheck": 0,
+              "Shared Hit Blocks": 3,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning": {
+              "Shared Hit Blocks": 5,
+              "Shared Read Blocks": 0,
+              "Shared Dirtied Blocks": 0,
+              "Shared Written Blocks": 0,
+              "Local Hit Blocks": 0,
+              "Local Read Blocks": 0,
+              "Local Dirtied Blocks": 0,
+              "Local Written Blocks": 0,
+              "Temp Read Blocks": 0,
+              "Temp Written Blocks": 0
+            },
+            "Planning Time": 0.043,
+            "Triggers": [],
+            "Execution Time": 0.013
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "10 concurrent authorized business writes complete with both pools drained",
+          "status": "PASS"
+        },
+        {
+          "name": "24 concurrent authorized business writes complete with both pools drained",
+          "status": "PASS"
+        },
+        {
+          "name": "50 concurrent authorized business writes complete with both pools drained",
+          "status": "PASS"
+        },
+        {
+          "name": "duplicate submission preserves one business row and one result",
+          "status": "PASS"
+        },
+        {
+          "name": "pool exhaustion has a finite queue timeout and later requests recover",
+          "status": "PASS"
+        },
+        {
+          "name": "cancelled lease queued behind a manager is returned after lock acquisition",
+          "status": "PASS"
+        },
+        {
+          "name": "database lock timeout rolls back lease and next request succeeds",
+          "status": "PASS"
+        },
+        {
+          "name": "database query timeout does not retain an authorization lease",
+          "status": "PASS"
+        },
+        {
+          "name": "terminated database connection is destroyed and a fresh lease can proceed",
+          "status": "PASS"
+        },
+        {
+          "name": "observed authorization loss rolls back the pending business row before commit",
+          "status": "PASS"
+        },
+        {
+          "name": "real HTTP cancellation before authorization prevents business write",
+          "status": "PASS"
+        },
+        {
+          "name": "representative UUID lookup execution plans retain primary key index",
+          "status": "PASS"
+        }
+      ],
+      "status": "PASS"
+    },
+    "rc2-reliability-results.json": {
+      "checks": [
+        {
+          "name": "unknown ARECOMS remains NULL on stock and map summary",
+          "status": "PASS"
+        },
+        {
+          "name": "legacy confirmed zero and empty ARECOMS projections remain distinct without changing stored business values",
+          "status": "PASS"
+        },
+        {
+          "name": "real cobalt stocktake audit resolves authoritative project and warehouse",
+          "status": "PASS"
+        },
+        {
+          "name": "trusted nginx separates twenty concurrent staff client addresses",
+          "status": "PASS"
+        },
+        {
+          "name": "untrusted forwarding spoof cannot bypass login limit",
+          "status": "PASS"
+        },
+        {
+          "name": "trusted proxy rejects chains rather than accepting forged forwarding hops",
+          "status": "PASS"
+        }
+      ],
+      "status": "PASS",
+      "checkedAt": "2026-11-08T20:38:18.120Z",
+      "syntheticOnly": true
+    },
+    "rc2-stocktake-results.json": {
+      "status": "PASS",
+      "states": [
+        "Cu start",
+        "Cu submit-review",
+        "Cu review",
+        "Cu approve",
+        "Co reject",
+        "Co approve"
+      ],
+      "syntheticOnly": true
+    },
+    "runner-integration.json": {
+      "suite": "integration",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T20:37:58.944Z"
+    },
+    "runner-reliability.json": {
+      "suite": "reliability",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T20:38:19.556Z"
+    },
+    "runner-security.json": {
+      "suite": "security",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T20:38:04.656Z"
+    },
+    "runner-ui.json": {
+      "suite": "ui",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T20:38:26.842Z"
+    },
+    "runner-unit.json": {
+      "suite": "unit",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T20:37:50.467Z"
+    },
+    "security-results.json": {
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "restricted role manager cannot add account management to its own role",
+          "status": "PASS"
+        },
+        {
+          "name": "restricted account listing excludes outside administrators and multi-project targets",
+          "status": "PASS"
+        },
+        {
+          "name": "restricted account manager cannot reset an outside administrator password",
+          "status": "PASS"
+        },
+        {
+          "name": "restricted account manager cannot promote itself to administrator",
+          "status": "PASS"
+        },
+        {
+          "name": "scoped audit list and count exclude another project",
+          "status": "PASS"
+        },
+        {
+          "name": "scoped audit details deny another project by ID",
+          "status": "PASS"
+        },
+        {
+          "name": "legacy audit endpoint uses the same project isolation",
+          "status": "PASS"
+        },
+        {
+          "name": "ordinary operators have no management access; system administrator retains audit access",
+          "status": "PASS"
+        },
+        {
+          "name": "system administrator account options retain every current built-in role",
+          "status": "PASS"
+        },
+        {
+          "name": "restricted role creation and editing succeed only within the live permission ceiling",
+          "status": "PASS"
+        },
+        {
+          "name": "own role, built-in roles and roles assigned outside the full scope cannot be changed",
+          "status": "PASS"
+        },
+        {
+          "name": "restricted account creation cannot assign administrator, stronger roles or outside scopes",
+          "status": "PASS"
+        },
+        {
+          "name": "full target containment protects all account lifecycle endpoints, including multi-project users",
+          "status": "PASS"
+        },
+        {
+          "name": "allowed account create, edit, reset, soft-delete and restore preserve identity and audit history",
+          "status": "PASS"
+        },
+        {
+          "name": "registration queue and review are system-administrator-only; concurrent review commits once",
+          "status": "PASS"
+        },
+        {
+          "name": "audit scope snapshots resist forged metadata and later actor/project reassignment",
+          "status": "PASS"
+        },
+        {
+          "name": "audit scope attribution treats valid uppercase UUIDs as the same authorized project",
+          "status": "PASS"
+        },
+        {
+          "name": "unknown and system audit events stay administrator-only; history cannot be rewritten",
+          "status": "PASS"
+        },
+        {
+          "name": "warehouse audit access requires exact warehouse coverage and project-wide records stay hidden",
+          "status": "PASS"
+        },
+        {
+          "name": "customer audit access does not expose another product/customer in the same project",
+          "status": "PASS"
+        },
+        {
+          "name": "all scope fragments must be authorized; partial coverage of a multi-project event is insufficient",
+          "status": "PASS"
+        },
+        {
+          "name": "permission and scope changes revoke every affected session without logging out unrelated users",
+          "status": "PASS"
+        },
+        {
+          "name": "a queued management request rechecks its session after password/session revocation",
+          "status": "PASS"
+        },
+        {
+          "name": "an ordinary write waiting for authorization cannot use revoked permission",
+          "status": "PASS"
+        },
+        {
+          "name": "an in-flight write finishes before revocation commits; no old session survives the boundary",
+          "status": "PASS"
+        },
+        {
+          "name": "more concurrent writes than the pool size complete without authorization-pool starvation",
+          "status": "PASS"
+        },
+        {
+          "name": "language preference is ordered safely and does not revoke normal sessions",
+          "status": "PASS"
+        },
+        {
+          "name": "role-code gates cannot be acquired by assigning another built-in role with matching raw grants",
+          "status": "PASS"
+        },
+        {
+          "name": "case changes in UUID text cannot bypass the own-role change prohibition",
+          "status": "PASS"
+        },
+        {
+          "name": "catalog built-in roles remain protected when historical built_in flags are false",
+          "status": "PASS"
+        },
+        {
+          "name": "172-to-173 upgrade preserves every historical account, grant, scope, session and audit row",
+          "status": "PASS"
+        }
+      ],
+      "database": "musonoi_audit_b7431bba4a_test",
+      "workingDatabaseWrites": 0,
+      "productionDatabaseWrites": 0
+    },
+    "ui-results.json": {
+      "status": "PASS",
+      "shapes": [
+        {
+          "page": "stock",
+          "language": "zh-CN",
+          "width": 1440
+        },
+        {
+          "page": "stock",
+          "language": "zh-CN",
+          "width": 768
+        },
+        {
+          "page": "stock",
+          "language": "zh-CN",
+          "width": 390
+        },
+        {
+          "page": "stock",
+          "language": "zh-CN",
+          "width": 320
+        },
+        {
+          "page": "stock",
+          "language": "en",
+          "width": 1440
+        },
+        {
+          "page": "stock",
+          "language": "en",
+          "width": 768
+        },
+        {
+          "page": "stock",
+          "language": "en",
+          "width": 390
+        },
+        {
+          "page": "stock",
+          "language": "en",
+          "width": 320
+        },
+        {
+          "page": "permissions",
+          "language": "zh-CN",
+          "width": 1440
+        },
+        {
+          "page": "permissions",
+          "language": "zh-CN",
+          "width": 390
+        },
+        {
+          "page": "permissions",
+          "language": "zh-CN",
+          "width": 320
+        },
+        {
+          "page": "permissions",
+          "language": "en",
+          "width": 1440
+        },
+        {
+          "page": "permissions",
+          "language": "en",
+          "width": 390
+        },
+        {
+          "page": "permissions",
+          "language": "en",
+          "width": 320
+        }
+      ],
+      "permissionCheckboxes": 66,
+      "permissionModules": 25,
+      "managementViews": [
+        "admin-registration-entry",
+        "limited-account-manager",
+        "limited-role-manager"
+      ],
+      "errors": [],
+      "workingDatabaseWrites": 0
+    }
+  }
+}

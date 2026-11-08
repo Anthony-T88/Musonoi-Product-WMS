@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "intake",
+      "status": "PASS"
+    },
+    {
+      "name": "sales",
+      "status": "PASS"
+    },
+    {
+      "name": "stock",
+      "status": "PASS"
+    },
+    {
+      "name": "gate",
+      "status": "PASS"
+    }
+  ],
+  "syntheticOnly": true
+}

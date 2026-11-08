@@ -1,0 +1,56 @@
+name: rc2 isolated reliability and Docker acceptance
+on:
+  pull_request:
+    branches: [fix/v4.6.9-r3-rc1-security]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install locked dependencies
+        run: |
+          npm install --global pnpm@11.25.0
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+      - name: Verify syntax, source integrity and all 173 historical migrations
+        run: node tests/release/source-check.cjs
+      - name: Generate temporary CI credentials and TLS
+        run: node tests/release/ci-setup.cjs
+      - name: Start an independent temporary PostgreSQL 16 server
+        run: |
+          sudo chown 999:999 .runtime/ci-tls/server.key
+          docker network create rc2-ci-net
+          docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
+          for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -U postgres && exit 0; sleep 1; done
+          exit 1
+      - name: Unit, migration, 31 security groups, reliability, business and real browser regression
+        run: node scripts/run-release-tests.cjs acceptance
+      - name: Actual Docker build, final image inspection and production-mode synthetic startup
+        run: node tests/release/docker-acceptance.cjs
+      - name: Upload only explicitly approved sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc2-sanitized-acceptance-evidence
+          if-no-files-found: warn
+          path: |
+            .runtime/release-tests/*results.json
+            .runtime/release-tests/runner-*.json
+            .runtime/release-tests/docker-image-files.txt
+            .runtime/release-tests/stock-*.png
+            .runtime/release-tests/permissions-*.png
+      - name: Remove temporary containers and volume
+        if: always()
+        run: |
+          docker rm -f rc2-app rc2-postgres || true
+          docker volume rm rc2-ci-uploads || true
+          docker network rm rc2-ci-net || true

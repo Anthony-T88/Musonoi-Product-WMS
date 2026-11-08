@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "release": "4.6.9-r3-rc1",
+  "release": "4.6.9-r3-rc2",
   "migrations": [
     {
       "version": "001_foundation.sql",
@@ -693,6 +693,10 @@
     {
       "version": "173_r3_security_scope_and_sessions.sql",
       "checksum": "98cfc7ada7546320c491a277eec8e27b2285c9c4584018857137ba060b386e03"
+    },
+    {
+      "version": "174_r3_reliable_audit_entity_scopes.sql",
+      "checksum": "7f26f3a2492531c0a4218586a2d2d2bc37b88b49c0c5edfa5afed460ce062759"
     }
   ]
 }

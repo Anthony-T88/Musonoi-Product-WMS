@@ -1,0 +1,153 @@
+▶ second batch isolated reliability acceptance
+  ✖ unknown ARECOMS remains NULL on stock and map summary (33.7266ms)
+  ✖ real cobalt stocktake audit resolves authoritative project and warehouse (38.0377ms)
+  ✖ trusted nginx separates twenty concurrent staff client addresses (5.2655ms)
+  ✔ untrusted forwarding spoof cannot bypass login limit (221.36ms)
+  ✖ trusted proxy rejects chains rather than accepting forged forwarding hops (0.5509ms)
+✖ second batch isolated reliability acceptance (1062.5499ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 1
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1137.5513
+
+✖ failing tests:
+
+test at tests\release\reliability.test.cjs:5:37
+✖ unknown ARECOMS remains NULL on stock and map summary (33.7266ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  '0' !== null
+  
+      at [WORKTREE]\tests\release\reliability.test.cjs:13:165
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:5:61)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:12:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '0',
+    expected: null,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\release\reliability.test.cjs:5:37
+✖ real cobalt stocktake audit resolves authoritative project and warehouse (38.0377ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert(row?.scope_context)
+  
+      at [WORKTREE]\tests\release\reliability.test.cjs:17:167
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:5:61)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:15:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\release\reliability.test.cjs:5:37
+✖ trusted nginx separates twenty concurrent staff client addresses (5.2655ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429,
+  +   429
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200,
+  -   200
+    ]
+  
+      at [WORKTREE]\tests\release\reliability.test.cjs:20:113
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:5:61)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:19:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [
+      429, 429, 429, 429, 429,
+      429, 429, 429, 429, 429,
+      429, 429, 429, 429, 429,
+      429, 429, 429, 429, 429
+    ],
+    expected: [
+      200, 200, 200, 200, 200,
+      200, 200, 200, 200, 200,
+      200, 200, 200, 200, 200,
+      200, 200, 200, 200, 200
+    ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\release\reliability.test.cjs:5:37
+✖ trusted proxy rejects chains rather than accepting forged forwarding hops (0.5509ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  429 !== 400
+  
+      at [WORKTREE]\tests\release\reliability.test.cjs:25:107
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:5:61)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async TestContext.<anonymous> ([WORKTREE]\tests\release\reliability.test.cjs:25:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 429,
+    expected: 400,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

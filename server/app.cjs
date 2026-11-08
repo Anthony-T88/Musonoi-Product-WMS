@@ -15,11 +15,14 @@ async function build(options={}){
  const Lease=require('./authorization-lease.cjs');
  const leasePool=options.authorizationPool||(options.pool?pool:new Pool({...dbOptions,max:Math.min(dbOptions.max||10,10),application_name:'musonoi-authorization'}));
  if(leasePool!==pool)leasePool.on('error',poolError);
- const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:false});
+ const proxy=require('./trusted-proxy.cjs').policy(cfg.trustedProxyIps);
+ const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:proxy.trust});
+ app.addHook('onRequest',async(req,reply)=>{proxy.validate(req);reply.raw.once('close',()=>{if(!reply.raw.writableFinished)req.authorizationCancelled=true;});});
  // Separate lease and work pools prevent pool starvation when concurrent requests need both.
- app.addHook('onRoute',route=>{const handler=route.handler;route.handler=async function(req,reply){try{return await handler.call(this,req,reply);}finally{await Lease.release(req);}};});
- app.addHook('onError',async req=>{await Lease.release(req);});
- app.addHook('onResponse',async req=>{await Lease.release(req);});
+ const releaseLease=async req=>{try{await Lease.release(req);}catch(e){ServiceErrors.report(e,req,options.errorReporter);}};
+ app.addHook('onRoute',route=>{const handler=route.handler;route.handler=async function(req,reply){try{return await handler.call(this,req,reply);}finally{await releaseLease(req);}};});
+ app.addHook('onError',releaseLease);
+ app.addHook('onResponse',releaseLease);
  await app.register(require('@fastify/cookie'));
  await app.register(require('@fastify/rate-limit'),{global:false});
  app.addHook('onClose',async()=>{if(!options.authorizationPool&&!options.pool)await leasePool.end();if(leasePool!==pool)leasePool.removeListener('error',poolError);if(!options.pool)await pool.end();pool.removeListener('error',poolError);});

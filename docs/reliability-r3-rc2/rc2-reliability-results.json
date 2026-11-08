@@ -1,0 +1,31 @@
+{
+  "checks": [
+    {
+      "name": "unknown ARECOMS remains NULL on stock and map summary",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy confirmed zero and empty ARECOMS projections remain distinct without changing stored business values",
+      "status": "PASS"
+    },
+    {
+      "name": "real cobalt stocktake audit resolves authoritative project and warehouse",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted nginx separates twenty concurrent staff client addresses",
+      "status": "PASS"
+    },
+    {
+      "name": "untrusted forwarding spoof cannot bypass login limit",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted proxy rejects chains rather than accepting forged forwarding hops",
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS",
+  "checkedAt": "2026-11-08T20:38:18.120Z",
+  "syntheticOnly": true
+}

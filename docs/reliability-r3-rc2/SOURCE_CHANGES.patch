@@ -1,0 +1,1351 @@
+diff --git a/.env.example b/.env.example
+index 51f07f9..156a817 100644
+--- a/.env.example
++++ b/.env.example
+@@ -7,3 +7,7 @@ DATABASE_URL=postgresql://musonoi_app:CHANGE_LOCALLY@127.0.0.1:55432/musonoi_v26
+ # Future isolated HTTPS validation: set exact APP_ORIGIN=https://internal-name.
+ # Secure cookie follows HTTPS origin; keep APP_ENV=test and the independent TEST database.
+ # This does not open a network listener or configure a proxy/certificate.
++
++# Exact IP addresses of the Nginx peers that connect to this app; empty means no trusted proxy.
++# Nginx must overwrite X-Forwarded-For with $remote_addr (one address, never append).
++TRUSTED_PROXY_IPS=
+diff --git a/.github/workflows/rc2-reliability.yml b/.github/workflows/rc2-reliability.yml
+new file mode 100644
+index 0000000..e230ee3
+--- /dev/null
++++ b/.github/workflows/rc2-reliability.yml
+@@ -0,0 +1,56 @@
++name: rc2 isolated reliability and Docker acceptance
++on:
++  pull_request:
++    branches: [fix/v4.6.9-r3-rc1-security]
++  workflow_dispatch:
++permissions:
++  contents: read
++jobs:
++  isolated-acceptance:
++    runs-on: ubuntu-latest
++    timeout-minutes: 30
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          fetch-depth: 0
++      - uses: actions/setup-node@v4
++        with:
++          node-version: 24
++      - name: Install locked dependencies
++        run: |
++          npm install --global pnpm@11.25.0
++          pnpm install --frozen-lockfile
++          pnpm exec playwright install --with-deps chromium
++      - name: Verify syntax, source integrity and all 173 historical migrations
++        run: node tests/release/source-check.cjs
++      - name: Generate temporary CI credentials and TLS
++        run: node tests/release/ci-setup.cjs
++      - name: Start an independent temporary PostgreSQL 16 server
++        run: |
++          sudo chown 999:999 .runtime/ci-tls/server.key
++          docker network create rc2-ci-net
++          docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
++          for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -U postgres && exit 0; sleep 1; done
++          exit 1
++      - name: Unit, migration, 31 security groups, reliability, business and real browser regression
++        run: node scripts/run-release-tests.cjs acceptance
++      - name: Actual Docker build, final image inspection and production-mode synthetic startup
++        run: node tests/release/docker-acceptance.cjs
++      - name: Upload only explicitly approved sanitized evidence
++        if: always()
++        uses: actions/upload-artifact@v4
++        with:
++          name: rc2-sanitized-acceptance-evidence
++          if-no-files-found: warn
++          path: |
++            .runtime/release-tests/*results.json
++            .runtime/release-tests/runner-*.json
++            .runtime/release-tests/docker-image-files.txt
++            .runtime/release-tests/stock-*.png
++            .runtime/release-tests/permissions-*.png
++      - name: Remove temporary containers and volume
++        if: always()
++        run: |
++          docker rm -f rc2-app rc2-postgres || true
++          docker volume rm rc2-ci-uploads || true
++          docker network rm rc2-ci-net || true
+diff --git a/.gitignore b/.gitignore
+index ef851c3..f3b6883 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -14,3 +14,5 @@ node_modules/
+ 
+ # Sanitized, intentionally public audit test evidence.
+ !docs/security-r3-rc1/*.log
++
++!docs/reliability-r3-rc2/*.log
+diff --git a/README.md b/README.md
+index bf24a51..8445643 100644
+--- a/README.md
++++ b/README.md
+@@ -1,13 +1,15 @@
+-# Musonoi Product WMS 4.6.9-r3-rc1
++# Musonoi Product WMS 4.6.9-r3-rc2
+ 
+-第一批安全整改候选分支，等待用户和 GPT 复审。仅提交独立 PR，不自动合并或部署。普通源码文件交付。
++第二批可靠性审计整改候选，固定基线28988c4b814d1120414effc787c9566bf91c022f。独立Draft PR目标为fix/v4.6.9-r3-rc1-security，等待用户及GPT复审，不自动合并或部署。
+ 
+-[给 GPT 的完整修复报告](docs/security-r3-rc1/REPORT.txt) · [测试证据](docs/security-r3-rc1/TEST_RESULTS.json) · [回滚说明](docs/security-r3-rc1/ROLLBACK.txt)
++[第二批报告](docs/reliability-r3-rc2/REPORT.txt) · [实体映射](docs/reliability-r3-rc2/audit-entity-matrix.json) · [回滚说明](docs/reliability-r3-rc2/ROLLBACK.txt) · [第一批报告](docs/security-r3-rc1/REPORT.txt)
+ 
+-修复角色自授权、账号跨范围及管理员操作、旧新审计入口隔离、权限变更后的会话及在途请求一致性。铜钴业务审批流程和独立审核规则保持原样。注册申请审批按用户确认限定为系统管理员。
++修复钴匹配审核目录、代理登录限流、未知ARECOMS统计、真实业务审计范围及授权连接异常清理。业务状态机与独立审核规则保留，注册申请仍仅系统管理员审批。
+ 
+-保留 172 条旧迁移原文，仅追加 173 安全迁移。原 r2 加密 TEST 备份保持不变，仍是 172 迁移基线；候选版启动需要先完成受控迁移至 173，不能直接运行于未迁移的原业务库。密钥和明文数据没有上传。
++原001—173迁移字节不变，仅追加174；启动要求完整验证至174。原r2加密TEST备份保持172基线，测试不读取或还原该备份。未上传密钥、真实密码或明文业务数据。
+ 
+-运行测试需要 Node.js >=22、pnpm 11.25.0 和独立 TEST PostgreSQL。`pnpm install --frozen-lockfile`，`pnpm test`，`pnpm run verify:integrity`。设置报告列明的 TEST 环境及浏览器后，`pnpm run test:acceptance` 执行数据库、权限、并发和前端回归。测试仅创建随机审计库。
++测试需要Node.js >=22、pnpm11.25.0和独立TEST PostgreSQL。运行pnpm install --frozen-lockfile、pnpm test、pnpm run verify:integrity；设置报告所述测试环境后pnpm run test:acceptance创建随机隔离库执行完整验收。
+ 
+-具体权限收紧、测试覆盖、连接池预算与剩余风险见报告。旧 AUDIT_REMEDIATION.md 是此前 r2 工程整改记录，本候选以本次报告为准。本次没有生产上线验收或 Docker 镜像构建，不代表生产就绪。
++GitHub Actions使用全新临时数据库及随机遮蔽密码，安排真实Docker构建和合成生产模式TLS启动。实际通过与否以Draft PR检查记录和交付报告为准，配置检查不能替代镜像实测。
++
++代理默认不受信任。部署前按Nginx真正连接应用的来源IP填写TRUSTED_PROXY_IPS（精确IP，无网段或通配符），并覆盖转发头。未连接或修改现有业务库，没有生产上线验收。
+diff --git a/db/migration-baseline.json b/db/migration-baseline.json
+index 8f71513..2760ae4 100644
+--- a/db/migration-baseline.json
++++ b/db/migration-baseline.json
+@@ -1,6 +1,6 @@
+ {
+   "format": 1,
+-  "release": "4.6.9-r3-rc1",
++  "release": "4.6.9-r3-rc2",
+   "migrations": [
+     {
+       "version": "001_foundation.sql",
+@@ -693,6 +693,10 @@
+     {
+       "version": "173_r3_security_scope_and_sessions.sql",
+       "checksum": "98cfc7ada7546320c491a277eec8e27b2285c9c4584018857137ba060b386e03"
++    },
++    {
++      "version": "174_r3_reliable_audit_entity_scopes.sql",
++      "checksum": "7f26f3a2492531c0a4218586a2d2d2bc37b88b49c0c5edfa5afed460ce062759"
+     }
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/db/migrations/174_r3_reliable_audit_entity_scopes.sql b/db/migrations/174_r3_reliable_audit_entity_scopes.sql
+new file mode 100644
+index 0000000..2a8cba0
+--- /dev/null
++++ b/db/migrations/174_r3_reliable_audit_entity_scopes.sql
+@@ -0,0 +1,129 @@
++-- Only future audit inserts use the extended resolver. No historical rows are updated.
++CREATE OR REPLACE FUNCTION security_r3_entity_scope(kind text, identity text, depth integer DEFAULT 0) RETURNS jsonb
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++DECLARE d jsonb;s jsonb;parent_kind text;parent_id text;extra jsonb;pk text:='id';n integer;
++BEGIN
++ IF depth>8 OR identity IS NULL OR identity!~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' THEN RETURN NULL;END IF;
++ IF kind IN('sales_plan_review','sales_plan_close') THEN
++  SELECT count(*) INTO n FROM (SELECT id FROM public.sales_plans WHERE id=identity::uuid UNION ALL SELECT id FROM public.co_sales_plans WHERE id=identity::uuid) x;
++  IF n<>1 THEN RETURN NULL;END IF;
++  kind:=CASE WHEN EXISTS(SELECT 1 FROM public.sales_plans WHERE id=identity::uuid) THEN 'sales_plans' ELSE 'co_sales_plans' END;
++ END IF;
++ IF kind IN('v26_submit','v26_allocation_action','v26_register_positions') THEN kind:='allocations';END IF;
++ IF kind IN('v26_create_load','v26_resubmit_load','v26_load_action','fixed_edit_load') THEN kind:='loading_orders';END IF;
++ IF kind='sales_dispatch' THEN kind:='sales_dispatch_imports';END IF;
++ IF kind<>ALL(ARRAY['projects','warehouses','yards','locations','batches','customers','co_customer_profiles','bundles','receipts','allocations','sales_plans','customer_contracts','co_preparations','co_sales_plans','co_sales_contracts','co_locations','co_zones','co_loading_plans','co_loading_orders','co_outbounds','co_dispatch_vehicles','co_vehicle_arrivals','loading_plan_groups','loading_plan_documents','loading_orders','outbound_orders','stock_moves','stocktakes','co_stocktakes','stock_adjustments','inventory_exceptions','sampling_batches','weighings','outbound_corrections','vehicle_arrivals','sales_dispatch_imports','sales_dispatch_vehicles','customer_transport_book','gate_permits','gate_printers','exception_rules','management_warning_settings']) THEN RETURN NULL;END IF;
++ IF kind IN('exception_rules','management_warning_settings') THEN pk:='project_id';END IF;
++ IF to_regclass('public.'||kind) IS NULL THEN RETURN NULL;END IF;
++ -- Typed UUID lookup retains the primary-key index (173 used id::text).
++ EXECUTE format('SELECT to_jsonb(t) FROM public.%I t WHERE %I=$1',kind,pk) INTO d USING identity::uuid;
++ IF d IS NULL THEN RETURN NULL;END IF;
++ IF kind='gate_permits' THEN parent_kind:=CASE WHEN d->>'co_order_id' IS NOT NULL THEN 'co_loading_orders' ELSE 'loading_orders' END;parent_id:=coalesce(d->>'co_order_id',d->>'cu_loading_id');
++ ELSIF kind IN('co_loading_plans','co_loading_orders') THEN parent_kind:='co_sales_plans';parent_id:=d->>'sales_plan_id';
++ ELSIF kind='allocations' THEN parent_kind:='sales_plans';parent_id:=d->>'plan_id';
++ ELSIF kind='loading_plan_documents' THEN parent_kind:='loading_plan_groups';parent_id:=d->>'group_id';
++ ELSIF kind='sales_dispatch_vehicles' THEN parent_kind:='sales_dispatch_imports';parent_id:=d->>'import_id';
++ ELSIF kind='stock_adjustments' THEN parent_kind:='inventory_exceptions';parent_id:=d->>'exception_id';
++ ELSIF kind IN('outbound_corrections','outbound_orders') THEN parent_kind:='loading_orders';parent_id:=d->>'loading_id';
++ ELSIF kind='co_outbounds' THEN parent_kind:='co_loading_orders';parent_id:=d->>'order_id';
++ ELSIF kind='customer_transport_book' THEN parent_kind:='customers';parent_id:=d->>'customer_id';
++ ELSIF d->>'sales_plan_id' IS NOT NULL THEN parent_kind:=CASE WHEN left(kind,3)='co_' THEN 'co_sales_plans' ELSE 'sales_plans' END;parent_id:=d->>'sales_plan_id';
++ END IF;
++ IF parent_id IS NOT NULL THEN s:=public.security_r3_entity_scope(parent_kind,parent_id,depth+1);ELSE s:=public.security_r3_scope_json(d,kind);END IF;
++ IF s IS NULL AND d->>'warehouse_id' IS NOT NULL THEN s:=public.security_r3_entity_scope('warehouses',d->>'warehouse_id',depth+1);s:=s||jsonb_build_object('warehouse_id',d->>'warehouse_id','customer_id',d->>'customer_id');END IF;
++ IF s IS NULL AND d->>'yard_id' IS NOT NULL THEN s:=public.security_r3_entity_scope('yards',d->>'yard_id',depth+1);END IF;
++ IF kind IN('co_loading_plans','co_loading_orders') THEN
++  extra:=public.security_r3_entity_scope('co_preparations',d->>'preparation_id',depth+1);
++  IF extra IS NULL OR extra->>'project_id' IS DISTINCT FROM s->>'project_id' OR extra->>'warehouse_id' IS DISTINCT FROM s->>'warehouse_id' THEN RETURN NULL;END IF;
++ END IF;
++ IF kind='allocations' AND d->>'planned_location_id' IS NOT NULL THEN
++  extra:=public.security_r3_entity_scope('locations',d->>'planned_location_id',depth+1);
++  IF extra IS NULL OR extra->>'project_id' IS DISTINCT FROM s->>'project_id' THEN RETURN NULL;END IF;
++  s:=s||jsonb_build_object('warehouse_id',extra->>'warehouse_id');
++ END IF;
++ RETURN s;
++END $$;
++
++CREATE FUNCTION security_r3_entity_scopes(kind text, identity text) RETURNS jsonb
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++DECLARE s jsonb;result jsonb:='[]';x record;loc jsonb;loadid uuid;moveid uuid;
++BEGIN
++ IF kind='label_jobs' THEN
++  IF identity IS NULL OR identity!~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' THEN RETURN NULL;END IF;
++  FOR x IN SELECT bundle_id FROM public.label_job_items WHERE job_id=identity::uuid LOOP
++   loc:=public.security_r3_entity_scope('bundles',x.bundle_id::text);
++   IF loc IS NULL THEN RETURN NULL;END IF;
++   result:=result||jsonb_build_array(loc);
++  END LOOP;
++  IF jsonb_array_length(result)=0 THEN RETURN NULL;END IF;
++  SELECT jsonb_agg(DISTINCT e) INTO result FROM jsonb_array_elements(result) e;
++  RETURN result;
++ END IF;
++ s:=public.security_r3_entity_scope(kind,identity);
++ IF s IS NULL THEN RETURN NULL;END IF;
++ IF kind='loading_orders' THEN loadid:=identity::uuid;
++ ELSIF kind='outbound_orders' THEN SELECT loading_id INTO loadid FROM public.outbound_orders WHERE id=identity::uuid;
++ ELSIF kind='outbound_corrections' THEN SELECT loading_id INTO loadid FROM public.outbound_corrections WHERE id=identity::uuid;
++ ELSIF kind='gate_permits' THEN SELECT cu_loading_id INTO loadid FROM public.gate_permits WHERE id=identity::uuid;
++ END IF;
++ IF loadid IS NOT NULL THEN
++  FOR x IN SELECT DISTINCT original_location_id location_id FROM public.loading_items WHERE loading_id=loadid LOOP
++   loc:=public.security_r3_entity_scope('locations',x.location_id::text);
++   IF loc IS NULL OR loc->>'project_id' IS DISTINCT FROM s->>'project_id' THEN RETURN NULL;END IF;
++   result:=result||jsonb_build_array(s||jsonb_build_object('warehouse_id',loc->>'warehouse_id'));
++  END LOOP;
++ END IF;
++ IF kind='stock_moves' THEN
++  FOR x IN SELECT from_location_id location_id FROM public.stock_move_items WHERE move_id=identity::uuid UNION SELECT target_location_id FROM public.stock_moves WHERE id=identity::uuid LOOP
++   loc:=public.security_r3_entity_scope('locations',x.location_id::text);
++   IF loc IS NULL OR loc->>'project_id' IS DISTINCT FROM s->>'project_id' THEN RETURN NULL;END IF;
++   result:=result||jsonb_build_array(s||jsonb_build_object('warehouse_id',loc->>'warehouse_id'));
++  END LOOP;
++ END IF;
++ IF kind IN('sampling_batches','weighings') THEN
++  FOR x IN SELECT si.bundle_id FROM public.sampling_items si WHERE kind='sampling_batches' AND si.sample_id=identity::uuid UNION SELECT wi.bundle_id FROM public.weighing_items wi WHERE kind='weighings' AND wi.weighing_id=identity::uuid LOOP
++   loc:=public.security_r3_entity_scope('bundles',x.bundle_id::text);
++   IF loc IS NULL OR loc->>'project_id' IS DISTINCT FROM s->>'project_id' THEN RETURN NULL;END IF;
++   result:=result||jsonb_build_array(s||jsonb_build_object('warehouse_id',loc->>'warehouse_id'));
++  END LOOP;
++ END IF;
++ IF kind='stock_adjustments' THEN
++  FOR x IN SELECT before_data d FROM public.adjustment_lines WHERE adjustment_id=identity::uuid UNION ALL SELECT after_data FROM public.adjustment_lines WHERE adjustment_id=identity::uuid LOOP
++   IF x.d->>'project_id' IS NOT NULL THEN
++    loc:=public.security_r3_scope_json(x.d,'bundles');
++    IF loc IS NULL THEN RETURN NULL;END IF;
++    result:=result||jsonb_build_array(loc);
++   ELSIF x.d->>'location_id' IS NOT NULL THEN
++    loc:=public.security_r3_entity_scope('locations',x.d->>'location_id');
++    IF loc IS NULL OR loc->>'project_id' IS DISTINCT FROM s->>'project_id' THEN RETURN NULL;END IF;
++    result:=result||jsonb_build_array(s||jsonb_build_object('warehouse_id',loc->>'warehouse_id'));
++   END IF;
++  END LOOP;
++ END IF;
++ IF jsonb_array_length(result)=0 THEN result:=jsonb_build_array(s);END IF;
++ SELECT jsonb_agg(DISTINCT e) INTO result FROM jsonb_array_elements(result) e;
++ RETURN result;
++END $$;
++
++CREATE OR REPLACE FUNCTION security_r3_audit_scope() RETURNS trigger
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++DECLARE scopes jsonb;s jsonb;d jsonb;
++BEGIN
++ NEW.scope_context:=NULL;
++ scopes:=public.security_r3_entity_scopes(NEW.entity_type,NEW.entity_id);
++ IF scopes IS NULL THEN RETURN NEW;END IF;
++ -- Preserve 173's conservative before/after restriction. Payload cannot replace or
++ -- remove authoritative scopes; invalid scope payloads stay administrator-only.
++ FOREACH d IN ARRAY ARRAY[NEW.before_data,NEW.after_data] LOOP
++  IF d->>'project_id' IS NOT NULL THEN
++   s:=public.security_r3_scope_json(d,NEW.entity_type);
++   IF s IS NULL THEN RETURN NEW;END IF;
++   -- Do not add a broader duplicate when entity resolution supplies warehouses.
++   IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(scopes) e WHERE e->>'project_id'=s->>'project_id' AND (s->>'warehouse_id' IS NULL OR e->>'warehouse_id'=s->>'warehouse_id') AND e->>'customer_id' IS NOT DISTINCT FROM s->>'customer_id') THEN scopes:=scopes||jsonb_build_array(s);END IF;
++  END IF;
++ END LOOP;
++ SELECT jsonb_agg(DISTINCT e) INTO scopes FROM jsonb_array_elements(scopes) e;
++ NEW.scope_context:=jsonb_build_object('version',2,'kind','SCOPED','basis','AUTHORITATIVE_ENTITY_WITH_RESTRICTIVE_PAYLOAD','scopes',scopes);
++ RETURN NEW;
++END $$;
++REVOKE ALL ON FUNCTION security_r3_entity_scopes(text,text) FROM PUBLIC;
+diff --git a/deploy/nginx.conf.example b/deploy/nginx.conf.example
+index 9cf88c6..5bde1da 100644
+--- a/deploy/nginx.conf.example
++++ b/deploy/nginx.conf.example
+@@ -15,6 +15,7 @@ server {
+     location / {
+         proxy_pass http://127.0.0.1:4174;
+         proxy_set_header Host $host;
++        proxy_set_header X-Forwarded-Host $host;
+         proxy_set_header X-Forwarded-Proto https;
+         proxy_set_header X-Forwarded-For $remote_addr;
+         proxy_read_timeout 90s;
+diff --git a/dist/index.html b/dist/index.html
+index 269756a..33091ee 100644
+--- a/dist/index.html
++++ b/dist/index.html
+@@ -1,9 +1,9 @@
+ <!doctype html>
+ <html lang="zh-CN">
+-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="穆松尼项目产品仓储管理系统，支持授权库存操作、盘点与报表；数据环境以页面标识为准。"><title>产品仓储管理系统 · 穆松尼项目 · V4.6.9</title><link rel="stylesheet" href="/styles.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/field.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/stock-map.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/product.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/accounts-overview.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v27.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/map-viewport.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v30.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v33.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v34.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/interaction-polish.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/account-task-polish.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/yard-workflow.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/interaction-completion.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v35.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v36.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/login.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v37.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v38.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v39.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v40.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v41.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v42.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v43.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v44.css?rev=4.6.9-r3-rc1"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#162a36"><script defer src="/i18n-dictionary.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v262.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v27.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v31.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v32.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v33.js?rev=4.6.9-r3-rc1"></script><script defer src="/management-labels.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v34.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-audit468r6.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n.js?rev=4.6.9-r3-rc1"></script><script defer src="/tonnes.js?rev=4.6.9-r3-rc1"></script><script defer src="/api.js?rev=4.6.9-r3-rc1"></script><script defer src="/business-time.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/gate468r8.css?rev=4.6.9-r3-rc1"><script defer src="/gate468r8.js?rev=4.6.9-r3-rc1"></script>
+-<link rel="stylesheet" href="/approval-display468r10.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/loading-filters469.css?rev=4.6.9-r3-rc1"><script defer src="/loading-filters469.js?rev=4.6.9-r3-rc1"></script>
+-<script defer src="/release.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui-state.js?rev=4.6.9-r3-rc1"></script><script defer src="/boot.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/cobalt-refinement.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/product-polish.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/shipping-overview.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/gate.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux10.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux11.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui452.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/operation-workspace.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui46.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/registration.css?rev=4.6.9-r3-rc1"><script defer src="/registration-ui.js?rev=4.6.9-r3-rc1"></script><script defer src="/login46.js?rev=4.6.9-r3-rc1"></script><script defer src="/route-permissions.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui46.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/ui46-pages.css?rev=4.6.9-r3-rc1&layout=2"><script defer src="/ui46-pages.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/login46.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/system46.css?rev=4.6.9-r3-rc1"><script defer src="/system46.js?rev=4.6.9-r3-rc1"></script><script defer src="/system46-pages.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/copper461.css?rev=4.6.9-r3-rc1"><script defer src="/copper461.js?rev=4.6.9-r3-rc1"></script><script defer src="/cobalt461.js?rev=4.6.9-r3-rc1"></script><script defer src="/business461.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/business461.css?rev=4.6.9-r3-rc1"><script defer src="/reports463.js?rev=4.6.9-r3-rc1"></script><script defer src="/plan-display.js?rev=4.6.9-r3-rc1"></script><script defer src="/sound467.js?rev=4.6.9-r3-rc1"></script><script defer src="/handover467.js?rev=4.6.9-r3-rc1"></script><script defer src="/next-steps467.js?rev=4.6.9-r3-rc1"></script><script defer src="/loading-detail465.js?rev=4.6.9-r3-rc1"></script><script defer src="/document-layout.js?rev=4.6.9-r3-rc1"></script><script defer src="/cobalt-map-site.js?rev=4.6.9-r3-rc1"></script><script defer src="/cobalt-map465.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui465.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui463.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/ui463.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux-r4.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux-r5.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui465.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/overview-analysis.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui468.css?rev=4.6.9-r3-rc1"><script defer src="/ui468.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/operations468r3.css?rev=4.6.9-r3-rc1"><script defer src="/operations468r3.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/operations468r4.css?rev=4.6.9-r3-rc1"><script defer src="/operations468r4.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/audit468r6.css?rev=4.6.9-r3-rc1"><script defer src="/audit468r6.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/v469.css?rev=4.6.9-r3-rc1">
+-<link rel="stylesheet" href="/cobalt-stock469r2.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/permissions469r2.css?rev=4.6.9-r3-rc1"></head>
++<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="穆松尼项目产品仓储管理系统，支持授权库存操作、盘点与报表；数据环境以页面标识为准。"><title>产品仓储管理系统 · 穆松尼项目 · V4.6.9</title><link rel="stylesheet" href="/styles.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/field.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/stock-map.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/product.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/accounts-overview.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v27.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ui.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/map-viewport.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v30.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v33.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v34.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/interaction-polish.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/account-task-polish.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/yard-workflow.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/interaction-completion.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v35.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v36.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/login.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v37.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v38.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v39.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v40.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v41.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v42.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v43.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/v44.css?rev=4.6.9-r3-rc2"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#162a36"><script defer src="/i18n-dictionary.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-v262.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-v27.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-v31.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-v32.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-v33.js?rev=4.6.9-r3-rc2"></script><script defer src="/management-labels.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-v34.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n-audit468r6.js?rev=4.6.9-r3-rc2"></script><script defer src="/i18n.js?rev=4.6.9-r3-rc2"></script><script defer src="/tonnes.js?rev=4.6.9-r3-rc2"></script><script defer src="/api.js?rev=4.6.9-r3-rc2"></script><script defer src="/business-time.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/gate468r8.css?rev=4.6.9-r3-rc2"><script defer src="/gate468r8.js?rev=4.6.9-r3-rc2"></script>
++<link rel="stylesheet" href="/approval-display468r10.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/loading-filters469.css?rev=4.6.9-r3-rc2"><script defer src="/loading-filters469.js?rev=4.6.9-r3-rc2"></script>
++<script defer src="/release.js?rev=4.6.9-r3-rc2"></script><script defer src="/ui-state.js?rev=4.6.9-r3-rc2"></script><script defer src="/boot.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/cobalt-refinement.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/product-polish.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/shipping-overview.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/gate.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ux10.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ux11.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ui452.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/operation-workspace.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ui46.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/registration.css?rev=4.6.9-r3-rc2"><script defer src="/registration-ui.js?rev=4.6.9-r3-rc2"></script><script defer src="/login46.js?rev=4.6.9-r3-rc2"></script><script defer src="/route-permissions.js?rev=4.6.9-r3-rc2"></script><script defer src="/ui46.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/ui46-pages.css?rev=4.6.9-r3-rc2&layout=2"><script defer src="/ui46-pages.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/login46.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/system46.css?rev=4.6.9-r3-rc2"><script defer src="/system46.js?rev=4.6.9-r3-rc2"></script><script defer src="/system46-pages.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/copper461.css?rev=4.6.9-r3-rc2"><script defer src="/copper461.js?rev=4.6.9-r3-rc2"></script><script defer src="/cobalt461.js?rev=4.6.9-r3-rc2"></script><script defer src="/business461.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/business461.css?rev=4.6.9-r3-rc2"><script defer src="/reports463.js?rev=4.6.9-r3-rc2"></script><script defer src="/plan-display.js?rev=4.6.9-r3-rc2"></script><script defer src="/sound467.js?rev=4.6.9-r3-rc2"></script><script defer src="/handover467.js?rev=4.6.9-r3-rc2"></script><script defer src="/next-steps467.js?rev=4.6.9-r3-rc2"></script><script defer src="/loading-detail465.js?rev=4.6.9-r3-rc2"></script><script defer src="/document-layout.js?rev=4.6.9-r3-rc2"></script><script defer src="/cobalt-map-site.js?rev=4.6.9-r3-rc2"></script><script defer src="/cobalt-map465.js?rev=4.6.9-r3-rc2"></script><script defer src="/ui465.js?rev=4.6.9-r3-rc2"></script><script defer src="/ui463.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/ui463.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ux-r4.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ux-r5.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ui465.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/overview-analysis.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/ui468.css?rev=4.6.9-r3-rc2"><script defer src="/ui468.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/operations468r3.css?rev=4.6.9-r3-rc2"><script defer src="/operations468r3.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/operations468r4.css?rev=4.6.9-r3-rc2"><script defer src="/operations468r4.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/audit468r6.css?rev=4.6.9-r3-rc2"><script defer src="/audit468r6.js?rev=4.6.9-r3-rc2"></script><link rel="stylesheet" href="/v469.css?rev=4.6.9-r3-rc2">
++<link rel="stylesheet" href="/cobalt-stock469r2.css?rev=4.6.9-r3-rc2"><link rel="stylesheet" href="/permissions469r2.css?rev=4.6.9-r3-rc2"></head>
+ <body>
+ <div id="session-restore" class="session-restore" role="status">正在打开页面 / Opening page…</div><section id="login-panel" class="login-overlay" hidden><div class="login-card"><img class="login-logo" src="/assets/metorex-ruashi-logo.png" alt="METOREX · A subsidiary of the Jinchuan Group · Ruashi Mining" width="265" height="244"><h1>产品仓储管理系统</h1><div class="login-project">穆松尼项目</div><div class="login-version"><span data-i18n-key="system.version">系统版本</span><span data-no-i18n>V4.6.8</span></div><p id="login-environment"></p><form id="login-form"><label>账号<input id="login-username" autocomplete="username" required maxlength="80"></label><label>密码<input id="login-password" type="password" autocomplete="current-password" required maxlength="128"></label><p id="login-error" class="error" role="alert"></p><button class="button primary" type="submit" disabled>登录</button></form><p id="login-safety-note"></p><p class="copyright-notice" data-login data-login-copyright data-no-i18n>© 2026 唐雷 · 保留所有权利</p></div></section>
+ <aside class="sidebar">
+diff --git a/dist/release.js b/dist/release.js
+index 086cc4c..29aca11 100644
+--- a/dist/release.js
++++ b/dist/release.js
+@@ -1,2 +1,2 @@
+ 'use strict';
+-globalThis.ClientRelease=Object.freeze({version:'4.6.9-r3-rc1',displayVersion:'4.6.9-r3-rc1',revision:'4.6.9-r3-rc1'});
++globalThis.ClientRelease=Object.freeze({version:'4.6.9-r3-rc2',displayVersion:'4.6.9-r3-rc2',revision:'4.6.9-r3-rc2'});
+diff --git a/dist/sw.js b/dist/sw.js
+index f2f63ba..7c1e9ac 100644
+--- a/dist/sw.js
++++ b/dist/sw.js
+@@ -1,5 +1,5 @@
+ 'use strict';
+-importScripts('/release.js?rev=4.6.9-r3-rc1');
++importScripts('/release.js?rev=4.6.9-r3-rc2');
+ const CACHE='musonoi-static-'+ClientRelease.revision;const STATIC=['/cobalt-preparation469.js','/v469.js','/v469.css','/cobalt-stock469r2.js','/cobalt-stock469r2.css','/permissions469r2.js','/permissions469r2.css','/approval-display468r10.js','/approval-display468r10.css','/loading-filters469.js','/loading-filters469.css','/gate468r8.js','/gate468r8.css','/i18n-audit468r6.js','/audit468r6.js','/audit468r6.css','/operations468r4.js','/operations468r4.css','/operations468r3.js','/operations468r3.css','/ui468.js','/ui468.css','/overview-analysis.css','/overview-analysis.js','/ui465.js','/ui465.css','/loading-detail465.js','/cobalt-map465.js','/cobalt-map-site.js','/plan-display.js','/document-layout.js','/ux-r5.css','/registration-ui.js','/registration.css','/ux-r4.css','/route-permissions.js','/cobalt461.js','/business461.js','/business461.css','/copper461.js','/copper461.css','/system46.js','/system46-pages.js','/system46.css','/login46.js','/login46.css','/assets/login-geology-v1.png','/ui46.css','/ui46.js','/ui46-pages.css','/ui46-pages.js','/operation-workspace.css','/ui452.css','/ui-state.js','/ui463.js','/ui463.css','/reports463.js','/ux11.css','/ux10.css','/gate.css','/v44.css','/cobalt-refinement.css','/product-polish.css','/shipping-overview.css','/v43.css','/v42.css','/v41.css','/v40.css','/v39.css','/v38.css','/v37.css','/v36.css','/v35.css','/interaction-completion.css','/accounts-overview.css','/product.css','/v33.css','/v34.css','/interaction-polish.css','/account-task-polish.css','/yard-workflow.css','/offline.html','/styles.css','/field.css','/stock-map.css','/assets/field-icon.svg','/assets/metorex-ruashi-logo.png','/manifest.webmanifest'];
+ self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)).then(()=>self.skipWaiting())));
+ self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('musonoi-static-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+diff --git a/package.json b/package.json
+index 49f95b5..3e707a9 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "musonoi-product-wms",
+-  "version": "4.6.9-r3-rc1",
++  "version": "4.6.9-r3-rc2",
+   "private": true,
+   "scripts": {
+     "start": "node scripts/start-current.cjs",
+diff --git a/scripts/run-release-tests.cjs b/scripts/run-release-tests.cjs
+index 10d265b..54b5e67 100644
+--- a/scripts/run-release-tests.cjs
++++ b/scripts/run-release-tests.cjs
+@@ -1,12 +1,12 @@
+ 'use strict';
+ const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
+ const root=path.resolve(__dirname,'..'),mode=process.argv[2]||'unit';
+-if(!['unit','integration','ui','security','acceptance'].includes(mode))throw Error('Unknown release test mode');
+-const suites=mode==='acceptance'?['unit','integration','security','ui']:[mode];
++if(!['unit','integration','ui','security','reliability','acceptance'].includes(mode))throw Error('Unknown release test mode');
++const suites=mode==='acceptance'?['unit','integration','security','reliability','ui']:[mode];
+ for(const suite of suites){
+- if(['integration','security'].includes(suite)&&(!process.env.WMS_TEST_OWNER_URL||!process.env.WMS_TEST_APP_PASSWORD))throw Error('Integration tests require WMS_TEST_OWNER_URL and WMS_TEST_APP_PASSWORD for an isolated TEST server');
+- const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs'].includes(f)):[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':'ui.test.cjs'];
+- const run=spawnSync(process.execPath,['--test',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
++ if(['integration','security','reliability'].includes(suite)&&(!process.env.WMS_TEST_OWNER_URL||!process.env.WMS_TEST_APP_PASSWORD))throw Error('Integration tests require WMS_TEST_OWNER_URL and WMS_TEST_APP_PASSWORD for an isolated TEST server');
++ const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs','reliability.test.cjs'].includes(f)):suite==='reliability'?['reliability.test.cjs','pool-reliability.cjs','core-flows.cjs','copper-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','lock-order.cjs']:[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':suite==='reliability'?'reliability.test.cjs':'ui.test.cjs'];
++ const run=spawnSync(process.execPath,['--test','--test-concurrency=1',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
+  const output=path.join(root,'.runtime/release-tests');fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'runner-'+suite+'.json'),JSON.stringify({suite,status:run.status===0?'PASS':'FAIL',exitCode:run.status,checkedAt:new Date().toISOString()},null,2));
+  if(run.status!==0){process.exitCode=run.status||1;break;}
+ }
+diff --git a/server/app.cjs b/server/app.cjs
+index f87acdd..ec2cbc5 100644
+--- a/server/app.cjs
++++ b/server/app.cjs
+@@ -15,11 +15,14 @@ async function build(options={}){
+  const Lease=require('./authorization-lease.cjs');
+  const leasePool=options.authorizationPool||(options.pool?pool:new Pool({...dbOptions,max:Math.min(dbOptions.max||10,10),application_name:'musonoi-authorization'}));
+  if(leasePool!==pool)leasePool.on('error',poolError);
+- const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:false});
++ const proxy=require('./trusted-proxy.cjs').policy(cfg.trustedProxyIps);
++ const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:proxy.trust});
++ app.addHook('onRequest',async(req,reply)=>{proxy.validate(req);reply.raw.once('close',()=>{if(!reply.raw.writableFinished)req.authorizationCancelled=true;});});
+  // Separate lease and work pools prevent pool starvation when concurrent requests need both.
+- app.addHook('onRoute',route=>{const handler=route.handler;route.handler=async function(req,reply){try{return await handler.call(this,req,reply);}finally{await Lease.release(req);}};});
+- app.addHook('onError',async req=>{await Lease.release(req);});
+- app.addHook('onResponse',async req=>{await Lease.release(req);});
++ const releaseLease=async req=>{try{await Lease.release(req);}catch(e){ServiceErrors.report(e,req,options.errorReporter);}};
++ app.addHook('onRoute',route=>{const handler=route.handler;route.handler=async function(req,reply){try{return await handler.call(this,req,reply);}finally{await releaseLease(req);}};});
++ app.addHook('onError',releaseLease);
++ app.addHook('onResponse',releaseLease);
+  await app.register(require('@fastify/cookie'));
+  await app.register(require('@fastify/rate-limit'),{global:false});
+  app.addHook('onClose',async()=>{if(!options.authorizationPool&&!options.pool)await leasePool.end();if(leasePool!==pool)leasePool.removeListener('error',poolError);if(!options.pool)await pool.end();pool.removeListener('error',poolError);});
+diff --git a/server/authorization-lease.cjs b/server/authorization-lease.cjs
+index 6f1cbe9..bc0d12c 100644
+--- a/server/authorization-lease.cjs
++++ b/server/authorization-lease.cjs
+@@ -1,8 +1,13 @@
+ 'use strict';
+ function requiresLease(req){return !['GET','HEAD','OPTIONS'].includes(req.method)&&!/^\/api\/v1\/(?:users(?:\/|$)|security\/(?:roles|policy)(?:\/|$)|me\/language(?:\/|$))/.test(req.url.split('?')[0]);}
++function cancelled(req){if(req.authorizationCancelled||req.raw?.aborted)throw Object.assign(Error('Request cancelled'),{statusCode:408,code:'AUTHORIZATION_CANCELLED'});}
++function healthy(req){if(req.authorizationLeaseError)throw Object.assign(Error('Authorization connection lost'),{statusCode:503,code:'AUTHORIZATION_CONNECTION_LOST'});}
++async function lockBusiness(c,req){healthy(req);if(!req.authorizationLease)await c.query('SELECT pg_advisory_xact_lock_shared(21002)');}
+ async function acquire(req,pool){
+  if(req.authorizationLease)return req.authorizationLease;
+- const c=await pool.connect();try{await c.query('BEGIN READ ONLY');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');req.authorizationLease=c;return c;}catch(e){await c.query('ROLLBACK').catch(()=>{});c.release();throw e;}
++ cancelled(req);const c=await pool.connect(),onError=e=>{req.authorizationLeaseError||=e;};c.on?.('error',onError);
++ try{cancelled(req);await c.query('BEGIN READ ONLY');await c.query("SET LOCAL lock_timeout='5s'");await c.query("SET LOCAL statement_timeout='6s'");await c.query('SELECT pg_advisory_xact_lock_shared(21002)');cancelled(req);healthy(req);req.authorizationLease=c;req.authorizationLeaseHandler=onError;return c;}
++ catch(e){let broken=req.authorizationLeaseError;try{await c.query('ROLLBACK');}catch(error){broken=error;}c.release(broken);if(!broken)c.removeListener?.('error',onError);throw e;}
+ }
+-async function release(req){const c=req.authorizationLease;if(!c)return;req.authorizationLease=null;try{await c.query('ROLLBACK');}finally{c.release();}}
+-module.exports={requiresLease,acquire,release};
++async function release(req){const c=req.authorizationLease;if(!c)return;req.authorizationLease=null;let broken=req.authorizationLeaseError;try{if(!broken)await c.query('ROLLBACK');}catch(error){broken=error;}finally{c.release(broken);if(!broken&&req.authorizationLeaseHandler)c.removeListener?.('error',req.authorizationLeaseHandler);req.authorizationLeaseHandler=null;}if(broken)throw broken;}
++module.exports={requiresLease,acquire,release,healthy,lockBusiness};
+diff --git a/server/business-common.cjs b/server/business-common.cjs
+index e1f0f58..b38fb56 100644
+--- a/server/business-common.cjs
++++ b/server/business-common.cjs
+@@ -10,7 +10,7 @@ const canonical=v=>JSON.stringify(v&&typeof v==='object'?(Array.isArray(v)?v.map
+ async function audit(c,req,action,type,id,before,after){await c.query('INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,before_data,after_data,request_id) VALUES($1,$2,$3,$4,$5,$6,$7)',[req.user.id,action,type,id,before||null,after||null,req.id]);}
+ async function scope(c,req,project,warehouse=null,customer=null,full=false){uuid(project);if(customer&&!/^\/api\/v1\/(?:users|security|audit|v27\/(?:audit|backups))(?:\/|$)/.test(req.url||'')){const co=(req.url||'').startsWith('/api/v1/cobalt/'),table=co?'co_customer_profiles':'copper_customers';if(!(await c.query('SELECT 1 FROM '+table+' WHERE id=$1 AND project_id=$2',[customer,project])).rowCount)throw error(403,'客户不属于当前产品或项目');}const r=await c.query(`SELECT 1 FROM user_scopes WHERE user_id=$1 AND project_id=$2 AND ${full?'warehouse_id IS NULL AND customer_id IS NULL':'(warehouse_id IS NULL OR warehouse_id=$3) AND (customer_id IS NULL OR customer_id=$4)'}` ,full?[req.user.id,project]:[req.user.id,project,warehouse,customer]);if(!r.rowCount)throw error(403,'对象不在授权项目、仓库或客户范围内');}
+ async function mutate(pool,req,fn,{exclusiveAuthorization=false}={}){const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw error(400,'必须提供 Idempotency-Key（8–128字符）');
+- const route=req.method+' '+req.url.split('?')[0],hash=createHash('sha256').update(canonical(req.body)).digest('hex');const c=await pool.connect();try{await c.query('BEGIN');if(exclusiveAuthorization){await c.query('SELECT pg_advisory_xact_lock(21002)');await require('./management-security.cjs').actor(c,req,null);}await c.query('SELECT v24_revision()');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'同一幂等键不能用于不同请求内容');await c.query('COMMIT');return old.response;}
+- const result=await fn(c);await c.query('INSERT INTO idempotency_requests VALUES($1,$2,$3,$4,$5,now())',[req.user.id,route,key,hash,result]);await c.query('COMMIT');return result;
++ const route=req.method+' '+req.url.split('?')[0],hash=createHash('sha256').update(canonical(req.body)).digest('hex');const c=await pool.connect();try{await c.query('BEGIN');if(exclusiveAuthorization){await c.query('SELECT pg_advisory_xact_lock(21002)');await require('./management-security.cjs').actor(c,req,null);}await c.query('SELECT v24_revision()');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'同一幂等键不能用于不同请求内容');require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return old.response;}
++ require('./authorization-lease.cjs').healthy(req);const result=await fn(c);await c.query('INSERT INTO idempotency_requests VALUES($1,$2,$3,$4,$5,now())',[req.user.id,route,key,hash,result]);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return result;
+  }catch(e){await c.query('ROLLBACK');if(require('./v265.cjs').businessError(e,req)){e.statusCode=e.statusCode||409;throw e;}if(['23505','23503','23514','40001','40P01'].includes(e.code))throw error(409,'数据重复、已占用或状态冲突：'+(e.code==='23514'?e.message:'请刷新后重试'));throw e;}finally{c.release();}}
+ module.exports={error,text,uuid,version,date,weight,audit,scope,mutate};
+diff --git a/server/cobalt-reports.cjs b/server/cobalt-reports.cjs
+index fe09054..8738bea 100644
+--- a/server/cobalt-reports.cjs
++++ b/server/cobalt-reports.cjs
+@@ -8,7 +8,7 @@ function dates(q,now=new Date()){const today=new Intl.DateTimeFormat('en-CA',{ti
+ async function filters(c,req,q){const keys=['from','to','month','project_id','warehouse_id','customer_id','contract_id','preparation_id','status'];if(Object.keys(q).some(k=>!keys.includes(k)))throw fail(400,'CO_REPORT_FILTER');const f=Object.fromEntries(keys.filter(k=>q[k]).map(k=>[k,q[k]]));for(const k of keys.filter(k=>k.endsWith('_id')))if(f[k])B.uuid(f[k]);if(f.status&&!states.includes(f.status))throw fail(400,'CO_REPORT_STATE');if(f.project_id&&!(await c.query('SELECT 1 FROM user_scopes WHERE user_id=$1 AND project_id=$2',[req.user.id,f.project_id])).rowCount)throw fail(403,'CO_REPORT_SCOPE');if(f.warehouse_id){const w=(await c.query('SELECT * FROM warehouses WHERE id=$1',[f.warehouse_id])).rows[0];if(!w||f.project_id&&f.project_id!==w.project_id||!(await c.query('SELECT 1 FROM user_scopes WHERE user_id=$1 AND project_id=$2 AND(warehouse_id IS NULL OR warehouse_id=$3)',[req.user.id,w.project_id,w.id])).rowCount)throw fail(403,'CO_REPORT_SCOPE');}if(f.customer_id&&!(await c.query(`SELECT 1 FROM co_sales_plans p WHERE p.customer_id=$2 AND ${visible()}`,[req.user.id,f.customer_id])).rowCount)throw fail(403,'CO_REPORT_SCOPE');if(f.contract_id){const k=await S.access(c,req,'contract',f.contract_id);if(f.customer_id&&f.customer_id!==k.customer_id)throw fail(403,'CO_REPORT_SCOPE');}if(f.preparation_id){const row=(await c.query(`SELECT p.id FROM co_preparations p LEFT JOIN co_loading_orders o ON o.preparation_id=p.id AND o.status IN('WAITING','OUTBOUND') LEFT JOIN co_sales_plans sp ON sp.id=o.sales_plan_id WHERE p.id=$2 AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id) AND(s.customer_id IS NULL OR s.customer_id=sp.customer_id))`,[req.user.id,f.preparation_id])).rows[0];if(!row)throw fail(403,'CO_REPORT_SCOPE');}return {f,window:dates(f)};}
+ const sumCols=`count(*)::int bags,count(*) FILTER(WHERE bw.actual_gross_kg IS NULL)::int unconfirmed_bags,count(*) FILTER(WHERE pos.location_id IS NULL)::int unlocated_bags,sum(b.expected_gross_kg)::text expected_gross_kg,sum(b.expected_net_kg)::text expected_net_kg,coalesce(sum(bw.actual_gross_kg) FILTER(WHERE bw.actual_gross_kg IS NOT NULL),0)::text actual_gross_kg,coalesce(sum(bw.actual_net_kg) FILTER(WHERE bw.actual_gross_kg IS NOT NULL),0)::text actual_net_kg`;
+ async function build(c,req,q={}){const {f,window}=await filters(c,req,q),v=[req.user.id],add=(a,col,key)=>{if(f[key]){v.push(f[key]);a.push(col+'=$'+v.length);}},stock=[`i.status<>'OUTBOUND'`,`i.preparation_id=b.preparation_id`,`i.product_code='CO_HYDROXIDE'`,`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id) AND(s.customer_id IS NULL OR s.customer_id=sp.customer_id))`];for(const k of ['project_id','warehouse_id','customer_id','contract_id']){add(stock,['project_id','warehouse_id'].includes(k)?'p.'+k:'sp.'+k,k);}add(stock,'p.id','preparation_id');if(f.status){v.push(f.status);stock.push('coalesce(e.state,CASE WHEN o.id IS NOT NULL THEN \'MATCHED\' ELSE w.status END)=$'+v.length);}
+-const inventory=(await c.query(`SELECT p.id preparation_id,p.preparation_batch_no,p.project_id,p.warehouse_id,w.status work_status,coalesce(e.state,CASE WHEN o.id IS NOT NULL THEN 'MATCHED' ELSE w.status END) status,w.cobalt_grade_pct::text,w.arecoms_input,CASE WHEN w.status='COMPLETED' AND w.reviewed_at IS NOT NULL AND w.arecoms_quantity_mt>0 AND w.amendment_status='NONE' THEN w.arecoms_input ELSE NULL END confirmed_arecoms_mt,${sumCols},array_agg(DISTINCT loc.code) FILTER(WHERE loc.id IS NOT NULL) locations FROM co_inventory i JOIN co_bags b ON b.id=i.bag_id JOIN co_preparations p ON p.id=i.preparation_id AND p.status='RECEIVED' JOIN co_work_batches w ON w.preparation_id=p.id JOIN co_bag_work bw ON bw.bag_id=i.bag_id LEFT JOIN co_positions pos ON pos.bag_id=i.bag_id LEFT JOIN co_locations loc ON loc.id=pos.location_id LEFT JOIN co_loading_orders o ON o.preparation_id=p.id AND o.status IN('WAITING','OUTBOUND') LEFT JOIN co_load_executions e ON e.order_id=o.id LEFT JOIN co_sales_plans sp ON sp.id=o.sales_plan_id WHERE ${stock.join(' AND ')} GROUP BY p.id,w.preparation_id,o.id,e.order_id ORDER BY p.preparation_batch_no LIMIT 10001`,v)).rows;
++const inventory=(await c.query(`SELECT p.id preparation_id,p.preparation_batch_no,p.project_id,p.warehouse_id,w.status work_status,coalesce(e.state,CASE WHEN o.id IS NOT NULL THEN 'MATCHED' ELSE w.status END) status,w.cobalt_grade_pct::text,w.arecoms_input,CASE WHEN w.status='COMPLETED' AND w.reviewed_at IS NOT NULL AND w.arecoms_quantity_mt IS NOT NULL AND w.amendment_status='NONE' THEN w.arecoms_input ELSE NULL END confirmed_arecoms_mt,${sumCols},array_agg(DISTINCT loc.code) FILTER(WHERE loc.id IS NOT NULL) locations FROM co_inventory i JOIN co_bags b ON b.id=i.bag_id JOIN co_preparations p ON p.id=i.preparation_id AND p.status='RECEIVED' JOIN co_work_batches w ON w.preparation_id=p.id JOIN co_bag_work bw ON bw.bag_id=i.bag_id LEFT JOIN co_positions pos ON pos.bag_id=i.bag_id LEFT JOIN co_locations loc ON loc.id=pos.location_id LEFT JOIN co_loading_orders o ON o.preparation_id=p.id AND o.status IN('WAITING','OUTBOUND') LEFT JOIN co_load_executions e ON e.order_id=o.id LEFT JOIN co_sales_plans sp ON sp.id=o.sales_plan_id WHERE ${stock.join(' AND ')} GROUP BY p.id,w.preparation_id,o.id,e.order_id ORDER BY p.preparation_batch_no LIMIT 10001`,v)).rows;
+ // PostgreSQL rejects unused bind parameters, so keep each statement's parameters local.
+ const pv=[req.user.id],pw=[visible(),"ux10_sales_ready('CO_HYDROXIDE',p.id)"];for(const k of ['project_id','warehouse_id','customer_id','contract_id'])if(f[k]){pv.push(f[k]);pw.push('p.'+k+'=$'+pv.length);}const plans=(await c.query(`SELECT p.*,c.name customer_name,k.contract_no FROM co_sales_plans p JOIN co_customer_profiles c ON c.id=p.customer_id JOIN co_sales_contracts k ON k.id=p.contract_id WHERE ${pw.join(' AND ')} ORDER BY p.code LIMIT 10001`,pv)).rows,ids=plans.map(p=>p.id);
+ const orders=(await c.query(`SELECT o.*,p.preparation_batch_no,e.state execution_state,e.load_reviewed_at,d.departed_at,ob.id outbound_id,ob.code outbound_code,ob.posted_at,ob.snapshot outbound_snapshot,pd.revision packing_revision,pd.updated_at packing_generated_at,pd.document_no FROM co_loading_orders o JOIN co_preparations p ON p.id=o.preparation_id LEFT JOIN co_load_executions e ON e.order_id=o.id LEFT JOIN co_departures d ON d.id=e.departure_id LEFT JOIN co_outbounds ob ON ob.order_id=o.id LEFT JOIN co_packing_documents pd ON pd.order_id=o.id WHERE o.sales_plan_id=ANY($1::uuid[]) AND o.product_code='CO_HYDROXIDE' AND o.status IN('WAITING','OUTBOUND') ORDER BY o.code LIMIT 10001`,[ids])).rows,vehicles=(await c.query(`SELECT v.id,v.sales_plan_id,v.cancelled_at,a.id arrival_id FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id WHERE v.sales_plan_id=ANY($1::uuid[]) AND v.product_code='CO_HYDROXIDE' AND v.cancelled_at IS NULL AND (EXISTS(SELECT 1 FROM co_loading_orders current_order WHERE current_order.vehicle_id=v.id AND current_order.status IN('WAITING','OUTBOUND')) OR NOT EXISTS(SELECT 1 FROM co_loading_events h WHERE h.entity_type='co_loading_orders' AND h.before_data->>'vehicle_id'=v.id::text AND h.after_data->>'vehicle_id'<>v.id::text)) LIMIT 10001`,[ids])).rows;
+@@ -17,7 +17,7 @@ if([inventory,plans,orders,vehicles].some(a=>a.length>10000))throw fail(413,'CO_
+ const numeric=async(rows,fields)=>(await c.query('SELECT '+fields.map(field=>`sum((x->>'${field}')::numeric)::text AS "${field}"`).join(',')+' FROM jsonb_array_elements($1::jsonb) x',[JSON.stringify(rows)])).rows[0];
+ const invSum=await numeric(inventory,['bags','unconfirmed_bags','unlocated_bags','expected_gross_kg','expected_net_kg','actual_gross_kg','actual_net_kg','confirmed_arecoms_mt']);const inventorySummary={batches:inventory.length,...invSum,arecoms_unconfirmed_batches:inventory.filter(b=>b.confirmed_arecoms_mt==null).length,preparing_batches:inventory.filter(b=>b.work_status==='PREPARING').length,review_batches:inventory.filter(b=>b.work_status==='PENDING_COMPLETION_REVIEW').length,completed_batches:inventory.filter(b=>b.status==='COMPLETED').length,matched_batches:inventory.filter(b=>['MATCHED','LOADING','REVIEW_PENDING'].includes(b.status)).length,loaded_not_outbound_batches:inventory.filter(b=>['LOADED','DEPARTED','OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION'].includes(b.status)).length};for(const k of ['bags','unconfirmed_bags','unlocated_bags'])inventorySummary[k]=Number(inventorySummary[k]||0);for(const k of ['expected_gross_kg','expected_net_kg','actual_gross_kg','actual_net_kg'])inventorySummary[k]??='0';
+ const outbound=selected.filter(o=>o.outbound_id&&inWindow(o.posted_at)).map(o=>{const s=o.outbound_snapshot,p=byPlan.get(o.sales_plan_id);return {order_id:o.id,order_no:o.code,outbound_id:o.outbound_id,outbound_code:o.outbound_code,preparation_id:o.preparation_id,preparation_batch_no:o.preparation_batch_no,sales_plan_id:o.sales_plan_id,customer_id:p.customer_id,contract_id:p.contract_id,customer_name:s.customer.name,contract_no:s.contract.contract_no,truck_no:s.order.transport_snapshot.truck_no,loaded_at:date(o.load_reviewed_at),departed_at:date(o.departed_at),posted_at:date(o.posted_at),bags:s.order.bag_count,actual_gross_kg:s.order.actual_gross_kg,actual_net_kg:s.order.actual_net_kg,arecoms_mt:s.order.arecoms_input,packing_revision:o.packing_revision,packing_generated_at:o.packing_generated_at,document_no:o.document_no||s.plan.packing_list_no};});
+-const shipSum=await numeric(outbound,['bags','actual_gross_kg','actual_net_kg','arecoms_mt']),shippingSummary={loaded_vehicles:selected.filter(o=>inWindow(o.load_reviewed_at)).length,departed_vehicles:selected.filter(o=>inWindow(o.departed_at)).length,outbound_vehicles:outbound.length,outbound_batches:outbound.length,...shipSum};for(const k of ['bags','actual_gross_kg','actual_net_kg','arecoms_mt'])shippingSummary[k]??='0';
++const shipSum=await numeric(outbound,['bags','actual_gross_kg','actual_net_kg']),shippingSummary={loaded_vehicles:selected.filter(o=>inWindow(o.load_reviewed_at)).length,departed_vehicles:selected.filter(o=>inWindow(o.departed_at)).length,outbound_vehicles:outbound.length,outbound_batches:outbound.length,...shipSum};for(const k of ['bags','actual_gross_kg','actual_net_kg','arecoms_mt'])shippingSummary[k]??='0';
+ const group=async(key,source=outbound)=>{const groupKey=key==='customer_name'?'customer_id':key==='contract_no'?'contract_id':key;return (await c.query(`SELECT min(x->>'${key}') "${key}",count(*)::int vehicles,sum((x->>'bags')::numeric)::text bags,sum((x->>'actual_gross_kg')::numeric)::text actual_gross_kg,sum((x->>'actual_net_kg')::numeric)::text actual_net_kg,sum((x->>'arecoms_mt')::numeric)::text arecoms_mt FROM jsonb_array_elements($1::jsonb) x GROUP BY x->>'${groupKey}' ORDER BY 1`,[JSON.stringify(source)])).rows;};
+ const totalsByPlan=new Map((await c.query("SELECT x->>'sales_plan_id' id,sum((x->>'actual_net_kg')::numeric)::text net,sum((x->>'arecoms_mt')::numeric)::text metal,(sum((x->>'actual_net_kg')::numeric)/1000/nullif(max((x->>'target_weight')::numeric),0)*100)::text rate FROM jsonb_array_elements($1::jsonb) x GROUP BY x->>'sales_plan_id'",[JSON.stringify(selected.filter(o=>o.outbound_id).map(o=>({sales_plan_id:o.sales_plan_id,actual_net_kg:o.outbound_snapshot.order.actual_net_kg,arecoms_mt:o.outbound_snapshot.order.arecoms_input,target_weight:byPlan.get(o.sales_plan_id).target_weight})))])).rows.map(r=>[r.id,r]));
+ const execution=[];for(const p of plans){if(window.month&&p.shipment_month!==window.month)continue;const os=selected.filter(o=>o.sales_plan_id===p.id);if((f.preparation_id||f.status)&&!os.length)continue;const vs=vehicles.filter(v=>v.sales_plan_id===p.id&&(!(f.preparation_id||f.status)||os.some(o=>o.vehicle_id===v.id))),posted=os.filter(o=>o.outbound_id),totals=totalsByPlan.get(p.id),net=totals?.net||'0',rate=totals?.rate||null;execution.push({id:p.id,code:p.code,customer_name:p.customer_name,contract_no:p.contract_no,shipment_month:p.shipment_month,status:p.status,planned_vehicles:p.planned_vehicle_count,dispatched_vehicles:vs.length,arrived_vehicles:vs.filter(v=>v.arrival_id).length,matched_vehicles:os.length,loaded_vehicles:os.filter(o=>o.load_reviewed_at).length,outbound_vehicles:posted.length,planned_physical_mt:p.target_weight,actual_net_kg:net,planned_metal_mt:p.planned_metal_mt,arecoms_mt:totals?.metal||'0',execution_pct:rate});}
+diff --git a/server/cobalt-sales.cjs b/server/cobalt-sales.cjs
+index 60f511c..2e74e18 100644
+--- a/server/cobalt-sales.cjs
++++ b/server/cobalt-sales.cjs
+@@ -7,7 +7,7 @@ const error=(s,k)=>B.error(s,k),fields=(b,keys)=>{if(!b||typeof b!=='object'||Ar
+ const visible=(a='p',warehouse=true)=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=${a}.project_id ${warehouse?`AND(s.warehouse_id IS NULL OR s.warehouse_id=${a}.warehouse_id)`:''} AND(s.customer_id IS NULL OR s.customer_id=${a}.customer_id))`;
+ async function access(c,req,entity,idValue,lock=false){const table={plan:'co_sales_plans',contract:'co_sales_contracts'}[entity],row=(await c.query(`SELECT p.* FROM ${table} p WHERE p.id=$2 AND ${visible('p',entity==='plan')}${lock?' FOR UPDATE OF p':''}`,[req.user.id,B.uuid(idValue)])).rows[0];if(!row)throw error(404,'CO_SALES_NOT_FOUND');return row;}
+ const metadata=p=>({project_id:p.project_id,warehouse_id:p.warehouse_id||null,customer_id:p.customer_id||p.id});
+-async function mutation(pool,req,permission,fn){if(req.productCode!=='CO_HYDROXIDE')throw error(409,'CO_PRODUCT_REQUIRED');const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw error(400,'CO_IDEMPOTENCY_REQUIRED');const c=await pool.connect(),route=req.method+' '+req.url.split('?')[0],hash=crypto.createHash('sha256').update(JSON.stringify(canonical(req.body))).digest('hex');try{await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');if(!(await c.query('SELECT 1 FROM users u JOIN role_permissions r ON r.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND r.permission_code=$2',[req.user.id,permission])).rowCount)throw error(403,'CO_PERMISSION_DENIED');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'CO_KEY_REUSED');await B.scope(c,req,old.response.project_id,old.response.warehouse_id,old.response.customer_id);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO co_requests(actor_id,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5)',[req.user.id,route,key,hash,result]);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(e.code==='23514'&&/^CO_(LOADING|EXECUTION|PACKING)_[A-Z_]+$/.test(e.message))throw B.error(409,e.message);if(['23505','23503','23514','40001','40P01'].includes(e.code))throw error(409,'CO_SALES_CONFLICT');throw e;}finally{c.release();}}
++async function mutation(pool,req,permission,fn){if(req.productCode!=='CO_HYDROXIDE')throw error(409,'CO_PRODUCT_REQUIRED');const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw error(400,'CO_IDEMPOTENCY_REQUIRED');const c=await pool.connect(),route=req.method+' '+req.url.split('?')[0],hash=crypto.createHash('sha256').update(JSON.stringify(canonical(req.body))).digest('hex');try{await c.query('BEGIN');await require('./authorization-lease.cjs').lockBusiness(c,req);if(!(await c.query('SELECT 1 FROM users u JOIN role_permissions r ON r.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND r.permission_code=$2',[req.user.id,permission])).rowCount)throw error(403,'CO_PERMISSION_DENIED');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'CO_KEY_REUSED');await B.scope(c,req,old.response.project_id,old.response.warehouse_id,old.response.customer_id);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO co_requests(actor_id,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5)',[req.user.id,route,key,hash,result]);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(e.code==='23514'&&/^CO_(LOADING|EXECUTION|PACKING)_[A-Z_]+$/.test(e.message))throw B.error(409,e.message);if(['23505','23503','23514','40001','40P01'].includes(e.code))throw error(409,'CO_SALES_CONFLICT');throw e;}finally{c.release();}}
+ function month(v){if(typeof v!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v))throw error(400,'CO_SALES_MONTH');return v;}
+ function optional(v,n){if(v===undefined)return '';if(typeof v!=='string'||v.length>n||/[\x00-\x1f]/.test(v))throw error(400,'CO_SALES_INPUT');return v.trim();}
+ const plate=v=>B.text(v,'CO_SALES_PLATE',80).toUpperCase(),truckKey=v=>v.toUpperCase().replace(/[\s-]+/g,'');
+diff --git a/server/cobalt-stock.cjs b/server/cobalt-stock.cjs
+index 498eb32..038ff0b 100644
+--- a/server/cobalt-stock.cjs
++++ b/server/cobalt-stock.cjs
+@@ -6,15 +6,15 @@ const enabled=async pool=>(await pool.query("SELECT to_regclass('public.co_posit
+ const fail=(s,k)=>B.error(s,k),scope=(a='p')=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=${a}.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=${a}.warehouse_id) AND s.customer_id IS NULL)`;
+ const fields=(b,keys)=>{if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!keys.includes(k)))throw fail(400,'CO_STOCK_INPUT');};
+ async function context(c,req,project,warehouse){await B.scope(c,req,B.uuid(project),B.uuid(warehouse));if(!(await c.query('SELECT 1 FROM warehouses WHERE id=$1 AND project_id=$2',[warehouse,project])).rowCount)throw fail(403,'CO_STOCK_SCOPE');}
+-async function mutate(pool,req,permission,fn){if(req.productCode!=='CO_HYDROXIDE')throw fail(409,'CO_PRODUCT_REQUIRED');const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw fail(400,'CO_IDEMPOTENCY_REQUIRED');const route=req.method+' '+req.url.split('?')[0],hash=crypto.createHash('sha256').update(JSON.stringify(canonical(req.body))).digest('hex'),c=await pool.connect();try{await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');if(!(await c.query('SELECT 1 FROM users u JOIN role_permissions r ON r.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND r.permission_code=$2',[req.user.id,permission])).rowCount)throw fail(403,'CO_PERMISSION_DENIED');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw fail(409,'CO_KEY_REUSED');await context(c,req,old.response.project_id,old.response.warehouse_id);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO co_requests(actor_id,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5)',[req.user.id,route,key,hash,result]);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(e.code==='23514'&&/^CO_(LOADING|EXECUTION)_[A-Z_]+$/.test(e.message))throw B.error(409,e.message);if(['23505','23503','23514','40001','40P01'].includes(e.code))throw fail(409,'CO_STOCK_CONFLICT');throw e;}finally{c.release();}}
++async function mutate(pool,req,permission,fn){if(req.productCode!=='CO_HYDROXIDE')throw fail(409,'CO_PRODUCT_REQUIRED');const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw fail(400,'CO_IDEMPOTENCY_REQUIRED');const route=req.method+' '+req.url.split('?')[0],hash=crypto.createHash('sha256').update(JSON.stringify(canonical(req.body))).digest('hex'),c=await pool.connect();try{await c.query('BEGIN');await require('./authorization-lease.cjs').lockBusiness(c,req);if(!(await c.query('SELECT 1 FROM users u JOIN role_permissions r ON r.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND r.permission_code=$2',[req.user.id,permission])).rowCount)throw fail(403,'CO_PERMISSION_DENIED');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw fail(409,'CO_KEY_REUSED');await context(c,req,old.response.project_id,old.response.warehouse_id);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO co_requests(actor_id,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5)',[req.user.id,route,key,hash,result]);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(e.code==='23514'&&/^CO_(LOADING|EXECUTION)_[A-Z_]+$/.test(e.message))throw B.error(409,e.message);if(['23505','23503','23514','40001','40P01'].includes(e.code))throw fail(409,'CO_STOCK_CONFLICT');throw e;}finally{c.release();}}
+ async function filter(c,req,extra={}){const q={...req.query,...extra},values=[req.user.id],conditions=[scope()];for(const k of ['project_id','warehouse_id','location_id','zone_id','preparation_id'])if(q[k])B.uuid(q[k]);if(q.project_id){if(q.warehouse_id)await context(c,req,q.project_id,q.warehouse_id);else if(!(await c.query('SELECT 1 FROM user_scopes WHERE user_id=$1 AND project_id=$2 AND customer_id IS NULL',[req.user.id,q.project_id])).rowCount)throw fail(403,'CO_STOCK_SCOPE');}if(q.warehouse_id){const w=(await c.query('SELECT * FROM warehouses WHERE id=$1',[q.warehouse_id])).rows[0];if(!w)throw fail(403,'CO_STOCK_SCOPE');await context(c,req,w.project_id,w.id);}for(const [k,table] of [['location_id','co_locations'],['zone_id','co_zones']])if(q[k]){const l=(await c.query('SELECT * FROM '+table+' WHERE id=$1',[q[k]])).rows[0];if(!l)throw fail(404,'CO_STOCK_NOT_FOUND');await context(c,req,l.project_id,l.warehouse_id);}if(q.preparation_id)await C.document(c,req,q.preparation_id);
+  const add=(sql,v)=>{values.push(v);conditions.push(sql.replace('?', '$'+values.length));};for(const k of ['project_id','warehouse_id'])if(q[k])add('p.'+k+'=?',q[k]);if(q.preparation_id)add('p.id=?',q.preparation_id);if(q.location_id)add('pos.location_id=?',q.location_id);if(q.zone_id)add('loc.zone_id=?',q.zone_id);if(q.unlocated==='1')conditions.push('pos.location_id IS NULL');if(q.history!=='1'&&q.status!=='OUTBOUND'&&q.phase!=='OUTBOUND')conditions.push("i.status<>'OUTBOUND'");if(q.status){if(!['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED','OUTBOUND'].includes(q.status))throw fail(400,'CO_STOCK_INPUT');add('i.status=?',q.status);}for(const [k,col] of [['batch','p.preparation_batch_no'],['production_batch','pb.code'],['bag','b.bag_no']])if(q[k]){if(typeof q[k]!=='string'||q[k].length>80)throw fail(400,'CO_STOCK_INPUT');add('strpos(lower('+col+'),lower(?))>0',q[k]);}
+  const page=Number(q.page||1);if(!Number.isInteger(page)||page<1||page>1000000)throw fail(400,'CO_STOCK_INPUT');const loading=await require('./cobalt-loading.cjs').enabled(c);if(q.occupancy){if(!['OCCUPIED','FREE'].includes(q.occupancy))throw fail(400,'CO_STOCK_INPUT');conditions.push(loading?(q.occupancy==='OCCUPIED'?'':'NOT ')+"EXISTS(SELECT 1 FROM co_loading_bag_locks k WHERE k.bag_id=i.bag_id AND k.released_at IS NULL)":q.occupancy==='OCCUPIED'?'false':'true');}const execution=await require('./cobalt-execution.cjs').enabled(c);if(q.phase){if(!execution||!['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED','MATCHED','LOADING','REVIEW_PENDING','LOADED','DEPARTED','OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION','OUTBOUND'].includes(q.phase))throw fail(400,'CO_STOCK_INPUT');add("coalesce((SELECT e.state FROM co_load_executions e WHERE e.preparation_id=p.id),CASE WHEN EXISTS(SELECT 1 FROM co_loading_orders l WHERE l.preparation_id=p.id AND l.status='WAITING') THEN 'MATCHED' ELSE i.status END)=?",q.phase);}return {where:conditions.join(' AND '),values,page,loading,execution};}
+ const joins=`FROM co_inventory i JOIN co_bags b ON b.id=i.bag_id JOIN co_preparations p ON p.id=i.preparation_id JOIN co_preparation_lines line ON line.id=b.line_id LEFT JOIN co_production_batches pb ON pb.id=line.production_batch_id JOIN co_work_batches w ON w.preparation_id=p.id JOIN co_bag_work bw ON bw.bag_id=i.bag_id JOIN co_positions pos ON pos.bag_id=i.bag_id LEFT JOIN co_locations loc ON loc.id=pos.location_id`;
+-const cte=f=>`WITH matched AS(SELECT p.id preparation_id,p.preparation_batch_no,p.project_id,p.warehouse_id,p.bag_count batch_total_bags,p.created_at,(SELECT name FROM warehouses WHERE id=p.warehouse_id) warehouse_name,(SELECT name FROM projects WHERE id=p.project_id) project_name,i.bag_id,i.status,${f.execution?"coalesce((SELECT e.state FROM co_load_executions e WHERE e.preparation_id=p.id),CASE WHEN EXISTS(SELECT 1 FROM co_loading_orders l WHERE l.preparation_id=p.id AND l.status='WAITING') THEN 'MATCHED' ELSE i.status END)":"i.status"} lifecycle_state,${f.execution?"(SELECT e.order_id FROM co_load_executions e WHERE e.preparation_id=p.id)":"NULL::uuid"} execution_order_id,${f.execution?"(SELECT o.code FROM co_outbounds o WHERE o.preparation_id=p.id)":"NULL::text"} outbound_code,${f.loading?"(SELECT k.order_id FROM co_loading_bag_locks k WHERE k.bag_id=i.bag_id AND k.released_at IS NULL)":"NULL::uuid"} loading_order_id,b.bag_no,b.daily_number,b.expected_gross_kg,b.expected_net_kg,b.packaging_kg,pb.code production_batch_code,bw.actual_gross_kg,bw.actual_net_kg,bw.seal_no,bw.sampled,w.cobalt_grade_pct,w.arecoms_quantity_mt,w.arecoms_input,pos.location_id,pos.version position_version,loc.code location_code,loc.zone_id ${joins} WHERE ${f.where})`;
++const cte=f=>`WITH matched AS(SELECT p.id preparation_id,p.preparation_batch_no,p.project_id,p.warehouse_id,p.bag_count batch_total_bags,p.created_at,(SELECT name FROM warehouses WHERE id=p.warehouse_id) warehouse_name,(SELECT name FROM projects WHERE id=p.project_id) project_name,i.bag_id,i.status,${f.execution?"coalesce((SELECT e.state FROM co_load_executions e WHERE e.preparation_id=p.id),CASE WHEN EXISTS(SELECT 1 FROM co_loading_orders l WHERE l.preparation_id=p.id AND l.status='WAITING') THEN 'MATCHED' ELSE i.status END)":"i.status"} lifecycle_state,${f.execution?"(SELECT e.order_id FROM co_load_executions e WHERE e.preparation_id=p.id)":"NULL::uuid"} execution_order_id,${f.execution?"(SELECT o.code FROM co_outbounds o WHERE o.preparation_id=p.id)":"NULL::text"} outbound_code,${f.loading?"(SELECT k.order_id FROM co_loading_bag_locks k WHERE k.bag_id=i.bag_id AND k.released_at IS NULL)":"NULL::uuid"} loading_order_id,b.bag_no,b.daily_number,b.expected_gross_kg,b.expected_net_kg,b.packaging_kg,pb.code production_batch_code,bw.actual_gross_kg,bw.actual_net_kg,bw.seal_no,bw.sampled,w.cobalt_grade_pct,w.reviewed_at,w.amendment_status,w.arecoms_quantity_mt,w.arecoms_input,pos.location_id,pos.version position_version,loc.code location_code,loc.zone_id ${joins} WHERE ${f.where})`;
+ const totals=`count(*)::int bags,count(*) FILTER(WHERE loading_order_id IS NOT NULL)::int loading_occupied_bags,count(*) FILTER(WHERE actual_gross_kg IS NULL)::int unconfirmed_bags,count(*) FILTER(WHERE location_id IS NULL)::int unlocated_bags,sum(expected_gross_kg)::text expected_gross_kg,sum(expected_net_kg)::text expected_net_kg,coalesce(sum(actual_gross_kg),0)::text actual_gross_kg,coalesce(sum(actual_net_kg),0)::text actual_net_kg,round(coalesce(sum(actual_gross_kg),0)/1000,4)::text actual_gross_mt,round(coalesce(sum(actual_net_kg),0)/1000,4)::text actual_net_mt`;
+ const groups=`SELECT preparation_id,preparation_batch_no,project_id,warehouse_id,batch_total_bags,status,lifecycle_state,execution_order_id,outbound_code,max(warehouse_name) warehouse_name,max(project_name) project_name,array_agg(DISTINCT location_code) FILTER(WHERE location_code IS NOT NULL) location_codes,cobalt_grade_pct,arecoms_input,arecoms_quantity_mt::text,round(arecoms_quantity_mt,4)::text arecoms_display_mt,${totals},array_agg(DISTINCT production_batch_code ORDER BY production_batch_code) production_batches FROM matched GROUP BY preparation_id,preparation_batch_no,project_id,warehouse_id,batch_total_bags,status,lifecycle_state,execution_order_id,outbound_code,cobalt_grade_pct,arecoms_input,arecoms_quantity_mt`;
+-async function summary(c,f){return (await c.query(cte(f)+`, batches AS(SELECT DISTINCT preparation_id,status,arecoms_quantity_mt FROM matched WHERE status<>'OUTBOUND') SELECT ${totals},(SELECT count(*)::int FROM batches) batches,(SELECT count(*)::int FROM batches WHERE status='PREPARING') preparing_batches,(SELECT count(*)::int FROM batches WHERE status='PENDING_COMPLETION_REVIEW') review_batches,(SELECT count(*)::int FROM batches WHERE status='COMPLETED') completed_batches,(SELECT coalesce(sum(arecoms_quantity_mt),0)::text FROM batches WHERE status='COMPLETED') completed_arecoms_mt FROM matched WHERE status<>'OUTBOUND'`,f.values)).rows[0];}
++async function summary(c,f){return (await c.query(cte(f)+`, batches AS(SELECT DISTINCT preparation_id,status,CASE WHEN status='COMPLETED' AND reviewed_at IS NOT NULL AND amendment_status='NONE' THEN arecoms_quantity_mt ELSE NULL END arecoms_quantity_mt FROM matched WHERE status<>'OUTBOUND') SELECT ${totals},(SELECT count(*)::int FROM batches) batches,(SELECT count(*)::int FROM batches WHERE status='PREPARING') preparing_batches,(SELECT count(*)::int FROM batches WHERE status='PENDING_COMPLETION_REVIEW') review_batches,(SELECT count(*)::int FROM batches WHERE status='COMPLETED') completed_batches,(SELECT sum(arecoms_quantity_mt)::text FROM batches WHERE status='COMPLETED') completed_arecoms_mt,(SELECT round(sum(arecoms_quantity_mt),4)::text FROM batches WHERE status='COMPLETED') completed_arecoms_display_mt,(SELECT count(*)::int FROM batches WHERE status='COMPLETED' AND arecoms_quantity_mt IS NOT NULL) confirmed_arecoms_batches,(SELECT count(*)::int FROM batches WHERE status='COMPLETED' AND arecoms_quantity_mt IS NULL) unconfirmed_arecoms_batches FROM matched WHERE status<>'OUTBOUND'`,f.values)).rows[0];}
+ async function layout(c,req){const q=req.query,f=await filter(c,req),where=[scope('z')],v=[req.user.id];for(const k of ['project_id','warehouse_id','zone_id'])if(q[k]){v.push(q[k]);where.push('z.'+(k==='zone_id'?'id':k)+'=$'+v.length);}return require('./cobalt-map-config.cjs').projection(c,req,{zones:(await c.query('SELECT z.* FROM co_zones z WHERE '+where.join(' AND ')+' ORDER BY z.code',v)).rows,locations:(await c.query(`SELECT l.*,${f.execution?"(SELECT e.state FROM co_load_executions e WHERE e.preparation_id=l.occupied_by)":"NULL::text"} lifecycle_state,${f.loading?"(SELECT count(*)::int FROM co_positions x JOIN co_loading_bag_locks k ON k.bag_id=x.bag_id AND k.released_at IS NULL WHERE x.location_id=l.id)":"0"} loading_occupied_bags,z.name zone_name,z.name_en zone_name_en,z.active zone_active,p.preparation_batch_no,p.status intake_status,p.intake_flow_version,(SELECT status FROM co_work_batches WHERE preparation_id=p.id) work_status,(SELECT amendment_status FROM co_work_batches WHERE preparation_id=p.id) amendment_status,(SELECT count(*)::int FROM co_positions a LEFT JOIN co_inventory inv ON inv.bag_id=a.bag_id WHERE a.location_id=l.id AND coalesce(inv.status,'PREPARING')<>'OUTBOUND') bags FROM co_locations l JOIN co_zones z ON z.id=l.zone_id LEFT JOIN co_preparations p ON p.id=l.occupied_by WHERE ${where.join(' AND ')} ORDER BY z.code,l.code`,v)).rows});}
+ async function plan(c,req,body,locked=false){fields(body,['preparation_id','batch_version','selection','target_location_id','target_version','reason','preview_hash','source']);const p=await C.document(c,req,body.preparation_id,locked),w=(await c.query('SELECT * FROM co_work_batches WHERE preparation_id=$1'+(locked?' FOR UPDATE':''),[p.id])).rows[0];if(!(p.status==='RECEIVED'||p.intake_flow_version===2&&p.status==='PREPARING')||!w||!['PREPARING','COMPLETED'].includes(w.status)||w.amendment_status==='PENDING')throw fail(409,'CO_STOCK_STATE');if(w.version!==B.version(body.batch_version))throw fail(409,'CO_STOCK_STALE');await require('./cobalt-loading.cjs').assertUnoccupied(c,p.id);if(body.source!==undefined&&body.source!=='PREPARATION')throw fail(400,'CO_STOCK_INPUT');const reason=body.source==='PREPARATION'&&body.reason===undefined?'备货货位安排（系统记录）':B.text(body.reason,'CO_STOCK_REASON',1000);let ids=null;if(body.selection!=='ALL'){if(!Array.isArray(body.selection)||!body.selection.length||body.selection.length>10000)throw fail(400,'CO_STOCK_SELECTION');ids=body.selection.map(x=>{fields(x,['bag_id','version']);return B.uuid(x.bag_id);});if(new Set(ids).size!==ids.length)throw fail(400,'CO_STOCK_SELECTION');}const rows=(await c.query(`SELECT x.*,b.bag_no,l.code from_code FROM co_positions x JOIN co_bags b ON b.id=x.bag_id LEFT JOIN co_locations l ON l.id=x.location_id WHERE x.preparation_id=$1 AND($2::uuid[] IS NULL OR x.bag_id=ANY($2)) ORDER BY x.bag_id${locked?' FOR UPDATE OF x':''}`,[p.id,ids])).rows;if(!rows.length||ids&&rows.length!==ids.length)throw fail(400,'CO_STOCK_SELECTION');if(ids)for(const b of body.selection)if(rows.find(r=>r.bag_id===b.bag_id)?.version!==B.version(b.version))throw fail(409,'CO_STOCK_STALE');
+  const target=body.target_location_id===null?null:B.uuid(body.target_location_id),lockIds=[...new Set([...rows.map(r=>r.location_id).filter(Boolean),target].filter(Boolean))].sort();if(locked&&lockIds.length)await c.query('SELECT id FROM co_locations WHERE id=ANY($1) ORDER BY id FOR UPDATE',[lockIds]);let l=null;if(target){l=(await c.query('SELECT l.*,z.active zone_active FROM co_locations l JOIN co_zones z ON z.id=l.zone_id WHERE l.id=$1',[target])).rows[0];if(!l)throw fail(404,'CO_STOCK_NOT_FOUND');await context(c,req,l.project_id,l.warehouse_id);if(l.project_id!==p.project_id||l.warehouse_id!==p.warehouse_id)throw fail(409,'CO_STOCK_SCOPE');if(l.version!==B.version(body.target_version))throw fail(409,'CO_STOCK_STALE');if(!l.active||!l.zone_active||l.occupied_by&&l.occupied_by!==p.id)throw fail(409,'CO_STOCK_OCCUPIED');}
+@@ -27,7 +27,7 @@ async function register({app,pool,permitted,csrf}){const read=permitted('co:read
+  app.get(prefix+'/layout',{preHandler:read},req=>C.readTransaction(pool,c=>layout(c,req)));
+  app.get(prefix+'/map',{preHandler:read},req=>C.readTransaction(pool,async c=>{const f=await filter(c,req),l=await layout(c,req),matched=(await c.query(cte(f)+' SELECT location_id,count(*)::int bags FROM matched GROUP BY location_id',f.values)).rows;return {...l,locations:l.locations.map(x=>({...x,matched_bags:matched.find(m=>m.location_id===x.id)?.bags||0})),summary:await summary(c,f),snapshot_at:new Date().toISOString(),source:'EXISTING_CO_INVENTORY',layout_reference:'COBALT MAP 02-11-2026.pdf',notice:'CONFIGURED_LOCATIONS_ONLY; PDF_LOT_SNAPSHOT_IS_NOT_INVENTORY'};}));
+  app.get(prefix+'/history',{preHandler:read},req=>C.readTransaction(pool,async c=>{await filter(c,req);const v=[req.user.id],conditions=[`((e.preparation_id IS NOT NULL AND ${scope('p')}) OR(e.preparation_id IS NULL AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=(e.after_data->>'project_id')::uuid AND(s.warehouse_id IS NULL OR s.warehouse_id=(e.after_data->>'warehouse_id')::uuid) AND s.customer_id IS NULL)))`];if(req.query.preparation_id){v.push(req.query.preparation_id);conditions.push('e.preparation_id=$'+v.length);}const page=Number(req.query.page||1);if(!Number.isInteger(page)||page<1||page>1000000)throw fail(400,'CO_STOCK_INPUT');return {items:(await c.query('SELECT e.*,b.bag_no,u.display_name actor_name FROM co_location_events e LEFT JOIN co_bags b ON e.entity_type=$$co_positions$$ AND b.id=e.entity_id JOIN users u ON u.id=e.actor_id LEFT JOIN co_preparations p ON p.id=e.preparation_id WHERE '+conditions.join(' AND ')+' ORDER BY e.id DESC LIMIT 200 OFFSET '+((page-1)*200),v)).rows.map(e=>({...e,actor_name_en:require('./employee-identity.cjs').englishName(e.actor_name)})),page};}));
+- app.get(prefix+'/export',{preHandler:[read,permitted('inventory:export')]},async(req,reply)=>{const data=await C.readTransaction(pool,async c=>{const f=await filter(c,req),n=Number((await c.query(cte(f)+' SELECT count(*) FROM matched',f.values)).rows[0].count);if(n>100000)throw fail(413,'CO_STOCK_EXPORT_LIMIT');return {batches:(await c.query(cte(f)+' '+groups+' ORDER BY preparation_batch_no',f.values)).rows,bags:(await c.query(cte(f)+' SELECT * FROM matched ORDER BY preparation_batch_no,daily_number',f.values)).rows};});const book=new(require('exceljs').Workbook)(),en=req.query.language==='en',sheet=(name,cols,rows)=>{const s=book.addWorksheet(name);s.columns=cols.map(([key,header])=>({key,header,width:24}));for(const row of rows)s.addRow(Object.fromEntries(cols.map(([key])=>[key,row[key]===null?'':Array.isArray(row[key])?row[key].join('; '):row[key]])));s.views=[{state:'frozen',ySplit:1}];s.autoFilter={from:'A1',to:{row:1,column:cols.length}};};sheet(en?'Batches':'批次汇总',[['preparation_batch_no',en?'Preparation Batch':'备货批次'],['project_name',en?'Project':'项目'],['warehouse_name',en?'Warehouse':'仓库'],['location_codes',en?'Locations':'货位'],['bags',en?'Matched Bags':'筛选库存袋数'],['batch_total_bags',en?'Whole Batch Bags':'整批总袋数'],['status',en?'Work Status':'备货状态'],['lifecycle_state',en?'Stock Lifecycle':'库存业务状态'],['outbound_code',en?'Formal Outbound':'正式出库单'],['expected_gross_kg',en?'Expected Gross kg':'预计毛重kg'],['expected_net_kg',en?'Expected Net kg':'预计净重kg'],['actual_gross_kg',en?'Confirmed Gross kg':'已确认实际毛重kg'],['actual_net_kg',en?'Confirmed Net kg':'已确认实际净重kg'],['unconfirmed_bags',en?'Unconfirmed Bags':'未确认重量袋数'],['loading_occupied_bags',en?'Loading Occupied Bags':'装车占用袋数'],['cobalt_grade_pct',en?'Cobalt Grade %':'钴品位%'],['arecoms_input',en?'Whole Batch Manual ARECOMS MT':'整批人工ARECOMS金属吨']],data.batches);sheet(en?'Bags':'袋级明细',[['preparation_batch_no',en?'Preparation Batch':'备货批次'],['project_name',en?'Project':'项目'],['warehouse_name',en?'Warehouse':'仓库'],['bag_no',en?'Bag':'袋号'],['status',en?'Status':'状态'],['location_code',en?'Location':'货位'],['loading_order_id',en?'Active Loading Order':'有效装车占用单'],['expected_gross_kg',en?'Expected Gross kg':'预计毛重kg'],['expected_net_kg',en?'Expected Net kg':'预计净重kg'],['actual_gross_kg',en?'Confirmed Gross kg':'已确认实际毛重kg'],['actual_net_kg',en?'Confirmed Net kg':'已确认实际净重kg']],data.bags);return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition','attachment; filename="cobalt-stock.xlsx"').send(Buffer.from(await book.xlsx.writeBuffer()));});
++ app.get(prefix+'/export',{preHandler:[read,permitted('inventory:export')]},async(req,reply)=>{const data=await C.readTransaction(pool,async c=>{const f=await filter(c,req),n=Number((await c.query(cte(f)+' SELECT count(*) FROM matched',f.values)).rows[0].count);if(n>100000)throw fail(413,'CO_STOCK_EXPORT_LIMIT');return {batches:(await c.query(cte(f)+' '+groups+' ORDER BY preparation_batch_no',f.values)).rows,bags:(await c.query(cte(f)+' SELECT * FROM matched ORDER BY preparation_batch_no,daily_number',f.values)).rows};});const book=new(require('exceljs').Workbook)(),en=req.query.language==='en',sheet=(name,cols,rows)=>{const s=book.addWorksheet(name);s.columns=cols.map(([key,header])=>({key,header,width:24}));for(const row of rows)s.addRow(Object.fromEntries(cols.map(([key])=>[key,row[key]===null?'':Array.isArray(row[key])?row[key].join('; '):row[key]])));s.views=[{state:'frozen',ySplit:1}];s.autoFilter={from:'A1',to:{row:1,column:cols.length}};};sheet(en?'Batches':'批次汇总',[['preparation_batch_no',en?'Preparation Batch':'备货批次'],['project_name',en?'Project':'项目'],['warehouse_name',en?'Warehouse':'仓库'],['location_codes',en?'Locations':'货位'],['bags',en?'Matched Bags':'筛选库存袋数'],['batch_total_bags',en?'Whole Batch Bags':'整批总袋数'],['status',en?'Work Status':'备货状态'],['lifecycle_state',en?'Stock Lifecycle':'库存业务状态'],['outbound_code',en?'Formal Outbound':'正式出库单'],['expected_gross_kg',en?'Expected Gross kg':'预计毛重kg'],['expected_net_kg',en?'Expected Net kg':'预计净重kg'],['actual_gross_kg',en?'Confirmed Gross kg':'已确认实际毛重kg'],['actual_net_kg',en?'Confirmed Net kg':'已确认实际净重kg'],['unconfirmed_bags',en?'Unconfirmed Bags':'未确认重量袋数'],['loading_occupied_bags',en?'Loading Occupied Bags':'装车占用袋数'],['cobalt_grade_pct',en?'Cobalt Grade %':'钴品位%'],['arecoms_display_mt',en?'Whole Batch ARECOMS MT (4 decimals)':'整批人工ARECOMS金属吨（四位小数）'],['arecoms_input',en?'Original Exact ARECOMS MT':'原始精确ARECOMS金属吨']],data.batches);sheet(en?'Bags':'袋级明细',[['preparation_batch_no',en?'Preparation Batch':'备货批次'],['project_name',en?'Project':'项目'],['warehouse_name',en?'Warehouse':'仓库'],['bag_no',en?'Bag':'袋号'],['status',en?'Status':'状态'],['location_code',en?'Location':'货位'],['loading_order_id',en?'Active Loading Order':'有效装车占用单'],['expected_gross_kg',en?'Expected Gross kg':'预计毛重kg'],['expected_net_kg',en?'Expected Net kg':'预计净重kg'],['actual_gross_kg',en?'Confirmed Gross kg':'已确认实际毛重kg'],['actual_net_kg',en?'Confirmed Net kg':'已确认实际净重kg']],data.bags);return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition','attachment; filename="cobalt-stock.xlsx"').send(Buffer.from(await book.xlsx.writeBuffer()));});
+  for(const kind of ['zones','locations'])for(const edit of [false,true])app.post(prefix+'/'+kind+(edit?'/:id':''),{preHandler:[permitted('co:location-manage'),csrf]},req=>mutate(pool,req,'co:location-manage',async c=>{const b=req.body,zone=kind==='zones';fields(b,zone?['project_id','warehouse_id','code','name','name_en','active','version','reason']:['zone_id','code','x','y','width','height','active','version','reason']);const table='co_'+kind;let old=null;if(edit){old=(await c.query('SELECT * FROM '+table+' WHERE id=$1 FOR UPDATE',[B.uuid(req.params.id)])).rows[0];if(!old)throw fail(404,'CO_STOCK_NOT_FOUND');if(old.version!==B.version(b.version))throw fail(409,'CO_STOCK_STALE');}let project,warehouse,z;if(zone){project=B.uuid(b.project_id);warehouse=B.uuid(b.warehouse_id);}else{z=(await c.query('SELECT * FROM co_zones WHERE id=$1 FOR UPDATE',[B.uuid(b.zone_id)])).rows[0];if(!z||!z.active)throw fail(409,'CO_STOCK_ZONE');project=z.project_id;warehouse=z.warehouse_id;}await context(c,req,project,warehouse);if(old&&(old.project_id!==project||old.warehouse_id!==warehouse||!zone&&old.zone_id!==z.id))throw fail(409,'CO_STOCK_SCOPE');const values={code:B.text(b.code,'CO_STOCK_CODE',80),active:b.active??true,updated_by:req.user.id};if(typeof values.active!=='boolean')throw fail(400,'CO_STOCK_INPUT');if(zone){values.name=B.text(b.name,'CO_STOCK_NAME',100);values.name_en=B.text(b.name_en,'CO_STOCK_NAME',100);}else{for(const k of ['x','y','width','height']){if(typeof b[k]!=='number'||!Number.isFinite(b[k])||b[k]<(k==='x'||k==='y'?0:40)||b[k]>(k==='x'||k==='y'?100000:10000))throw fail(400,'CO_STOCK_COORDINATES');values[k]=b[k];}}await c.query("SELECT set_config('musonoi.co_location_reason',$1,true)",[B.text(b.reason,'CO_STOCK_REASON',1000)]);if(!old){Object.assign(values,{project_id:project,warehouse_id:warehouse});if(!zone)values.zone_id=z.id;}const keys=Object.keys(values),v=Object.values(values);let result;if(old){v.push(old.id);result=(await c.query('UPDATE '+table+' SET '+keys.map((k,i)=>k+'=$'+(i+1)).join(',')+',version=version+1,updated_at=clock_timestamp() WHERE id=$'+v.length+' RETURNING *',v)).rows[0];}else result=(await c.query('INSERT INTO '+table+'('+keys.join(',')+') VALUES('+keys.map((_,i)=>'$'+(i+1)).join(',')+') RETURNING *',v)).rows[0];return result;}));
+  app.post(prefix+'/place-preview',{preHandler:[permitted('co:locate'),csrf]},req=>C.readTransaction(pool,async c=>{const x=await plan(c,req,req.body);return {preview_hash:x.hash,target_code:x.l?.code||null,target_count:x.rows.length,affected_count:x.changed.length,examples:x.changed.slice(0,20).map(b=>({bag_no:b.bag_no,from:b.from_code,to:x.l?.code||null}))};}));
+  app.post(prefix+'/place',{preHandler:[permitted('co:locate'),csrf]},req=>mutate(pool,req,'co:locate',async c=>{const x=await plan(c,req,req.body,true);if(x.hash!==req.body.preview_hash)throw fail(409,'CO_STOCK_PREVIEW_STALE');if(!x.changed.length)throw fail(409,'CO_STOCK_NO_CHANGE');await c.query("SELECT set_config('musonoi.co_location_reason',$1,true)",[x.reason]);if(x.target&&x.l.occupied_by===null)await c.query('UPDATE co_locations SET occupied_by=$2,version=version+1,updated_by=$3,updated_at=clock_timestamp() WHERE id=$1',[x.target,x.p.id,req.user.id]);await c.query('UPDATE co_positions SET location_id=$2,version=version+1,updated_by=$3,updated_at=clock_timestamp() WHERE bag_id=ANY($1)',[x.changed.map(b=>b.bag_id),x.target,req.user.id]);for(const source of [...new Set(x.changed.map(b=>b.location_id).filter(Boolean))].sort())if(source!==x.target)await c.query('UPDATE co_locations SET occupied_by=NULL,version=version+1,updated_by=$2,updated_at=clock_timestamp() WHERE id=$1 AND NOT EXISTS(SELECT 1 FROM co_positions WHERE location_id=$1)',[source,req.user.id]);return {id:x.p.id,project_id:x.p.project_id,warehouse_id:x.p.warehouse_id,affected_count:x.changed.length};}));
+diff --git a/server/cobalt.cjs b/server/cobalt.cjs
+index 1dbc8d0..c194227 100644
+--- a/server/cobalt.cjs
++++ b/server/cobalt.cjs
+@@ -8,7 +8,7 @@ const enabled=async pool=>(await pool.query("SELECT to_regclass('public.co_prepa
+ const fields=(body,keys)=>{if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!keys.includes(k)))throw B.error(400,'CO_INVALID_INPUT');};
+ const visible=(alias='p')=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=${alias}.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=${alias}.warehouse_id) AND s.customer_id IS NULL)`;
+ async function actor(c,req,permission,role){const u=(await c.query('SELECT u.id,u.role_code FROM users u JOIN role_permissions p ON p.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND p.permission_code=$2',[req.user.id,permission])).rows[0];if(!u||role&&u.role_code!==role&&u.role_code!=='admin')throw B.error(403,'CO_PERMISSION_DENIED');return u;}
+-async function mutation(pool,req,permission,role,fn){if(req.productCode!=='CO_HYDROXIDE')throw B.error(409,'CO_PRODUCT_REQUIRED');const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw B.error(400,'CO_IDEMPOTENCY_REQUIRED');const route=req.method+' '+req.url.split('?')[0],hash=crypto.createHash('sha256').update(JSON.stringify(canonical(req.body))).digest('hex'),c=await pool.connect();try{await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');await actor(c,req,permission,role);await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw B.error(409,'CO_KEY_REUSED');await document(c,req,old.response.id);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO co_requests(actor_id,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5)',[req.user.id,route,key,hash,result]);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(e.code==='23514'&&/^CO_(LOADING|EXECUTION)_[A-Z_]+$/.test(e.message))throw B.error(409,e.message);if(['23505','23503','23514','40001','40P01'].includes(e.code))throw B.error(409,'CO_STATE_CONFLICT');throw e;}finally{c.release();}}
++async function mutation(pool,req,permission,role,fn){if(req.productCode!=='CO_HYDROXIDE')throw B.error(409,'CO_PRODUCT_REQUIRED');const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw B.error(400,'CO_IDEMPOTENCY_REQUIRED');const route=req.method+' '+req.url.split('?')[0],hash=crypto.createHash('sha256').update(JSON.stringify(canonical(req.body))).digest('hex'),c=await pool.connect();try{await c.query('BEGIN');await require('./authorization-lease.cjs').lockBusiness(c,req);await actor(c,req,permission,role);await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw B.error(409,'CO_KEY_REUSED');await document(c,req,old.response.id);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO co_requests(actor_id,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5)',[req.user.id,route,key,hash,result]);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(e.code==='23514'&&/^CO_(LOADING|EXECUTION)_[A-Z_]+$/.test(e.message))throw B.error(409,e.message);if(['23505','23503','23514','40001','40P01'].includes(e.code))throw B.error(409,'CO_STATE_CONFLICT');throw e;}finally{c.release();}}
+ const summary=p=>Object.fromEntries(['id','document_no','preparation_batch_no','business_date','bag_count','status','version','created_by','site_reviewed_by','production_reviewed_by','intake_flow_version'].map(k=>[k,p[k]]));
+ async function event(c,req,p,action,status,reason){await c.query('INSERT INTO co_events(preparation_id,actor_id,action,from_status,to_status,reason) VALUES($1,$2,$3,$4,$5,$6)',[p.id,req.user.id,action,p.status||null,status,reason||null]);}
+ async function document(c,req,id,lock=false){const p=(await c.query(`SELECT p.* FROM co_preparations p WHERE p.id=$2 AND ${visible()}${lock?' FOR UPDATE OF p':''}`,[req.user.id,B.uuid(id)])).rows[0];if(!p)throw B.error(404,'CO_NOT_FOUND');return p;}
+diff --git a/server/config.cjs b/server/config.cjs
+index 6475c63..cf66268 100644
+--- a/server/config.cjs
++++ b/server/config.cjs
+@@ -8,6 +8,6 @@ function config(){
+  if(!['test','production'].includes(environment))throw Error('APP_ENV must be test or production');
+  if(environment==='production'&&(!process.env.APP_ORIGIN||!process.env.APP_ORIGIN.startsWith('https://')))throw Error('Production requires an explicit HTTPS APP_ORIGIN');
+  if(!process.env.DATABASE_URL)throw Error('DATABASE_URL is required; there is no mock fallback');
+- return {root,environment,databaseUrl:process.env.DATABASE_URL,db:require('./database-connection.cjs').settings(),host:process.env.HOST||'127.0.0.1',port:Number(process.env.PORT||4174),secure:environment==='production'||(process.env.APP_ORIGIN||'').startsWith('https://'),origin:process.env.APP_ORIGIN||'http://127.0.0.1:4174'};
++ return {root,environment,trustedProxyIps:process.env.TRUSTED_PROXY_IPS,databaseUrl:process.env.DATABASE_URL,db:require('./database-connection.cjs').settings(),host:process.env.HOST||'127.0.0.1',port:Number(process.env.PORT||4174),secure:environment==='production'||(process.env.APP_ORIGIN||'').startsWith('https://'),origin:process.env.APP_ORIGIN||'http://127.0.0.1:4174'};
+ }
+ module.exports={root,config};
+diff --git a/server/gate-permits.cjs b/server/gate-permits.cjs
+index c66ff2f..c85c284 100644
+--- a/server/gate-permits.cjs
++++ b/server/gate-permits.cjs
+@@ -10,7 +10,7 @@ async function source(c,req,id,ready=true){
+ }
+ async function access(c,req,id,lock=false){const p=(await c.query('SELECT * FROM gate_permits WHERE id=$1 AND product_code=$2'+(lock?' FOR UPDATE':''),[B.uuid(id),req.productCode])).rows[0];if(!p)throw B.error(404,'GATE_NOT_FOUND');await source(c,req,p.co_order_id||p.cu_loading_id,false);return p;}
+ async function event(c,req,id,action,before,after){await c.query('INSERT INTO gate_events(permit_id,actor_id,action,before_data,after_data) VALUES($1,$2,$3,$4,$5)',[id,req.user.id,action,before,after]);await B.audit(c,req,action,'gate_permits',id,before,after);}
+-async function mutate(pool,req,permission,fn){const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw B.error(400,'GATE_KEY_REQUIRED');const c=await pool.connect(),route=req.method+' '+req.url.split('?')[0],hash=PL.digest(Buffer.from(JSON.stringify(require('./cobalt-stock.cjs').canonical(req.body||{}))));try{await c.query('BEGIN');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');if(!(await c.query('SELECT 1 FROM users u JOIN role_permissions r ON r.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND r.permission_code=$2',[req.user.id,permission])).rowCount)throw B.error(403,'GATE_PERMISSION');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+req.productCode+route+key]);const old=(await c.query('SELECT * FROM gate_requests WHERE actor_id=$1 AND product_code=$2 AND route=$3 AND key=$4',[req.user.id,req.productCode,route,key])).rows[0];if(old){if(hash!==old.request_hash)throw B.error(409,'GATE_KEY_REUSED');if(old.response.permit_id)await access(c,req,old.response.permit_id);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO gate_requests(actor_id,product_code,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5,$6)',[req.user.id,req.productCode,route,key,hash,result]);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(['23505','23514','23503','40001','40P01'].includes(e.code))throw B.error(409,/^GATE_/.test(e.message)?e.message:'GATE_CONFLICT');throw e;}finally{c.release();}}
++async function mutate(pool,req,permission,fn){const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw B.error(400,'GATE_KEY_REQUIRED');const c=await pool.connect(),route=req.method+' '+req.url.split('?')[0],hash=PL.digest(Buffer.from(JSON.stringify(require('./cobalt-stock.cjs').canonical(req.body||{}))));try{await c.query('BEGIN');await require('./authorization-lease.cjs').lockBusiness(c,req);if(!(await c.query('SELECT 1 FROM users u JOIN role_permissions r ON r.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND r.permission_code=$2',[req.user.id,permission])).rowCount)throw B.error(403,'GATE_PERMISSION');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+req.productCode+route+key]);const old=(await c.query('SELECT * FROM gate_requests WHERE actor_id=$1 AND product_code=$2 AND route=$3 AND key=$4',[req.user.id,req.productCode,route,key])).rows[0];if(old){if(hash!==old.request_hash)throw B.error(409,'GATE_KEY_REUSED');if(old.response.permit_id)await access(c,req,old.response.permit_id);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return old.response;}const result=await fn(c);await c.query('INSERT INTO gate_requests(actor_id,product_code,route,key,request_hash,response) VALUES($1,$2,$3,$4,$5,$6)',[req.user.id,req.productCode,route,key,hash,result]);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');if(['23505','23514','23503','40001','40P01'].includes(e.code))throw B.error(409,/^GATE_/.test(e.message)?e.message:'GATE_CONFLICT');throw e;}finally{c.release();}}
+ async function revision(c,req,id,rev){const p=await access(c,req,id),r=(await c.query('SELECT * FROM gate_permit_revisions WHERE permit_id=$1 AND revision=$2',[p.id,Number(rev)])).rows[0];if(!r)throw B.error(404,'GATE_NOT_FOUND');if(PL.digest(r.content)!==r.file_sha256||PL.digest(Buffer.from(r.print_html))!==r.html_sha256)throw B.error(409,'GATE_HASH_MISMATCH');return {p,r};}
+ async function issue(c,req,orderId,p,reason){const s=await source(c,req,orderId);if(!s.batch_number||!s.truck_no||!s.driver_name||!s.packing_list_no||!s.quantity||!s.net_kg)throw B.error(409,'GATE_SOURCE_MISSING');const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());let rev=1;if(!p){const seq=(await c.query("SELECT nextval('gate_permit_numbers')::text n")).rows[0].n,document_no='RMM-'+(req.productCode==='CO_HYDROXIDE'?'CO':'CU')+'-'+date.slice(0,4)+'-GP'+seq.padStart(6,'0');p=(await c.query('INSERT INTO gate_permits(product_code,cu_loading_id,co_order_id,project_id,customer_id,document_no,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[req.productCode,req.productCode==='CU_CATHODE'?orderId:null,req.productCode==='CO_HYDROXIDE'?orderId:null,s.project_id,s.customer_id,document_no,req.user.id])).rows[0];}else{if(p.state==='EXITED')throw B.error(409,'GATE_ALREADY_EXITED');rev=p.current_revision+1;}
+  const snapshot={...s,document_no:s.batch_number,business_date:date,applicant:req.user.display_name},rendered=await R.render(snapshot),html=R.html(rendered.layout,snapshot.document_no);await c.query('INSERT INTO gate_permit_revisions(permit_id,revision,snapshot,template_sha256,file_sha256,html_sha256,content,print_html,reason,generated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[p.id,rev,snapshot,rendered.template_sha256,rendered.file_sha256,PL.digest(Buffer.from(html)),rendered.buffer,html,reason,req.user.id]);if(rev>1)await c.query('UPDATE gate_permits SET current_revision=$2,version=version+1 WHERE id=$1',[p.id,rev]);await event(c,req,p.id,rev===1?'gate_issued':'gate_revised',null,{revision:rev,source_order:orderId,document_no:p.document_no});return {permit_id:p.id,revision:rev};
+diff --git a/server/release.cjs b/server/release.cjs
+index 7fc0a71..26fc2e6 100644
+--- a/server/release.cjs
++++ b/server/release.cjs
+@@ -1,3 +1,3 @@
+ 'use strict';
+ const version=require('../package.json').version;
+-module.exports=Object.freeze({version,displayVersion:version,frontendRevision:version,requiredMigration:'173_r3_security_scope_and_sessions.sql'});
++module.exports=Object.freeze({version,displayVersion:version,frontendRevision:version,requiredMigration:'174_r3_reliable_audit_entity_scopes.sql'});
+diff --git a/server/trusted-proxy.cjs b/server/trusted-proxy.cjs
+new file mode 100644
+index 0000000..c561244
+--- /dev/null
++++ b/server/trusted-proxy.cjs
+@@ -0,0 +1,14 @@
++'use strict';
++const net=require('node:net');
++const normalize=ip=>String(ip||'').replace(/^::ffff:/i,'');
++function policy(value){
++ const entries=String(value||'').split(',').map(x=>x.trim()).filter(Boolean);
++ if(entries.some(ip=>!net.isIP(ip)))throw Object.assign(Error('TRUSTED_PROXY_IPS must contain exact proxy IP addresses'),{code:'PROXY_CONFIGURATION_INVALID'});
++ const trusted=new Set(entries.map(normalize)),peer=ip=>trusted.has(normalize(ip));
++ return {trust:entries.length?(ip,hop)=>hop===0&&peer(ip):false,validate(req){
++  if(!peer(req.raw.socket.remoteAddress))return;
++  const forwarded=req.headers['x-forwarded-for'];
++  if(forwarded!==undefined&&(typeof forwarded!=='string'||!net.isIP(forwarded.trim())))throw Object.assign(Error('Invalid proxy forwarding header'),{statusCode:400});
++ }};
++}
++module.exports={policy};
+diff --git a/server/workflow-permissions.cjs b/server/workflow-permissions.cjs
+index d11d376..0f41491 100644
+--- a/server/workflow-permissions.cjs
++++ b/server/workflow-permissions.cjs
+@@ -78,9 +78,9 @@ const fixedRoles={
+  'gate:exit':['sales_operator','sales_manager']
+ };
+ const copperOnly=new Set(['receipt:read','receipt:write','receipt:review','allocation:read','allocation:write','allocation:review','lot:revoke','lot:cancel-approve','move:write','adjust:read','adjust:write','adjust:approve']);
+-const catalog=Object.fromEntries(Object.entries(definitions).map(([code,[zh,en]])=>[code,{zh,en,products:code.startsWith('co:')?['CO_HYDROXIDE']:copperOnly.has(code)?['CU_CATHODE']:['CU_CATHODE','CO_HYDROXIDE'],...(fixedRoles[code]?{roles:[...fixedRoles[code],'admin']}:{})}]));
++const catalog=Object.fromEntries(Object.entries(definitions).map(([code,[zh,en]])=>[code,{zh,en,products:code.startsWith('co:')?['CO_HYDROXIDE']:copperOnly.has(code)?['CU_CATHODE']:['CU_CATHODE','CO_HYDROXIDE'],...(fixedRoles[code]?{roles:code==='co:loading-review'?fixedRoles[code]:[...fixedRoles[code],'admin']}:{})}]));
+ const modules={"dashboard":["overview","信息总览","Overview"],"plan":["sales","销售计划及审批","Sales Plans and Approvals"],"dispatch":["dispatch","客户派车管理","Customer Dispatch"],"customer":["customers","客户与合同","Customers and Contracts"],"receipt":["copper-intake","阴极铜入库","Copper Receipts"],"allocation":["copper-preparation","阴极铜备货","Copper Preparation"],"lot":["copper-preparation","阴极铜备货","Copper Preparation"],"co":["cobalt-preparation","氢氧化钴入库与备货","Cobalt Intake and Preparation"],"vehicle-arrival":["arrivals","车辆到厂登记","Vehicle Arrival"],"loading-plan":["loading-plans","装车计划与匹配","Loading Plans and Matching"],"load":["loading-orders","装车单及装车作业","Loading Orders and Operations"],"outbound":["outbound","出库审批与归档","Outbound Approvals and Records"],"gate":["gate","车辆出厂与出门证","Gate Exit and Permits"],"document":["shipping","装箱单生成","Packing List Generation"],"packing-template":["shipping","装箱单模板","Packing List Templates"],"printer":["printing","打印设备设置","Printer Settings"],"inventory":["inventory","库存查询与导出","Stock Queries and Export"],"move":["placement","实际货位调整","Physical Stock Placement"],"stocktake":["stocktaking","库存盘点","Stocktaking"],"adjust":["adjustment","库存调整","Stock Adjustments"],"master":["master-data","项目仓库与基础资料","Master Data"],"users":["accounts","账户与注册审批","Accounts and Registration"],"roles":["roles","岗位与权限","Roles and Permissions"],"system":["system","系统设置与预警","System and Alerts"],"audit":["audit","操作日志","Audit Log"],"report":["reports","统计报表","Reports"]};for(const [code,entry]of Object.entries(catalog)){const [module,module_zh,module_en]=code.startsWith('co:')&&['co:locate','co:location-manage','co:temp-locate'].includes(code)?['cobalt-placement','氢氧化钴货位与地图','Cobalt Locations and Map']:modules[code.split(':')[0]];Object.assign(entry,{module,module_zh,module_en,protected_admin:['users:manage','roles:manage'].includes(code)});}
+ catalog['load:review'].product_roles={CO_HYDROXIDE:['site_supervisor','admin']};catalog['outbound:production-approve'].product_roles={CO_HYDROXIDE:['production_manager','admin']};
+-const active=code=>Object.hasOwn(catalog,code),assignable=(role,code)=>active(code)&&(role==='admin'||!fixedRoles[code]||fixedRoles[code].includes(role));
++const active=code=>Object.hasOwn(catalog,code),assignable=(role,code)=>active(code)&&(code==='co:loading-review'?role==='site_supervisor':role==='admin'||!fixedRoles[code]||fixedRoles[code].includes(role));
+ function present(role){const applicable=p=>assignable(role.code,p);return {...role,caps:role.caps.filter(applicable),permissions:role.permissions.filter(applicable),recommended_permissions:(role.recommended_permissions||[]).filter(applicable)};}
+ module.exports={catalog,retired,active,assignable,present};
+diff --git a/tests/release/ci-setup.cjs b/tests/release/ci-setup.cjs
+new file mode 100644
+index 0000000..7db00ee
+--- /dev/null
++++ b/tests/release/ci-setup.cjs
+@@ -0,0 +1,13 @@
++'use strict';
++const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),{execFileSync}=require('node:child_process');
++if(process.env.GITHUB_ACTIONS!=='true'||!process.env.GITHUB_ENV)throw Error('Ephemeral GitHub CI only');
++fs.mkdirSync('.runtime/ci-tls',{recursive:true});
++const owner=crypto.randomBytes(32).toString('base64url'),app=crypto.randomBytes(32).toString('base64url');
++const env={POSTGRES_PASSWORD:owner,WMS_TEST_OWNER_URL:'postgresql://postgres:'+owner+'@127.0.0.1:55432/postgres',WMS_TEST_APP_PASSWORD:app};
++for(const value of Object.values(env))console.log('::add-mask::'+value);
++fs.appendFileSync(process.env.GITHUB_ENV,Object.entries(env).map(([k,v])=>k+'='+v).join('\n')+'\n');
++execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','2','-subj','/CN=rc2-postgres','-addext','subjectAltName=DNS:rc2-postgres,IP:127.0.0.1','-keyout','.runtime/ci-tls/server.key','-out','.runtime/ci-tls/server.crt'],{stdio:'ignore'});
++fs.chmodSync('.runtime/ci-tls/server.key',0o600);
++execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','2','-subj','/CN=untrusted-ci-ca','-keyout','.runtime/ci-tls/wrong.key','-out','.runtime/ci-tls/wrong.crt'],{stdio:'ignore'});
++for(const [p,v]of [['.env','CI_CANARY_ENV_DO_NOT_SHIP=yes'],['server/private/rc2-canary.key','CI_CANARY_PRIVATE_DO_NOT_SHIP'],['db/private/rc2-canary.dump','CI_CANARY_DATABASE_DO_NOT_SHIP'],['uploads/rc2-canary.txt','CI_CANARY_UPLOAD_DO_NOT_SHIP']]){fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,v);}
++console.log('Generated fresh CI-only database credentials, short-lived TLS material and build canaries.');
+diff --git a/tests/release/copper-core.cjs b/tests/release/copper-core.cjs
+new file mode 100644
+index 0000000..d60ea28
+--- /dev/null
++++ b/tests/release/copper-core.cjs
+@@ -0,0 +1,28 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{Client}=require('pg'),E=require('./environment.cjs');
++test('native copper receipt, preparation, sampling, weighing and formal outbound',async()=>{
++ const f=E.fixture(),c=new Client(E.options(f.database));await c.connect();let app;const steps=[];
++ try{
++ for(const [role,permissions]of [['production_operator',['receipt:write','receipt:read']],['logistics_field_operator',['load:write','load:execute','allocation:write','allocation:read']]])for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2) ON CONFLICT DO NOTHING',[role,p]);
++ app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
++ for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.95.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
++ const api=async(url,role='admin',body,expected=200)=>{const r=await app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CU_CATHODE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
++ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),seq=String(Date.now()),customer=f.customers.CU_CATHODE;
++ const plan=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:customer.contract,target_weight:'100',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic rc2 copper'});
++ for(const role of ['sales_manager','commerce_manager']){const p=await api('/sales-workflow/plans/'+plan.id);await api('/sales-workflow/plans/'+plan.id+'/review',role,{version:p.approval_version,decision:'APPROVED'});}steps.push('sales plan two independent approvals');
++ const number='MUS-'+today.slice(0,4)+'-020-'+seq;
++ let receipt=await api('/receipts','production_operator',{project_id:f.project,lines:[{bundle_no:number,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}]});
++ await api('/receipts','production_operator',{project_id:f.project,lines:[{bundle_no:number,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}]},409);
++ receipt=await api('/receipts/'+receipt.id+'/submit','production_operator',{version:receipt.version});await api('/receipts/'+receipt.id+'/confirm','production_manager',{version:receipt.version});const bundle=(await c.query('SELECT * FROM bundles WHERE receipt_id=$1',[receipt.id])).rows[0];assert(bundle);steps.push('unique bundle, independent receipt review');
++ await c.query("UPDATE stock_map_source SET status='VERIFIED',source_sha256=$1,source_name='Synthetic CI geometry',notes='Synthetic test geometry only'",[crypto.createHash('sha256').update('RC2-SYNTHETIC-MAP').digest('hex')]);await c.query("UPDATE stock_map_cells SET x=0,y=0,width=100,height=100 WHERE code IN('P1-01','P5')");const location=(await c.query("SELECT * FROM locations WHERE project_id=$1 AND code='P1-01'",[f.project])).rows[0]||await api('/masters/locations','admin',{project_id:f.project,warehouse_id:f.warehouse,code:'P1-01',active:true});
++ await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-01' WHERE id=$1",[location.id]);let lot=await api('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:'RMM-CU-'+today.slice(0,4)+'-01',planned_location_id:location.id,items:[{bundle_id:bundle.id,sample_required:false}]});
++ lot=await api('/v261/lots/'+lot.id,'logistics_field_operator');
++ lot=(await api('/v262/lots/'+lot.id+'/weigh','logistics_field_operator',{version:lot.version,items:lot.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'RC2-CU-'+seq}))})).lot;
++ assert.equal((await c.query('SELECT (net_weight=2.0325::numeric) v FROM bundles WHERE id=$1',[bundle.id])).rows[0].v,true);
++ lot=await api('/v261/lots/'+lot.id+'/submit','logistics_field_operator',{version:lot.version});await api('/v261/lots/'+lot.id+'/approve','site_supervisor',{version:lot.version,all_weighed_and_stored:true});steps.push('exclusive location and gross minus 2.5kg net weight');
++ let load=await api('/v26/loads','logistics_field_operator',{allocation_id:lot.id,vehicle_no:'RC2-CU-'+seq,load_date:today,bundle_ids:[bundle.id]});
++ for(const [action,role,extra]of [['approve','site_supervisor',{}],['depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()}],['logistics-approve','logistics_manager',{}]])load=await api('/v26/loads/'+load.id+'/'+action,role,{version:load.version,...extra});
++ assert.notEqual((await c.query('SELECT physical_status FROM bundles WHERE id=$1',[bundle.id])).rows[0].physical_status,'OUTBOUND');load=await api('/v26/loads/'+load.id+'/manager-approve','production_manager',{version:load.version});assert.equal((await c.query('SELECT physical_status FROM bundles WHERE id=$1',[bundle.id])).rows[0].physical_status,'OUTBOUND');steps.push('independent loading, logistics and final production approval; final outbound deduction');
++ E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true});
++ }finally{await app?.close();await c.end();}
++});
+diff --git a/tests/release/core-flows.cjs b/tests/release/core-flows.cjs
+new file mode 100644
+index 0000000..72a9183
+--- /dev/null
++++ b/tests/release/core-flows.cjs
+@@ -0,0 +1,58 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{Client}=require('pg'),E=require('./environment.cjs');
++test('native cobalt match independence, cancellation, rematch, formal outbound and reports',async t=>{
++ const f=E.fixture(),c=new Client(E.options(f.database));await c.connect();let app;const checks=[];
++ const check=(name,fn)=>t.test(name,async()=>{try{await fn();checks.push({name,status:'PASS'});}catch(e){checks.push({name,status:'FAIL'});throw e;}});
++ try{
++ await c.query("INSERT INTO role_permissions SELECT 'logistics_field_operator',unnest(ARRAY['loading-plan:match','load:write','load:execute']) ON CONFLICT DO NOTHING");app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
++ for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.93.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
++ const request=(url,role='admin',body)=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});
++ const api=async(url,role,body,expected=200)=>{const r=await request(url,role,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
++ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),salt=crypto.randomBytes(4).toString('hex'),customer=f.customers.CO_HYDROXIDE;
++ let sales,prep,plan,matched,review,preview;
++ await check('two independent sales approvals and a dispatch arrival feed the loading plan',async()=>{
++  sales=await api('/cobalt/sales/plans','sales_operator',{project_id:f.project,warehouse_id:f.warehouse,customer_id:customer.id,contract_id:customer.contract,target_weight:'100',shipment_month:today.slice(0,7),planned_vehicle_count:2,destination:'Synthetic destination',status:'OPEN',remark:'Synthetic rc2 flow'});
++  for(const role of ['sales_manager','commerce_manager']){const d=await api('/cobalt/sales-workflow/plans/'+sales.id,role);await api('/cobalt/sales-workflow/plans/'+sales.id+'/review',role,{version:d.approval_version,decision:'APPROVED'});}sales=await api('/cobalt/sales-workflow/plans/'+sales.id);
++  const vehicle=await api('/cobalt/sales/plans/'+sales.id+'/dispatch/vehicles','logistics_manager',{plan_version:sales.version,shipment_month:today.slice(0,7),truck_no:'RC2-'+salt,capacity_tonnes:'30',trailer_no:'RC2-TRAILER',driver_name:'Synthetic Driver',passport_no:'Synthetic Passport',transporter:'Synthetic Transport'});
++  f.rc2arrival=await api('/cobalt/sales/arrivals/'+vehicle.id,'logistics_field_operator',{dispatch_version:vehicle.version,arrived_at:new Date(Date.now()-1000).toISOString(),trailer_one:'RC2-TRAILER',trailer_two:'',driver_name:'Synthetic Driver',passport_no:'Synthetic Passport',transporter:'Synthetic Transport',container_no:'',exception_remark:'Synthetic arrival'});
++ });
++ await check('native preparation preserves exact ARECOMS precision and final receipt independence',async()=>{
++  prep=await api('/cobalt/preparations','logistics_field_operator',{project_id:f.project,warehouse_id:f.warehouse,total_bags:1});const base='/cobalt/preparations/'+prep.id;
++  await api(base+'/submit','logistics_field_operator',{version:prep.version});let w=await api(base+'/work','logistics_field_operator');
++  await api(base+'/work/save','logistics_field_operator',{batch_version:w.work.version,arecoms_quantity_mt:'1.23456789',bags:w.bags.map(b=>({bag_id:b.bag_id,version:b.version,actual_gross_kg:'650.123',seal_no:'RC2-SEAL-'+salt,sampled:true}))});w=await api(base+'/work');
++  const zone=(await c.query('SELECT zone_id FROM co_locations WHERE id=$1',[f.location])).rows[0].zone_id;await c.query("SELECT set_config('musonoi.co_location_reason','Synthetic rc2 location',false)");const loc=(await c.query('INSERT INTO co_locations(zone_id,project_id,warehouse_id,code,x,y,width,height,updated_by) VALUES($1,$2,$3,$4,300,100,100,100,$5) RETURNING *',[zone,f.project,f.warehouse,'RC2-'+salt,f.accounts.find(a=>a.role==='admin').id])).rows[0];
++  const place={preparation_id:prep.id,batch_version:w.work.version,selection:'ALL',target_location_id:loc.id,target_version:loc.version,source:'PREPARATION'},pv=await api('/cobalt/stock/place-preview','site_supervisor',place);await api('/cobalt/stock/place','site_supervisor',{...place,preview_hash:pv.preview_hash});await api(base+'/work/submit','logistics_field_operator',{batch_version:w.work.version});w=await api(base+'/work');await api(base+'/work/approve','site_supervisor',{batch_version:w.work.version});let p=await api(base);await api(base+'/production-approve','production_manager',{version:p.version});
++  const raw=(await c.query('SELECT arecoms_quantity_mt::text v FROM co_work_batches WHERE preparation_id=$1',[prep.id])).rows[0].v;assert.equal(raw,'1.23456789');assert.equal((await api('/cobalt/stock/batches/'+prep.id)).batch.arecoms_display_mt,'1.2346');
++  const s=await api('/cobalt/stock/summary');assert.equal(s.completed_arecoms_mt,'1.23456789');assert.equal(s.confirmed_arecoms_batches,1);assert(s.unconfirmed_arecoms_batches>=1);
++  const report=await api('/cobalt/reports');assert.equal(report.inventorySummary.confirmed_arecoms_mt,'1.23456789');assert(report.inventorySummary.arecoms_unconfirmed_batches>=1);
++  const exported=await request('/cobalt/stock/export');assert.equal(exported.statusCode,200);const book=new(require('exceljs').Workbook)();await book.xlsx.load(exported.rawPayload);const text=JSON.stringify(book.worksheets[0].getSheetValues());assert(text.includes('1.2346'));assert(text.includes('1.23456789'));
++ });
++ await check('matching requires current versions and a complete independent preparation',async()=>{
++  const options=await api('/cobalt/loading/options?sales_plan_id='+sales.id),a=options.arrivals.find(a=>a.id===f.rc2arrival.id);assert(a);
++  preview=await api('/cobalt/loading/preview?sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);
++  plan=await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,destination:'Synthetic destination',invoice_no:'RC2-INV-'+salt,export_license_no:'RC2-LICENSE',remark:'Synthetic rc2 matching',...preview.versions});
++  const match=async()=>{const d=await api('/cobalt/loading/plans/'+plan.id),p=await api('/cobalt/loading/preview?plan_id='+plan.id+'&sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);await api('/cobalt/loading/plans/'+plan.id+'/match','logistics_field_operator',{version:d.plan.version,preview_hash:p.preview_hash});return api('/cobalt/loading/plans/'+plan.id);};
++  f.rc2match=match;matched=await match();review=await api('/cobalt/loading/orders/'+matched.order.id+'/requests','logistics_field_operator',{version:matched.order.version,kind:'CANCEL_MATCH',reason:'Synthetic cancellation proof'});
++ });
++ await check('administrator with raw historical grant is denied; supervisor needs permission and correct version',async()=>{
++  const body={version:review.version,order_version:matched.order.version,note:'Synthetic review'};
++  await api('/cobalt/loading/reviews/'+review.id+'/approve','admin',body,403);
++  await api('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',{...body,version:review.version+1},409);
++  const id=f.accounts.find(a=>a.role==='site_supervisor').id;await c.query("DELETE FROM role_permissions WHERE role_code='site_supervisor' AND permission_code='co:loading-review'");
++  assert.equal((await request('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body)).statusCode,401);
++  await c.query("INSERT INTO role_permissions VALUES('site_supervisor','co:loading-review')");const a=f.accounts.find(a=>a.id===id),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.94.0.1',headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});sessions.site_supervisor={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};
++  await api('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body);assert.equal((await api('/cobalt/loading/plans/'+plan.id)).plan.status,'DRAFT');matched=await f.rc2match();
++  await c.query('BEGIN');try{
++   await c.query("INSERT INTO role_permissions VALUES('site_supervisor','loading-plan:match') ON CONFLICT DO NOTHING");
++   const self=(await c.query("INSERT INTO co_loading_reviews(order_id,kind,expected_order_version,reason,requested_by) VALUES($1,'CANCEL_MATCH',$2,'Synthetic self review denial',$3) RETURNING id",[matched.order.id,matched.order.version,id])).rows[0];
++   await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET status='APPROVED',version=version+1,reviewed_by=$2,reviewed_at=now(),review_note='Synthetic self review' WHERE id=$1",[self.id,id]),e=>e.code==='23514'&&e.message.includes('CO_LOADING_INDEPENDENT_SUPERVISOR_REQUIRED'));
++  }finally{await c.query('ROLLBACK');}
++ });
++ await check('formal outbound alone deducts inventory after independent load, logistics and production approvals',async()=>{
++  const base='/cobalt/execution/orders/'+matched.order.id,act=async(action,role,extra={})=>{const d=await api(base);await api(base+'/'+action,role,{...(action==='start'?{order_version:d.order.version}:{version:d.execution.version}),note:'Synthetic rc2 '+action,...extra});};
++  await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
++  assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);await act('production-approve','production_manager');assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
++  await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET reason='tamper' WHERE id=$1",[review.id]));
++ });
++ }finally{await app?.close();await c.end();E.save('rc2-core-results.json',{checks,status:checks.every(x=>x.status==='PASS')?'PASS':'FAIL',syntheticOnly:true});}
++});
+diff --git a/tests/release/database.test.cjs b/tests/release/database.test.cjs
+index cf053e7..6914338 100644
+--- a/tests/release/database.test.cjs
++++ b/tests/release/database.test.cjs
+@@ -5,8 +5,8 @@ test('isolated migration, initialization, business permission and concurrency ac
+  try{
+  const production=await connect();
+  await check('empty schema dry-run rolls back every table; release apply, repeat and backup precondition',async()=>{
+-  let r=await migrate(production.client,{environment:'production',appPassword});assert.equal(r.added,173);assert.equal((await production.client.query("SELECT to_regclass('public.schema_migrations') value")).rows[0].value,null);
+-  r=await migrate(production.client,{environment:'production',apply:true,appPassword});assert.equal(r.added,173);await assert.rejects(()=>migrate(production.client,{environment:'production',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});assert.equal((await migrate(production.client,{environment:'production',apply:true,backupVerified:true})).added,0);
++  let r=await migrate(production.client,{environment:'production',appPassword});assert.equal(r.added,174);assert.equal((await production.client.query("SELECT to_regclass('public.schema_migrations') value")).rows[0].value,null);
++  r=await migrate(production.client,{environment:'production',apply:true,appPassword});assert.equal(r.added,174);await assert.rejects(()=>migrate(production.client,{environment:'production',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});assert.equal((await migrate(production.client,{environment:'production',apply:true,backupVerified:true})).added,0);
+  });
+  await check('bootstrap requires reviewed map, verified backup; dry-run/apply/retry preserve identities',async()=>{
+   const c=production.client,sourceHash=crypto.createHash('sha256').update('SYNTHETIC TEST GEOMETRY ONLY').digest('hex'),plan={admin:{username:'audit_bootstrap',displayName:'Synthetic bootstrap admin',language:'zh-CN'},project:{code:'AUDIT',name:'Synthetic audit project'},warehouse:{code:'AUDIT',name:'Synthetic audit warehouse'},formalCells:['P1-01'],mapSourceSha256:sourceHash},password=crypto.randomBytes(24).toString('base64url');
+@@ -17,7 +17,7 @@ test('isolated migration, initialization, business permission and concurrency ac
+  });
+  const old=await connect();
+  await check('138-entry old schema upgrades incrementally; database holes and checksum changes are rejected',async()=>{
+-  const c=old.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,138))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,35);const first=chain[0];await c.query('DELETE FROM schema_migrations WHERE version=$1',[first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_DATABASE_HISTORY_GAP'});await c.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[first.version,first.checksum]);await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',['0'.repeat(64),first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_CHECKSUM_CHANGED'});await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',[first.checksum,first.version]);
++  const c=old.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,138))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,36);const first=chain[0];await c.query('DELETE FROM schema_migrations WHERE version=$1',[first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_DATABASE_HISTORY_GAP'});await c.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[first.version,first.checksum]);await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',['0'.repeat(64),first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_CHECKSUM_CHANGED'});await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',[first.checksum,first.version]);
+  });
+  await check('preproduction CLI dry-run and confirmed apply use the same verified migration chain',async()=>{
+   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
+@@ -25,11 +25,11 @@ test('isolated migration, initialization, business permission and concurrency ac
+  const guard=await connect();
+  await check('172 refuses a drifted prerequisite function, rolls back, then applies once with exact snapshots',async()=>{
+   const c=guard.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,chain.findIndex(e=>e.version.startsWith('172_'))))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");const prior=require('./fixtures/172-functions.json').before.find(f=>f.name==='ux10_plan_submission');await c.query(prior.definition.replace('BEGIN','BEGIN\n-- synthetic drift'));
+-  await assert.rejects(()=>migrate(c,{environment:'test',apply:true,backupVerified:true}),{code:'MIGRATION_172_FUNCTION_BASELINE_MISMATCH'});assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,171);await c.query(prior.definition);assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true} )).added,2);await Chain.guard172(c,'after');
++  await assert.rejects(()=>migrate(c,{environment:'test',apply:true,backupVerified:true}),{code:'MIGRATION_172_FUNCTION_BASELINE_MISMATCH'});assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,171);await c.query(prior.definition);assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true} )).added,3);await Chain.guard172(c,'after');
+  });
+  const business=await connect();
+  await check('concurrent migrations serialize: exactly one applies, the other is an idempotent retry',async()=>{
+-  const second=new Client(E.options(business.name));open.push(second);await second.connect();const results=await Promise.all([migrate(business.client,{environment:'test',apply:true,backupVerified:true}),migrate(second,{environment:'test',apply:true,backupVerified:true})]);assert.deepEqual(results.map(r=>r.added).sort((a,b)=>a-b),[0,173]);
++  const second=new Client(E.options(business.name));open.push(second);await second.connect();const results=await Promise.all([migrate(business.client,{environment:'test',apply:true,backupVerified:true}),migrate(second,{environment:'test',apply:true,backupVerified:true})]);assert.deepEqual(results.map(r=>r.added).sort((a,b)=>a-b),[0,174]);
+  });
+  const f=await E.seed(business.client,business.name);app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};
+  const login=async role=>{const a=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.20.0.'+(f.accounts.indexOf(a)+1),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200,'login '+role);return sessions[role]={id:a.id,origin:f.appCfg.origin,cookie:r.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':r.json().csrfToken};};for(const a of f.accounts)await login(a.role);
+@@ -53,6 +53,6 @@ test('isolated migration, initialization, business permission and concurrency ac
+   const withoutScope=(await business.client.query("INSERT INTO projects(code,name) VALUES('OUTSIDE','Synthetic unscoped project') RETURNING id")).rows[0].id,wh=(await business.client.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'OUTSIDE','Synthetic unscoped warehouse') RETURNING id",[withoutScope])).rows[0].id;await api('admin',co,'/cobalt/preparations',{project_id:withoutScope,warehouse_id:wh,total_bags:1},403);
+  });
+  if(failed)throw Error('Acceptance subtests failed; no successful fixture published');
+- E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:173,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
++ E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:174,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
+  }finally{await app?.close();for(const c of open)await c.end();}
+ });
+diff --git a/tests/release/docker-acceptance.cjs b/tests/release/docker-acceptance.cjs
+new file mode 100644
+index 0000000..821174c
+--- /dev/null
++++ b/tests/release/docker-acceptance.cjs
+@@ -0,0 +1,35 @@
++'use strict';
++const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process'),{Client}=require('pg'),E=require('./environment.cjs');
++if(process.env.GITHUB_ACTIONS!=='true')throw Error('Docker acceptance uses only the ephemeral CI database');
++const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],...options}).trim(),wait=ms=>new Promise(r=>setTimeout(r,ms));
++const results={status:'RUNNING',checks:[],syntheticOnly:true},check=async(name,fn)=>{await fn();results.checks.push({name,status:'PASS'});console.log('PASS '+name);};
++(async()=>{const image='musonoi-rc2:ci',f=E.fixture(),c=new Client(E.options(f.database));await c.connect();const names=[];try{
++ await check('actual image build with unchanged default-deny packaging design',async()=>{docker(['build','--progress=plain','-f','deploy/Dockerfile','-t',image,'.'],{stdio:'inherit'});});
++ await check('final image file inventory excludes backups, private env, keys, runtime and test credentials',async()=>{
++  assert.equal(docker(['image','inspect',image,'--format','{{.Config.User}}']),'node');
++  const listing=docker(['run','--rm','--entrypoint','node',image,'-e',"const fs=require('fs');function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const q=p+'/'+e.name;if(q==='/app/node_modules')continue;if(e.isDirectory())walk(q);else console.log(q)}}walk('/app')"]);
++  fs.writeFileSync(path.join(E.runtime,'docker-image-files.txt'),listing+'\n');
++  assert(!listing.split('\n').some(p=>/(?:\/private\/|\/\.runtime\/|\/backups\/|\/\.env$|\.(?:key|pem|enc|dump|backup|zip)$|rc2-canary)/.test(p)));
++  assert.equal(docker(['run','--rm','--entrypoint','node',image,'-e','process.stdout.write(String(process.getuid()))']),'1000');
++ });
++ await check('missing production configuration fails closed',async()=>{let code=0;try{docker(['run','--rm',image]);}catch(e){code=e.status;}assert.notEqual(code,0);});
++ await c.query("UPDATE system_info SET environment='production'");
++ const url=new URL(f.appCfg.databaseUrl);url.hostname='rc2-postgres';url.port='5432';
++ const env={...process.env,DATABASE_URL:url.href,APP_ORIGIN:'https://ci.example.invalid',DB_ALLOWED_HOSTS:'rc2-postgres',DB_EXPECTED_NAME:f.database,DB_TLS_CA_FILE:'/certs/root.crt',DB_EXPECTED_MAJOR:'16'};
++ const args=['--network','rc2-ci-net',...['DATABASE_URL','APP_ORIGIN','DB_ALLOWED_HOSTS','DB_EXPECTED_NAME','DB_TLS_CA_FILE','DB_EXPECTED_MAJOR'].flatMap(k=>['-e',k]),'-v',path.resolve('.runtime/ci-tls/server.crt')+':/certs/root.crt:ro'];
++ await check('public database CA mount, production TLS, migration verification and real application startup',async()=>{
++  docker(['run','-d','--name','rc2-app',...args,'-p','127.0.0.1:4174:4174','-v','rc2-ci-uploads:/app/uploads',image],{env});names.push('rc2-app');
++  let healthy=false;for(let i=0;i<100;i++){try{const r=await fetch('http://127.0.0.1:4174/api/v1/health');if(r.ok&&(await r.json()).database==='ok'){healthy=true;break;}}catch{}await wait(200);}if(!healthy){console.log(docker(['logs','rc2-app']).replaceAll(url.href,'[DATABASE_URL REDACTED]'));}assert(healthy,'production TLS startup');
++ });
++ await check('uploads volume persists across independent non-root containers',async()=>{
++  docker(['exec','rc2-app','node','-e',"require('fs').writeFileSync('/app/uploads/rc2-persistence','synthetic attachment')"]);
++  docker(['stop','rc2-app']);docker(['rm','rc2-app']);names.length=0;
++  assert.equal(docker(['run','--rm','-v','rc2-ci-uploads:/app/uploads','--entrypoint','node',image,'-e',"process.stdout.write(require('fs').readFileSync('/app/uploads/rc2-persistence','utf8'))"]),'synthetic attachment');
++ });
++ await check('valid but untrusted CA certificate causes TLS handshake failure',async()=>{let code=0,error='';const badArgs=args.map(v=>v===path.resolve('.runtime/ci-tls/server.crt')+':/certs/root.crt:ro'?path.resolve('.runtime/ci-tls/wrong.crt')+':/certs/root.crt:ro':v);try{docker(['run','--rm',...badArgs,image],{env});}catch(e){code=e.status;error=String(e.stderr);}assert.notEqual(code,0);assert.match(error,/DEPTH_ZERO_SELF_SIGNED_CERT|SELF_SIGNED_CERT_IN_CHAIN|UNABLE_TO_VERIFY_LEAF_SIGNATURE/);});
++ await check('missing latest migration is refused at startup even with valid database TLS',async()=>{
++  await c.query("DELETE FROM schema_migrations WHERE version='174_r3_reliable_audit_entity_scopes.sql'");let code=0,error='';try{docker(['run','--rm',...args,image],{env});}catch(e){code=e.status;error=String(e.stderr);}assert.notEqual(code,0);assert.match(error,/DB_SECURITY_SCHEMA_REQUIRED/);
++ });
++ results.status='PASS';
++ }finally{for(const name of names){try{docker(['rm','-f',name]);}catch{}}await c.end();if(results.status!=='PASS')results.status='FAIL';E.save('docker-results.json',results);}
++})().catch(e=>{console.error('Docker acceptance failed:',e.code||e.name);process.exitCode=1;});
+diff --git a/tests/release/environment.cjs b/tests/release/environment.cjs
+index d7e6c27..7477a7f 100644
+--- a/tests/release/environment.cjs
++++ b/tests/release/environment.cjs
+@@ -14,7 +14,7 @@ function save(file,data){fs.mkdirSync(runtime,{recursive:true});fs.writeFileSync
+ function fixture(){const f=JSON.parse(fs.readFileSync(path.join(runtime,'fixture.json'),'utf8'));if(!/^musonoi_audit_[a-f0-9]{10}_test$/.test(f.database)||f.appCfg.environment!=='test'||new URL(f.appCfg.databaseUrl).pathname!=='/'+f.database)throw Error('UI requires the isolated integration fixture');return f;}
+ async function seed(client,name){
+  const {hashPassword}=require('../../server/security.cjs'),project=(await client.query("INSERT INTO projects(code,name) VALUES('AUDIT','Synthetic audit project') RETURNING id")).rows[0].id,warehouse=(await client.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'AUDIT-WH','Synthetic audit warehouse') RETURNING id",[project])).rows[0].id;
+- const roles=['admin','sales_operator','sales_manager','commerce_manager','logistics_field_operator','site_supervisor','production_manager','production_operator'],accounts=[];
++ const roles=['admin','sales_operator','sales_manager','commerce_manager','logistics_field_operator','site_supervisor','production_manager','production_operator','logistics_manager'],accounts=[];
+  await client.query("INSERT INTO role_permissions SELECT 'admin',code FROM permissions ON CONFLICT DO NOTHING");
+  for(const role of roles){const password=crypto.randomBytes(18).toString('base64url'),username='audit_'+role,id=(await client.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Audit '+role,hashPassword(password),role])).rows[0].id;await client.query('INSERT INTO user_scopes(user_id,project_id) VALUES($1,$2)',[id,project]);accounts.push({id,role,username,password});}
+  await client.query("SELECT set_config('musonoi.co_location_reason','Synthetic fixture creation',false)");
+diff --git a/tests/release/fixtures/rc2-audit-entity-matrix.json b/tests/release/fixtures/rc2-audit-entity-matrix.json
+new file mode 100644
+index 0000000..65b8be5
+--- /dev/null
++++ b/tests/release/fixtures/rc2-audit-entity-matrix.json
+@@ -0,0 +1,317 @@
++{
++  "defaultPolicy": "ADMIN_ONLY",
++  "historicalBackfill": false,
++  "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
++  "entries": [
++    {
++      "entity": "allocations",
++      "policy": "AUTHORITATIVE",
++      "basis": "plan_id -> sales_plans + planned location warehouse"
++    },
++    {
++      "entity": "batches",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "bundles",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_customer_profiles",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_dispatch_vehicles",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_loading_orders",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales plan project/customer/warehouse + same preparation scope required"
++    },
++    {
++      "entity": "co_loading_plans",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales plan project/customer/warehouse + same preparation scope required"
++    },
++    {
++      "entity": "co_locations",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_outbounds",
++      "policy": "AUTHORITATIVE",
++      "basis": "order_id -> co_loading_orders"
++    },
++    {
++      "entity": "co_packing_templates",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "co_preparations",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_sales_contracts",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_sales_plans",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_stocktakes",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative task project and warehouse; customer-wide"
++    },
++    {
++      "entity": "co_vehicle_arrivals",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "co_zones",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "customer_contracts",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "customer_transport_book",
++      "policy": "AUTHORITATIVE",
++      "basis": "customer_id -> customers"
++    },
++    {
++      "entity": "customers",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "exception_rules",
++      "policy": "AUTHORITATIVE",
++      "basis": "UUID project_id primary key"
++    },
++    {
++      "entity": "fixed_edit_load",
++      "policy": "AUTHORITATIVE",
++      "basis": "loading_orders"
++    },
++    {
++      "entity": "gate_permits",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative copper load or cobalt order scope"
++    },
++    {
++      "entity": "gate_printers",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "inventory_exceptions",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "label_jobs",
++      "policy": "AUTHORITATIVE",
++      "basis": "all label_job_items -> bundles; empty/unknown stays admin-only"
++    },
++    {
++      "entity": "loading_orders",
++      "policy": "AUTHORITATIVE",
++      "basis": "project/customer + every loading_items original location warehouse"
++    },
++    {
++      "entity": "loading_plan_documents",
++      "policy": "AUTHORITATIVE",
++      "basis": "group_id -> loading_plan_groups"
++    },
++    {
++      "entity": "loading_plan_groups",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales_plan_id -> sales_plans"
++    },
++    {
++      "entity": "locations",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "management_warning_settings",
++      "policy": "AUTHORITATIVE",
++      "basis": "UUID project_id primary key"
++    },
++    {
++      "entity": "outbound_corrections",
++      "policy": "AUTHORITATIVE",
++      "basis": "loading_id -> loading_orders; all original warehouses"
++    },
++    {
++      "entity": "outbound_orders",
++      "policy": "AUTHORITATIVE",
++      "basis": "loading_id -> loading_orders; all original warehouses"
++    },
++    {
++      "entity": "packing_list_templates",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "projects",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "receipts",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "registration_requests",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "reports",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "reservations",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "roles",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "sales_dispatch",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales_dispatch_imports"
++    },
++    {
++      "entity": "sales_dispatch_imports",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales_plan_id -> sales_plans"
++    },
++    {
++      "entity": "sales_dispatch_vehicles",
++      "policy": "AUTHORITATIVE",
++      "basis": "import_id -> sales_dispatch_imports"
++    },
++    {
++      "entity": "sales_plan_close",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales_plans or co_sales_plans; exactly one UUID match"
++    },
++    {
++      "entity": "sales_plan_review",
++      "policy": "AUTHORITATIVE",
++      "basis": "sales_plans or co_sales_plans; exactly one UUID match"
++    },
++    {
++      "entity": "sales_plans",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "sampling_batches",
++      "policy": "AUTHORITATIVE",
++      "basis": "project/customer + every sampling item bundle warehouse"
++    },
++    {
++      "entity": "settings",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "stock_adjustments",
++      "policy": "AUTHORITATIVE",
++      "basis": "exception scope + all before/after adjustment line scopes"
++    },
++    {
++      "entity": "stock_balance",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "stock_moves",
++      "policy": "AUTHORITATIVE",
++      "basis": "project/customer + all source and target warehouses"
++    },
++    {
++      "entity": "stocktakes",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative task project and warehouse; customer-wide"
++    },
++    {
++      "entity": "users",
++      "policy": "ADMIN_ONLY",
++      "basis": "sensitive system entity, collection without a single authoritative identity, or pre-173 migration-only event"
++    },
++    {
++      "entity": "v26_allocation_action",
++      "policy": "AUTHORITATIVE",
++      "basis": "allocations"
++    },
++    {
++      "entity": "v26_create_load",
++      "policy": "AUTHORITATIVE",
++      "basis": "loading_orders"
++    },
++    {
++      "entity": "v26_load_action",
++      "policy": "AUTHORITATIVE",
++      "basis": "loading_orders"
++    },
++    {
++      "entity": "v26_register_positions",
++      "policy": "AUTHORITATIVE",
++      "basis": "allocations"
++    },
++    {
++      "entity": "v26_resubmit_load",
++      "policy": "AUTHORITATIVE",
++      "basis": "loading_orders"
++    },
++    {
++      "entity": "v26_submit",
++      "policy": "AUTHORITATIVE",
++      "basis": "allocations"
++    },
++    {
++      "entity": "vehicle_arrivals",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "warehouses",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    },
++    {
++      "entity": "weighings",
++      "policy": "AUTHORITATIVE",
++      "basis": "project/customer + every weighing item bundle warehouse"
++    },
++    {
++      "entity": "yards",
++      "policy": "AUTHORITATIVE",
++      "basis": "authoritative row project/customer/warehouse; parent warehouse/yard when required; unknown warehouse requires project-wide authorization"
++    }
++  ]
++}
+diff --git a/tests/release/lock-order.cjs b/tests/release/lock-order.cjs
+new file mode 100644
+index 0000000..1972519
+--- /dev/null
++++ b/tests/release/lock-order.cjs
+@@ -0,0 +1,13 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{Client,Pool}=require('pg'),E=require('./environment.cjs'),Lease=require('../../server/authorization-lease.cjs');
++test('queued management cannot strand cobalt and gate work behind its own authorization lease',async t=>{
++ const f=E.fixture(),owner=new Client(E.options(f.database));await owner.connect();const config=require('../../server/database-connection.cjs').connection(f.appCfg),auth=new Pool({...config,max:1}),work=new Pool({...config,max:1,options:config.options+' -c lock_timeout=500ms'}),results=[];
++ try{
++ for(const [name,module]of [['intake','cobalt.cjs'],['sales','cobalt-sales.cjs'],['stock','cobalt-stock.cjs'],['gate','gate-permits.cjs']])await t.test(name,async()=>{
++  const req={method:'POST',url:'/api/v1/cobalt/rc2-lock-'+name,headers:{'idempotency-key':crypto.randomUUID()},body:{},productCode:'CO_HYDROXIDE',raw:{},user:{id:f.accounts.find(a=>a.role==='admin').id}};let exclusive;
++  await Lease.acquire(req,auth);await owner.query('BEGIN');exclusive=owner.query('SELECT pg_advisory_xact_lock(21002)');
++  try{await new Promise(r=>setTimeout(r,60));const fn=require('../../server/'+module)[name==='intake'||name==='sales'?'mutation':'mutate'],result=await (name==='intake'?fn(work,req,'co:read',null,async()=>({id:f.preparation})):fn(work,req,'co:read',async()=>({id:f.preparation})));assert.equal(result.id,f.preparation);results.push({name,status:'PASS'});}
++  finally{await Lease.release(req);await exclusive;await owner.query('ROLLBACK');}
++ });
++ }finally{await owner.query('ROLLBACK').catch(()=>{});await auth.end();await work.end();await owner.end();E.save('rc2-lock-order-results.json',{status:results.length===4?'PASS':'FAIL',checks:results,syntheticOnly:true});}
++});
+diff --git a/tests/release/migrations.test.cjs b/tests/release/migrations.test.cjs
+index f024f71..3019753 100644
+--- a/tests/release/migrations.test.cjs
++++ b/tests/release/migrations.test.cjs
+@@ -1,9 +1,9 @@
+ 'use strict';
+ const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),Chain=require('../../scripts/migration-chain.cjs');
+ const root=path.resolve(__dirname,'../..'),chain=Chain.load();
+-test('release migration baseline accepts the reviewed chain and known historical filename gaps',()=>{assert.equal(chain.length,173);assert.equal(chain.at(-1).version,'173_r3_security_scope_and_sessions.sql');assert(chain.some(e=>e.version==='004b_bundle_row_lock.sql'));});
++test('release migration baseline accepts the reviewed chain and known historical filename gaps',()=>{assert.equal(chain.length,174);assert.equal(chain.at(-1).version,'174_r3_reliable_audit_entity_scopes.sql');assert(chain.some(e=>e.version==='004b_bundle_row_lock.sql'));});
+ test('applied migrations must be a checksum-matching prefix; unknown versions and holes fail closed',()=>{
+- assert.equal(Chain.applied([],chain).size,0);assert.equal(Chain.applied(chain.slice(0,138),chain).size,138);assert.equal(Chain.applied(chain,chain,{complete:true}).size,173);
++ assert.equal(Chain.applied([],chain).size,0);assert.equal(Chain.applied(chain.slice(0,138),chain).size,138);assert.equal(Chain.applied(chain,chain,{complete:true}).size,174);
+  for(const [rows,options,code] of [[[{version:'999_unknown.sql',checksum:'a'.repeat(64)}],{},'MIGRATION_DATABASE_VERSION_UNKNOWN'],[[{...chain[0],checksum:'a'.repeat(64)}],{},'MIGRATION_CHECKSUM_CHANGED'],[[chain[1]],{},'MIGRATION_DATABASE_HISTORY_GAP'],[chain.slice(0,-1),{complete:true},'MIGRATION_DATABASE_INCOMPLETE']])assert.throws(()=>Chain.applied(rows,chain,options),{code});
+ });
+ test('missing, injected, edited SQL and reordered baseline are rejected before any database query',()=>{
+diff --git a/tests/release/pool-reliability.cjs b/tests/release/pool-reliability.cjs
+new file mode 100644
+index 0000000..4fcb626
+--- /dev/null
++++ b/tests/release/pool-reliability.cjs
+@@ -0,0 +1,45 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),http=require('node:http'),{Client,Pool}=require('pg'),E=require('./environment.cjs'),Lease=require('../../server/authorization-lease.cjs');
++const wait=ms=>new Promise(r=>setTimeout(r,ms));
++test('isolated authorization pools, cancellation, recovery and execution plans',async t=>{
++ const f=E.fixture(),owner=new Client(E.options(f.database));await owner.connect();
++ const config=require('../../server/database-connection.cjs').connection(f.appCfg),pools=[new Pool({...config,max:10}),new Pool({...config,max:10,application_name:'musonoi-authorization-rc2'})];let app;
++ const metrics={syntheticOnly:true,maximumApplicationConnections:20,maximumPerInstanceConfigured:60,ownerConnectionsExcluded:1,concurrency:[],plans:[],checks:[]};
++ const check=(name,fn)=>t.test(name,async()=>{try{await fn();metrics.checks.push({name,status:'PASS'});}catch(e){metrics.checks.push({name,status:'FAIL'});throw e;}});
++ try{
++ const waits=[[],[]];for(const [i,p]of pools.entries()){const connect=p.connect.bind(p);p.connect=function(cb){const start=performance.now();if(cb)return connect((e,c,release)=>{waits[i].push(performance.now()-start);cb(e,c,release);});return connect().then(c=>{waits[i].push(performance.now()-start);return c;});};}
++ app=await require('../../server/app.cjs').build({config:f.appCfg,pool:pools[0],authorizationPool:pools[1]});const a=f.accounts.find(a=>a.role==='admin'),r=await app.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);const headers={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};
++ const write=(name,key=crypto.randomUUID())=>app.inject({method:'POST',url:'/api/v1/masters/warehouses',headers:{...headers,'idempotency-key':key},payload:{project_id:f.project,code:name,name,active:true}});
++ const percentile=(a,p)=>Number([...a].sort((a,b)=>a-b)[Math.max(0,Math.ceil(a.length*p)-1)]?.toFixed(3)||0);
++ for(const n of [10,24,50])await check(n+' concurrent authorized business writes complete with both pools drained',async()=>{
++  waits.forEach(a=>a.length=0);const elapsed=[],start=performance.now(),salt=crypto.randomBytes(4).toString('hex').toUpperCase();const responses=await Promise.all(Array.from({length:n},async(_,i)=>{const s=performance.now(),r=await write('RC2-'+salt+'-'+i);elapsed.push(performance.now()-s);return r;}));const total=performance.now()-start;
++  assert(responses.every(r=>r.statusCode===200),responses.find(r=>r.statusCode!==200)?.body);assert.equal(new Set(responses.map(r=>r.json().id)).size,n);assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code LIKE $1',['RC2-'+salt+'-%'])).rows[0].n,n);
++  assert.equal(pools[1].waitingCount,0);assert.equal(pools[1].idleCount,pools[1].totalCount);metrics.concurrency.push({requests:n,totalMs:Number(total.toFixed(3)),requestsPerSecond:Number((1000*n/total).toFixed(2)),requestP50Ms:percentile(elapsed,.5),requestP95Ms:percentile(elapsed,.95),businessPoolWaitP95Ms:percentile(waits[0],.95),authorizationPoolWaitP95Ms:percentile(waits[1],.95)});
++ });
++ await check('duplicate submission preserves one business row and one result',async()=>{const code='RC2-DUP-'+crypto.randomBytes(4).toString('hex').toUpperCase(),key=crypto.randomUUID(),rs=await Promise.all([write(code,key),write(code,key)]);assert.deepEqual(rs[0].json(),rs[1].json());assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,1);});
++ await check('pool exhaustion has a finite queue timeout and later requests recover',async()=>{const p=new Pool({...config,max:1,connectionTimeoutMillis:500});try{const held=await p.connect();await assert.rejects(()=>p.connect(),/timeout|connection/i);held.release();assert.equal((await p.query('SELECT 1 n')).rows[0].n,1);assert.equal(p.waitingCount,0);}finally{await p.end();}});
++ await check('cancelled lease queued behind a manager is returned after lock acquisition',async()=>{
++  await owner.query('BEGIN');await owner.query('SELECT pg_advisory_xact_lock(21002)');const req={raw:{aborted:false}},pending=Lease.acquire(req,pools[1]);await wait(80);req.authorizationCancelled=true;await owner.query('ROLLBACK');await assert.rejects(()=>pending,{code:'AUTHORIZATION_CANCELLED'});assert.equal(pools[1].idleCount,pools[1].totalCount);
++ });
++ await check('database lock timeout rolls back lease and next request succeeds',async()=>{
++  await owner.query('BEGIN');await owner.query('SELECT pg_advisory_xact_lock(21002)');try{await assert.rejects(()=>Lease.acquire({},pools[1]),{code:'55P03'});}finally{await owner.query('ROLLBACK');}const req={};await Lease.acquire(req,pools[1]);await Lease.release(req);assert.equal(pools[1].idleCount,pools[1].totalCount);
++ });
++ await check('database query timeout does not retain an authorization lease',async()=>{const req={},c=await Lease.acquire(req,pools[1]);await c.query("SET LOCAL statement_timeout='30ms'");await assert.rejects(()=>c.query('SELECT pg_sleep(1)'),{code:'57014'});await Lease.release(req);assert.equal(pools[1].idleCount,pools[1].totalCount);});
++ await check('terminated database connection is destroyed and a fresh lease can proceed',async()=>{
++  const req={},client=await Lease.acquire(req,pools[1]);client.once('error',()=>{});const pid=(await client.query('SELECT pg_backend_pid() pid,current_database() name')).rows[0];assert.equal(pid.name,f.database);await owner.query('SELECT pg_terminate_backend($1)',[pid.pid]);await wait(50);await Lease.release(req).catch(()=>{});assert.equal(req.authorizationLease,null);const next={};await Lease.acquire(next,pools[1]);await Lease.release(next);assert.equal(pools[1].idleCount,pools[1].totalCount);
++ });
++ await check('observed authorization loss rolls back the pending business row before commit',async()=>{
++  const req={method:'POST',url:'/api/v1/rc2-disconnect-proof',headers:{'idempotency-key':crypto.randomUUID()},body:{},raw:{},user:{id:a.id}},client=await Lease.acquire(req,pools[1]),code='RC2-LOST-'+crypto.randomBytes(4).toString('hex').toUpperCase();
++  try{await assert.rejects(()=>require('../../server/business-common.cjs').mutate(pools[0],req,async work=>{const row=(await work.query('INSERT INTO warehouses(project_id,code,name) VALUES($1,$2,$2) RETURNING id',[f.project,code])).rows[0],pid=(await client.query('SELECT pg_backend_pid() pid')).rows[0].pid;await owner.query('SELECT pg_terminate_backend($1)',[pid]);await wait(50);return row;}),{code:'AUTHORIZATION_CONNECTION_LOST'});assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,0);}finally{await Lease.release(req).catch(()=>{});}
++ });
++ await check('real HTTP cancellation before authorization prevents business write',async()=>{
++  await app.listen({host:'127.0.0.1',port:0});const port=app.server.address().port,code='RC2-CANCEL-'+crypto.randomBytes(4).toString('hex').toUpperCase();await owner.query('BEGIN');await owner.query('SELECT pg_advisory_xact_lock(21002)');
++  const req=http.request({host:'127.0.0.1',port,path:'/api/v1/masters/warehouses',method:'POST',headers:{...headers,'content-type':'application/json','idempotency-key':crypto.randomUUID()}},res=>res.resume());req.on('error',()=>{});req.end(JSON.stringify({project_id:f.project,code,name:code,active:true}));
++  for(let i=0;i<100;i++){const q=await owner.query("SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE a.datname=$1 AND a.application_name='musonoi-authorization-rc2' AND NOT l.granted",[f.database]);if(q.rowCount)break;if(i===99)throw Error('No cancelled request lock waiter');await wait(10);}req.destroy();await wait(50);await owner.query('ROLLBACK');
++  for(let i=0;i<100&&pools[1].idleCount!==pools[1].totalCount;i++)await wait(20);assert.equal(pools[1].idleCount,pools[1].totalCount);assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,0);
++ });
++ await check('representative UUID lookup execution plans retain primary key index',async()=>{
++  await owner.query('BEGIN');try{await owner.query("INSERT INTO projects(code,name) SELECT 'RC2-PLAN-'||g,'Synthetic plan benchmark' FROM generate_series(1,5000) g");await owner.query('ANALYZE projects');for(const predicate of ['id::text=$1','id=$1::uuid']){const plan=(await owner.query('EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) SELECT to_jsonb(t) FROM projects t WHERE '+predicate,[f.project])).rows[0]['QUERY PLAN'][0];metrics.plans.push({predicate,plan});}assert.match(JSON.stringify(metrics.plans.at(-1).plan),/Index Scan|Bitmap Index Scan/);}finally{await owner.query('ROLLBACK');}
++ });
++ }finally{await owner.query('ROLLBACK').catch(()=>{});await app?.close();for(const p of pools)await p.end();await owner.end();metrics.status=metrics.checks.every(x=>x.status==='PASS')?'PASS':'FAIL';E.save('rc2-pool-results.json',metrics);}
++});
+diff --git a/tests/release/reliability-unit.test.cjs b/tests/release/reliability-unit.test.cjs
+new file mode 100644
+index 0000000..4fa8959
+--- /dev/null
++++ b/tests/release/reliability-unit.test.cjs
+@@ -0,0 +1,33 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict');
++const Lease=require('../../server/authorization-lease.cjs');
++test('co matching review catalog only offers the approved site supervisor role',()=>{
++ const P=require('../../server/workflow-permissions.cjs');
++ assert.deepEqual(P.catalog['co:loading-review'].roles,['site_supervisor']);
++ assert.equal(P.assignable('admin','co:loading-review'),false);
++ assert.equal(P.assignable('site_supervisor','co:loading-review'),true);
++});
++test('cancelled request cannot retain an authorization lease',async()=>{
++ let returned=0;const client={query:async()=>({rows:[]}),release:()=>returned++};
++ await assert.rejects(()=>Lease.acquire({raw:{aborted:true}},{connect:async()=>client}));
++ assert.equal(returned,0,'already cancelled request must not take a connection');
++});
++test('rollback failure destroys rather than recycles a leased connection',async()=>{
++ const error=Error('synthetic disconnected connection');let released;
++ const req={authorizationLease:{query:async()=>{throw error;},release:e=>{released=e;}}};
++ await Lease.release(req).catch(()=>{});assert.equal(released,error);assert.equal(req.authorizationLease,null);
++});
++test('only exact configured immediate proxies can supply a single client IP',()=>{
++ const {policy}=require('../../server/trusted-proxy.cjs');assert.equal(policy('').trust,false);
++ for(const value of ['true','*','0.0.0.0/0','127.0.0.1/8','invalid'])assert.throws(()=>policy(value));
++ const p=policy('127.0.0.1,::1');assert(p.trust('::ffff:127.0.0.1',0));assert(!p.trust('127.0.0.1',1));assert(!p.trust('198.51.100.1',0));
++ for(const h of ['192.0.2.1, 192.0.2.2','invalid',''])assert.throws(()=>p.validate({raw:{socket:{remoteAddress:'127.0.0.1'}},headers:{'x-forwarded-for':h}}));
++ p.validate({raw:{socket:{remoteAddress:'198.51.100.1'}},headers:{'x-forwarded-for':'forged'}});
++});
++test('every literal application audit entity has an explicit reviewed scope policy',()=>{
++ const fs=require('node:fs'),path=require('node:path'),root=path.resolve(__dirname,'../..');
++ const matrix=require('./fixtures/rc2-audit-entity-matrix.json'),known=new Set(matrix.entries.map(e=>e.entity));
++ assert.equal(matrix.defaultPolicy,'ADMIN_ONLY');assert.equal(matrix.historicalBackfill,false);
++ for(const file of fs.readdirSync(path.join(root,'server')).filter(f=>f.endsWith('.cjs'))){const source=fs.readFileSync(path.join(root,'server',file),'utf8');for(const m of source.matchAll(/\b(?:B|C)\.audit\([^,\n]+,[^,\n]+,[^,\n]+,\s*(['"])([^'"]+)\1/g))assert(known.has(m[2]),file+': unmapped '+m[2]);}
++ for(const entity of ['co_stocktakes','stocktakes','stock_adjustments','sampling_batches','weighings','outbound_corrections','gate_permits','sales_plan_review','sales_plan_close'])assert.equal(matrix.entries.find(e=>e.entity===entity)?.policy,'AUTHORITATIVE',entity);
++});
+diff --git a/tests/release/reliability.test.cjs b/tests/release/reliability.test.cjs
+new file mode 100644
+index 0000000..9975864
+--- /dev/null
++++ b/tests/release/reliability.test.cjs
+@@ -0,0 +1,43 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{Client,Pool}=require('pg'),E=require('./environment.cjs');
++test('second batch isolated reliability acceptance',async t=>{
++ const f=E.fixture(),c=new Client(E.options(f.database));await c.connect();let app;
++ const checks=[],check=(name,fn)=>t.test(name,async()=>{try{await fn();checks.push({name,status:'PASS'});}catch(e){checks.push({name,status:'FAIL'});throw e;}});
++ try{
++ app=await require('../../server/app.cjs').build({config:{...f.appCfg,trustedProxyIps:'127.90.0.1'}});
++ const admin=f.accounts.find(x=>x.role==='admin');
++ const login=(remoteAddress,forwarded,password=admin.password)=>app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress,headers:{origin:f.appCfg.origin,...(forwarded?{'x-forwarded-for':forwarded}:{})},payload:{username:admin.username,password}});
++ const r=await login('127.90.1.1');assert.equal(r.statusCode,200);const session={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken,'x-product-code':'CO_HYDROXIDE'};
++ const api=(url,body)=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...session,'idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});
++ await check('unknown ARECOMS remains NULL on stock and map summary',async()=>{
++  for(const path of ['/cobalt/stock/summary','/cobalt/stock/map']){const r=await api(path);assert.equal(r.statusCode,200);const s=r.json().summary||r.json();assert.equal(s.completed_arecoms_mt,null);assert(s.unconfirmed_arecoms_batches>=1);assert.equal(s.confirmed_arecoms_batches,0);}
++ });
++ await check('legacy confirmed zero and empty ARECOMS projections remain distinct without changing stored business values',async()=>{
++  await c.query('BEGIN');try{
++   await c.query('CREATE TEMP TABLE co_work_batches AS SELECT * FROM public.co_work_batches');
++   await c.query("UPDATE co_work_batches SET arecoms_quantity_mt=0,reviewed_at=now(),amendment_status='NONE' WHERE preparation_id=$1",[f.preparation]);
++   const S=require('../../server/cobalt-stock.cjs'),req={query:{preparation_id:f.preparation},user:{id:admin.id},url:'/api/v1/cobalt/stock/summary'},filter=await S.filter(c,req);let s=await S.summary(c,filter);assert.equal(Number(s.completed_arecoms_mt),0);assert.equal(s.completed_arecoms_display_mt,'0.0000');assert.equal(s.confirmed_arecoms_batches,1);assert.equal(s.unconfirmed_arecoms_batches,0);
++   await c.query('UPDATE co_work_batches SET arecoms_quantity_mt=NULL WHERE preparation_id=$1',[f.preparation]);s=await S.summary(c,filter);assert.equal(s.completed_arecoms_mt,null);assert.equal(s.unconfirmed_arecoms_batches,1);
++   await c.query('CREATE TEMP TABLE co_inventory AS SELECT * FROM public.co_inventory');await c.query("UPDATE co_inventory SET status='OUTBOUND'");s=await S.summary(c,filter);assert.equal(s.completed_arecoms_mt,null);assert.equal(s.confirmed_arecoms_batches,0);assert.equal(s.unconfirmed_arecoms_batches,0);
++  }finally{await c.query('ROLLBACK');}
++ });
++ await check('real cobalt stocktake audit resolves authoritative project and warehouse',async()=>{
++  const r=await api('/cobalt/stocktaking',{project_id:f.project,warehouse_id:f.warehouse,title:'Synthetic rc2 scope proof'});assert.equal(r.statusCode,200,r.body);
++  const row=(await c.query("SELECT scope_context FROM audit_logs WHERE entity_type='co_stocktakes' AND entity_id=$1 ORDER BY id DESC LIMIT 1",[r.json().id])).rows[0];assert(row?.scope_context);assert(row.scope_context.scopes.some(x=>x.project_id===f.project&&x.warehouse_id===f.warehouse));
++  const auditId=(await c.query("SELECT id FROM audit_logs WHERE entity_type='co_stocktakes' AND entity_id=$1 ORDER BY id DESC LIMIT 1",[r.json().id])).rows[0].id;
++  const other=(await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,$2,'Synthetic audit denial warehouse') RETURNING id",[f.project,'AUD-'+crypto.randomBytes(4).toString('hex').toUpperCase()])).rows[0].id;
++  const role='custom_'+crypto.randomBytes(8).toString('hex');await c.query('INSERT INTO roles(code,name,name_en,built_in,created_by) VALUES($1,$1,$1,false,$2)',[role,admin.id]);await c.query("INSERT INTO role_permissions VALUES($1,'audit:read')",[role]);
++  for(const [warehouse,customer,want]of [[f.warehouse,null,200],[other,null,404],[f.warehouse,f.customers.CO_HYDROXIDE.id,404]]){
++   const password=crypto.randomBytes(20).toString('base64url'),username='audit_scope_'+crypto.randomBytes(4).toString('hex'),id=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$1,$2,$3) RETURNING id',[username,require('../../server/security.cjs').hashPassword(password),role])).rows[0].id;await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id,customer_id) VALUES($1,$2,$3,$4)',[id,f.project,warehouse,customer]);
++   const l=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.96.'+Math.floor(Math.random()*200)+'.1',headers:{origin:f.appCfg.origin},payload:{username,password}});assert.equal(l.statusCode,200);const h={cookie:l.cookies.map(x=>x.name+'='+x.value).join('; ')};assert.equal((await app.inject({method:'GET',url:'/api/v1/v27/audit/'+auditId,headers:h})).statusCode,want);const legacy=await app.inject({method:'GET',url:'/api/v1/audit',headers:h});assert.equal(legacy.json().items.some(x=>x.id===auditId),want===200);
++  }
++ });
++ await check('trusted nginx separates twenty concurrent staff client addresses',async()=>{
++  const responses=await Promise.all(Array.from({length:20},(_,i)=>login('127.90.0.1','192.0.2.'+(i+1))));assert.deepEqual(responses.map(r=>r.statusCode),Array(20).fill(200));
++ });
++ await check('untrusted forwarding spoof cannot bypass login limit',async()=>{
++  const statuses=[];for(let i=0;i<11;i++)statuses.push((await login('127.91.0.1','198.51.100.'+(i+1),'incorrect synthetic password')).statusCode);assert.deepEqual(statuses,[...Array(10).fill(401),429]);
++ });
++ await check('trusted proxy rejects chains rather than accepting forged forwarding hops',async()=>{assert.equal((await login('127.90.0.1','192.0.2.1, 198.51.100.2')).statusCode,400);});
++ }finally{await app?.close();await c.end();E.save('rc2-reliability-results.json',{checks,status:checks.every(x=>x.status==='PASS')?'PASS':'FAIL',checkedAt:new Date().toISOString(),syntheticOnly:true});}
++});
+diff --git a/tests/release/security.test.cjs b/tests/release/security.test.cjs
+index dd74297..9830815 100644
+--- a/tests/release/security.test.cjs
++++ b/tests/release/security.test.cjs
+@@ -90,8 +90,8 @@ test('first batch management security regressions',async t=>{
+   const created=await api(session,'POST','/users',{username:'sec_catalog_builtin',display_name:'Synthetic blocked catalog role',password:crypto.randomBytes(20).toString('base64url'),role_code:'commerce_manager',scopes:scope}),changed=await api(session,'PUT','/security/roles/commerce_manager',{version,permissions:ps.filter(require('../../server/workflow-permissions.cjs').active)});assert.deepEqual([created.statusCode,changed.statusCode],[403,403]);
+  });
+  await check('172-to-173 upgrade preserves every historical account, grant, scope, session and audit row',async()=>{
+-  const old=await E.database();try{const Chain=require('../../scripts/migration-chain.cjs'),prior=Chain.load().filter(e=>!e.version.startsWith('173_'));await old.client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of prior)await Chain.execute(old.client,e);await old.client.query("INSERT INTO system_info VALUES(true,'test')");const fixture=await E.seed(old.client,old.name),who=fixture.accounts.find(a=>a.role==='admin');await old.client.query("INSERT INTO sessions(token_hash,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[crypto.randomBytes(32).toString('hex'),who.id,crypto.randomBytes(32).toString('hex')]);const event=(await old.client.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_legacy','projects',$2,$3) RETURNING id",[who.id,fixture.project,{project_id:fixture.project}])).rows[0].id;
+-   const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context')::text,'' ORDER BY (to_jsonb(t)-'scope_context')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,1);assert.deepEqual(await snapshot(),before);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
++  const old=await E.database();try{const Chain=require('../../scripts/migration-chain.cjs'),prior=Chain.load().filter(e=>e.version<'173_');await old.client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of prior)await Chain.execute(old.client,e);await old.client.query("INSERT INTO system_info VALUES(true,'test')");const fixture=await E.seed(old.client,old.name),who=fixture.accounts.find(a=>a.role==='admin');await old.client.query("INSERT INTO sessions(token_hash,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[crypto.randomBytes(32).toString('hex'),who.id,crypto.randomBytes(32).toString('hex')]);const event=(await old.client.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_legacy','projects',$2,$3) RETURNING id",[who.id,fixture.project,{project_id:fixture.project}])).rows[0].id;
++   const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context')::text,'' ORDER BY (to_jsonb(t)-'scope_context')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();await old.client.query('BEGIN');try{await Chain.execute(old.client,Chain.load().find(e=>e.version.startsWith('173_')));await old.client.query('COMMIT');}catch(e){await old.client.query('ROLLBACK');throw e;}assert.deepEqual(await snapshot(),before);await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,1);assert.deepEqual(await snapshot(),before);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
+    const oldApp=await require('../../server/app.cjs').build({config:fixture.appCfg});try{const r=await oldApp.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:fixture.appCfg.origin},payload:{username:who.username,password:who.password}});assert.equal(r.statusCode,200);const cookie=r.cookies.map(x=>x.name+'='+x.value).join('; ');assert.equal((await oldApp.inject({url:'/api/v1/v27/audit/'+event,headers:{cookie,origin:fixture.appCfg.origin}})).statusCode,200);}finally{await oldApp.close();}
+   }finally{await old.client.end();}
+  });
+diff --git a/tests/release/source-check.cjs b/tests/release/source-check.cjs
+new file mode 100644
+index 0000000..64d14a2
+--- /dev/null
++++ b/tests/release/source-check.cjs
+@@ -0,0 +1,8 @@
++'use strict';
++const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process'),crypto=require('node:crypto');
++const baseline='28988c4b814d1120414effc787c9566bf91c022f';
++const before=JSON.parse(execFileSync('git',['show',baseline+':db/migration-baseline.json'],{encoding:'utf8'}));
++for(const m of before.migrations){assert.equal(crypto.createHash('sha256').update(fs.readFileSync('db/migrations/'+m.version)).digest('hex'),m.checksum,'Historical migration bytes: '+m.version);}
++let count=0;for(const dir of ['server','scripts','tests/release','dist']){const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(/\.(?:cjs|js)$/.test(p)){execFileSync(process.execPath,['--check',p],{stdio:'pipe'});count++;}}};walk(dir);}
++require('../../server/release-integrity.cjs').verify(process.cwd());
++console.log(JSON.stringify({status:'PASS',syntaxFiles:count,historicalMigrationsUnchanged:before.migrations.length}));
+diff --git a/tests/release/stocktake-core.cjs b/tests/release/stocktake-core.cjs
+new file mode 100644
+index 0000000..b926b52
+--- /dev/null
++++ b/tests/release/stocktake-core.cjs
+@@ -0,0 +1,20 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{Client}=require('pg'),E=require('./environment.cjs');
++test('native copper and cobalt stocktake submissions, independent review and retained histories',async()=>{
++ const f=E.fixture(),c=new Client(E.options(f.database));await c.connect();let app;const states=[];
++ try{
++ app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
++ for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.97.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
++ const api=async(url,role,body,co=false)=>{const r=await app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':co?'CO_HYDROXIDE':'CU_CATHODE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});assert.equal(r.statusCode,200,url+' '+r.body.slice(0,300));return r.json();};
++ const wh=(await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,$2,'Synthetic empty count warehouse') RETURNING id",[f.project,'CNT-'+crypto.randomBytes(4).toString('hex').toUpperCase()])).rows[0].id;
++ const count=await api('/v27/stocktakes','admin',{project_id:f.project,warehouse_id:wh,assigned_to:f.accounts.find(a=>a.role==='admin').id,task_type:'SPECIAL',cutoff_at:new Date(Date.now()+60000).toISOString(),remark:'Synthetic isolated empty count'});
++ for(const[action,role]of [['start','admin'],['submit-review','admin'],['review','logistics_manager'],['approve','logistics_manager'],['complete','logistics_manager']]){const d=await api('/v27/stocktakes/'+count.id,'admin'),task=d.task||d.document||d;if(action==='complete'&&task.phase==='COMPLETED')continue;await api('/v27/stocktakes/'+count.id+'/'+action,role,{version:task.version,note:'Synthetic '+action});states.push('Cu '+action);}
++ for(const decision of ['reject','approve']){
++  const p=await api('/cobalt/stocktaking','logistics_field_operator',{project_id:f.project,warehouse_id:f.warehouse,title:'Synthetic rc2 '+decision},true),base='/cobalt/stocktaking/'+p.id;
++  const rows=(await c.query('SELECT snapshot FROM co_stocktake_rounds WHERE task_id=$1 ORDER BY round DESC LIMIT 1',[p.id])).rows[0].snapshot;
++  for(let i=0;i<rows.length;i+=200){const d=await api(base,'admin',null,true);await api(base+'/observe','logistics_field_operator',{version:(d.task||d).version,items:rows.slice(i,i+200).map(r=>({bag_id:r.bag_id||r.id,present:true,actual_location_id:r.location_id||r.expected_location_id||null,actual_gross_kg:null,note:'Synthetic observed'}))},true);}
++  let d=await api(base,'admin',null,true);await api(base+'/submit','logistics_field_operator',{version:(d.task||d).version,note:'Synthetic submit'},true);d=await api(base,'admin',null,true);await api(base+'/'+decision,'logistics_manager',{version:(d.task||d).version,note:'Synthetic independent '+decision},true);d=await api(base,'admin',null,true);assert.equal(d._approval.workflows[0].state,decision==='approve'?'APPROVED':'REJECTED');assert(d._approval.history.items.every(x=>x.role_basis!=='CURRENT_ACCOUNT'));states.push('Co '+decision);
++ }
++ E.save('rc2-stocktake-results.json',{status:'PASS',states,syntheticOnly:true});
++ }finally{await app?.close();await c.end();}
++});
+diff --git a/tests/release/ui.test.cjs b/tests/release/ui.test.cjs
+index b846c9a..59625a3 100644
+--- a/tests/release/ui.test.cjs
++++ b/tests/release/ui.test.cjs
+@@ -11,12 +11,12 @@ test('real browser: current cobalt stock, independent permissions and both langu
+  await go(page,'/inventory/'+f.preparation);await page.locator('.co469r2-stock .co2-bags').waitFor();assert.equal(await page.locator('.co2-bags tbody tr').count(),3);assert((await page.locator('.co2-bags').innerText()).includes('AUDIT-'));
+  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForFunction(()=>!!document.querySelector('.co469r2-stock .co2-bags'));for(const width of [1440,768,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'stock overflow '+language+' '+width);shapes.push({page:'stock',language,width});}await page.screenshot({path:path.join(E.runtime,'stock-'+language+'.png'),fullPage:true});}
+  await go(viewer.page,'/inventory/'+f.preparation);assert.equal(await viewer.page.locator('[data-co2-select],#co2-place').count(),0);
+- await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').click();await page.locator('.s46-r2-matrix').waitFor();assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),67);assert.equal(await page.locator('.s46-r2-matrix tbody tr').count(),25);const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
++ await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').click();await page.locator('.s46-r2-matrix').waitFor();assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),66);assert.equal(await page.locator('.s46-r2-matrix tbody tr').count(),25);const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
+  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
+- assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.6.9-r3-rc1');
++ assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.6.9-r3-rc2');
+  await page.goto(origin+'/workbench/accounts');await ready(page);await page.locator('#account-filter').waitFor();assert.equal(await page.locator('#account-registration-requests').count(),1);
+  const limited=await open('limited_account_manager');await limited.page.goto(origin+'/workbench/accounts');await ready(limited.page);await limited.page.locator('#account-filter').waitFor();assert.equal(await limited.page.locator('#account-registration-requests').count(),0);assert.equal(await limited.page.locator('#account-create').count(),1);const options=await limited.context.request.get(origin+'/api/v1/users/options');assert(options.ok());assert(!(await options.json()).roles.some(r=>r.code==='admin'));
+  const roleManager=await open('limited_role_manager');await roleManager.page.goto(origin+'/workbench/permissions');await ready(roleManager.page);await roleManager.page.locator('[data-role]').first().waitFor();assert.equal(await roleManager.page.locator('[data-role=admin]').count(),0);const own=await roleManager.page.evaluate(()=>CurrentUser.role_code);assert.equal(await roleManager.page.locator('[data-role="'+own+'"]').count(),0);await roleManager.page.locator('[data-role]').first().click();await roleManager.page.locator('.s46-r2-matrix').waitFor();const prohibited=roleManager.page.locator('.s46-r2-matrix input[value="users:manage"]');assert(await prohibited.count()===0||await prohibited.isDisabled());await limited.page.screenshot({path:path.join(E.runtime,'limited-accounts.png'),fullPage:true});await roleManager.page.screenshot({path:path.join(E.runtime,'limited-roles.png'),fullPage:true});
+- assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:67,permissionModules:25,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
++ assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:66,permissionModules:25,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
+  }finally{await browser?.close();await app.close();}
+ });
