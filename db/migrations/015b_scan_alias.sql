@@ -1,1 +1,0 @@
-DO $$ DECLARE def text;BEGIN SELECT pg_get_functiondef('exception_scan(uuid,uuid)'::regprocedure) INTO def;def:=replace(replace(def,'d inventory_exceptions;','raised inventory_exceptions;'),'d:=v24_raise_exception','raised:=v24_raise_exception');EXECUTE def;END $$;

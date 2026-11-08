@@ -1,9 +1,0 @@
-# Copy to a PRIVATE file outside Git. Replace every placeholder.
-DB_OWNER_PASSWORD=REPLACE_WITH_STRONG_OWNER_SECRET
-APP_DB_PASSWORD=REPLACE_WITH_DIFFERENT_STRONG_APP_SECRET
-# Password components in URLs must be URL encoded.
-DATABASE_OWNER_URL=postgresql://musonoi_owner:URL_ENCODED_OWNER_SECRET@database:5432/musonoi_production
-DATABASE_URL=postgresql://musonoi_app:URL_ENCODED_APP_SECRET@database:5432/musonoi_production
-APP_ORIGIN=https://warehouse.example.com
-# Set yes only after an existing production database backup has been verified.
-PRODUCTION_BACKUP_VERIFIED=no

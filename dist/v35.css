@@ -1,9 +1,0 @@
-/* Allow page scrolling when the pointer is over nested tables. */
-.business-table,.account-table-scroll,.table-scroll{overscroll-behavior:auto!important;overscroll-behavior-y:auto!important;touch-action:pan-x pan-y!important}
-form .business-table{max-height:none!important;overflow-y:visible}
-.yard-tabs{display:flex;gap:10px;align-items:center;margin-bottom:18px}.yard-tabs .button{min-width:160px;justify-content:center;text-align:center}.yard-tabs a[aria-current=page]{box-shadow:0 0 0 2px #badbd7}
-#page-content>.business-toolbar{margin-left:0;justify-content:flex-start}
-.v35-audit-intro{padding:14px 18px;background:#eef5fa;border-left:4px solid #247a91;border-radius:8px;line-height:1.7}
-.copyright-notice{font-size:11px;color:#647a86;text-align:center;padding:8px}.copyright-notice[data-login]{margin-top:14px}
-
-.business-toolbar:has(#v26-departure-date){align-items:flex-end;justify-content:flex-start}.business-toolbar:has(#v26-departure-date)>label{width:100%;flex-basis:100%}#v26-departure-date{max-width:250px;display:block;margin-top:6px}.business-toolbar [data-v26-action]{margin-left:0}

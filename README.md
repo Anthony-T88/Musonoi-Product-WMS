@@ -1,11 +1,12 @@
-# 穆松尼项目产品仓储管理系统 V3.5
+# Musonoi Product WMS 4.6.9-r2
 
-版本3.5.0。Copyright © 2026 唐雷 (Tang Lei). All rights reserved.
+本仓库只保留本次 r2 运行源码交付包与加密数据库备份。
 
-包含客户与销售管理、入库、备货、库存查询与地图、装车管理、出库及装箱单、盘点、报表、权限与审计。按既有规则仅正式出库扣减库存，净重每捆减2.5kg，装车管理单与装车单保持1:1。
+- 袋级库存采用批次展开清单，保留筛选、分页、实际货位调整、历史与 Excel 导出。
+- 权限采用横向勾选框，25个业务模块、67项权限，初审和终审独立设置。
+- 代码包内保留当前程序依赖的完整172条数据库迁移，未包含旧版发布包或旧版报告。
 
-本地运行：Node.js 22以上，pnpm按package.json固定版本安装；填写私有.env后执行 pnpm start。此命令仅连接本机TEST，不迁移、不初始化、不清理数据。正式环境入口为 node server/app.cjs，见[部署说明](RUNBOOK.md)。
+数据库来自本机 TEST，保留业务历史和账户；公开仓库只提供 AES-256-GCM 加密文件。密钥单独交付，未上传。该备份不是空白生产库。
 
-[修复清单](V3.5_IMPLEMENTATION.md) · [测试结果](V3.5_TEST_RESULTS.json) · [上线前自检](V3.5_PREFLIGHT.md) · [接口](API.md) · [数据库](DATABASE_REPORT.md) · [版权许可](LICENSE)
-
-GitHub主分支仅维护当前源码，不包含旧交付包、旧发布报告、账号口令、业务数据库、附件和备份。运行代码中的API兼容模块与全部136条历史迁移属于当前版本依赖，继续保留。
+解密：node decrypt-database.cjs 数据库.enc 本地私钥.json 输出.dump
+再使用 PostgreSQL pg_restore 恢复到新建的独立数据库。应用运行需要 Node.js 22以上、pnpm 11.25.0、PostgreSQL和私有环境配置；部署前完成目标环境验收。

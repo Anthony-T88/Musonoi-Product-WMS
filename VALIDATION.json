@@ -1,0 +1,164 @@
+{
+  "version": "4.6.9-r2",
+  "status": "PASS",
+  "checkedAt": "2026-11-08T16:23:00.005Z",
+  "scope": "local TEST; production deployment not performed",
+  "api": {
+    "status": "PASS",
+    "checks": [
+      "Native 51-bag single-site intake preserves exact weights, seals, positions and final receipt",
+      "Optional bounded page sizes retain native default 50/200 behavior and return continuous bags",
+      "Invalid sizes/history pages return 400; read-only role cannot relocate",
+      "Location history resolves bag numbers and recorded actor roles"
+    ],
+    "workingDatabaseWrites": 0
+  },
+  "ui": {
+    "status": "PASS",
+    "checks": [
+      "Batch expansion, full bag/seal/weight/location fields, continuous pagination, exact one-bag relocation, whole-batch preview across filters/pages, stale-preview invalidation and real Excel export.",
+      "Read-only role keeps bag information and has no selection or location mutation controls.",
+      "25 horizontal module rows and 67 native checkboxes: separate initial/final stages, protected recovery permissions, independent toggle/reset, both languages and contained narrow-screen scrolling."
+    ],
+    "shapes": [
+      {
+        "language": "zh-CN",
+        "width": 1440,
+        "page": "stock"
+      },
+      {
+        "language": "zh-CN",
+        "width": 1024,
+        "page": "stock"
+      },
+      {
+        "language": "zh-CN",
+        "width": 768,
+        "page": "stock"
+      },
+      {
+        "language": "zh-CN",
+        "width": 390,
+        "page": "stock"
+      },
+      {
+        "language": "zh-CN",
+        "width": 320,
+        "page": "stock"
+      },
+      {
+        "language": "en",
+        "width": 1440,
+        "page": "stock"
+      },
+      {
+        "language": "en",
+        "width": 1024,
+        "page": "stock"
+      },
+      {
+        "language": "en",
+        "width": 768,
+        "page": "stock"
+      },
+      {
+        "language": "en",
+        "width": 390,
+        "page": "stock"
+      },
+      {
+        "language": "en",
+        "width": 320,
+        "page": "stock"
+      },
+      {
+        "language": "zh-CN",
+        "width": 1440,
+        "page": "permissions"
+      },
+      {
+        "language": "zh-CN",
+        "width": 1024,
+        "page": "permissions"
+      },
+      {
+        "language": "zh-CN",
+        "width": 390,
+        "page": "permissions"
+      },
+      {
+        "language": "zh-CN",
+        "width": 320,
+        "page": "permissions"
+      },
+      {
+        "language": "en",
+        "width": 1440,
+        "page": "permissions"
+      },
+      {
+        "language": "en",
+        "width": 1024,
+        "page": "permissions"
+      },
+      {
+        "language": "en",
+        "width": 390,
+        "page": "permissions"
+      },
+      {
+        "language": "en",
+        "width": 320,
+        "page": "permissions"
+      }
+    ],
+    "errors": [],
+    "workingDatabaseWrites": 0
+  },
+  "restore": {
+    "status": "PASS",
+    "database": "musonoi_v469r2_restore_test",
+    "tables": 157,
+    "migrations": 172,
+    "accounts": 11,
+    "encryptedRoundTripVerified": true
+  },
+  "delivery": {
+    "status": "PASS",
+    "zipFiles": 536,
+    "noPrivateFiles": true,
+    "noKeyOrCredentialPatterns": true,
+    "actualDecryptionHelperVerified": true,
+    "publicationHashesVerified": true
+  },
+  "service": {
+    "status": "PASS",
+    "url": "http://127.0.0.1:4176",
+    "version": "4.6.9",
+    "frontendRevision": "4.6.9-r2",
+    "environment": "test",
+    "database": "ok",
+    "requiredMigration": "172_v469_configurable_admin_business_permissions.sql",
+    "verifiedAssets": [
+      "index.html",
+      "boot.js",
+      "release.js",
+      "sw.js",
+      "approval-display468r10.js",
+      "approval-display468r10.css",
+      "system46-pages.js",
+      "cobalt-preparation469.js",
+      "v469.js",
+      "v469.css",
+      "gate-ui.js",
+      "cobalt-map-site.js",
+      "cobalt-stock469r2.js",
+      "cobalt-stock469r2.css",
+      "permissions469r2.js",
+      "permissions469r2.css"
+    ],
+    "sourceIntegrityRequired": true,
+    "workingDatabaseWrites": 0,
+    "checkedAt": "2026-11-08T16:22:31.803Z"
+  }
+}

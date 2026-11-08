@@ -1,0 +1,41 @@
+{
+  "version": "4.6.9-r2",
+  "environment": "local TEST",
+  "tables": 157,
+  "migrations": 172,
+  "accounts": 11,
+  "encryption": "AES-256-GCM",
+  "plaintextSha256": "90c63d626a8cb097dd4a54ceebc39f64b6a6b196953be8ec78dca2358535b40c",
+  "encryptedSha256": "1d94a32f450bcce65e80ac7a2aee8f59e737974e0a479013dfd51b820e714822",
+  "decryptionRoundTripVerified": true,
+  "keyIncluded": false,
+  "files": [
+    {
+      "path": "decrypt-database.cjs",
+      "bytes": 650,
+      "sha256": "3841913df71d95be5b38bcbfc8dc1e3768c71e4fcd5560356362dd640357d08a"
+    },
+    {
+      "path": "Musonoi-Database-V4.6.9-R2.dump.enc",
+      "bytes": 3123069,
+      "sha256": "1d94a32f450bcce65e80ac7a2aee8f59e737974e0a479013dfd51b820e714822"
+    },
+    {
+      "path": "Musonoi-Product-WMS-V4.6.9-R2.zip",
+      "bytes": 4553449,
+      "sha256": "d63e059a243b9c384832c1950e81a4e10d74c2a893064bdd77a0c8d0753f1bed"
+    },
+    {
+      "path": "README.md",
+      "bytes": 881,
+      "sha256": "85e5b2e6b3d111e5fd0f3a1b6a2e1c8c2b44ece709492609d5de4b787172c021"
+    },
+    {
+      "path": "VALIDATION.json",
+      "bytes": 4142,
+      "sha256": "46fb4edc40e6a2e5ea8673bc174f232c0ffaf1d6430ed7fd2eef3d69b5485b88"
+    }
+  ],
+  "restoreVerified": true,
+  "validation": "VALIDATION.json"
+}
