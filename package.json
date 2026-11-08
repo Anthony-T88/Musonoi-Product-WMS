@@ -6,14 +6,18 @@
     "start": "node scripts/start-current.cjs",
     "start:configured": "node server/app.cjs",
     "db:migrate": "node scripts/db.cjs migrate",
-    "test": "node scripts/verify-release.cjs"
+    "test": "node scripts/run-release-tests.cjs unit",
+    "verify:integrity": "node scripts/verify-release.cjs",
+    "test:integration": "node scripts/run-release-tests.cjs integration",
+    "test:ui": "node scripts/run-release-tests.cjs ui",
+    "test:acceptance": "node scripts/run-release-tests.cjs acceptance"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.5",
     "@fastify/rate-limit": "10.3.0",
     "@fastify/static": "10.1.8",
     "exceljs": "4.4.0",
-    "fastify": "5.12.7",
+    "fastify": "5.12.8",
     "jszip": "3.10.2",
     "pg": "8.23.1",
     "pinyin-pro": "3.29.5",
@@ -26,5 +30,8 @@
   "packageManager": "pnpm@11.25.0",
   "description": "Musonoi Project Product WMS",
   "license": "LicenseRef-Proprietary",
-  "author": "唐雷"
+  "author": "唐雷",
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
 }

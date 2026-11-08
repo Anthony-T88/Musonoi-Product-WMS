@@ -1,0 +1,27 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),{Client}=require('pg');
+const root=path.resolve(__dirname,'../..'),runtime=path.join(root,'.runtime/release-tests');
+function configuration(){
+ const u=new URL(process.env.WMS_TEST_OWNER_URL||'invalid:');
+ if(!['postgres:','postgresql:'].includes(u.protocol)||!['127.0.0.1','localhost','[::1]'].includes(u.hostname)||u.search||u.hash||u.username==='musonoi_app'||u.pathname!=='/postgres'||!u.password)throw Error('Use an explicit loopback TEST owner URL ending in /postgres');
+ if(!process.env.WMS_TEST_APP_PASSWORD)throw Error('WMS_TEST_APP_PASSWORD is required');
+ return u;
+}
+function options(name){const u=configuration();u.pathname='/'+name;return {connectionString:u.href};}
+async function database(){const name='musonoi_audit_'+crypto.randomBytes(5).toString('hex')+'_test',c=new Client(options('postgres'));await c.connect();try{await c.query('CREATE DATABASE '+name);}finally{await c.end();}const client=new Client(options(name));await client.connect();return {name,client};}
+function appConfig(name){if(!/^musonoi_audit_[a-f0-9]{10}_test$/.test(name))throw Error('Unexpected integration database');const u=configuration();u.username='musonoi_app';u.password=process.env.WMS_TEST_APP_PASSWORD;u.pathname='/'+name;return {root,environment:'test',databaseUrl:u.href,host:'127.0.0.1',port:4392,origin:'http://127.0.0.1:4392',secure:false,db:{tier:'local'}};}
+function save(file,data){fs.mkdirSync(runtime,{recursive:true});fs.writeFileSync(path.join(runtime,file),JSON.stringify(data,null,2),{mode:0o600});}
+function fixture(){const f=JSON.parse(fs.readFileSync(path.join(runtime,'fixture.json'),'utf8'));if(!/^musonoi_audit_[a-f0-9]{10}_test$/.test(f.database)||f.appCfg.environment!=='test'||new URL(f.appCfg.databaseUrl).pathname!=='/'+f.database)throw Error('UI requires the isolated integration fixture');return f;}
+async function seed(client,name){
+ const {hashPassword}=require('../../server/security.cjs'),project=(await client.query("INSERT INTO projects(code,name) VALUES('AUDIT','Synthetic audit project') RETURNING id")).rows[0].id,warehouse=(await client.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'AUDIT-WH','Synthetic audit warehouse') RETURNING id",[project])).rows[0].id;
+ const roles=['admin','sales_operator','sales_manager','commerce_manager','logistics_field_operator','site_supervisor','production_manager','production_operator'],accounts=[];
+ await client.query("INSERT INTO role_permissions SELECT 'admin',code FROM permissions ON CONFLICT DO NOTHING");
+ for(const role of roles){const password=crypto.randomBytes(18).toString('base64url'),username='audit_'+role,id=(await client.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Audit '+role,hashPassword(password),role])).rows[0].id;await client.query('INSERT INTO user_scopes(user_id,project_id) VALUES($1,$2)',[id,project]);accounts.push({id,role,username,password});}
+ await client.query("SELECT set_config('musonoi.co_location_reason','Synthetic fixture creation',false)");
+ const admin=accounts.find(a=>a.role==='admin').id,zone=(await client.query("INSERT INTO co_zones(project_id,warehouse_id,code,name,name_en,updated_by) VALUES($1,$2,'AUDIT','Synthetic audit zone','Synthetic audit zone',$3) RETURNING id",[project,warehouse,admin])).rows[0].id;
+ const location=(await client.query("INSERT INTO co_locations(zone_id,project_id,warehouse_id,code,x,y,width,height,updated_by) VALUES($1,$2,$3,'AUDIT-01',100,100,100,100,$4) RETURNING id",[zone,project,warehouse,admin])).rows[0].id;
+ const customers={};for(const co of [false,true]){const product=co?'CO_HYDROXIDE':'CU_CATHODE',code=co?'CO-AUDIT':'CU-AUDIT',id=(await client.query('INSERT INTO customers(project_id,code,name,product_code) VALUES($1,$2,$3,$4) RETURNING id',[project,code,'Synthetic '+code,product])).rows[0].id;if(co)await client.query('INSERT INTO co_customer_profiles(id,project_id,code,name,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$5)',[id,project,code,'Synthetic '+code,admin]);const table=co?'co_sales_contracts':'customer_contracts',extra=co?',updated_by':'',values=co?',$3':'';const contract=(await client.query(`INSERT INTO ${table}(project_id,customer_id,contract_no,effective_date,end_date,created_by${extra}) VALUES($1,$2,'AUDIT-'||$2::uuid::text,current_date-1,current_date+365,$3${values}) RETURNING id`,[project,id,admin])).rows[0].id;customers[product]={id,contract};}
+ const password=crypto.randomBytes(18).toString('base64url'),username='audit_customer_admin',id=(await client.query("INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,'Synthetic customer-scoped administrator',$2,'admin') RETURNING id",[username,hashPassword(password)])).rows[0].id;await client.query('INSERT INTO user_scopes(user_id,project_id,customer_id) VALUES($1,$2,$3)',[id,project,customers.CU_CATHODE.id]);accounts.push({id,role:'customer_admin',username,password});
+ return {database:name,appCfg:appConfig(name),project,warehouse,location,accounts,customers};
+}
+module.exports={root,runtime,configuration,options,database,appConfig,save,fixture,seed};

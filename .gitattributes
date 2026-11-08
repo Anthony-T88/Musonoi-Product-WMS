@@ -1,0 +1,6 @@
+# Preserve reviewed bytes so integrity checks survive Windows checkout.
+* -text
+*.png binary
+*.xlsx binary
+*.xls binary
+*.enc binary

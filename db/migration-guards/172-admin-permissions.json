@@ -1,0 +1,133 @@
+{
+  "migration": "172_v469_configurable_admin_business_permissions.sql",
+  "names": [
+    "ux10_plan_submission",
+    "ux10_review_sales_plan",
+    "v468_request_plan_close",
+    "v468_review_plan_close",
+    "v468_submit_legacy_plan_edit",
+    "co_work_authorized",
+    "co_execution_authorized",
+    "gate_exit_guard"
+  ],
+  "before": [
+    {
+      "signature": "co_execution_authorized(uuid,text,uuid,text)",
+      "bodySha256": "824655ab28fd184cec5874b0855c9d4dc766da3cba5afde549ea97da4c052fd4",
+      "security_definer": false,
+      "configuration": null
+    },
+    {
+      "signature": "co_work_authorized(uuid,text,uuid,text)",
+      "bodySha256": "929bf877a161de8eea28cfeffbb6a3f2533eb029d9acf64844ba5a973904f9c9",
+      "security_definer": false,
+      "configuration": null
+    },
+    {
+      "signature": "gate_exit_guard()",
+      "bodySha256": "d2ec8f7674a88d829e70c8c4e24165243a151f9cdc90dc2876a40daa342440fe",
+      "security_definer": false,
+      "configuration": null
+    },
+    {
+      "signature": "ux10_plan_submission()",
+      "bodySha256": "487d08bec6a102dfb530b05e8147d7d09cb16fb27d7956da580fda08c9505e73",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "ux10_review_sales_plan(text,uuid,uuid,integer,text,text)",
+      "bodySha256": "5d17a13cb47afbdbc74bb6dd800c194a0e909631a9bde93397d6bc77a661d9f8",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "v468_request_plan_close(text,uuid,uuid,integer,text)",
+      "bodySha256": "38c41fd9116b3f3ef971350747403d9baf08bbfbed34b2cec526d452376a010d",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "v468_review_plan_close(text,uuid,uuid,uuid,integer,text,text)",
+      "bodySha256": "50d698010994d4bb9dfb328526608ec6ef35c7b960d098f99cd7a22d328d043d",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "v468_submit_legacy_plan_edit(text,uuid,uuid,integer)",
+      "bodySha256": "075b801a939d08fea219287d7d6f23cef5e5a9b3035ca18fe64ca5fd43a7aaef",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    }
+  ],
+  "after": [
+    {
+      "signature": "co_execution_authorized(uuid,text,uuid,text)",
+      "bodySha256": "2b0b373272166de84870b396f024f4074a4b0af2d63accf6209c07eac6e54b3b",
+      "security_definer": false,
+      "configuration": null
+    },
+    {
+      "signature": "co_work_authorized(uuid,text,uuid,text)",
+      "bodySha256": "aa5895366df2e54a91aa19162a25437fe6c200b28bb41612e5495bb86975cf25",
+      "security_definer": false,
+      "configuration": null
+    },
+    {
+      "signature": "gate_exit_guard()",
+      "bodySha256": "95f91712cf5b964cad52a6db4a9f4b49460520d02638bfbf49ada26b6d7afdc2",
+      "security_definer": false,
+      "configuration": null
+    },
+    {
+      "signature": "ux10_plan_submission()",
+      "bodySha256": "2b1072256b5ea79def69d027bea890a8ece97c6eb0db9ff972e52b745fc7b32c",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "ux10_review_sales_plan(text,uuid,uuid,integer,text,text)",
+      "bodySha256": "ecdb8e070775445254b85ec48c16ef8004471a2994c194701ee2ab4c71b4e72a",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "v468_request_plan_close(text,uuid,uuid,integer,text)",
+      "bodySha256": "ec203378a4b5bdad153dd92dcd31120472fce6eac787ccb75bda5d43eff22495",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "v468_review_plan_close(text,uuid,uuid,uuid,integer,text,text)",
+      "bodySha256": "201180412d342c5c19fd36f7b4b15e0c19a2fe6d799d6e123d541ba0edc9830f",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "signature": "v468_submit_legacy_plan_edit(text,uuid,uuid,integer)",
+      "bodySha256": "ba275acfb0ef6653005745da3472f33b5aab5be291456d02641a0f7b80fe5e3a",
+      "security_definer": true,
+      "configuration": [
+        "search_path=public, pg_temp"
+      ]
+    }
+  ]
+}

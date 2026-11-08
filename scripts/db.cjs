@@ -1,17 +1,16 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),{Client}=require('pg'),{createHash}=require('node:crypto');
-const {root}=require('../server/config.cjs');const runtime=path.join(root,'.runtime');
+const {root}=require('../server/config.cjs'),Chain=require('./migration-chain.cjs');const runtime=path.join(root,'.runtime');
 function ownerConfig(database='postgres'){return {host:'127.0.0.1',port:55432,user:'musonoi_owner',password:fs.readFileSync(path.join(runtime,'pg-password.txt'),'utf8').trim(),database};}
 async function migrate(database,through=null){
  if((process.env.APP_ENV||'test')!=='test'||!/^musonoi_[a-z0-9_]+_test$/.test(database))throw Error('Unexpected database target');
  const client=new Client(ownerConfig(database));await client.connect();try{
  await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(21001)');
  await client.query('CREATE TABLE IF NOT EXISTS schema_migrations(version text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())');
- if(through&&!fs.existsSync(path.join(root,'db/migrations',through)))throw Error('Unknown historical fixture baseline');
- for(const file of fs.readdirSync(path.join(root,'db/migrations')).filter(x=>x.endsWith('.sql')&&(!through||x<=through)).sort()){
- const sql=fs.readFileSync(path.join(root,'db/migrations',file),'utf8'),hash=createHash('sha256').update(sql).digest('hex'),old=(await client.query('SELECT checksum FROM schema_migrations WHERE version=$1',[file])).rows[0];
- if(old){if(old.checksum!==hash)throw Error('Applied migration checksum changed: '+file);continue;}
- await client.query(sql);await client.query('INSERT INTO schema_migrations VALUES($1,$2,now())',[file,hash]);}
+ const chain=Chain.load(),prior=Chain.applied((await client.query('SELECT version,checksum FROM schema_migrations')).rows,chain);
+ if(through&&!chain.some(e=>e.version===through))throw Error('Unknown historical fixture baseline');
+ for(const entry of chain.filter(e=>!through||e.version<=through)){if(!prior.has(entry.version))await Chain.execute(client,entry);}
+ if(!through||prior.has(chain.at(-1).version))await Chain.guard172(client,'after');
  const environment=process.env.APP_ENV||'test';
  await client.query('INSERT INTO system_info VALUES(true,$1) ON CONFLICT DO NOTHING',[environment]);
  if((await client.query('SELECT environment FROM system_info')).rows[0].environment!==environment)throw Error('Database environment mismatch');

@@ -1,0 +1,694 @@
+{
+  "format": 1,
+  "release": "4.6.9-r2",
+  "migrations": [
+    {
+      "version": "001_foundation.sql",
+      "checksum": "ff5e4c2d9b3766a621f6db7c9982088e5932fb2a68e984ab9731f947f3329ac3"
+    },
+    {
+      "version": "002_master_data.sql",
+      "checksum": "753e374e69d806070388cc7320d3ca65bff205c01a578468ae60c9ba8a14fce7"
+    },
+    {
+      "version": "003_receipts.sql",
+      "checksum": "fac2bed5ae5a6f5fbf687de88df4f4707462cb89600d9be40e40f34f86074f1f"
+    },
+    {
+      "version": "004_allocations.sql",
+      "checksum": "8ff2e6872f774aea0d193b317e1ad5c9c3311a3f0f5163891b6fd03f4f3ecf50"
+    },
+    {
+      "version": "004b_bundle_row_lock.sql",
+      "checksum": "37212becf54c9c729c73c3c258108582aebd5a8e9a181767434631ca19d75bdf"
+    },
+    {
+      "version": "005_inventory_history.sql",
+      "checksum": "fc88c706b2d39634566477d5ec0dcbef809e8e00e276fdf3810cf6f81686598a"
+    },
+    {
+      "version": "006_master_relations.sql",
+      "checksum": "19d0b0358f6417a6cd63e7e708025e3f248b67416f9726b953af79a09e35744f"
+    },
+    {
+      "version": "007_sampling.sql",
+      "checksum": "2032813aa7289e622b8248d60918f33a8812a704dca36df9b17d8834a52ab9a3"
+    },
+    {
+      "version": "008_weighing.sql",
+      "checksum": "a276ffdcc84b73eb0bd40e7e070653f6ba771753ea83c49c384fa9529e976fdd"
+    },
+    {
+      "version": "009_loading.sql",
+      "checksum": "c10addc89537b9e38b075bc9370dd34a066cce87401fec20e67606224aea794c"
+    },
+    {
+      "version": "009b_guard_permission.sql",
+      "checksum": "6890e4350a740e7d70752228b47ab0659cbabe84a5fc8c5f418a2b1dd121688d"
+    },
+    {
+      "version": "009c_guard_row_locks.sql",
+      "checksum": "b8bd1aa8998fcec29575c5a64115f98ff1234d9ba43ad528405fd96a30be1f8c"
+    },
+    {
+      "version": "010_outbound.sql",
+      "checksum": "6e5c74320cbc4887334dfac0a67e35865a03e04e18bf10f0a8c8421dd7dd43f7"
+    },
+    {
+      "version": "010b_workflow_guards.sql",
+      "checksum": "d9150fd603408264ee8e4d3c0e35a74174b0f46f065beb4645c6e486b9c67fe9"
+    },
+    {
+      "version": "011_moves_trace.sql",
+      "checksum": "11701bf9b95ba993130dacfc78965bf45e1a7aa36a9200658bb882f4f7d62c0a"
+    },
+    {
+      "version": "012_position_integrity.sql",
+      "checksum": "5101f44731eebe100330313c8ff32c802147d524a7c84ebbcae67c5e1bd3c84e"
+    },
+    {
+      "version": "013_inventory_history.sql",
+      "checksum": "1cd15c7f1f3a17bfb8f96d909dd270cabddf4e61d53582ab4a25a79f4bae9353"
+    },
+    {
+      "version": "013b_trigger_records.sql",
+      "checksum": "c66dc3001da9f8ac487815039037b99c732f847158955754b6c0613ec757a7dd"
+    },
+    {
+      "version": "014_stocktakes.sql",
+      "checksum": "1ec27a03dd1da5b7b6084d8ef1b78ad408a800bef06b433b92cd34c4f55a300c"
+    },
+    {
+      "version": "014b_count_attachments.sql",
+      "checksum": "0bb4693852a62705186fb44a58bef3ef8a8466f62755e30d46bd638c0f7582e6"
+    },
+    {
+      "version": "015_exceptions.sql",
+      "checksum": "8e68c23f34eddf51310dda2ae3099b30ffe0d6a6b4fd930fd7eb36d420c9ad56"
+    },
+    {
+      "version": "015b_scan_alias.sql",
+      "checksum": "34785ea7bca8e60e3175a2571bd2715faf552cf851dfeebdc2769ed7fc5af938"
+    },
+    {
+      "version": "016_adjustments.sql",
+      "checksum": "5cce372f8abbbba9b8fa1fc9eb1ebf1d9457276bbe71ee3caff41f985fafc3cf"
+    },
+    {
+      "version": "016b_adjustment_alias.sql",
+      "checksum": "d5b38c245ed40021ecd91647ce18e343adb60fce536800a9eb6563ba1a09b856"
+    },
+    {
+      "version": "017_reporting_epoch.sql",
+      "checksum": "1f73cad19db892d7f4933219b73b3dafca963fd935ded40346d3f35231afc1a5"
+    },
+    {
+      "version": "018_control_validation.sql",
+      "checksum": "c33185e29aeeee72f1ec03edce563d356e8193cdec807a7690b87f05b8011fba"
+    },
+    {
+      "version": "019_count_exception_dimensions.sql",
+      "checksum": "63cc2632b8b011e50821f64c27884639de0c260e46c186d964161e29a2bf02f2"
+    },
+    {
+      "version": "020_labels.sql",
+      "checksum": "02e02c543aed3b82ac8c75b7cc6f564ba5ea9f054759fc4ede1fe70d1911966b"
+    },
+    {
+      "version": "021_user_language.sql",
+      "checksum": "75d00ca2ca061481e78333aed69a12717733ebdb90f9851c48d805845f1a4482"
+    },
+    {
+      "version": "022_ux_contracts.sql",
+      "checksum": "bb90c6de7799af8f893ab8c925a90d4c1da18285c3b1a9c4815c525c22c264a6"
+    },
+    {
+      "version": "023_ux_gross_net.sql",
+      "checksum": "66af88a00611410470823d75a9970c6805ae611dd380041c0841ea73f1ca1c2e"
+    },
+    {
+      "version": "024_ux_weight_completeness.sql",
+      "checksum": "df4e5944a686cb2e9b768d3c245ff31eeec8959aabafebbeff16887f2b48f3e2"
+    },
+    {
+      "version": "025_ux_dispatch_contract.sql",
+      "checksum": "232c6ddd84ecc78c9e27adc311be8618cd388743b7d86a7a4100c5ea84219db2"
+    },
+    {
+      "version": "026_ux_legacy_pending_weight.sql",
+      "checksum": "9bf4a480f58f946ba5a8ee35ac33e29cdccc4a3e533b61c687ae990318d79584"
+    },
+    {
+      "version": "027_stock_map_metadata.sql",
+      "checksum": "4d3831da61c269051599fb853ba3636553a435640496f95ab022a2e85ee41317"
+    },
+    {
+      "version": "028_storage_customer_rules.sql",
+      "checksum": "d6a3f0ad33f2fb5302b5d3adf003a7dd4c50272c9248b7d46d5da714b6bb0519"
+    },
+    {
+      "version": "029_stock_map_binding_uniqueness.sql",
+      "checksum": "626a1772aa67e004b81dd18c38ce7256bde1f48414a206c65a9d4be04d32a334"
+    },
+    {
+      "version": "030_stock_map_site_geometry.sql",
+      "checksum": "dcfca227246f5250a9ca7b901b94ffaa2b2e0da1b3eb3270466f05efc70319c9"
+    },
+    {
+      "version": "031_empty_reporting_epoch.sql",
+      "checksum": "d0988a6fb7c74f37394edf85f4a759cd8438be8abf385ba966989c90cd5881fb"
+    },
+    {
+      "version": "032_v26_workflow.sql",
+      "checksum": "3f91486004ffc1760601ca090e79defb0aca3f4b564e20b13bfd722cd599632a"
+    },
+    {
+      "version": "033_v26_actions.sql",
+      "checksum": "93a8c3ccb084f6e1cb53b519c5df5771b255ed60d6940531dfacebfdf1e7d1d9"
+    },
+    {
+      "version": "034_v26_inventory.sql",
+      "checksum": "d4171f51f83b8efb4143f9077d1bdf95216afe6f8ee37a82679d06c21631bffe"
+    },
+    {
+      "version": "035_v26_production.sql",
+      "checksum": "ec3fae0f8c783faec030d8fa35a3687f00ab70d6809e66293521043cc4c0d406"
+    },
+    {
+      "version": "036_v26_operator_permissions.sql",
+      "checksum": "039e62a774dec28b5ae7833ef8078c2b4b5f9de398a630ffc40da1d262cdbde5"
+    },
+    {
+      "version": "037_v26_dispatch_projection.sql",
+      "checksum": "7a1abcd14ec25ed79f96eaae3995a007d22cf0184fbaceb652cb02b3cd083f9f"
+    },
+    {
+      "version": "038_v26_workflow_guards.sql",
+      "checksum": "9307253a623451348d9e1c5258535adc6d48dacbcaa2aa9a6516d34908852694"
+    },
+    {
+      "version": "039_v26_corrections.sql",
+      "checksum": "8137bc4e151a35c9c4530486efae4d9ae3bc4793cb6b65bafc4c6fd6a0fb54b7"
+    },
+    {
+      "version": "040_v26_temporal_lot.sql",
+      "checksum": "22a0fca51d9a34d25ca44e15d53a0bf77f3f02e73cdcecd1c51cf53b7c12ac2c"
+    },
+    {
+      "version": "041_v26_scoped_operations.sql",
+      "checksum": "115d477848101e31c30705eadd386bc4b8598ba58ee42a619ee8680dc216294f"
+    },
+    {
+      "version": "042_v261_lot_work.sql",
+      "checksum": "7edde36034ae903a981e5f21b8fec0be3e1c92bdf54a12667e3f39d50ba20b68"
+    },
+    {
+      "version": "043_v261_work_actions.sql",
+      "checksum": "3be449f7bcce59907c4b8c714a8e68a82d6f0f76749cceaf3a7b10db9119a9ed"
+    },
+    {
+      "version": "044_v261_projection.sql",
+      "checksum": "0b9cde3f94830b114a555b152f88adb32f3baee3bfa6eadfde59b39779f97bd4"
+    },
+    {
+      "version": "045_v261_cancel_history.sql",
+      "checksum": "72442eeb6c126b90370e929c134cd9e9437f93a70831f667887abf84c783827d"
+    },
+    {
+      "version": "046_v261_cancel_physical_facts.sql",
+      "checksum": "04dd1886efd57ded3bc896fb53d0e08db3426e4bf793ffb42f71474ac9937d99"
+    },
+    {
+      "version": "047_v261_catalog_locations.sql",
+      "checksum": "9164309d8baa109f10a64c5f192dbc05afca5d085bb4f562a6e1a94e85738510"
+    },
+    {
+      "version": "048_v261_customer_guard.sql",
+      "checksum": "feb91f40ee37afa9f9a3a29ba641d5f75855ec1870cb9fabe1f7edc79b98adfe"
+    },
+    {
+      "version": "049_v261_creation_boundary.sql",
+      "checksum": "150bd9cb81e8037fb375fc35cce91b7eca436fa66aa824b96a7d88b99ab5ef0a"
+    },
+    {
+      "version": "050_v261_authorized_correction.sql",
+      "checksum": "8c2495b7a204944b08c695baeab7d6b3389f7aeff6582b64353f9ada23628b96"
+    },
+    {
+      "version": "051_fixed_five_rbac.sql",
+      "checksum": "799abfd03a2765ea6e33f00c7c0159ff1c733e576a490fc572ae26e1beb1e073"
+    },
+    {
+      "version": "052_loading_edit.sql",
+      "checksum": "b6fce5594e034795913bce9f5edc8df8593184b4746645c4cc2ab25b5273d7fa"
+    },
+    {
+      "version": "053_receipt_nullable_submitter.sql",
+      "checksum": "317389558dabeadc1eedf4b2879cf029d4c18fe987c1bf82464a54ea108f1e43"
+    },
+    {
+      "version": "054_v262_metadata_claims.sql",
+      "checksum": "eaa18851acdb69a413546028b72ab12b52d62155a56c8c5645f960f2bffbff6a"
+    },
+    {
+      "version": "055_v262_services.sql",
+      "checksum": "6acfabf4cbd4e072a22357bf3310add49ebf48f5065c0722658443149cb6246d"
+    },
+    {
+      "version": "056_v262_release_projection.sql",
+      "checksum": "b3278ca5d81eb7b9ef9f0050db5cdb2328308dbf9871b57545e8a97f8f91bfb5"
+    },
+    {
+      "version": "057_v262_audit_guards.sql",
+      "checksum": "76caac164552d46ae5808f514ba28a2264bc069458d352c4f46513a0d2185c99"
+    },
+    {
+      "version": "058_v262_latest_validity.sql",
+      "checksum": "84a738eb9a8fe98995a8a2e515c927c25666e86086f4f8ac2c27273b67ee4fb1"
+    },
+    {
+      "version": "059_v262_historical_seal_boundary.sql",
+      "checksum": "be36b2c13ba2da4c2f09f409182c7ed4c278468c354f5af76e3462c53853b1f3"
+    },
+    {
+      "version": "060_v262_preapproval_revoke.sql",
+      "checksum": "c664dbe183ce757d43397f719ca1d983dcb0a391ae3ab7f835f21aa711491ec1"
+    },
+    {
+      "version": "061_v262_public_p5.sql",
+      "checksum": "7878632b4dece471bc18bac42e33603c214f86a749d37da749d9a43d37745656"
+    },
+    {
+      "version": "062_v262_revoke_location_guard.sql",
+      "checksum": "44cd6f06a04e1934a370ae7c17336aa0e69384c1cfa305ed8633abc8ae6f0fab"
+    },
+    {
+      "version": "063_v262_employee_accounts.sql",
+      "checksum": "71ba22002a8218bb62b99b102825865fbc08e3ad0a740e8870cc725f225c1e1e"
+    },
+    {
+      "version": "064_v262_account_scope_grants.sql",
+      "checksum": "b5580634d97191fc289af672db37f17bd97093fb85866df263619f3e90f3404b"
+    },
+    {
+      "version": "065_v262_account_lock_order.sql",
+      "checksum": "c55f28555607f37d124a87b3c9030f883b5fad901f54e71a71fae4a4e9b5ee3a"
+    },
+    {
+      "version": "066_v265_identity_registry.sql",
+      "checksum": "2d4fb22fb8b2074bb5b01a7376f7dec8b2394ad409306b432deb74bb2c8dfbc1"
+    },
+    {
+      "version": "067_v265_sales_controls.sql",
+      "checksum": "36dbac3e698aff7da0771d7d919123b89549413b914fe1b837eb648efcd5a35c"
+    },
+    {
+      "version": "068_v265_posted_fulfilment.sql",
+      "checksum": "2c9a1e66c8e20d51b3bb6ab42e7cb2de5257e07b22c9c4234909f5a63f5fd560"
+    },
+    {
+      "version": "069_v265_released_weight.sql",
+      "checksum": "58165552ee96a207ea6b57f4ce4bfdbba47bfe610aa08a6bb2a084ef3d7646b8"
+    },
+    {
+      "version": "070_v265_insert_seal_guard.sql",
+      "checksum": "2af89715e8374149ccdb0b4f748a4bab0c05c0ce8426e6229e4ff260af8c64ca"
+    },
+    {
+      "version": "071_v265_legacy_lot_count.sql",
+      "checksum": "642617e9c8f64966687d03697b45776f32dc1d440f662fe46bce6362a3d226ce"
+    },
+    {
+      "version": "072_v265_plan_history_controls.sql",
+      "checksum": "5fdff2284eb0776dd8c83252c977be4988c9c9b5298052712939117863e06de8"
+    },
+    {
+      "version": "073_v27_stocktake_model.sql",
+      "checksum": "653ee2d9c87cbe70ee15fbfd1555277d21c405279ecef8827a6c14ee494f5cc0"
+    },
+    {
+      "version": "074_v27_stocktake_reporting.sql",
+      "checksum": "75ded84d632e8d98078738fafc8a21013509ca52ba3c526f8715adb33ed76091"
+    },
+    {
+      "version": "075_v27_adjustment_evidence.sql",
+      "checksum": "0b4f678e2345b5d498824d48bb3f5e634a599492be0a6898060cb42725d66227"
+    },
+    {
+      "version": "076_v27_unknown_weight_events.sql",
+      "checksum": "25229d0d25255b1d042e0f90d5d21725112d339dcc2289cc7c6cc40c5d5b591e"
+    },
+    {
+      "version": "077_v27_stocktake_api_boundary.sql",
+      "checksum": "0c08775127a55c095c827ea64853e876981b0fcff1a4d447a8fdbfc420d9c07c"
+    },
+    {
+      "version": "078_v27_compact_count_exceptions.sql",
+      "checksum": "cb3415fb5eafd3aa53328e052c4a7faf898451c168ecfb8b6ff90acee9c81d16"
+    },
+    {
+      "version": "079_v27_adjustment_number_length.sql",
+      "checksum": "e3cc5f830a7ee3180a162b2687b60a9e30866fc4bc9e6e1808de2782cf02d71a"
+    },
+    {
+      "version": "080_v27_unweighed_quantity_loss.sql",
+      "checksum": "c1108d379e91ff3bab1aad26d1e483dba6dc69aa78841970864f2bea8de28012"
+    },
+    {
+      "version": "081_v27_count_difference_dimensions.sql",
+      "checksum": "6caf4663cdab0f9939c49ccce47d04973faa1e99ee305e56773bed7e154659f0"
+    },
+    {
+      "version": "082_v27_outbound_corrections.sql",
+      "checksum": "7f6c581870ec5a1b009eb5b549df0fb701c84fec29dab20cf53d953ce4c063ad"
+    },
+    {
+      "version": "083_v27_correction_approval_version.sql",
+      "checksum": "9b1a3dffa328972bfde87c5b1a260c68f3d183646317d612193c7dfe759815c7"
+    },
+    {
+      "version": "084_v27_correction_snapshot_alias.sql",
+      "checksum": "5a3282625dbb0032124d566bfdf1ddc5132621f2f9534f2e85e5ca7c6f993f5d"
+    },
+    {
+      "version": "085_v27_correction_plan_alias.sql",
+      "checksum": "24757c78fcc8fe3db2b3ba85f2c9181213469edebaf9e03af7f3ac92ac255820"
+    },
+    {
+      "version": "086_v27_reliability_records.sql",
+      "checksum": "9c7adf1f653e80436f2ebb4d18e61103215b05296ef8e66af7b9976601bf27d6"
+    },
+    {
+      "version": "087_v27_history_query_indexes.sql",
+      "checksum": "a252b0ae54cda1bd3249d439684d1efafe030df274edac781a2bf27704dabc1e"
+    },
+    {
+      "version": "088_v27_audit_outcome.sql",
+      "checksum": "f72788c4400645c8cacda766b3326d3163cde7028bf507fb7f750ad24c163d03"
+    },
+    {
+      "version": "089_v27_current_weighing_evidence.sql",
+      "checksum": "4ce984c3566e854ade1e871908f9e25792009e8e3a9d232dc97e8ed561bbe140"
+    },
+    {
+      "version": "090_v27_count_gain_evidence.sql",
+      "checksum": "d2ec05047de98c0119a1e35967e4a7adab6cdfe049ac8c9f90585785836994fd"
+    },
+    {
+      "version": "091_v27_observed_location_scope.sql",
+      "checksum": "8cd7d5ae2996b13cdb825a97974e8a954c08ed18187efe9fbb96f795137bb3ce"
+    },
+    {
+      "version": "092_v27_adjustment_decimal_validation.sql",
+      "checksum": "6405e87b085dc6f2580400a65c78b37dd1710370c3f65a48526ede37a1ac0e4d"
+    },
+    {
+      "version": "093_v27_cancelled_count_cutoff.sql",
+      "checksum": "02f1d0cef9852b19b3f378036fb718d848265f6740c806146467bb2e7db14ce9"
+    },
+    {
+      "version": "094_v27_count_scope_relations.sql",
+      "checksum": "0aaa79363f1670bbff5c5cc0a16e7362fdfe88090b76de58edf2523eaccc90dd"
+    },
+    {
+      "version": "095_v27_absence_and_unknown_mass.sql",
+      "checksum": "3f28a2c9d5fd5e10645c413aec67770dcad5d9dfaf2c98c61f563671c509ce36"
+    },
+    {
+      "version": "096_v272_annual_stocktaking.sql",
+      "checksum": "3f023b290d8e1ba2c6c89ab6e9fc9d62c0d6c05a45106e5038f9858317b7c85a"
+    },
+    {
+      "version": "097_v30_export_shipping.sql",
+      "checksum": "c39b197b8ef9fd37c47718dc79b553b1b861497be2dce85548b431b307967515"
+    },
+    {
+      "version": "098_v30_prelaunch_permissions.sql",
+      "checksum": "1183c3dca5ddca995724629fdadf1c6170ce196f7c186e6c180d4d5d3bb27393"
+    },
+    {
+      "version": "099_v30_two_stage_outbound.sql",
+      "checksum": "eec0a48b07428a1a2b1923c57d5a0f81db23eda5813c3029ce4cbc5ba1660ea1"
+    },
+    {
+      "version": "100_v30_remaining_and_contracts.sql",
+      "checksum": "be2e968baa1ed44e3d35b700b4d8b009b53bd6f8649edb5c4e83df5f07dc1923"
+    },
+    {
+      "version": "101_v30_departed_location_claim.sql",
+      "checksum": "d6e8a5359e54f41bc5d3667652d89243de61c6a76f9b1a6eebaa2ea1b030d34b"
+    },
+    {
+      "version": "102_v31_loading_plans.sql",
+      "checksum": "85a32671076be05f79f6402568a5522a18ee535c582972f2f050cb69e3943fdb"
+    },
+    {
+      "version": "103_v31_document_posting_checks.sql",
+      "checksum": "ba6d089edb96c6648c11bd3066321712a32fb192e33dbdc37bae6274d9b98f16"
+    },
+    {
+      "version": "104_v31_scope_and_lock_order.sql",
+      "checksum": "825efe9c45e394179a3c699ef85d72094a16341238fc53f5bebf5c6493689ee3"
+    },
+    {
+      "version": "105_v31_correction_bundle_identity.sql",
+      "checksum": "284c63045fc91e121f4be434bec88a456e9f214f4df855397cafcae26f545d5c"
+    },
+    {
+      "version": "106_v31_actual_dispatch_view.sql",
+      "checksum": "33c06ab8a83a271d1d8aae6689fb377524dfad7f3b982e7a1db6a7eac28f6ee2"
+    },
+    {
+      "version": "107_v31_invoice_header.sql",
+      "checksum": "8560b68404c2826f37f56318bc1091ce867280e164124aca479287e0b0ddb78b"
+    },
+    {
+      "version": "108_v31_single_loading_plan.sql",
+      "checksum": "cfe5546f17c94de810c009909fe1fc4c1ff3585a9348fad3f261ea7b0d8b1a30"
+    },
+    {
+      "version": "109_v31_plan_batch_trigger.sql",
+      "checksum": "f0a5ae62f2037f48b9124f56a08c3414164da188f809b9fd1d89e878e97c02b6"
+    },
+    {
+      "version": "110_v31_sales_dispatch.sql",
+      "checksum": "b8553a7afe190d0bbb7dcd69e36e2526a9c3698e23dd9512dfd9efb370f3273a"
+    },
+    {
+      "version": "111_dispatch_capacity_templates.sql",
+      "checksum": "91833d98f287cb209734b7a14064f8017e1d3c5c619959863f53ff285d2ea2d2"
+    },
+    {
+      "version": "112_v32_inventory_state.sql",
+      "checksum": "62a11b5a58bb25d1f5c19654f6bec1c87b1e160e55c39ec88f734833739a71e2"
+    },
+    {
+      "version": "113_v32_loading_release.sql",
+      "checksum": "f115867fae954f087f006fa37fb87d694b05d2fc376c73f841817834d7ac52d7"
+    },
+    {
+      "version": "114_v32_number_weight_controls.sql",
+      "checksum": "42a459998b89968ab4a1ae8620a0c59238c6fec36ff734ce015c55010eb79641"
+    },
+    {
+      "version": "115_v32_cancel_compatibility.sql",
+      "checksum": "2e92248b487c4a552c7070ba127929eca08ef86518f2ec0f921560ed8a02b5b9"
+    },
+    {
+      "version": "116_v32_shared_snapshot_projection.sql",
+      "checksum": "9f0c0275cfab77974fef32ad1daebedf8a1c3c05ca577808c3946ef85e11b2fa"
+    },
+    {
+      "version": "117_v32_controlled_cancel_match.sql",
+      "checksum": "1329ee83e217f587c818fd74aa5a9483aebd51a1857414741ed6f0c94847f493"
+    },
+    {
+      "version": "118_v33_stocktake_snapshot.sql",
+      "checksum": "5013b37bfe5251b35bab4996c7ed34bfd29337be88bfb7a6f5046710f55b78e2"
+    },
+    {
+      "version": "119_v33_formal_lot_storage.sql",
+      "checksum": "4f97372d035ce7a4c05b2fd92f745bbd1317b77e15b6bdf0e762e17c1252d55b"
+    },
+    {
+      "version": "120_v33_count_import_provenance.sql",
+      "checksum": "ae5f95aa9a8afa859a259842441bb6c221c16c237fdccb5a5ba469ec84443ee6"
+    },
+    {
+      "version": "121_v33_count_scope_movements.sql",
+      "checksum": "6e5c573819927dac974e07acf86c68fea7a47d7b263c9f72a4b44f2137a3f4a6"
+    },
+    {
+      "version": "122_v33_count_review_dependencies.sql",
+      "checksum": "7c88c2c01ee97457d0d07db89f882916da882bbe48a155de5a12a996c443a723"
+    },
+    {
+      "version": "123_v33_count_misplaced_bundle.sql",
+      "checksum": "3bf3d96d6cf5d409760a4919c0bfa95b30f0aed073d869bebc6c59cfd21d113c"
+    },
+    {
+      "version": "124_v34_management_warnings.sql",
+      "checksum": "7cad8771c0c4a5fae961b05b3bd64807db5b8ad27f862f09a513beba9ae9f228"
+    },
+    {
+      "version": "125_v34_read_only_count_report.sql",
+      "checksum": "466e07c595eb570c9a055e5bffe5c40ad760092bfb3e97192d8bd0fdb4d858be"
+    },
+    {
+      "version": "126_v34_operator_duties.sql",
+      "checksum": "3b3f57dd2690907179130233bed4fc72a149613e717b34ff36416d3ae15aa6e7"
+    },
+    {
+      "version": "127_v34_arrival_dispatch_workflow.sql",
+      "checksum": "386a9d69504c22db604d171498bf399eb3a112f86ef4be201ff8d74ad9a474c8"
+    },
+    {
+      "version": "128_v34_interaction_completion.sql",
+      "checksum": "2d64bc397d2220b55eb70090e18bee2e0720b8fb857894beb2550b6188d78be2"
+    },
+    {
+      "version": "129_v36_roles_workflow.sql",
+      "checksum": "addd7f793dd4ced3b415ea4f54d7a4f614bca618258ded411c28d54cd1e18b06"
+    },
+    {
+      "version": "130_v36_custom_role_account_guard.sql",
+      "checksum": "1f2b3b9b535034ee7f3af02eb17afe2b70a894ced7e0608561a4800d23fc44e0"
+    },
+    {
+      "version": "139_v38_cobalt_preparation.sql",
+      "checksum": "65626d85052225edb2377dd56fb802aeb52bf98dd2308d961b816cd381273aba"
+    },
+    {
+      "version": "140_v39_cobalt_work.sql",
+      "checksum": "3839aad300bff048ca67589f5b0c008c633c893bec35ae5604ede72c9865b507"
+    },
+    {
+      "version": "141_v40_cobalt_locations.sql",
+      "checksum": "0745623103a2deaf980ae892a0e054cc2ad18193adca7bf419776bc3b1b9a906"
+    },
+    {
+      "version": "142_v41_cobalt_sales_vehicles.sql",
+      "checksum": "8a43c237c9f60964aa143080c2c757ff41d448daa03865039d0179000333a6ed"
+    },
+    {
+      "version": "143_v42_cobalt_loading.sql",
+      "checksum": "00435288355847c59aa6f2d70acc3912e6996632502188e873368d85dc828329"
+    },
+    {
+      "version": "144_v43_cobalt_execution.sql",
+      "checksum": "be7519160801a8b02dceb2e04688e870e6d16c31f20ba7fb0c2eea0b372771f9"
+    },
+    {
+      "version": "145_v44_cobalt_packing.sql",
+      "checksum": "fa2d458b6495fc58a9994fb15336f61ad2344a19e16a5d78ac0598f2943226d7"
+    },
+    {
+      "version": "146_ux7_cobalt_identity_customers.sql",
+      "checksum": "6e8413f98d9176290d8ae1dd4a75682da3d38365214b45eb06b745e44b1ec9fc"
+    },
+    {
+      "version": "147_gate_permits_sales_print.sql",
+      "checksum": "84ab47bb8c28f1f5524b74a0e83e1e15b5a698553c1be7e0848686b6a3f448e2"
+    },
+    {
+      "version": "148_gate_current_actor_scope.sql",
+      "checksum": "343c8aa70eccdd7912acec9146da2ac7215fd7b9a09b16b5bafff7e088e6a7e3"
+    },
+    {
+      "version": "149_ux10_sales_plan_approval.sql",
+      "checksum": "064ce53ac53683687980984f922bdd196c0d45cc9d68b1f4d860847954fd0bfc"
+    },
+    {
+      "version": "150_ux11_commerce_sales_approval.sql",
+      "checksum": "8e76ee101fc7c26011d737564e88a8fe6cf847ca6798b21005cb6883c2024017"
+    },
+    {
+      "version": "151_ux11_cobalt_document_settings.sql",
+      "checksum": "f183e20cd27cf7bb743928a362f0a357c8c4bbc73de92114e8f3dee1208c7af9"
+    },
+    {
+      "version": "152_ux11_cobalt_active_template.sql",
+      "checksum": "9061aa45500e1dc5db7e5267feb07afe56389ac06964d21558be6fcb51ab189f"
+    },
+    {
+      "version": "153_v451_cobalt_stocktaking.sql",
+      "checksum": "a983d7daa7e680d112837a69d69bdb9ebdfbd50fad7edb2f405c393987594473"
+    },
+    {
+      "version": "154_v461_copper_pages.sql",
+      "checksum": "6e0ea439ef2c9baa92f84d8a4499a782fdf55e0bcc6129cfda171761327c67d1"
+    },
+    {
+      "version": "155_v461_cobalt_design.sql",
+      "checksum": "9e48b376cef1be9230378e1cff5599deff3945f0e7f3103b6cb59d508af688f2"
+    },
+    {
+      "version": "156_v463_stock_balance.sql",
+      "checksum": "3cef1a910004f54b0d8976295be3eb91b09755f164a5d7364322856a77b502f2"
+    },
+    {
+      "version": "157_v463_registration_requests.sql",
+      "checksum": "f2d563329e97defb814a1a2a6f34f50e665b1881f62554e4742ec8faa1167243"
+    },
+    {
+      "version": "158_v463_remove_lot_count_limit.sql",
+      "checksum": "6b2d0f8141a19c901b1087fd25cdac7e54158306142a3cae558d7887981a39f3"
+    },
+    {
+      "version": "159_v465_cobalt_site_map.sql",
+      "checksum": "89a9323edf7863e32df1b2b6170f0bef8a991773ffa2f4ff2fd2a36f0a23b3a1"
+    },
+    {
+      "version": "160_v465_temporary_point_reuse.sql",
+      "checksum": "33abeb424913b25e3580cbdca2624e7aca6d815be0a1de02499d7cb87df05ad9"
+    },
+    {
+      "version": "161_v465_temporary_trigger_record_types.sql",
+      "checksum": "a0414db42e6e0e00318fd55bfec099aa1880b36db8dfd57b8c4a5fbfb1b2a003"
+    },
+    {
+      "version": "162_v467_readable_loading_numbers.sql",
+      "checksum": "befff5e6728bb6e8bd90cdc078d33c1af54eb5bf36d952ab4be3b051189244a2"
+    },
+    {
+      "version": "163_v468_sales_plan_close_approval.sql",
+      "checksum": "262ab70cc75b09abd04062fdf4aa052aec63492cf4465cefa44ff220347303f5"
+    },
+    {
+      "version": "164_v468_plan_edit_and_current_dispatch.sql",
+      "checksum": "36a71a351ac1bc4ae08c29ec38914c23b52c910ed5a88db6dbd416e1c208b258"
+    },
+    {
+      "version": "165_v468_guarded_early_close.sql",
+      "checksum": "26d1c1a7d46fb3e015d5184244890c2da59b5dba9d904f7b8e36f5a4d827bae9"
+    },
+    {
+      "version": "166_v468_cobalt_final_close_actor.sql",
+      "checksum": "70344d71fd81f176740e94197235e174eae0f8a7af4d39cef349d8230b19a549"
+    },
+    {
+      "version": "167_v468_new_plan_open_state.sql",
+      "checksum": "d74f50879e448a3188a8840c003c86fae472cc8eeca6722e73a3bbbb128b4588"
+    },
+    {
+      "version": "168_v468_cobalt_batch_sequence.sql",
+      "checksum": "9231522d620b3548ee3b445d8f62d9180c6dc03f2ead706361de76dd21dd2a91"
+    },
+    {
+      "version": "169_v468_approval_identity_snapshots.sql",
+      "checksum": "0f5c8acb7cd8a536d0b8d996dbc7dc207f1d7d3ddbd234b560bc66811d68de8d"
+    },
+    {
+      "version": "170_v469_cobalt_optional_assay.sql",
+      "checksum": "cd46a8b296389b7b68c60bc81d6e7ee005d7ac4fbede7dc265a32c6ac277c4b7"
+    },
+    {
+      "version": "171_v469_single_site_intake.sql",
+      "checksum": "e5170777463f7fa6e2f13e2df4556610ce5691c0e209c0e7a51062763646d49f"
+    },
+    {
+      "version": "172_v469_configurable_admin_business_permissions.sql",
+      "checksum": "45f812e8b586893c2759456741750bcb4958500f6824a860e41414dac3ed0a4a"
+    }
+  ]
+}

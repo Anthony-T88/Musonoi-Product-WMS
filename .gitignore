@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.runtime/
+node_modules/
+**/private/
+**/backups/
+**/uploads/
+**/database-decryption-key.json
+*.dump
+*.backup
+*.zip
+*.log

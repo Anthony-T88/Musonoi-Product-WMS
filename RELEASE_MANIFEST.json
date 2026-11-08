@@ -11,9 +11,29 @@
   "keyIncluded": false,
   "files": [
     {
+      "path": ".dockerignore",
+      "bytes": 928,
+      "sha256": "7e04dc78e20847ecf3246c3fa52d41a6a58105cf62f426d72288cbb9d61f458d"
+    },
+    {
       "path": ".env.example",
       "bytes": 467,
       "sha256": "fec63038ff999e56577906fe1b95d5a4045ffecd5b16e0d289af62cb918d1248"
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 133,
+      "sha256": "5fba520964ec06d3425fdbf9ec7eecc4507619d1c7ab80f78be6f02b78e84231"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 146,
+      "sha256": "a9244c4e0c4cdaccc89487119c17d55ac114193ca501a6772593ee400d77c6c0"
+    },
+    {
+      "path": "AUDIT_REMEDIATION.md",
+      "bytes": 4810,
+      "sha256": "dd0ca60006d26f7a993ab39709c8cb758ed3d416216bed883eb40dba574c7bf8"
     },
     {
       "path": "LICENSE",
@@ -32,23 +52,33 @@
     },
     {
       "path": "README.md",
-      "bytes": 1101,
-      "sha256": "e0b72e547615e6fc700be90ce18c5bf6a63899b2fd35fd7fdf452c25aa7d5f96"
+      "bytes": 1664,
+      "sha256": "d6d48240d6b983c5d04a039744f407bc692d4608bb31c2196e7224cdae8010f6"
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "bytes": 76773,
-      "sha256": "587a93852f49c49b33b313b1be1d9304c1a59b4ec734225d140980946462cdb3"
+      "bytes": 78689,
+      "sha256": "1fc33989a960e40d84403240d9274d1a47f0b925c582b78d1fd3856a4b30d50d"
     },
     {
       "path": "VALIDATION.json",
-      "bytes": 4138,
-      "sha256": "20b55078ce149ac2fc220ed39f3c9783d9ce86172b1956b3372adde3d2fbefce"
+      "bytes": 7109,
+      "sha256": "4f4ac414a4c445ec7ddd67a65df0ea3b110c8f653394f0b6c075ee70e2748f34"
     },
     {
       "path": "db/MIGRATIONS.md",
       "bytes": 4957,
       "sha256": "7f5fee40f967038bbb58c46ad40f2fcf72c05146b6e4ea28eba79d839ebae681"
+    },
+    {
+      "path": "db/migration-baseline.json",
+      "bytes": 25592,
+      "sha256": "c1daa46a4f581c1562e717623bbf226c19d929eaab6433c5eee4a2c8f7d55725"
+    },
+    {
+      "path": "db/migration-guards/172-admin-permissions.json",
+      "bytes": 4426,
+      "sha256": "c60a3eb21a8000b81b94eb18179ef8c961b58a16ea7efe2d35ba988b1977ec03"
     },
     {
       "path": "db/migrations/001_foundation.sql",
@@ -987,8 +1017,8 @@
     },
     {
       "path": "deploy/Dockerfile",
-      "bytes": 427,
-      "sha256": "99595e3c9e268fb8bf022d86796b5a43bee572eb0f7bb16dc4532aa052298cb2"
+      "bytes": 1081,
+      "sha256": "db4eed56ae1d64eb9383139aaa47ffbffc1b88353e3abf4642f7a08c18d0fdd0"
     },
     {
       "path": "deploy/bootstrap.example.json",
@@ -1992,13 +2022,13 @@
     },
     {
       "path": "package.json",
-      "bytes": 806,
-      "sha256": "88f164af79e046eda73849610face656e5eebf8468144e08cffe7faf294498a5"
+      "bytes": 1131,
+      "sha256": "734ab38900175ae31e5931fcd9b358262e1df871e60a1929a3ed29f85126fa86"
     },
     {
       "path": "pnpm-lock.yaml",
-      "bytes": 76783,
-      "sha256": "12a11a8d038316c2890a26ec6f036bdedb6d6eb160ee789d7a9485de38de7ec0"
+      "bytes": 77660,
+      "sha256": "6c17b3eb82e8435946209475c3843a3f446755fc89bf12ad4be0fd18ed30dd7c"
     },
     {
       "path": "pnpm-workspace.yaml",
@@ -2007,13 +2037,18 @@
     },
     {
       "path": "scripts/db.cjs",
-      "bytes": 2925,
-      "sha256": "8f31b2bbfd369d9ac6bad8d573f1f65db3b8f00c2fb83c581b0f46271dcd93c5"
+      "bytes": 2720,
+      "sha256": "4675860cd021c2ff283f1baeb00d7a3db31b8d499becb1a5db63e9ae7aa30fe5"
     },
     {
       "path": "scripts/maintenance-connection.cjs",
       "bytes": 794,
       "sha256": "98454226dcd4fdc43e2ddbf5f455451522a97ab123d462b57304549b545877ae"
+    },
+    {
+      "path": "scripts/migration-chain.cjs",
+      "bytes": 3198,
+      "sha256": "c4b07daf0c50f3216691d32828fabd1a43211c89af67a8d27a0c2fb113b0c47d"
     },
     {
       "path": "scripts/preproduction-db.cjs",
@@ -2022,13 +2057,18 @@
     },
     {
       "path": "scripts/production-bootstrap.cjs",
-      "bytes": 6716,
-      "sha256": "1aca0433d6d10818336157b5d02d4a4810c5f408f9357efdac3ace7c9b81b2f9"
+      "bytes": 6639,
+      "sha256": "fc317df1f05c5523be352a0e3d1c51d44b5e5c8975e3ff6fb918d21f14911176"
     },
     {
       "path": "scripts/production-db.cjs",
-      "bytes": 3482,
-      "sha256": "88819105096c717716526c22bc4cb37208835d5c0f46071659a97d9899f5e3eb"
+      "bytes": 3097,
+      "sha256": "0e661b3011e8fb085b4524cc1126442c51a952e9dfb237fdfca1a7706e469266"
+    },
+    {
+      "path": "scripts/run-release-tests.cjs",
+      "bytes": 1316,
+      "sha256": "32ca1be23920748a7565a6d2834839fb40617818d2a0900c29f53adf2bfb8f03"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -2037,8 +2077,8 @@
     },
     {
       "path": "scripts/verify-release.cjs",
-      "bytes": 407,
-      "sha256": "4deb22204853afc5142732c57fcf7f919ab3db4d8e90691a546a32dc495e462b"
+      "bytes": 203,
+      "sha256": "8b837f9b3cd728c43fc0df45234bbea61ea0beacd04c5b38cc1e917fd9b78d08"
     },
     {
       "path": "server/account-policy.cjs",
@@ -2704,10 +2744,46 @@
       "path": "templates/stocktake/approved.xlsx",
       "bytes": 17871,
       "sha256": "09088b3e1bb4c386d0da542c0e4e731a4b343a44998db282f33a2da127cfad3d"
+    },
+    {
+      "path": "tests/release/business.test.cjs",
+      "bytes": 2028,
+      "sha256": "61022cfba93771cad67e3f67195525e0458547912a1f65407cd13eba6342ea09"
+    },
+    {
+      "path": "tests/release/database.test.cjs",
+      "bytes": 14759,
+      "sha256": "eebcb7673ca0c4ccd0ac5a019cc3351d211a48bd377f1203ec3ccb541aa3df52"
+    },
+    {
+      "path": "tests/release/deployment.test.cjs",
+      "bytes": 3302,
+      "sha256": "5b66e0e157d452ebeccc9efceb4e69977db8948823e3702bfd361906d7d12335"
+    },
+    {
+      "path": "tests/release/environment.cjs",
+      "bytes": 5213,
+      "sha256": "d05f2f366dc5d47aaebe19f16e5b61cf6247a772e94b498e6dbdeb826eca39e5"
+    },
+    {
+      "path": "tests/release/fixtures/172-functions.json",
+      "bytes": 59431,
+      "sha256": "3f1f7c24939bbde441d338e5d95aab063fbd844555fdb855c5dc9e7cb876a846"
+    },
+    {
+      "path": "tests/release/migrations.test.cjs",
+      "bytes": 3367,
+      "sha256": "81ea04405ca60449e23f02590c20717bbaf43da4a199681a360ff7d503a49b24"
+    },
+    {
+      "path": "tests/release/ui.test.cjs",
+      "bytes": 4167,
+      "sha256": "c1966065c1dc9878e656a246d71541a160be57cddae27aa38699ae1218d8febe"
     }
   ],
   "restoreVerified": true,
   "validation": "VALIDATION.json",
   "deliveryFormat": "ordinary-files",
-  "sourceFiles": 535
+  "sourceFiles": 548,
+  "auditRevision": "stage1-remediation-20261108"
 }

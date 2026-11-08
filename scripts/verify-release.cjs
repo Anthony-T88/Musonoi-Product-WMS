@@ -1,1 +1,3 @@
-'use strict';const fs=require('fs'),crypto=require('crypto'),assert=require('assert/strict'),path=require('path');const root=path.resolve(__dirname,'..'),m=require('../SOURCE_MANIFEST.json');for(const f of m.files)assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,f.path))).digest('hex'),f.sha256,f.path);console.log('4.6.9-r2 source integrity PASS: '+m.files.length+' files');
+'use strict';
+const path=require('node:path');
+console.log(JSON.stringify({status:'PASS',scope:'source hashes only',...require('../server/release-integrity.cjs').verify(path.resolve(__dirname,'..'))}));
