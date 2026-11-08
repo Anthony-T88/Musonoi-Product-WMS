@@ -8,6 +8,6 @@ async function independent(c,req,table,id,exception=false){const r=(await c.quer
 async function register({app,pool,permitted,csrf}){
  await require('./roles.cjs').register({app,pool,permitted,csrf});
  app.get('/api/v1/security/policy',{preHandler:permitted('users:manage')},()=>policy(pool));
- app.patch('/api/v1/security/policy',{preHandler:[permitted('system:manage'),csrf]},req=>transaction(pool,async c=>{if(req.body?.production_receipt_self_review!==false)throw B.error(400,'入库自审已取消，必须由另一位授权人员审核');await c.query("UPDATE auth_policy_settings SET enabled=false WHERE key='production_receipt_self_review'");return policy(c);}));
+ app.patch('/api/v1/security/policy',{preHandler:[permitted('system:manage'),csrf]},req=>transaction(pool,async c=>{await require('./management-security.cjs').actor(c,req,'system:manage');if(req.body?.production_receipt_self_review!==false)throw B.error(400,'入库自审已取消，必须由另一位授权人员审核');await c.query("UPDATE auth_policy_settings SET enabled=false WHERE key='production_receipt_self_review'");return policy(c);}));
 }
 module.exports={policy,allowed,independent,pagePermissions,pagePermission,register};

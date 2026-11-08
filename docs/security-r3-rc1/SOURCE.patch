@@ -1,0 +1,797 @@
+diff --git a/.gitignore b/.gitignore
+index f6aabd7..ef851c3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -11,3 +11,6 @@ node_modules/
+ *.backup
+ *.zip
+ *.log
++
++# Sanitized, intentionally public audit test evidence.
++!docs/security-r3-rc1/*.log
+diff --git a/README.md b/README.md
+index 4c09af6..bf24a51 100644
+--- a/README.md
++++ b/README.md
+@@ -1,15 +1,13 @@
+-# Musonoi Product WMS 4.6.9-r2
++# Musonoi Product WMS 4.6.9-r3-rc1
+ 
+-当前以普通文件交付 4.6.9-r2，包含 server、dist、db、scripts、templates、deploy 及可复跑的 tests/release。第一阶段审计整改见 [AUDIT_REMEDIATION.md](AUDIT_REMEDIATION.md)。
++第一批安全整改候选分支，等待用户和 GPT 复审。仅提交独立 PR，不自动合并或部署。普通源码文件交付。
+ 
+-- 氢氧化钴袋级库存采用批次展开清单；权限为横向勾选框，25 个模块、67 项权限。
+-- 本次审计整改修复部署迁移链和初始化校验、测试交付、Docker 文件边界、第 172 条迁移的前后断言，并将 Fastify 升级至 5.12.8。
+-- 现有 172 条 SQL 迁移原文与审计基线一致，保留历史数据及已确认的业务流程。
++[给 GPT 的完整修复报告](docs/security-r3-rc1/REPORT.txt) · [测试证据](docs/security-r3-rc1/TEST_RESULTS.json) · [回滚说明](docs/security-r3-rc1/ROLLBACK.txt)
+ 
+-Node.js 22 以上，pnpm 11.25.0，PostgreSQL。`pnpm install --frozen-lockfile` 安装依赖；`pnpm test` 运行单元及规则测试；`pnpm run verify:integrity` 独立校验源码；`pnpm run test:acceptance` 执行数据库、接口、权限、并发及前端测试，所需独立 TEST 环境变量和浏览器设置见整改说明。
++修复角色自授权、账号跨范围及管理员操作、旧新审计入口隔离、权限变更后的会话及在途请求一致性。铜钴业务审批流程和独立审核规则保持原样。注册申请审批按用户确认限定为系统管理员。
+ 
+-本机使用私有环境配置及 `pnpm start`；目标环境使用 `pnpm start:configured`，部署前完成 TLS、网络、地图、设备和环境验收。本机没有 Docker，镜像实际构建未验证，不能据此认定生产就绪。
++保留 172 条旧迁移原文，仅追加 173 安全迁移。原 r2 加密 TEST 备份保持不变，仍是 172 迁移基线；候选版启动需要先完成受控迁移至 173，不能直接运行于未迁移的原业务库。密钥和明文数据没有上传。
+ 
+-仓库按用户决定保持公开。数据库备份来自本机 TEST，保留业务历史及账户，只提供 AES-256-GCM 加密文件 Musonoi-Database-V4.6.9-R2.dump.enc。密钥和明文备份仅保存在本机。
++运行测试需要 Node.js >=22、pnpm 11.25.0 和独立 TEST PostgreSQL。`pnpm install --frozen-lockfile`，`pnpm test`，`pnpm run verify:integrity`。设置报告列明的 TEST 环境及浏览器后，`pnpm run test:acceptance` 执行数据库、权限、并发和前端回归。测试仅创建随机审计库。
+ 
+-解密：`node decrypt-database.cjs 数据库.enc 本地私钥.json 新输出.dump`。使用 PostgreSQL pg_restore 恢复到新建独立数据库。验证结果见 VALIDATION.json，全部发布文件校验见 RELEASE_MANIFEST.json。
++具体权限收紧、测试覆盖、连接池预算与剩余风险见报告。旧 AUDIT_REMEDIATION.md 是此前 r2 工程整改记录，本候选以本次报告为准。本次没有生产上线验收或 Docker 镜像构建，不代表生产就绪。
+diff --git a/db/migration-baseline.json b/db/migration-baseline.json
+index c649dcd..8f71513 100644
+--- a/db/migration-baseline.json
++++ b/db/migration-baseline.json
+@@ -1,6 +1,6 @@
+ {
+   "format": 1,
+-  "release": "4.6.9-r2",
++  "release": "4.6.9-r3-rc1",
+   "migrations": [
+     {
+       "version": "001_foundation.sql",
+@@ -689,6 +689,10 @@
+     {
+       "version": "172_v469_configurable_admin_business_permissions.sql",
+       "checksum": "45f812e8b586893c2759456741750bcb4958500f6824a860e41414dac3ed0a4a"
++    },
++    {
++      "version": "173_r3_security_scope_and_sessions.sql",
++      "checksum": "98cfc7ada7546320c491a277eec8e27b2285c9c4584018857137ba060b386e03"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/db/migrations/173_r3_security_scope_and_sessions.sql b/db/migrations/173_r3_security_scope_and_sessions.sql
+new file mode 100644
+index 0000000..f30f911
+--- /dev/null
++++ b/db/migrations/173_r3_security_scope_and_sessions.sql
+@@ -0,0 +1,86 @@
++-- Additive security metadata only. Existing audit rows, grants and identities are not rewritten.
++ALTER TABLE audit_logs ADD COLUMN scope_context jsonb;
++-- Runtime can verify the required migration without reading maintenance history directly.
++CREATE VIEW security_schema_status AS SELECT version,checksum FROM schema_migrations ORDER BY version DESC LIMIT 1;
++GRANT SELECT ON security_schema_status TO musonoi_app;
++
++CREATE FUNCTION security_r3_scope_json(d jsonb, kind text) RETURNS jsonb
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++DECLARE p text;w text;k text;loc record;
++BEGIN
++ p:=d->>'project_id';w:=d->>'warehouse_id';k:=d->>'customer_id';
++ IF kind='projects' THEN p:=coalesce(d->>'id',p);END IF;
++ IF kind='warehouses' THEN w:=coalesce(d->>'id',w);END IF;
++ IF kind IN('customers','co_customer_profiles') THEN k:=coalesce(d->>'id',k);END IF;
++ IF p IS NULL OR p!~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' THEN RETURN NULL;END IF;
++ IF w IS NOT NULL AND w!~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' OR k IS NOT NULL AND k!~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' THEN RETURN NULL;END IF;
++ IF w IS NULL AND coalesce(d->>'location_id','')~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' THEN
++  SELECT project_id,warehouse_id INTO loc FROM public.locations WHERE id=(d->>'location_id')::uuid;
++  IF loc.project_id::text=p THEN w:=loc.warehouse_id::text;END IF;
++ END IF;
++ RETURN jsonb_build_object('project_id',p::uuid::text,'warehouse_id',w::uuid::text,'customer_id',k::uuid::text);
++END $$;
++
++CREATE FUNCTION security_r3_entity_scope(kind text, identity text, depth integer DEFAULT 0) RETURNS jsonb
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++DECLARE d jsonb;s jsonb;parent_kind text;parent_id text;
++BEGIN
++ IF depth>3 OR kind<>ALL(ARRAY['projects','warehouses','customers','co_customer_profiles','bundles','receipts','allocations','sales_plans','customer_contracts','co_preparations','co_sales_plans','co_sales_contracts','co_locations','co_zones','co_loading_plans','co_loading_orders','loading_plan_documents','loading_orders','outbound_orders','stock_moves','stocktake_tasks','adjustment_tasks','vehicle_arrivals','co_dispatch_vehicles','sales_dispatch_vehicles','co_stocktake_tasks']) THEN RETURN NULL;END IF;
++ IF identity IS NULL OR to_regclass('public.'||kind) IS NULL THEN RETURN NULL;END IF;
++ IF identity!~*'^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$' THEN RETURN NULL;END IF;
++ identity:=identity::uuid::text;
++ EXECUTE format('SELECT to_jsonb(t) FROM public.%I t WHERE id::text=$1',kind) INTO d USING identity;
++ IF d IS NULL THEN RETURN NULL;END IF;
++ s:=public.security_r3_scope_json(d,kind);IF s IS NOT NULL THEN RETURN s;END IF;
++ IF d->>'preparation_id' IS NOT NULL THEN parent_kind:='co_preparations';parent_id:=d->>'preparation_id';
++ ELSIF d->>'sales_plan_id' IS NOT NULL THEN parent_kind:=CASE WHEN kind LIKE 'co\_%' ESCAPE '\' THEN 'co_sales_plans' ELSE 'sales_plans' END;parent_id:=d->>'sales_plan_id';
++ ELSIF d->>'allocation_id' IS NOT NULL THEN parent_kind:='allocations';parent_id:=d->>'allocation_id';
++ ELSIF d->>'loading_id' IS NOT NULL THEN parent_kind:='loading_orders';parent_id:=d->>'loading_id';
++ ELSIF kind='co_loading_orders' AND d->>'plan_id' IS NOT NULL THEN parent_kind:='co_loading_plans';parent_id:=d->>'plan_id';
++ ELSE RETURN NULL;END IF;
++ RETURN public.security_r3_entity_scope(parent_kind,parent_id,depth+1);
++END $$;
++
++CREATE FUNCTION security_r3_audit_scope() RETURNS trigger
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++DECLARE s jsonb;d jsonb;scopes jsonb:='[]'::jsonb;
++BEGIN
++ -- Ignore caller-supplied scope metadata. Unknown/system events remain administrator-only.
++ NEW.scope_context:=NULL;
++ s:=public.security_r3_entity_scope(NEW.entity_type,NEW.entity_id);
++ IF s IS NULL THEN RETURN NEW;END IF;
++ scopes:=jsonb_build_array(s);
++ FOREACH d IN ARRAY ARRAY[NEW.before_data,NEW.after_data] LOOP
++  IF d->>'project_id' IS NOT NULL THEN
++   s:=public.security_r3_scope_json(d,NEW.entity_type);
++   IF s IS NULL THEN RETURN NEW;END IF;
++   scopes:=scopes||jsonb_build_array(s);
++  END IF;
++ END LOOP;
++ SELECT jsonb_agg(DISTINCT x) INTO scopes FROM jsonb_array_elements(scopes) x;
++ NEW.scope_context:=jsonb_build_object('version',1,'kind','SCOPED','basis','ENTITY_AND_PAYLOAD_AT_INSERT','scopes',scopes);
++ RETURN NEW;
++END $$;
++CREATE TRIGGER aa_security_r3_audit_scope BEFORE INSERT ON audit_logs FOR EACH ROW EXECUTE FUNCTION security_r3_audit_scope();
++
++CREATE FUNCTION security_r3_authorization_lock() RETURNS trigger LANGUAGE plpgsql AS $$
++BEGIN PERFORM pg_advisory_xact_lock(21002);RETURN NULL;END $$;
++CREATE TRIGGER security_r3_permission_lock BEFORE INSERT OR UPDATE OR DELETE ON role_permissions FOR EACH STATEMENT EXECUTE FUNCTION security_r3_authorization_lock();
++CREATE TRIGGER security_r3_scope_lock BEFORE INSERT OR UPDATE OR DELETE ON user_scopes FOR EACH STATEMENT EXECUTE FUNCTION security_r3_authorization_lock();
++
++CREATE FUNCTION security_r3_revoke_sessions() RETURNS trigger
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
++BEGIN
++ IF TG_TABLE_NAME='role_permissions' THEN
++  DELETE FROM public.sessions WHERE user_id IN(SELECT id FROM public.users WHERE role_code IN(CASE WHEN TG_OP<>'INSERT' THEN OLD.role_code END,CASE WHEN TG_OP<>'DELETE' THEN NEW.role_code END));
++ ELSIF TG_TABLE_NAME='user_scopes' THEN
++  DELETE FROM public.sessions WHERE user_id IN(CASE WHEN TG_OP<>'INSERT' THEN OLD.user_id END,CASE WHEN TG_OP<>'DELETE' THEN NEW.user_id END);
++ ELSIF (NEW.role_code,NEW.active,NEW.password_hash,NEW.deleted_at) IS DISTINCT FROM (OLD.role_code,OLD.active,OLD.password_hash,OLD.deleted_at) THEN
++  DELETE FROM public.sessions WHERE user_id=NEW.id;
++ END IF;
++ RETURN NULL;
++END $$;
++CREATE TRIGGER security_r3_permissions_revoke AFTER INSERT OR UPDATE OR DELETE ON role_permissions FOR EACH ROW EXECUTE FUNCTION security_r3_revoke_sessions();
++CREATE TRIGGER security_r3_scopes_revoke AFTER INSERT OR UPDATE OR DELETE ON user_scopes FOR EACH ROW EXECUTE FUNCTION security_r3_revoke_sessions();
++CREATE TRIGGER security_r3_accounts_revoke AFTER UPDATE ON users FOR EACH ROW EXECUTE FUNCTION security_r3_revoke_sessions();
++REVOKE ALL ON FUNCTION security_r3_scope_json(jsonb,text),security_r3_entity_scope(text,text,integer),security_r3_audit_scope(),security_r3_authorization_lock(),security_r3_revoke_sessions() FROM PUBLIC;
+diff --git a/dist/index.html b/dist/index.html
+index eeefc11..269756a 100644
+--- a/dist/index.html
++++ b/dist/index.html
+@@ -1,9 +1,9 @@
+ <!doctype html>
+ <html lang="zh-CN">
+-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="穆松尼项目产品仓储管理系统，支持授权库存操作、盘点与报表；数据环境以页面标识为准。"><title>产品仓储管理系统 · 穆松尼项目 · V4.6.9</title><link rel="stylesheet" href="/styles.css?rev=4.6.9-r2"><link rel="stylesheet" href="/field.css?rev=4.6.9-r2"><link rel="stylesheet" href="/stock-map.css?rev=4.6.9-r2"><link rel="stylesheet" href="/product.css?rev=4.6.9-r2"><link rel="stylesheet" href="/accounts-overview.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v27.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ui.css?rev=4.6.9-r2"><link rel="stylesheet" href="/map-viewport.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v30.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v33.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v34.css?rev=4.6.9-r2"><link rel="stylesheet" href="/interaction-polish.css?rev=4.6.9-r2"><link rel="stylesheet" href="/account-task-polish.css?rev=4.6.9-r2"><link rel="stylesheet" href="/yard-workflow.css?rev=4.6.9-r2"><link rel="stylesheet" href="/interaction-completion.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v35.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v36.css?rev=4.6.9-r2"><link rel="stylesheet" href="/login.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v37.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v38.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v39.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v40.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v41.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v42.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v43.css?rev=4.6.9-r2"><link rel="stylesheet" href="/v44.css?rev=4.6.9-r2"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#162a36"><script defer src="/i18n-dictionary.js?rev=4.6.9-r2"></script><script defer src="/i18n-v262.js?rev=4.6.9-r2"></script><script defer src="/i18n-v27.js?rev=4.6.9-r2"></script><script defer src="/i18n-v31.js?rev=4.6.9-r2"></script><script defer src="/i18n-v32.js?rev=4.6.9-r2"></script><script defer src="/i18n-v33.js?rev=4.6.9-r2"></script><script defer src="/management-labels.js?rev=4.6.9-r2"></script><script defer src="/i18n-v34.js?rev=4.6.9-r2"></script><script defer src="/i18n-audit468r6.js?rev=4.6.9-r2"></script><script defer src="/i18n.js?rev=4.6.9-r2"></script><script defer src="/tonnes.js?rev=4.6.9-r2"></script><script defer src="/api.js?rev=4.6.9-r2"></script><script defer src="/business-time.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/gate468r8.css?rev=4.6.9-r2"><script defer src="/gate468r8.js?rev=4.6.9-r2"></script>
+-<link rel="stylesheet" href="/approval-display468r10.css?rev=4.6.9-r2"><link rel="stylesheet" href="/loading-filters469.css?rev=4.6.9-r2"><script defer src="/loading-filters469.js?rev=4.6.9-r2"></script>
+-<script defer src="/release.js?rev=4.6.9-r2"></script><script defer src="/ui-state.js?rev=4.6.9-r2"></script><script defer src="/boot.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/cobalt-refinement.css?rev=4.6.9-r2"><link rel="stylesheet" href="/product-polish.css?rev=4.6.9-r2"><link rel="stylesheet" href="/shipping-overview.css?rev=4.6.9-r2"><link rel="stylesheet" href="/gate.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ux10.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ux11.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ui452.css?rev=4.6.9-r2"><link rel="stylesheet" href="/operation-workspace.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ui46.css?rev=4.6.9-r2"><link rel="stylesheet" href="/registration.css?rev=4.6.9-r2"><script defer src="/registration-ui.js?rev=4.6.9-r2"></script><script defer src="/login46.js?rev=4.6.9-r2"></script><script defer src="/route-permissions.js?rev=4.6.9-r2"></script><script defer src="/ui46.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/ui46-pages.css?rev=4.6.9-r2&layout=2"><script defer src="/ui46-pages.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/login46.css?rev=4.6.9-r2"><link rel="stylesheet" href="/system46.css?rev=4.6.9-r2"><script defer src="/system46.js?rev=4.6.9-r2"></script><script defer src="/system46-pages.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/copper461.css?rev=4.6.9-r2"><script defer src="/copper461.js?rev=4.6.9-r2"></script><script defer src="/cobalt461.js?rev=4.6.9-r2"></script><script defer src="/business461.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/business461.css?rev=4.6.9-r2"><script defer src="/reports463.js?rev=4.6.9-r2"></script><script defer src="/plan-display.js?rev=4.6.9-r2"></script><script defer src="/sound467.js?rev=4.6.9-r2"></script><script defer src="/handover467.js?rev=4.6.9-r2"></script><script defer src="/next-steps467.js?rev=4.6.9-r2"></script><script defer src="/loading-detail465.js?rev=4.6.9-r2"></script><script defer src="/document-layout.js?rev=4.6.9-r2"></script><script defer src="/cobalt-map-site.js?rev=4.6.9-r2"></script><script defer src="/cobalt-map465.js?rev=4.6.9-r2"></script><script defer src="/ui465.js?rev=4.6.9-r2"></script><script defer src="/ui463.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/ui463.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ux-r4.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ux-r5.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ui465.css?rev=4.6.9-r2"><link rel="stylesheet" href="/overview-analysis.css?rev=4.6.9-r2"><link rel="stylesheet" href="/ui468.css?rev=4.6.9-r2"><script defer src="/ui468.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/operations468r3.css?rev=4.6.9-r2"><script defer src="/operations468r3.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/operations468r4.css?rev=4.6.9-r2"><script defer src="/operations468r4.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/audit468r6.css?rev=4.6.9-r2"><script defer src="/audit468r6.js?rev=4.6.9-r2"></script><link rel="stylesheet" href="/v469.css?rev=4.6.9-r2">
+-<link rel="stylesheet" href="/cobalt-stock469r2.css?rev=4.6.9-r2"><link rel="stylesheet" href="/permissions469r2.css?rev=4.6.9-r2"></head>
++<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="穆松尼项目产品仓储管理系统，支持授权库存操作、盘点与报表；数据环境以页面标识为准。"><title>产品仓储管理系统 · 穆松尼项目 · V4.6.9</title><link rel="stylesheet" href="/styles.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/field.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/stock-map.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/product.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/accounts-overview.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v27.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/map-viewport.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v30.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v33.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v34.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/interaction-polish.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/account-task-polish.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/yard-workflow.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/interaction-completion.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v35.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v36.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/login.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v37.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v38.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v39.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v40.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v41.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v42.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v43.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/v44.css?rev=4.6.9-r3-rc1"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#162a36"><script defer src="/i18n-dictionary.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v262.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v27.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v31.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v32.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v33.js?rev=4.6.9-r3-rc1"></script><script defer src="/management-labels.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-v34.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n-audit468r6.js?rev=4.6.9-r3-rc1"></script><script defer src="/i18n.js?rev=4.6.9-r3-rc1"></script><script defer src="/tonnes.js?rev=4.6.9-r3-rc1"></script><script defer src="/api.js?rev=4.6.9-r3-rc1"></script><script defer src="/business-time.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/gate468r8.css?rev=4.6.9-r3-rc1"><script defer src="/gate468r8.js?rev=4.6.9-r3-rc1"></script>
++<link rel="stylesheet" href="/approval-display468r10.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/loading-filters469.css?rev=4.6.9-r3-rc1"><script defer src="/loading-filters469.js?rev=4.6.9-r3-rc1"></script>
++<script defer src="/release.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui-state.js?rev=4.6.9-r3-rc1"></script><script defer src="/boot.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/cobalt-refinement.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/product-polish.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/shipping-overview.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/gate.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux10.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux11.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui452.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/operation-workspace.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui46.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/registration.css?rev=4.6.9-r3-rc1"><script defer src="/registration-ui.js?rev=4.6.9-r3-rc1"></script><script defer src="/login46.js?rev=4.6.9-r3-rc1"></script><script defer src="/route-permissions.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui46.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/ui46-pages.css?rev=4.6.9-r3-rc1&layout=2"><script defer src="/ui46-pages.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/login46.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/system46.css?rev=4.6.9-r3-rc1"><script defer src="/system46.js?rev=4.6.9-r3-rc1"></script><script defer src="/system46-pages.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/copper461.css?rev=4.6.9-r3-rc1"><script defer src="/copper461.js?rev=4.6.9-r3-rc1"></script><script defer src="/cobalt461.js?rev=4.6.9-r3-rc1"></script><script defer src="/business461.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/business461.css?rev=4.6.9-r3-rc1"><script defer src="/reports463.js?rev=4.6.9-r3-rc1"></script><script defer src="/plan-display.js?rev=4.6.9-r3-rc1"></script><script defer src="/sound467.js?rev=4.6.9-r3-rc1"></script><script defer src="/handover467.js?rev=4.6.9-r3-rc1"></script><script defer src="/next-steps467.js?rev=4.6.9-r3-rc1"></script><script defer src="/loading-detail465.js?rev=4.6.9-r3-rc1"></script><script defer src="/document-layout.js?rev=4.6.9-r3-rc1"></script><script defer src="/cobalt-map-site.js?rev=4.6.9-r3-rc1"></script><script defer src="/cobalt-map465.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui465.js?rev=4.6.9-r3-rc1"></script><script defer src="/ui463.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/ui463.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux-r4.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ux-r5.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui465.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/overview-analysis.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/ui468.css?rev=4.6.9-r3-rc1"><script defer src="/ui468.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/operations468r3.css?rev=4.6.9-r3-rc1"><script defer src="/operations468r3.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/operations468r4.css?rev=4.6.9-r3-rc1"><script defer src="/operations468r4.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/audit468r6.css?rev=4.6.9-r3-rc1"><script defer src="/audit468r6.js?rev=4.6.9-r3-rc1"></script><link rel="stylesheet" href="/v469.css?rev=4.6.9-r3-rc1">
++<link rel="stylesheet" href="/cobalt-stock469r2.css?rev=4.6.9-r3-rc1"><link rel="stylesheet" href="/permissions469r2.css?rev=4.6.9-r3-rc1"></head>
+ <body>
+ <div id="session-restore" class="session-restore" role="status">正在打开页面 / Opening page…</div><section id="login-panel" class="login-overlay" hidden><div class="login-card"><img class="login-logo" src="/assets/metorex-ruashi-logo.png" alt="METOREX · A subsidiary of the Jinchuan Group · Ruashi Mining" width="265" height="244"><h1>产品仓储管理系统</h1><div class="login-project">穆松尼项目</div><div class="login-version"><span data-i18n-key="system.version">系统版本</span><span data-no-i18n>V4.6.8</span></div><p id="login-environment"></p><form id="login-form"><label>账号<input id="login-username" autocomplete="username" required maxlength="80"></label><label>密码<input id="login-password" type="password" autocomplete="current-password" required maxlength="128"></label><p id="login-error" class="error" role="alert"></p><button class="button primary" type="submit" disabled>登录</button></form><p id="login-safety-note"></p><p class="copyright-notice" data-login data-login-copyright data-no-i18n>© 2026 唐雷 · 保留所有权利</p></div></section>
+ <aside class="sidebar">
+diff --git a/dist/registration-ui.js b/dist/registration-ui.js
+index 74b9be9..14a829a 100644
+--- a/dist/registration-ui.js
++++ b/dist/registration-ui.js
+@@ -7,7 +7,7 @@ window.RegistrationUI={
+  box.querySelector('.reg-close').onclick=box.querySelector('[data-reg-cancel]').onclick=()=>box.close();box.onclose=()=>{box.querySelector('form')?.reset();};box.showModal();box.querySelector('input').focus();for(const input of box.querySelectorAll('input[type=password]')){const row=document.createElement('div');row.className='reg-password-row';input.before(row);row.append(input);const b=document.createElement('button');b.type='button';b.className='reg-password-toggle';b.textContent=t('显示','Show');b.setAttribute('aria-label',t('显示密码','Show Password'));b.onclick=()=>{const show=input.type==='password';input.type=show?'text':'password';b.textContent=show?t('隐藏','Hide'):t('显示','Show');b.setAttribute('aria-label',show?t('隐藏密码','Hide Password'):t('显示密码','Show Password'));b.setAttribute('aria-pressed',String(show));};row.append(b);}
+  box.querySelector('form').onsubmit=async e=>{e.preventDefault();const form=e.target,d=Object.fromEntries(new FormData(form)),button=e.submitter,error=box.querySelector('#reg-error');error.textContent='';if(d.password!==d.confirm){error.textContent=t('两次密码不一致','Passwords do not match');return;}button.disabled=true;try{const {csrfToken}=await this.publicRequest('registration-token');delete d.confirm;const result=await this.publicRequest('registration-requests',{method:'POST',headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},body:JSON.stringify(d)});form.reset();box.innerHTML='<div class="reg-success"><span aria-hidden="true">✓</span><h2>'+t('注册申请已提交','Account Request Submitted')+'</h2><p>'+t('请等待管理员审批。审批通过后，使用申请时填写的账号和密码登录。','Please wait for administrator approval, then log in with the username and password you submitted.')+'</p><button type="button" class="button primary">'+t('完成','Done')+'</button></div>';box.querySelector('button').onclick=()=>box.close();box.querySelector('button').focus();}catch(err){error.textContent=I18n.language==='en'?I18n.translate(err.message,true):err.message;button.disabled=false;}};
+  },
+- install(){if(this.installed)return;this.installed=true;const draw=Accounts.drawUsers.bind(Accounts);Accounts.drawUsers=(...args)=>{const r=draw(...args),tools=document.getElementById('account-filter');if(tools&&Business.can('users:manage')){const button=document.createElement('button');button.type='button';button.id='account-registration-requests';button.className='button secondary';button.dataset.noI18n='';button.textContent=this.t('注册申请审批','Account Requests');button.onclick=()=>this.list();const create=document.getElementById('account-create');if(create)create.after(button);else tools.append(button);API.request('/users/registration-requests').then(d=>{if(button.isConnected)button.textContent=this.t('注册申请审批','Account Requests')+(d.pending?' · '+d.pending:'');}).catch(()=>{});}return r;};},
++ install(){if(this.installed)return;this.installed=true;const draw=Accounts.drawUsers.bind(Accounts);Accounts.drawUsers=(...args)=>{const r=draw(...args),tools=document.getElementById('account-filter');if(tools&&window.CurrentUser?.role_code==='admin'){const button=document.createElement('button');button.type='button';button.id='account-registration-requests';button.className='button secondary';button.dataset.noI18n='';button.textContent=this.t('注册申请审批','Account Requests');button.onclick=()=>this.list();const create=document.getElementById('account-create');if(create)create.after(button);else tools.append(button);API.request('/users/registration-requests').then(d=>{if(button.isConnected)button.textContent=this.t('注册申请审批','Account Requests')+(d.pending?' · '+d.pending:'');}).catch(()=>{});}return r;};},
+  async list(status='PENDING'){const t=this.t,h=this.escape;try{const data=await API.request('/users/registration-requests?status='+status);dialog(t('注册申请审批','Account Requests'),'<div class="reg-admin"><label>'+t('申请状态','Request Status')+'<select id="reg-list-status">'+[['PENDING','待审批','Pending'],['APPROVED','已批准','Approved'],['REJECTED','已驳回','Rejected'],['ALL','全部','All']].map(([k,z,e])=>'<option value="'+k+'"'+(k===status?' selected':'')+'>'+t(z,e)+'</option>').join('')+'</select></label><div class="reg-request-list">'+(data.items.map(r=>'<article><div><strong data-no-i18n>'+h(r.display_name)+'</strong><p data-no-i18n>'+h(r.username)+' · '+h(r.contact)+'</p><small>'+h(BusinessTime.display(r.created_at))+' · '+t(...({PENDING:['待审批','Pending'],APPROVED:['已批准','Approved'],REJECTED:['已驳回','Rejected']}[r.status]))+'</small>'+(r.review_reason?'<p data-no-i18n>'+h(r.review_reason)+'</p>':'')+'</div>'+(r.status==='PENDING'?'<button type="button" class="button primary" data-reg-review="'+r.id+'">'+t('审批','Review')+'</button>':'')+'</article>').join('')||'<p>'+t('当前筛选暂无注册申请','No requests under this filter')+'</p>')+'</div></div>');document.getElementById('reg-list-status').onchange=e=>this.list(e.target.value);document.querySelectorAll('[data-reg-review]').forEach(b=>b.onclick=()=>this.review(data.items.find(r=>r.id===b.dataset.regReview)));}catch(e){notify(e.message);}},
+  async review(r){const t=this.t,h=this.escape,o=await API.request('/users/options');dialog(t('审批注册申请','Review Account Request'),'<div class="reg-applicant"><strong data-no-i18n>'+h(r.display_name)+'</strong><span data-no-i18n>'+h(r.username)+' · '+h(r.contact)+'</span></div><form id="reg-review-form" class="reg-form"><label class="reg-wide">'+t('审批结果','Decision')+'<select name="decision"><option value="APPROVED">'+t('批准并启用账号','Approve and Activate')+'</option><option value="REJECTED">'+t('驳回申请','Reject Request')+'</option></select></label><label class="reg-wide" data-reg-grant>'+t('分配角色','Assign Role')+'<select name="role_code" required><option value="">'+t('请选择角色','Select a Role')+'</option>'+o.roles.map(x=>'<option value="'+h(x.code)+'">'+h(I18n.language==='en'?x.name_en||x.name:x.name)+'</option>').join('')+'</select></label><fieldset class="reg-wide" data-reg-grant><legend>'+t('授权数据范围','Data Access Scopes')+'</legend>'+o.projects.map(p=>'<div class="reg-scope"><label><input type="checkbox" name="project" value="'+p.id+'"><span data-no-i18n>'+h(p.name)+'</span></label><select data-reg-warehouse="'+p.id+'"><option value="">'+t('整个项目（须具备对应授权）','Entire Project (Requires Matching Access)')+'</option>'+o.warehouses.filter(w=>w.project_id===p.id).map(w=>'<option value="'+w.id+'">'+h(w.name)+'</option>').join('')+'</select></div>').join('')+'</fieldset><label class="reg-wide">'+t('审批说明（驳回必填）','Review Note (Required for Rejection)')+'<textarea name="reason" maxlength="1000" rows="3"></textarea></label><p id="reg-review-error" class="error reg-wide" role="alert"></p><div class="reg-actions reg-wide"><button type="button" class="button secondary" id="reg-review-back">'+t('返回申请列表','Back to Requests')+'</button><button class="button primary">'+t('确认审批','Confirm Review')+'</button></div></form>');const form=document.getElementById('reg-review-form');form.elements.decision.onchange=()=>{const approve=form.elements.decision.value==='APPROVED';form.querySelectorAll('[data-reg-grant]').forEach(n=>n.hidden=!approve);form.elements.role_code.required=approve;form.elements.reason.required=!approve;};document.getElementById('reg-review-back').onclick=()=>this.list();form.onsubmit=async e=>{e.preventDefault();const d=new FormData(form),decision=d.get('decision'),body={decision,reason:d.get('reason')};if(decision==='APPROVED')Object.assign(body,{role_code:d.get('role_code'),scopes:d.getAll('project').map(project_id=>({project_id,warehouse_id:form.querySelector('[data-reg-warehouse="'+project_id+'"]').value||null}))});e.submitter.disabled=true;try{await API.request('/users/registration-requests/'+r.id+'/review',{method:'POST',body});ProductContext.dirty=false;await Accounts.render();await this.list();}catch(err){document.getElementById('reg-review-error').textContent=I18n.language==='en'?I18n.translate(err.message,true):err.message;e.submitter.disabled=false;}};
+  }
+diff --git a/dist/release.js b/dist/release.js
+index 291bd2a..086cc4c 100644
+--- a/dist/release.js
++++ b/dist/release.js
+@@ -1,2 +1,2 @@
+ 'use strict';
+-globalThis.ClientRelease=Object.freeze({version:'4.6.9',displayVersion:'4.6.9-r2',revision:'4.6.9-r2'});
++globalThis.ClientRelease=Object.freeze({version:'4.6.9-r3-rc1',displayVersion:'4.6.9-r3-rc1',revision:'4.6.9-r3-rc1'});
+diff --git a/dist/sw.js b/dist/sw.js
+index eaa48ef..f2f63ba 100644
+--- a/dist/sw.js
++++ b/dist/sw.js
+@@ -1,5 +1,5 @@
+ 'use strict';
+-importScripts('/release.js?rev=4.6.9-r2');
++importScripts('/release.js?rev=4.6.9-r3-rc1');
+ const CACHE='musonoi-static-'+ClientRelease.revision;const STATIC=['/cobalt-preparation469.js','/v469.js','/v469.css','/cobalt-stock469r2.js','/cobalt-stock469r2.css','/permissions469r2.js','/permissions469r2.css','/approval-display468r10.js','/approval-display468r10.css','/loading-filters469.js','/loading-filters469.css','/gate468r8.js','/gate468r8.css','/i18n-audit468r6.js','/audit468r6.js','/audit468r6.css','/operations468r4.js','/operations468r4.css','/operations468r3.js','/operations468r3.css','/ui468.js','/ui468.css','/overview-analysis.css','/overview-analysis.js','/ui465.js','/ui465.css','/loading-detail465.js','/cobalt-map465.js','/cobalt-map-site.js','/plan-display.js','/document-layout.js','/ux-r5.css','/registration-ui.js','/registration.css','/ux-r4.css','/route-permissions.js','/cobalt461.js','/business461.js','/business461.css','/copper461.js','/copper461.css','/system46.js','/system46-pages.js','/system46.css','/login46.js','/login46.css','/assets/login-geology-v1.png','/ui46.css','/ui46.js','/ui46-pages.css','/ui46-pages.js','/operation-workspace.css','/ui452.css','/ui-state.js','/ui463.js','/ui463.css','/reports463.js','/ux11.css','/ux10.css','/gate.css','/v44.css','/cobalt-refinement.css','/product-polish.css','/shipping-overview.css','/v43.css','/v42.css','/v41.css','/v40.css','/v39.css','/v38.css','/v37.css','/v36.css','/v35.css','/interaction-completion.css','/accounts-overview.css','/product.css','/v33.css','/v34.css','/interaction-polish.css','/account-task-polish.css','/yard-workflow.css','/offline.html','/styles.css','/field.css','/stock-map.css','/assets/field-icon.svg','/assets/metorex-ruashi-logo.png','/manifest.webmanifest'];
+ self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)).then(()=>self.skipWaiting())));
+ self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('musonoi-static-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+diff --git a/package.json b/package.json
+index ef7eb0e..49f95b5 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "musonoi-product-wms",
+-  "version": "4.6.9",
++  "version": "4.6.9-r3-rc1",
+   "private": true,
+   "scripts": {
+     "start": "node scripts/start-current.cjs",
+@@ -10,7 +10,9 @@
+     "verify:integrity": "node scripts/verify-release.cjs",
+     "test:integration": "node scripts/run-release-tests.cjs integration",
+     "test:ui": "node scripts/run-release-tests.cjs ui",
+-    "test:acceptance": "node scripts/run-release-tests.cjs acceptance"
++    "test:acceptance": "node scripts/run-release-tests.cjs acceptance",
++    "test:security": "node scripts/run-release-tests.cjs security",
++    "test:security:baseline": "node --test tests/release/security-baseline.cjs"
+   },
+   "dependencies": {
+     "@fastify/cookie": "11.1.5",
+@@ -34,4 +36,4 @@
+   "devDependencies": {
+     "playwright": "1.62.1"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/scripts/run-release-tests.cjs b/scripts/run-release-tests.cjs
+index b92202a..10d265b 100644
+--- a/scripts/run-release-tests.cjs
++++ b/scripts/run-release-tests.cjs
+@@ -1,11 +1,11 @@
+ 'use strict';
+ const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
+ const root=path.resolve(__dirname,'..'),mode=process.argv[2]||'unit';
+-if(!['unit','integration','ui','acceptance'].includes(mode))throw Error('Unknown release test mode');
+-const suites=mode==='acceptance'?['unit','integration','ui']:[mode];
++if(!['unit','integration','ui','security','acceptance'].includes(mode))throw Error('Unknown release test mode');
++const suites=mode==='acceptance'?['unit','integration','security','ui']:[mode];
+ for(const suite of suites){
+- if(suite==='integration'&&(!process.env.WMS_TEST_OWNER_URL||!process.env.WMS_TEST_APP_PASSWORD))throw Error('Integration tests require WMS_TEST_OWNER_URL and WMS_TEST_APP_PASSWORD for an isolated TEST server');
+- const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs'].includes(f)):[suite==='integration'?'database.test.cjs':'ui.test.cjs'];
++ if(['integration','security'].includes(suite)&&(!process.env.WMS_TEST_OWNER_URL||!process.env.WMS_TEST_APP_PASSWORD))throw Error('Integration tests require WMS_TEST_OWNER_URL and WMS_TEST_APP_PASSWORD for an isolated TEST server');
++ const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs'].includes(f)):[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':'ui.test.cjs'];
+  const run=spawnSync(process.execPath,['--test',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
+  const output=path.join(root,'.runtime/release-tests');fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'runner-'+suite+'.json'),JSON.stringify({suite,status:run.status===0?'PASS':'FAIL',exitCode:run.status,checkedAt:new Date().toISOString()},null,2));
+  if(run.status!==0){process.exitCode=run.status||1;break;}
+diff --git a/server/account-policy.cjs b/server/account-policy.cjs
+index 4c30e3d..2402ce0 100644
+--- a/server/account-policy.cjs
++++ b/server/account-policy.cjs
+@@ -8,6 +8,6 @@ async function independent(c,req,table,id,exception=false){const r=(await c.quer
+ async function register({app,pool,permitted,csrf}){
+  await require('./roles.cjs').register({app,pool,permitted,csrf});
+  app.get('/api/v1/security/policy',{preHandler:permitted('users:manage')},()=>policy(pool));
+- app.patch('/api/v1/security/policy',{preHandler:[permitted('system:manage'),csrf]},req=>transaction(pool,async c=>{if(req.body?.production_receipt_self_review!==false)throw B.error(400,'入库自审已取消，必须由另一位授权人员审核');await c.query("UPDATE auth_policy_settings SET enabled=false WHERE key='production_receipt_self_review'");return policy(c);}));
++ app.patch('/api/v1/security/policy',{preHandler:[permitted('system:manage'),csrf]},req=>transaction(pool,async c=>{await require('./management-security.cjs').actor(c,req,'system:manage');if(req.body?.production_receipt_self_review!==false)throw B.error(400,'入库自审已取消，必须由另一位授权人员审核');await c.query("UPDATE auth_policy_settings SET enabled=false WHERE key='production_receipt_self_review'");return policy(c);}));
+ }
+ module.exports={policy,allowed,independent,pagePermissions,pagePermission,register};
+diff --git a/server/accounts.cjs b/server/accounts.cjs
+index 496a8e9..467d536 100644
+--- a/server/accounts.cjs
++++ b/server/accounts.cjs
+@@ -1,6 +1,7 @@
+ 'use strict';
+ const B=require('./business-common.cjs'),transaction=require('./account-transaction.cjs'),{hashPassword}=require('./security.cjs');
+ const roles=['admin','export_supervisor','logistics_manager','site_supervisor','logistics_office_operator','logistics_field_operator','production_operator','production_manager'];
++const S=require('./management-security.cjs');
+ const publicUser=u=>Object.fromEntries(Object.entries(u).filter(([k])=>!['password_hash'].includes(k)));
+ function body(b,keys){if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!keys.includes(k)))throw B.error(400,'账号参数无效');}
+ function password(p){if(typeof p!=='string'||p.length<12||p.length>128)throw B.error(400,'密码须为12—128字符');return hashPassword(p);}
+@@ -10,22 +11,22 @@ async function pending(c,id){return (await c.query(`SELECT
+  (SELECT count(*)::int FROM receipts WHERE status IN('DRAFT','PENDING') AND(created_by=$1 OR submitted_by=$1)) receipts,
+  (SELECT count(*)::int FROM allocations WHERE workflow_state IN('WORKING','RECTIFY','PENDING','PREPARED') AND(created_by=$1 OR submitted_by=$1)) lots,
+  (SELECT count(*)::int FROM loading_orders WHERE workflow_state IN('PENDING','READY','DEPARTED_PENDING','DEPARTED_CORRECTION') AND(created_by=$1 OR submitted_by=$1 OR departure_by=$1)) loads`,[id])).rows[0];}
+-async function actor(c,req){if(!(await c.query("SELECT 1 FROM users u JOIN role_permissions p ON p.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND p.permission_code='users:manage'",[req.user.id])).rowCount)throw B.error(403,'管理员会话或权限已失效');}
+-async function locked(c,id,req){await c.query('SELECT pg_advisory_xact_lock(21002)');await actor(c,req);const u=(await c.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[B.uuid(id)])).rows[0];if(!u)throw B.error(404,'用户不存在');return u;}
++async function actor(c,req){return S.actor(c,req,'users:manage');}
++async function locked(c,id,req){await c.query('SELECT pg_advisory_xact_lock(21002)');const authority=await actor(c,req);const u=(await c.query('SELECT * FROM users WHERE id=$1 FOR UPDATE',[B.uuid(id)])).rows[0];if(!u)throw B.error(404,'用户不存在');await S.target(c,authority,u.id);return u;}
+ async function keepAdmin(c,u,next){if(u.role_code==='admin'&&u.active&&(!next.active||next.role_code!=='admin'||next.deleted_at)&&!(await c.query("SELECT 1 FROM users WHERE id<>$1 AND role_code='admin' AND active AND deleted_at IS NULL",[u.id])).rowCount)throw B.error(409,'必须保留至少一个有效管理员');}
+ async function scopes(c,req,id,values){if(!Array.isArray(values)||!values.length||values.length>20)throw B.error(400,'至少选择一个授权数据范围');const actor=(await c.query('SELECT project_id,warehouse_id,customer_id FROM user_scopes WHERE user_id=$1',[req.user.id])).rows;for(const s of values){body(s,['project_id','warehouse_id','customer_id']);B.uuid(s.project_id);if(s.warehouse_id)B.uuid(s.warehouse_id);if(s.customer_id)B.uuid(s.customer_id);if(!actor.some(a=>a.project_id===s.project_id&&(!a.warehouse_id||a.warehouse_id===s.warehouse_id)&&(!a.customer_id||a.customer_id===s.customer_id)))throw B.error(403,'数据范围超出管理员授权');if(s.warehouse_id&&!(await c.query('SELECT 1 FROM warehouses WHERE id=$1 AND project_id=$2',[s.warehouse_id,s.project_id])).rowCount||s.customer_id&&!(await c.query('SELECT 1 FROM customers WHERE id=$1 AND project_id=$2',[s.customer_id,s.project_id])).rowCount)throw B.error(400,'数据范围无效');}
+  await c.query('DELETE FROM user_scopes WHERE user_id=$1',[id]);for(const s of values)await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id,customer_id) VALUES($1,$2,$3,$4)',[id,s.project_id,s.warehouse_id||null,s.customer_id||null]);}
+ module.exports={roles,pending,role,scopes,actor,name,password,body,register:async({app,pool,permitted,csrf})=>{
+  const admin=permitted('users:manage');
+- app.get('/api/v1/users',{preHandler:admin},async req=>{const q=req.query;if(q.status&&!['active','disabled','deleted','all'].includes(q.status))throw B.error(400,'账号状态筛选无效');return {items:(await pool.query(`SELECT u.id,u.username,u.display_name,u.role_code,u.active,u.created_at,u.last_login_at,u.deleted_at,u.deleted_by,u.deletion_reason,u.deleted_role_code,
++ app.get('/api/v1/users',{preHandler:admin},req=>S.read(pool,req,'users:manage',async(c,authority)=>{const q=req.query;if(q.status&&!['active','disabled','deleted','all'].includes(q.status))throw B.error(400,'账号状态筛选无效');return {items:(await c.query(`SELECT u.id,u.username,u.display_name,u.role_code,u.active,u.created_at,u.last_login_at,u.deleted_at,u.deleted_by,u.deletion_reason,u.deleted_role_code,
+  coalesce((SELECT json_agg(s) FROM(SELECT project_id,warehouse_id,customer_id FROM user_scopes WHERE user_id=u.id)s),'[]') scopes FROM users u
+- WHERE($1='' OR u.username ILIKE '%'||$1||'%' OR u.display_name ILIKE '%'||$1||'%') AND($2='' OR u.role_code=$2)
+- AND CASE $3 WHEN 'all' THEN true WHEN 'deleted' THEN u.deleted_at IS NOT NULL WHEN 'active' THEN u.active AND u.deleted_at IS NULL WHEN 'disabled' THEN NOT u.active AND u.deleted_at IS NULL ELSE u.deleted_at IS NULL END ORDER BY u.username`,[String(q.q||'').slice(0,80),q.role||'',q.status||''])).rows.map(require('./employee-identity.cjs').enrich)};});
+- app.get('/api/v1/users/options',{preHandler:admin},async req=>({roles:(await pool.query('SELECT * FROM roles WHERE code=ANY($1) OR NOT built_in ORDER BY name',[roles])).rows,projects:(await pool.query('SELECT DISTINCT p.* FROM projects p JOIN user_scopes s ON s.project_id=p.id WHERE s.user_id=$1',[req.user.id])).rows,warehouses:(await pool.query('SELECT w.* FROM warehouses w WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=w.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id))',[req.user.id])).rows,customers:(await pool.query('SELECT c.* FROM customers c WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=c.project_id AND(s.customer_id IS NULL OR s.customer_id=c.id))',[req.user.id])).rows}));
+- app.post('/api/v1/users',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['username','display_name','password','role_code','active','scopes']);if(b.username!==undefined&&(typeof b.username!=='string'||!/^[a-z][a-z0-9_]{2,39}$/.test(b.username))||b.active!==undefined&&typeof b.active!=='boolean')throw B.error(400,'账号参数无效');b.username||=('employee_'+require('crypto').randomUUID().replaceAll('-','').slice(0,16));await role(c,b.role_code);const display=name(b.display_name),hash=password(b.password);await c.query('SELECT pg_advisory_xact_lock(21002)');await actor(c,req);if((await c.query('SELECT 1 FROM users WHERE username=$1',[b.username])).rowCount)throw B.error(409,'用户名已存在；已删除账号请使用恢复');const u=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code,active) VALUES($1,$2,$3,$4,$5) RETURNING id,username,display_name,role_code,active',[b.username,display,hash,b.role_code,b.active!==false])).rows[0];await scopes(c,req,u.id,b.scopes);await B.audit(c,req,'user_created','users',u.id,null,{...u,scopes:b.scopes});return u;}));
+- app.patch('/api/v1/users/:id',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['display_name','role_code','active','scopes']);if(!Object.keys(b).length||b.active!==undefined&&typeof b.active!=='boolean')throw B.error(400,'账号参数无效');const u=await locked(c,req.params.id,req);if(u.deleted_at)throw B.error(409,'账号已删除，请先恢复');const next={...u,...(b.display_name!==undefined?{display_name:name(b.display_name)}:{}),...(b.role_code!==undefined?{role_code:await role(c,b.role_code)}:{}),...(b.active!==undefined?{active:b.active}:{})};if(u.id===req.user.id&&(!next.active||(u.role_code==='admin'&&next.role_code!=='admin')||b.scopes!==undefined))throw B.error(409,'不能移除自身管理员权限或数据范围');if(next.active)await role(c,next.role_code);await keepAdmin(c,u,next);if(b.scopes!==undefined)await scopes(c,req,u.id,b.scopes);await c.query('UPDATE users SET display_name=$1,role_code=$2,active=$3 WHERE id=$4',[next.display_name,next.role_code,next.active,u.id]);await c.query('DELETE FROM sessions WHERE user_id=$1',[u.id]);await B.audit(c,req,'user_updated','users',u.id,publicUser(u),{...publicUser(next),...(b.scopes?{scopes:b.scopes}:{})});return {ok:true};}));
++ WHERE ($4::boolean OR ${S.userVisible('$5')}) AND($1='' OR u.username ILIKE '%'||$1||'%' OR u.display_name ILIKE '%'||$1||'%') AND($2='' OR u.role_code=$2)
++ AND CASE $3 WHEN 'all' THEN true WHEN 'deleted' THEN u.deleted_at IS NOT NULL WHEN 'active' THEN u.active AND u.deleted_at IS NULL WHEN 'disabled' THEN NOT u.active AND u.deleted_at IS NULL ELSE u.deleted_at IS NULL END ORDER BY u.username`,[String(q.q||'').slice(0,80),q.role||'',q.status||'',S.isAdmin(authority),authority.id])).rows.map(require('./employee-identity.cjs').enrich)};}));
++ app.get('/api/v1/users/options',{preHandler:admin},req=>S.read(pool,req,'users:manage',async(c,a)=>{const all=(await c.query('SELECT * FROM roles WHERE code=ANY($1) OR NOT built_in ORDER BY name',[roles])).rows,allowed=[];for(const r of all){try{await S.grantRole(c,a,r.code);allowed.push(r);}catch(e){if(e.statusCode!==403)throw e;}}return {roles:allowed,projects:(await c.query('SELECT DISTINCT p.* FROM projects p JOIN user_scopes s ON s.project_id=p.id WHERE s.user_id=$1',[a.id])).rows,warehouses:(await c.query('SELECT w.* FROM warehouses w WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=w.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id))',[a.id])).rows,customers:(await c.query('SELECT c.* FROM customers c WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=c.project_id AND(s.customer_id IS NULL OR s.customer_id=c.id))',[a.id])).rows};}));
++ app.post('/api/v1/users',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['username','display_name','password','role_code','active','scopes']);if(b.username!==undefined&&(typeof b.username!=='string'||!/^[a-z][a-z0-9_]{2,39}$/.test(b.username))||b.active!==undefined&&typeof b.active!=='boolean')throw B.error(400,'账号参数无效');b.username||=('employee_'+require('crypto').randomUUID().replaceAll('-','').slice(0,16));await role(c,b.role_code);const display=name(b.display_name),hash=password(b.password);await c.query('SELECT pg_advisory_xact_lock(21002)');const authority=await actor(c,req);await S.grantRole(c,authority,b.role_code);if((await c.query('SELECT 1 FROM users WHERE username=$1',[b.username])).rowCount)throw B.error(409,'用户名已存在；已删除账号请使用恢复');const u=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code,active) VALUES($1,$2,$3,$4,$5) RETURNING id,username,display_name,role_code,active',[b.username,display,hash,b.role_code,b.active!==false])).rows[0];await scopes(c,req,u.id,b.scopes);await B.audit(c,req,'user_created','users',u.id,null,{...u,scopes:b.scopes});return u;}));
++ app.patch('/api/v1/users/:id',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['display_name','role_code','active','scopes']);if(!Object.keys(b).length||b.active!==undefined&&typeof b.active!=='boolean')throw B.error(400,'账号参数无效');const u=await locked(c,req.params.id,req);if(u.id===req.user.id&&b.role_code!==undefined&&b.role_code!==u.role_code&&!S.isAdmin(req.user))throw B.error(403,'不能变更自身管理角色');if(b.role_code!==undefined)await S.grantRole(c,req.user,b.role_code);if(u.deleted_at)throw B.error(409,'账号已删除，请先恢复');const next={...u,...(b.display_name!==undefined?{display_name:name(b.display_name)}:{}),...(b.role_code!==undefined?{role_code:await role(c,b.role_code)}:{}),...(b.active!==undefined?{active:b.active}:{})};if(u.id===req.user.id&&(!next.active||(u.role_code==='admin'&&next.role_code!=='admin')||b.scopes!==undefined))throw B.error(409,'不能移除自身管理员权限或数据范围');if(next.active)await role(c,next.role_code);await keepAdmin(c,u,next);if(b.scopes!==undefined)await scopes(c,req,u.id,b.scopes);await c.query('UPDATE users SET display_name=$1,role_code=$2,active=$3 WHERE id=$4',[next.display_name,next.role_code,next.active,u.id]);await c.query('DELETE FROM sessions WHERE user_id=$1',[u.id]);await B.audit(c,req,'user_updated','users',u.id,publicUser(u),{...publicUser(next),...(b.scopes?{scopes:b.scopes}:{})});return {ok:true};}));
+  app.get('/api/v1/users/:id/deletion-check',{preHandler:admin},req=>transaction(pool,async c=>{const u=await locked(c,req.params.id,req);return {user:publicUser(u),pending:await pending(c,u.id)};}));
+  app.delete('/api/v1/users/:id',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['username','employee_name','reason','acknowledge_pending']);const u=await locked(c,req.params.id,req);if(u.id===req.user.id)throw B.error(409,'不能删除当前登录账号');if(u.deleted_at)throw B.error(409,'账号已删除，请先恢复');if((b.employee_name!==undefined?![u.display_name,require('./employee-identity.cjs').englishName(u.display_name)].includes(b.employee_name):b.username!==u.username)||typeof b.reason!=='string'||!b.reason.trim()||b.reason.length>1000)throw B.error(400,'请确认用户名并填写删除原因');await keepAdmin(c,u,{...u,active:false,deleted_at:true});const tasks=await pending(c,u.id);if(Object.values(tasks).some(n=>n>0)&&b.acknowledge_pending!==true)throw B.error(409,'账号仍有关联待办，请核查并明确确认；审批历史不会转移');const after=(await c.query('UPDATE users SET active=false,deleted_at=now(),deleted_by=$1,deletion_reason=$2,deleted_role_code=role_code WHERE id=$3 RETURNING id,username,active,deleted_at,deleted_by,deletion_reason,deleted_role_code',[req.user.id,b.reason.trim(),u.id])).rows[0];await c.query('DELETE FROM sessions WHERE user_id=$1',[u.id]);await B.audit(c,req,'user_deleted','users',u.id,publicUser(u),{...after,pending:tasks});return after;}));
+- app.post('/api/v1/users/:id/restore',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['password','role_code','scopes']);const u=await locked(c,req.params.id,req);if(!u.deleted_at)throw B.error(409,'账号未删除');const hash=password(b.password),r=await role(c,b.role_code||u.deleted_role_code||u.role_code);if(b.scopes!==undefined)await scopes(c,req,u.id,b.scopes);await c.query('DELETE FROM sessions WHERE user_id=$1',[u.id]);await c.query('UPDATE users SET active=true,deleted_at=NULL,deleted_by=NULL,deletion_reason=NULL,deleted_role_code=NULL,password_hash=$1,role_code=$2 WHERE id=$3',[hash,r,u.id]);await B.audit(c,req,'user_restored','users',u.id,publicUser(u),{id:u.id,username:u.username,active:true,role_code:r,password_reset:true});return {ok:true,id:u.id};}));
++ app.post('/api/v1/users/:id/restore',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{const b=req.body;body(b,['password','role_code','scopes']);const u=await locked(c,req.params.id,req);if(!u.deleted_at)throw B.error(409,'账号未删除');const hash=password(b.password),r=await role(c,b.role_code||u.deleted_role_code||u.role_code);await S.grantRole(c,req.user,r);if(b.scopes!==undefined)await scopes(c,req,u.id,b.scopes);await c.query('DELETE FROM sessions WHERE user_id=$1',[u.id]);await c.query('UPDATE users SET active=true,deleted_at=NULL,deleted_by=NULL,deletion_reason=NULL,deleted_role_code=NULL,password_hash=$1,role_code=$2 WHERE id=$3',[hash,r,u.id]);await B.audit(c,req,'user_restored','users',u.id,publicUser(u),{id:u.id,username:u.username,active:true,role_code:r,password_reset:true});return {ok:true,id:u.id};}));
+  app.post('/api/v1/users/:id/reset-password',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{body(req.body,['password']);const u=await locked(c,req.params.id,req);if(u.deleted_at)throw B.error(409,'账号已删除，请先恢复');await c.query('UPDATE users SET password_hash=$1 WHERE id=$2',[password(req.body.password),u.id]);await c.query('DELETE FROM sessions WHERE user_id=$1',[u.id]);await B.audit(c,req,'password_reset','users',u.id,null,{username:u.username,sessions_revoked:true});return {ok:true};}));
+ }};
+diff --git a/server/app.cjs b/server/app.cjs
+index 0841481..f87acdd 100644
+--- a/server/app.cjs
++++ b/server/app.cjs
+@@ -10,16 +10,24 @@ const problem=(status,message)=>Object.assign(Error(message),{statusCode:status}
+ async function build(options={}){
+  const cfg=options.config||config();if(process.env.VERIFY_SOURCE_INTEGRITY==='1')require('./release-integrity.cjs').verify(cfg.root);const DB=require('./database-connection.cjs'),dbOptions=options.pool?null:DB.connection(cfg);if(dbOptions)await DB.network(cfg,dbOptions);const pool=options.pool||new Pool(dbOptions);
+  if(cfg.environment==='production'||cfg.db?.tier==='preproduction'){try{await DB.verify(pool,cfg);}catch(e){if(!options.pool)await pool.end();throw e;}}
++ try{const latest=(await pool.query('SELECT version,checksum FROM security_schema_status')).rows[0],required=require('./release.cjs').requiredMigration,expected=require('../db/migration-baseline.json').migrations.find(e=>e.version===required);if(!latest||latest.version!==required||latest.checksum!==expected?.checksum)throw Object.assign(Error('数据库安全迁移未就绪，请先完成维护验收'),{code:'DB_SECURITY_SCHEMA_REQUIRED'});}catch(e){if(!options.pool)await pool.end();if(e.code==='42P01')throw Object.assign(Error('数据库安全迁移未就绪，请先完成维护验收'),{code:'DB_SECURITY_SCHEMA_REQUIRED'});throw e;}
+  const poolError=e=>ServiceErrors.report(e,null,options.errorReporter);pool.on('error',poolError);
+- const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:false});
++ const Lease=require('./authorization-lease.cjs');
++ const leasePool=options.authorizationPool||(options.pool?pool:new Pool({...dbOptions,max:Math.min(dbOptions.max||10,10),application_name:'musonoi-authorization'}));
++ if(leasePool!==pool)leasePool.on('error',poolError);
++ const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:false});
++ // Separate lease and work pools prevent pool starvation when concurrent requests need both.
++ app.addHook('onRoute',route=>{const handler=route.handler;route.handler=async function(req,reply){try{return await handler.call(this,req,reply);}finally{await Lease.release(req);}};});
++ app.addHook('onError',async req=>{await Lease.release(req);});
++ app.addHook('onResponse',async req=>{await Lease.release(req);});
+  await app.register(require('@fastify/cookie'));
+  await app.register(require('@fastify/rate-limit'),{global:false});
+- app.addHook('onClose',async()=>{if(!options.pool)await pool.end();pool.removeListener('error',poolError);});
++ app.addHook('onClose',async()=>{if(!options.authorizationPool&&!options.pool)await leasePool.end();if(leasePool!==pool)leasePool.removeListener('error',poolError);if(!options.pool)await pool.end();pool.removeListener('error',poolError);});
+  app.setErrorHandler(async(e,req,reply)=>{try{await require('./v265.cjs').enrichSealError(pool,req,e);}catch{}const business=require('./v27-errors.cjs')(e,req)||require('./v265.cjs').businessError(e,req);if(req.user&&req.method!=='GET'&&/^\/api\/v1\//.test(req.url)){try{await pool.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data,request_id,outcome) VALUES($1,'operation_failed',$2,$3,$4,$5,'FAILED')",[req.user.id,req.routeOptions?.url?.split('/')[3]||'business',req.params?.id||null,{status:business?(e.statusCode||409):ServiceErrors.status(e),code:business?.code||e.code||'BUSINESS_VALIDATION_FAILED'},req.id]);}catch{}}if(business){reply.code(e.statusCode||409).send(business);return;}const status=ServiceErrors.status(e);if(status>=500){const errorId=ServiceErrors.report(e,req,options.errorReporter);reply.code(status).send({error:(status===503?'数据库或服务暂不可用，请检查本机服务；未使用演示数据替代。':'服务处理失败，请联系管理员；提交结果请查询确认。')+' 错误编号：'+errorId,errorId});}else reply.code(status).send({error:e.validation?'请求参数无效':e.message,...(['CO_WORK_INCOMPLETE','CO_LOADING_NOT_READY'].includes(e.message)?{details:e.details}:{})});});
+  app.addHook('onSend',async(req,reply,payload)=>{reply.header('Permissions-Policy','camera=(self), microphone=(), geolocation=()').header('X-Content-Type-Options','nosniff').header('Referrer-Policy','same-origin').header('Cache-Control','no-store').header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'"+(req.routeOptions.config.gatePrint?" 'unsafe-inline'":"")+"; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");if(req.user&&Buffer.isBuffer(payload)&&String(reply.getHeader('content-type')||'').includes('spreadsheetml')&&!/\/shipping\/[^/]+\/packing-list\.xlsx/.test(req.url)&&!require('./cobalt-packing.cjs').allowed(req.url.split('?')[0],'GET')&&req.url.split('?')[0]!=='/api/v1/cobalt/reports/export'&&!require('./gate-permits.cjs').download(req.url.split('?')[0]))return require('./export-language.cjs').workbook(payload,req.user.language_code);return payload;});
+  async function dbEnvironment(c=pool){const r=await c.query('SELECT environment FROM system_info WHERE singleton');if(r.rows[0]?.environment!==cfg.environment)throw Error('Database environment mismatch');}
+  async function userInfo(c,user){const role=(await c.query('SELECT name,name_en FROM roles WHERE code=$1',[user.role_code])).rows[0];return {role_name:role?.name,role_name_en:role?.name_en,...require('./employee-identity.cjs').enrich(user),permissions:(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[user.role_code])).rows.map(r=>r.permission_code)};}
+- async function auth(req){await dbEnvironment();const sid=req.cookies.musonoi_session;if(!sid)throw problem(401,'请先登录');const row=(await pool.query('SELECT u.id,u.username,u.display_name,u.role_code,u.language_code,s.csrf_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active AND u.deleted_at IS NULL',[digest(sid)])).rows[0];if(!row||!await AccountPolicy.allowed(pool,row))throw problem(401,'登录已失效，请重新登录');req.user=await userInfo(pool,row);}
++ async function auth(req){const reader=Lease.requiresLease(req)?await Lease.acquire(req,leasePool):pool;await dbEnvironment(reader);const sid=req.cookies.musonoi_session;if(!sid)throw problem(401,'请先登录');const row=(await reader.query('SELECT u.id,u.username,u.display_name,u.role_code,u.language_code,s.csrf_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active AND u.deleted_at IS NULL',[digest(sid)])).rows[0];if(!row||!await AccountPolicy.allowed(reader,row))throw problem(401,'登录已失效，请重新登录');req.user=await userInfo(reader,row);}
+  const permitted=code=>async req=>{await auth(req);if(!req.user.permissions.includes(code))throw problem(403,'当前账号没有此操作权限');};
+  async function csrf(req){if(req.headers.origin!==cfg.origin)throw problem(403,'请求来源不受信任');if(!req.user||digest(String(req.headers['x-csrf-token']||''))!==req.user.csrf_hash)throw problem(403,'安全令牌无效，请重新登录');}
+  require('./activity-people.cjs')({app,pool});
+@@ -64,7 +72,7 @@ async function build(options={}){
+  if(b.format==='csv'){const clean=x=>{let s=String(x);if(/^[\s\u0000-\u001f]*[=+@\-]/.test(s)||/^[\t\r\n]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};return reply.type('text/csv; charset=utf-8').send('\ufeff'+[headers,...matrix].map(r=>r.map(clean).join(',')).join('\r\n'));}
+  return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(await require('./warehouse-templates.cjs').inventory(rows,req.user.language_code));
+  });
+- app.get('/api/v1/audit',{preHandler:permitted('audit:read')},async req=>({items:(await pool.query('SELECT a.id,a.action,a.entity_type,a.entity_id,a.before_data,a.after_data,a.occurred_at,u.username FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE $1 OR a.actor_id=$2 ORDER BY a.id DESC LIMIT 100',[req.user.permissions.includes('audit:read'),req.user.id])).rows}));
++ app.get('/api/v1/audit',{preHandler:permitted('audit:read')},req=>require('./management-security.cjs').read(pool,req,'audit:read',async(c,a)=>({items:(await c.query('SELECT a.id,a.action,a.entity_type,a.entity_id,a.before_data,a.after_data,a.occurred_at,u.username FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE '+require('./audit-security.cjs').visible('a','$2')+' ORDER BY a.id DESC LIMIT 100',[a.id,a.role_code==='admin'])).rows})));
+  await require('./accounts.cjs').register({app,pool,permitted,csrf});
+  await require('./registration-requests.cjs')({app,pool,permitted,csrf,secure:cfg.secure,origin:cfg.origin});
+  await AccountPolicy.register({app,pool,permitted,csrf});
+diff --git a/server/audit-records.cjs b/server/audit-records.cjs
+index 56d7c46..237eb68 100644
+--- a/server/audit-records.cjs
++++ b/server/audit-records.cjs
+@@ -1,25 +1,25 @@
+ 'use strict';
+-const C=require('./control-common.cjs');
++const C=require('./control-common.cjs'),S=require('./management-security.cjs'),A=require('./audit-security.cjs');
+ module.exports=async({app,pool,permitted})=>{
+  app.get('/api/v1/v27/backups',{preHandler:permitted('system:manage')},async()=>({items:(await pool.query('SELECT * FROM backup_runs ORDER BY started_at DESC LIMIT 100')).rows,scheduleConfigured:null,scheduleNote:'Scheduling must be installed on the actual host; database records report executions, not deployment status.'}));
+- app.get('/api/v1/v27/audit',{preHandler:permitted('audit:read')},async req=>{
++ app.get('/api/v1/v27/audit',{preHandler:permitted('audit:read')},req=>S.read(pool,req,'audit:read',async(c,authority)=>{
+   const q=req.query,page=Number(q.page||1);if(!Number.isInteger(page)||page<1||page>100000)throw C.error(400,'分页参数无效');
+   for(const key of ['action','entity','search'])if(q[key]!==undefined&&(typeof q[key]!=='string'||q[key].length>160))throw C.error(400,'日志查询条件无效');
+   for(const key of ['from','to'])if(q[key]){const date=/^[1-9]\d{3}-\d{2}-\d{2}$/.test(q[key])?new Date(q[key]+'T00:00:00Z'):null;if(!date||!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==q[key])throw C.error(400,'日志日期无效');}
+   if(q.from&&q.to&&q.from>q.to)throw C.error(400,'开始日期不能晚于结束日期');
+   if(q.outcome&&!['SUCCESS','COMMITTED','FAILED'].includes(q.outcome))throw C.error(400,'日志结果筛选无效');
+-  const values=[q.action||'',q.entity||'',q.search||'',q.from||null,q.to||null,q.outcome==='SUCCESS'?'COMMITTED':q.outcome||''];
+-  const where=`($1='' OR a.action=$1) AND($2='' OR a.entity_id=$2)
+-   AND($3='' OR strpos(lower(coalesce(a.entity_id,'')||' '||coalesce(a.actor_name_snapshot,u.display_name,'')||' '||a.action||' '||coalesce(a.entity_type,'')),lower($3))>0)
+-   AND($4::date IS NULL OR a.occurred_at>=($4::date::timestamp AT TIME ZONE 'Africa/Lubumbashi'))
+-   AND($5::date IS NULL OR a.occurred_at<(($5::date+1)::timestamp AT TIME ZONE 'Africa/Lubumbashi'))
+-   AND($6='' OR coalesce(a.outcome,'COMMITTED')=$6)`;
+-  return {items:(await pool.query(`SELECT a.*,coalesce(a.actor_name_snapshot,u.display_name) actor_name,coalesce(a.actor_role_snapshot,a.actor_role) actor_role,coalesce(a.actor_role_name_snapshot,r.name) actor_role_name,coalesce(a.actor_role_name_en_snapshot,r.name_en,r.name) actor_role_name_en FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id LEFT JOIN roles r ON r.code=coalesce(a.actor_role_snapshot,a.actor_role) WHERE ${where} ORDER BY a.id DESC LIMIT 50 OFFSET $7`,[...values,(page-1)*50])).rows,
+-   total:(await pool.query(`SELECT count(*)::int n FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE ${where}`,values)).rows[0].n,page,page_size:50};
+- });
+- app.get('/api/v1/v27/audit/:id',{preHandler:permitted('audit:read')},async req=>{
++  const values=[authority.id,S.isAdmin(authority),q.action||'',q.entity||'',q.search||'',q.from||null,q.to||null,q.outcome==='SUCCESS'?'COMMITTED':q.outcome||''];
++  const where=`${A.visible('a','$2')} AND($3='' OR a.action=$3) AND($4='' OR a.entity_id=$4)
++   AND($5='' OR strpos(lower(coalesce(a.entity_id,'')||' '||coalesce(a.actor_name_snapshot,u.display_name,'')||' '||a.action||' '||coalesce(a.entity_type,'')),lower($5))>0)
++   AND($6::date IS NULL OR a.occurred_at>=($6::date::timestamp AT TIME ZONE 'Africa/Lubumbashi'))
++   AND($7::date IS NULL OR a.occurred_at<(($7::date+1)::timestamp AT TIME ZONE 'Africa/Lubumbashi'))
++   AND($8='' OR coalesce(a.outcome,'COMMITTED')=$8)`;
++  return {items:(await c.query(`SELECT a.*,coalesce(a.actor_name_snapshot,u.display_name) actor_name,coalesce(a.actor_role_snapshot,a.actor_role) actor_role,coalesce(a.actor_role_name_snapshot,r.name) actor_role_name,coalesce(a.actor_role_name_en_snapshot,r.name_en,r.name) actor_role_name_en FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id LEFT JOIN roles r ON r.code=coalesce(a.actor_role_snapshot,a.actor_role) WHERE ${where} ORDER BY a.id DESC LIMIT 50 OFFSET $9`,[...values,(page-1)*50])).rows,
++   total:(await c.query(`SELECT count(*)::int n FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE ${where}`,values)).rows[0].n,page,page_size:50};
++ }));
++ app.get('/api/v1/v27/audit/:id',{preHandler:permitted('audit:read')},req=>S.read(pool,req,'audit:read',async(c,authority)=>{
+   if(!/^[1-9]\d{0,18}$/.test(req.params.id))throw C.error(400,'审计记录编号无效');
+-  const row=(await pool.query('SELECT a.*,coalesce(a.actor_name_snapshot,u.display_name) actor_name,coalesce(a.actor_role_snapshot,a.actor_role) actor_role,coalesce(a.actor_role_name_snapshot,r.name) actor_role_name,coalesce(a.actor_role_name_en_snapshot,r.name_en,r.name) actor_role_name_en FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id LEFT JOIN roles r ON r.code=coalesce(a.actor_role_snapshot,a.actor_role) WHERE a.id=$1',[req.params.id])).rows[0];
++  const row=(await c.query('SELECT a.*,coalesce(a.actor_name_snapshot,u.display_name) actor_name,coalesce(a.actor_role_snapshot,a.actor_role) actor_role,coalesce(a.actor_role_name_snapshot,r.name) actor_role_name,coalesce(a.actor_role_name_en_snapshot,r.name_en,r.name) actor_role_name_en FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id LEFT JOIN roles r ON r.code=coalesce(a.actor_role_snapshot,a.actor_role) WHERE a.id=$3 AND '+A.visible('a','$2'),[authority.id,S.isAdmin(authority),req.params.id])).rows[0];
+   if(!row)throw C.error(404,'审计记录不存在');return row;
+- });
++ }));
+ };
+diff --git a/server/audit-security.cjs b/server/audit-security.cjs
+new file mode 100644
+index 0000000..0321d90
+--- /dev/null
++++ b/server/audit-security.cjs
+@@ -0,0 +1,12 @@
++'use strict';
++// No ownership is inferred from an actor's current assignments or an entity's current state.
++function visible(a,parameter){
++ return `(${parameter}::boolean OR (a.scope_context->>'kind'='SCOPED'
++ AND jsonb_typeof(a.scope_context->'scopes')='array' AND jsonb_array_length(a.scope_context->'scopes')>0
++ AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(a.scope_context->'scopes') event_scope
++ WHERE NOT EXISTS(SELECT 1 FROM user_scopes mine WHERE mine.user_id=$1
++ AND mine.project_id::text=event_scope->>'project_id'
++ AND(mine.warehouse_id IS NULL OR mine.warehouse_id::text=event_scope->>'warehouse_id')
++ AND(mine.customer_id IS NULL OR mine.customer_id::text=event_scope->>'customer_id')))))`;
++}
++module.exports={visible};
+diff --git a/server/authorization-lease.cjs b/server/authorization-lease.cjs
+new file mode 100644
+index 0000000..6f1cbe9
+--- /dev/null
++++ b/server/authorization-lease.cjs
+@@ -0,0 +1,8 @@
++'use strict';
++function requiresLease(req){return !['GET','HEAD','OPTIONS'].includes(req.method)&&!/^\/api\/v1\/(?:users(?:\/|$)|security\/(?:roles|policy)(?:\/|$)|me\/language(?:\/|$))/.test(req.url.split('?')[0]);}
++async function acquire(req,pool){
++ if(req.authorizationLease)return req.authorizationLease;
++ const c=await pool.connect();try{await c.query('BEGIN READ ONLY');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');req.authorizationLease=c;return c;}catch(e){await c.query('ROLLBACK').catch(()=>{});c.release();throw e;}
++}
++async function release(req){const c=req.authorizationLease;if(!c)return;req.authorizationLease=null;try{await c.query('ROLLBACK');}finally{c.release();}}
++module.exports={requiresLease,acquire,release};
+diff --git a/server/business-common.cjs b/server/business-common.cjs
+index 8741132..e1f0f58 100644
+--- a/server/business-common.cjs
++++ b/server/business-common.cjs
+@@ -9,8 +9,8 @@ function weight(v){if(typeof v!=='string'||!/^\d{1,8}(\.\d{1,4})?$/.test(v)||!/[
+ const canonical=v=>JSON.stringify(v&&typeof v==='object'?(Array.isArray(v)?v.map(x=>JSON.parse(canonical(x))):Object.fromEntries(Object.keys(v).sort().map(k=>[k,JSON.parse(canonical(v[k]))]))):v??null);
+ async function audit(c,req,action,type,id,before,after){await c.query('INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,before_data,after_data,request_id) VALUES($1,$2,$3,$4,$5,$6,$7)',[req.user.id,action,type,id,before||null,after||null,req.id]);}
+ async function scope(c,req,project,warehouse=null,customer=null,full=false){uuid(project);if(customer&&!/^\/api\/v1\/(?:users|security|audit|v27\/(?:audit|backups))(?:\/|$)/.test(req.url||'')){const co=(req.url||'').startsWith('/api/v1/cobalt/'),table=co?'co_customer_profiles':'copper_customers';if(!(await c.query('SELECT 1 FROM '+table+' WHERE id=$1 AND project_id=$2',[customer,project])).rowCount)throw error(403,'客户不属于当前产品或项目');}const r=await c.query(`SELECT 1 FROM user_scopes WHERE user_id=$1 AND project_id=$2 AND ${full?'warehouse_id IS NULL AND customer_id IS NULL':'(warehouse_id IS NULL OR warehouse_id=$3) AND (customer_id IS NULL OR customer_id=$4)'}` ,full?[req.user.id,project]:[req.user.id,project,warehouse,customer]);if(!r.rowCount)throw error(403,'对象不在授权项目、仓库或客户范围内');}
+-async function mutate(pool,req,fn){const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw error(400,'必须提供 Idempotency-Key（8–128字符）');
+- const route=req.method+' '+req.url.split('?')[0],hash=createHash('sha256').update(canonical(req.body)).digest('hex');const c=await pool.connect();try{await c.query('BEGIN');await c.query('SELECT v24_revision()');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'同一幂等键不能用于不同请求内容');await c.query('COMMIT');return old.response;}
++async function mutate(pool,req,fn,{exclusiveAuthorization=false}={}){const key=req.headers['idempotency-key'];if(typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw error(400,'必须提供 Idempotency-Key（8–128字符）');
++ const route=req.method+' '+req.url.split('?')[0],hash=createHash('sha256').update(canonical(req.body)).digest('hex');const c=await pool.connect();try{await c.query('BEGIN');if(exclusiveAuthorization){await c.query('SELECT pg_advisory_xact_lock(21002)');await require('./management-security.cjs').actor(c,req,null);}await c.query('SELECT v24_revision()');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'同一幂等键不能用于不同请求内容');await c.query('COMMIT');return old.response;}
+  const result=await fn(c);await c.query('INSERT INTO idempotency_requests VALUES($1,$2,$3,$4,$5,now())',[req.user.id,route,key,hash,result]);await c.query('COMMIT');return result;
+  }catch(e){await c.query('ROLLBACK');if(require('./v265.cjs').businessError(e,req)){e.statusCode=e.statusCode||409;throw e;}if(['23505','23503','23514','40001','40P01'].includes(e.code))throw error(409,'数据重复、已占用或状态冲突：'+(e.code==='23514'?e.message:'请刷新后重试'));throw e;}finally{c.release();}}
+ module.exports={error,text,uuid,version,date,weight,audit,scope,mutate};
+diff --git a/server/management-security.cjs b/server/management-security.cjs
+new file mode 100644
+index 0000000..c5a6250
+--- /dev/null
++++ b/server/management-security.cjs
+@@ -0,0 +1,37 @@
++'use strict';
++const B=require('./business-common.cjs'),{digest}=require('./security.cjs');
++const isAdmin=a=>a.role_code==='admin';
++const builtIn=r=>r.built_in||require('./role-catalog.cjs').builtins.includes(r.code);
++async function actor(c,req,permission){
++ const sid=req.cookies?.musonoi_session;
++ const a=sid&&(await c.query('SELECT u.id,u.role_code,s.csrf_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active AND u.deleted_at IS NULL',[digest(sid)])).rows[0];
++ if(!a||a.id!==req.user?.id)throw B.error(401,'登录已失效，请重新登录');
++ a.permissions=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[a.role_code])).rows.map(r=>r.permission_code);
++ if(permission&&!a.permissions.includes(permission))throw B.error(403,'管理授权已失效');
++ if(!['GET','HEAD','OPTIONS'].includes(req.method)&&digest(String(req.headers['x-csrf-token']||''))!==a.csrf_hash)throw B.error(403,'安全令牌已失效，请重新登录');
++ req.user={...req.user,...a};return a;
++}
++async function read(pool,req,permission,fn){const c=await pool.connect();try{await c.query('BEGIN READ ONLY');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');const a=await actor(c,req,permission),result=await fn(c,a);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
++// Whole-target containment: overlap with one scope is insufficient for an account with several scopes.
++function userVisible(parameter='$1',alias='u'){
++ return `(${alias}.role_code<>'admin' AND coalesce(${alias}.deleted_role_code,'')<>'admin'
++ AND NOT EXISTS(SELECT 1 FROM role_permissions higher WHERE higher.role_code=${alias}.role_code AND NOT EXISTS(SELECT 1 FROM users me JOIN role_permissions own ON own.role_code=me.role_code WHERE me.id=${parameter} AND own.permission_code=higher.permission_code))
++ AND EXISTS(SELECT 1 FROM user_scopes target WHERE target.user_id=${alias}.id)
++ AND NOT EXISTS(SELECT 1 FROM user_scopes target WHERE target.user_id=${alias}.id AND NOT EXISTS(SELECT 1 FROM user_scopes own WHERE own.user_id=${parameter} AND own.project_id=target.project_id AND(own.warehouse_id IS NULL OR own.warehouse_id=target.warehouse_id) AND(own.customer_id IS NULL OR own.customer_id=target.customer_id))))`;
++}
++async function target(c,a,id){if(isAdmin(a))return;const r=await c.query(`SELECT 1 FROM users u WHERE u.id=$2 AND ${userVisible('$1')}`,[a.id,id]);if(!r.rowCount)throw B.error(404,'账号不存在或不在可管理范围内');}
++async function grantRole(c,a,code){
++ const role=await require('./role-catalog.cjs').valid(c,code);if(!role)throw B.error(400,'请选择有效角色');
++ if(!isAdmin(a)){if(code==='admin')throw B.error(403,'仅系统管理员可分配管理员角色');if(builtIn(role)&&code!==a.role_code)throw B.error(403,'不同内置岗位须由系统管理员分配');const permissions=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[code])).rows.map(r=>r.permission_code);if(permissions.some(p=>!a.permissions.includes(p)))throw B.error(403,'角色权限超出本人授权上限');}
++ return role;
++}
++function grantPermissions(a,permissions){if(!isAdmin(a)&&permissions.some(p=>!a.permissions.includes(p)))throw B.error(403,'不能授予超出本人授权上限的权限');}
++async function manageRole(c,a,role){
++ if(isAdmin(a))return;
++ if(builtIn(role)||role.code===a.role_code)throw B.error(403,'受限管理人员不能修改内置岗位或自身角色');
++ await grantRole(c,a,role.code);
++ if((await c.query(`SELECT 1 FROM users u WHERE u.role_code=$2 AND NOT ${userVisible('$1')} LIMIT 1`,[a.id,role.code])).rowCount)throw B.error(403,'该角色存在超出本人管理范围的账号');
++}
++function systemAdministrator(a){if(!isAdmin(a))throw B.error(403,'此操作仅限系统管理员');}
++async function visibleRoles(c,a,rows){if(isAdmin(a))return rows;const result=[];for(const r of rows){try{await manageRole(c,a,r);result.push(r);}catch(e){if(e.statusCode!==403)throw e;}}return result;}
++module.exports={actor,read,isAdmin,builtIn,userVisible,target,grantRole,grantPermissions,manageRole,systemAdministrator,visibleRoles};
+diff --git a/server/preferences.cjs b/server/preferences.cjs
+index e96b52e..90aa1ee 100644
+--- a/server/preferences.cjs
++++ b/server/preferences.cjs
+@@ -1,5 +1,5 @@
+ 'use strict';
+ const B=require('./business-common.cjs');
+ module.exports=async({app,pool,auth,csrf})=>{
+- app.post('/api/v1/me/language',{preHandler:[auth,csrf]},req=>B.mutate(pool,req,async c=>{const language=req.body?.language;if(!['zh-CN','en'].includes(language))throw B.error(400,'不支持此语言');await c.query('UPDATE users SET language_code=$1 WHERE id=$2',[language,req.user.id]);await B.audit(c,req,'language_preference','users',req.user.id,null,{language});return {language};}));
++ app.post('/api/v1/me/language',{preHandler:[auth,csrf]},req=>B.mutate(pool,req,async c=>{const language=req.body?.language;if(!['zh-CN','en'].includes(language))throw B.error(400,'不支持此语言');await c.query('UPDATE users SET language_code=$1 WHERE id=$2',[language,req.user.id]);await B.audit(c,req,'language_preference','users',req.user.id,null,{language});return {language};},{exclusiveAuthorization:true}));
+ };
+diff --git a/server/registration-requests.cjs b/server/registration-requests.cjs
+index 7743a0c..9aa09f3 100644
+--- a/server/registration-requests.cjs
++++ b/server/registration-requests.cjs
+@@ -1,5 +1,6 @@
+ 'use strict';
+ const B=require('./business-common.cjs'),A=require('./accounts.cjs'),transaction=require('./account-transaction.cjs'),{token,digest}=require('./security.cjs');
++const S=require('./management-security.cjs');
+ module.exports=async({app,pool,permitted,csrf,secure,origin})=>{
+  const admin=permitted('users:manage'),publicFields='id,username,display_name,contact,status,created_at,reviewed_at,review_reason,approved_user_id';
+  app.get('/api/v1/auth/registration-token',{config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async(req,reply)=>{const value=token();reply.setCookie('musonoi_registration_csrf',value,{path:'/api/v1/auth/registration-requests',httpOnly:true,sameSite:'strict',secure,maxAge:1800});return{csrfToken:value};});
+@@ -8,9 +9,9 @@ module.exports=async({app,pool,permitted,csrf,secure,origin})=>{
+   const b=req.body,display=A.name(b.display_name),contact=b.contact.trim();if(!contact)throw B.error(400,'请填写联系方式');const hash=A.password(b.password);
+   return transaction(pool,async c=>{if((await c.query('SELECT 1 FROM users WHERE username=$1',[b.username])).rowCount)throw B.error(409,'该账号已存在，请使用其他账号或联系管理员');if((await c.query("SELECT 1 FROM registration_requests WHERE username=$1 AND status='PENDING'",[b.username])).rowCount)throw B.error(409,'该账号已有待审批申请，请勿重复提交');const r=(await c.query('INSERT INTO registration_requests(username,display_name,password_hash,contact) VALUES($1,$2,$3,$4) RETURNING id,status,created_at',[b.username,display,hash,contact])).rows[0];reply.code(201);return r;});
+  });
+- app.get('/api/v1/users/registration-requests',{preHandler:admin},async req=>{const status=req.query.status||'PENDING';if(!['PENDING','APPROVED','REJECTED','ALL'].includes(status))throw B.error(400,'申请状态筛选无效');return{items:(await pool.query('SELECT '+publicFields+' FROM registration_requests WHERE ($1=\'ALL\' OR status=$1) ORDER BY created_at DESC LIMIT 200',[status])).rows,pending:(await pool.query("SELECT count(*)::int n FROM registration_requests WHERE status='PENDING'")).rows[0].n};});
++ app.get('/api/v1/users/registration-requests',{preHandler:admin},req=>S.read(pool,req,'users:manage',async(c,a)=>{S.systemAdministrator(a);const status=req.query.status||'PENDING';if(!['PENDING','APPROVED','REJECTED','ALL'].includes(status))throw B.error(400,'申请状态筛选无效');return{items:(await c.query('SELECT '+publicFields+' FROM registration_requests WHERE ($1=\'ALL\' OR status=$1) ORDER BY created_at DESC LIMIT 200',[status])).rows,pending:(await c.query("SELECT count(*)::int n FROM registration_requests WHERE status='PENDING'")).rows[0].n};}));
+  app.post('/api/v1/users/registration-requests/:id/review',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{
+-  A.body(req.body,['decision','role_code','scopes','reason']);const b=req.body;if(!['APPROVED','REJECTED'].includes(b.decision)||b.reason!==undefined&&(typeof b.reason!=='string'||b.reason.length>1000))throw B.error(400,'申请审批参数无效');await A.actor(c,req);const r=(await c.query('SELECT * FROM registration_requests WHERE id=$1 FOR UPDATE',[B.uuid(req.params.id)])).rows[0];if(!r)throw B.error(404,'注册申请不存在');if(r.status!=='PENDING')throw B.error(409,'该注册申请已审批，请刷新列表');let userId=null;
++  A.body(req.body,['decision','role_code','scopes','reason']);const b=req.body;if(!['APPROVED','REJECTED'].includes(b.decision)||b.reason!==undefined&&(typeof b.reason!=='string'||b.reason.length>1000))throw B.error(400,'申请审批参数无效');S.systemAdministrator(await A.actor(c,req));const r=(await c.query('SELECT * FROM registration_requests WHERE id=$1 FOR UPDATE',[B.uuid(req.params.id)])).rows[0];if(!r)throw B.error(404,'注册申请不存在');if(r.status!=='PENDING')throw B.error(409,'该注册申请已审批，请刷新列表');let userId=null;
+   if(b.decision==='APPROVED'){await A.role(c,b.role_code);if((await c.query('SELECT 1 FROM users WHERE username=$1',[r.username])).rowCount)throw B.error(409,'该账号已存在，未重复创建');userId=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code,active) VALUES($1,$2,$3,$4,true) RETURNING id',[r.username,r.display_name,r.password_hash,b.role_code])).rows[0].id;await A.scopes(c,req,userId,b.scopes);await B.audit(c,req,'user_created','users',userId,null,{username:r.username,display_name:r.display_name,role_code:b.role_code,scopes:b.scopes,registration_request_id:r.id});}
+   else if(!b.reason?.trim())throw B.error(400,'驳回申请须填写原因');
+   const updated=(await c.query('UPDATE registration_requests SET status=$1,reviewed_at=now(),reviewed_by=$2,review_reason=$3,approved_user_id=$4 WHERE id=$5 RETURNING '+publicFields,[b.decision,req.user.id,b.reason?.trim()||null,userId,r.id])).rows[0];await B.audit(c,req,'registration_'+b.decision.toLowerCase(),'registration_requests',r.id,{status:r.status},{status:updated.status,approved_user_id:userId,reason:updated.review_reason});return updated;
+diff --git a/server/release.cjs b/server/release.cjs
+index 69c4477..7fc0a71 100644
+--- a/server/release.cjs
++++ b/server/release.cjs
+@@ -1,3 +1,3 @@
+ 'use strict';
+ const version=require('../package.json').version;
+-module.exports=Object.freeze({version,displayVersion:version+'-r2',frontendRevision:version+'-r2',requiredMigration:'172_v469_configurable_admin_business_permissions.sql'});
++module.exports=Object.freeze({version,displayVersion:version,frontendRevision:version,requiredMigration:'173_r3_security_scope_and_sessions.sql'});
+diff --git a/server/roles.cjs b/server/roles.cjs
+index 3dd15b1..d85f2b1 100644
+--- a/server/roles.cjs
++++ b/server/roles.cjs
+@@ -1,12 +1,13 @@
+ 'use strict';
+ const B=require('./business-common.cjs'),transaction=require('./account-transaction.cjs'),R=require('./role-catalog.cjs'),P=require('./workflow-permissions.cjs');
++const S=require('./management-security.cjs');
+ function names(b){const name=typeof b.name==='string'?b.name.trim():'',name_en=typeof b.name_en==='string'?b.name_en.trim():'';if(!name||name.length>80||name_en.length>120||/[\x00-\x1f]/.test(name+name_en))throw B.error(400,'请输入有效角色名称');return {name,name_en:name_en||require('./employee-identity.cjs').englishName(name)};}
+-async function actor(c,req){if(!(await c.query("SELECT 1 FROM users u JOIN role_permissions p ON p.role_code=u.role_code WHERE u.id=$1 AND u.active AND u.deleted_at IS NULL AND p.permission_code='roles:manage'",[req.user.id])).rowCount)throw B.error(403,'角色管理授权已失效');}
++async function actor(c,req){return S.actor(c,req,'roles:manage');}
+ async function selected(c,values,roleCode){const all=(await c.query('SELECT code FROM permissions ORDER BY code')).rows.map(r=>r.code);if(!Array.isArray(values)||values.some(v=>!all.includes(v)||!P.active(v)||roleCode&&!P.assignable(roleCode,v))||new Set(values).size!==values.length)throw B.error(400,'角色权限无效');return {all,permissions:R.expand(values)};}
+ async function register({app,pool,permitted,csrf}){
+  // Counts include assigned, non-deleted accounts. Scope names are restricted to
+  // the viewing administrator's own data scope; this does not grant new rights.
+- app.get('/api/v1/security/roles',{preHandler:permitted('roles:manage')},async req=>({catalog:{legacy:P.retired,dependencies:R.deps,presets:R.presets,workflow:P.catalog},items:(await pool.query(`SELECT r.*,
++ app.get('/api/v1/security/roles',{preHandler:permitted('roles:manage')},req=>S.read(pool,req,'roles:manage',async(c,authority)=>({catalog:{legacy:P.retired,dependencies:R.deps,presets:R.presets,workflow:P.catalog},items:(await S.visibleRoles(c,authority,(await c.query(`SELECT r.*,
+  ARRAY(SELECT code FROM permissions ORDER BY code) caps,
+  ARRAY(SELECT permission_code FROM role_permission_caps WHERE role_code=r.code ORDER BY permission_code) recommended_permissions,
+  ARRAY(SELECT permission_code FROM role_permissions WHERE role_code=r.code ORDER BY permission_code) permissions,
+@@ -21,9 +22,9 @@ async function register({app,pool,permitted,csrf}){
+  AND(a.warehouse_id IS NULL OR a.warehouse_id=s.warehouse_id)
+  AND(a.customer_id IS NULL OR a.customer_id=s.customer_id))
+  GROUP BY p.name,w.name,(s.customer_id IS NOT NULL) ORDER BY p.name,w.name)x),'[]') scope_summary
+- FROM roles r WHERE code=ANY($1) OR NOT built_in ORDER BY built_in DESC,name`,[R.builtins,req.user.id])).rows.map(r=>P.present(r))}));
+- app.post('/api/v1/security/roles',{preHandler:[permitted('roles:manage'),csrf]},req=>transaction(pool,async c=>{await actor(c,req);const b=req.body||{},n=names(b);if((await c.query('SELECT 1 FROM roles WHERE lower(name)=lower($1)',[n.name])).rowCount)throw B.error(409,'角色名称已存在');let ps=b.permissions||[],recommended=[];if(b.copy_from){const source=await R.valid(c,b.copy_from);if(!source)throw B.error(400,'复制来源角色无效');ps=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[source.code])).rows.map(r=>r.permission_code);recommended=(await c.query('SELECT permission_code FROM role_permission_caps WHERE role_code=$1',[source.code])).rows.map(r=>r.permission_code);}else if(b.preset){const preset=R.presets[b.preset];if(!preset)throw B.error(400,'岗位模板无效');ps=preset.permissions;recommended=ps;}if(b.copy_from||b.preset)ps=ps.filter(p=>P.assignable('custom',p));const {permissions}=await selected(c,ps,'custom'),code='custom_'+require('crypto').randomUUID().replaceAll('-','').slice(0,16),r=(await c.query('INSERT INTO roles(code,name,name_en,built_in,created_by,created_at) VALUES($1,$2,$3,false,$4,now()) RETURNING *',[code,n.name,n.name_en,req.user.id])).rows[0];for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2)',[code,p]);for(const p of recommended)await c.query('INSERT INTO role_permission_caps VALUES($1,$2)',[code,p]);await B.audit(c,req,'role_created','roles',code,null,{...r,permissions});return {...r,permissions,warnings:R.warnings(permissions,recommended)};}));
+- app.patch('/api/v1/security/roles/:code',{preHandler:[permitted('roles:manage'),csrf]},req=>transaction(pool,async c=>{await actor(c,req);const old=await R.valid(c,req.params.code);if(!old)throw B.error(404,'角色不存在');if(old.built_in)throw B.error(409,'内置岗位名称保留，请新增自定义角色');if(old.version!==B.version(req.body?.version))throw B.error(409,'角色已变化，请刷新');const n=names(req.body);if((await c.query('SELECT 1 FROM roles WHERE code<>$1 AND lower(name)=lower($2)',[old.code,n.name])).rowCount)throw B.error(409,'角色名称已存在');const row=(await c.query('UPDATE roles SET name=$1,name_en=$2,version=version+1 WHERE code=$3 RETURNING *',[n.name,n.name_en,old.code])).rows[0];await B.audit(c,req,'role_renamed','roles',old.code,old,row);return row;}));
+- app.put('/api/v1/security/roles/:code',{preHandler:[permitted('roles:manage'),csrf]},req=>transaction(pool,async c=>{await actor(c,req);const code=req.params.code,r=await R.valid(c,code);if(!r)throw B.error(400,'角色无效');const {all,permissions}=await selected(c,req.body?.permissions,code);if(code==='admin'&&['users:manage','roles:manage'].some(p=>!permissions.includes(p)))throw B.error(400,'系统管理员保留账户与权限管理能力');if(r.version!==B.version(req.body?.version))throw B.error(409,'角色权限已变化，请刷新');const before=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1 ORDER BY permission_code',[code])).rows.map(x=>x.permission_code),recommended=(await c.query('SELECT permission_code FROM role_permission_caps WHERE role_code=$1',[code])).rows.map(x=>x.permission_code);await c.query('DELETE FROM role_permissions WHERE role_code=$1 AND NOT(permission_code=ANY($2::text[]))',[code,permissions]);for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2) ON CONFLICT DO NOTHING',[code,p]);await c.query('UPDATE roles SET version=version+1 WHERE code=$1',[code]);await c.query('DELETE FROM sessions WHERE user_id IN(SELECT id FROM users WHERE role_code=$1)',[code]);await B.audit(c,req,'role_permissions_changed','roles',code,{permissions:before,version:r.version},{permissions,version:r.version+1});return {ok:true,permissions,version:r.version+1,warnings:R.warnings(permissions,recommended)};}));
++ FROM roles r WHERE code=ANY($1) OR NOT built_in ORDER BY built_in DESC,name`,[R.builtins,req.user.id])).rows)).map(r=>P.present({...r,built_in:S.builtIn(r),caps:S.isAdmin(authority)?r.caps:r.caps.filter(p=>authority.permissions.includes(p))}))})));
++ app.post('/api/v1/security/roles',{preHandler:[permitted('roles:manage'),csrf]},req=>transaction(pool,async c=>{const authority=await actor(c,req);const b=req.body||{},n=names(b);if((await c.query('SELECT 1 FROM roles WHERE lower(name)=lower($1)',[n.name])).rowCount)throw B.error(409,'角色名称已存在');let ps=b.permissions||[],recommended=[];if(b.copy_from){const source=await R.valid(c,b.copy_from);if(!source)throw B.error(400,'复制来源角色无效');ps=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[source.code])).rows.map(r=>r.permission_code);recommended=(await c.query('SELECT permission_code FROM role_permission_caps WHERE role_code=$1',[source.code])).rows.map(r=>r.permission_code);}else if(b.preset){const preset=R.presets[b.preset];if(!preset)throw B.error(400,'岗位模板无效');ps=preset.permissions;recommended=ps;}if(b.copy_from||b.preset)ps=ps.filter(p=>P.assignable('custom',p));const {permissions}=await selected(c,ps,'custom');S.grantPermissions(authority,permissions);const code='custom_'+require('crypto').randomUUID().replaceAll('-','').slice(0,16),r=(await c.query('INSERT INTO roles(code,name,name_en,built_in,created_by,created_at) VALUES($1,$2,$3,false,$4,now()) RETURNING *',[code,n.name,n.name_en,req.user.id])).rows[0];for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2)',[code,p]);for(const p of recommended)await c.query('INSERT INTO role_permission_caps VALUES($1,$2)',[code,p]);await B.audit(c,req,'role_created','roles',code,null,{...r,permissions});return {...r,permissions,warnings:R.warnings(permissions,recommended)};}));
++ app.patch('/api/v1/security/roles/:code',{preHandler:[permitted('roles:manage'),csrf]},req=>transaction(pool,async c=>{const authority=await actor(c,req);const old=await R.valid(c,req.params.code);if(!old)throw B.error(404,'角色不存在');await S.manageRole(c,authority,old);if(S.builtIn(old))throw B.error(409,'内置岗位名称保留，请新增自定义角色');if(old.version!==B.version(req.body?.version))throw B.error(409,'角色已变化，请刷新');const n=names(req.body);if((await c.query('SELECT 1 FROM roles WHERE code<>$1 AND lower(name)=lower($2)',[old.code,n.name])).rowCount)throw B.error(409,'角色名称已存在');const row=(await c.query('UPDATE roles SET name=$1,name_en=$2,version=version+1 WHERE code=$3 RETURNING *',[n.name,n.name_en,old.code])).rows[0];await B.audit(c,req,'role_renamed','roles',old.code,old,row);return row;}));
++ app.put('/api/v1/security/roles/:code',{preHandler:[permitted('roles:manage'),csrf]},req=>transaction(pool,async c=>{const authority=await actor(c,req);const code=req.params.code,r=await R.valid(c,code);if(!r)throw B.error(400,'角色无效');await S.manageRole(c,authority,r);const {all,permissions}=await selected(c,req.body?.permissions,code);S.grantPermissions(authority,permissions);if(code==='admin'&&['users:manage','roles:manage'].some(p=>!permissions.includes(p)))throw B.error(400,'系统管理员保留账户与权限管理能力');if(r.version!==B.version(req.body?.version))throw B.error(409,'角色权限已变化，请刷新');const before=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1 ORDER BY permission_code',[code])).rows.map(x=>x.permission_code),recommended=(await c.query('SELECT permission_code FROM role_permission_caps WHERE role_code=$1',[code])).rows.map(x=>x.permission_code);await c.query('DELETE FROM role_permissions WHERE role_code=$1 AND NOT(permission_code=ANY($2::text[]))',[code,permissions]);for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2) ON CONFLICT DO NOTHING',[code,p]);await c.query('UPDATE roles SET version=version+1 WHERE code=$1',[code]);await c.query('DELETE FROM sessions WHERE user_id IN(SELECT id FROM users WHERE role_code=$1)',[code]);await B.audit(c,req,'role_permissions_changed','roles',code,{permissions:before,version:r.version},{permissions,version:r.version+1});return {ok:true,permissions,version:r.version+1,warnings:R.warnings(permissions,recommended)};}));
+ }
+ module.exports={register};
+diff --git a/tests/release/database.test.cjs b/tests/release/database.test.cjs
+index e9b87dc..cf053e7 100644
+--- a/tests/release/database.test.cjs
++++ b/tests/release/database.test.cjs
+@@ -4,9 +4,9 @@ test('isolated migration, initialization, business permission and concurrency ac
+  const open=[];let app,failed=false;const check=async(name,fn)=>t.test(name,async()=>{try{await fn();}catch(e){failed=true;throw e;}});const connect=async()=>{const d=await E.database();open.push(d.client);return d;},chain=Chain.load(),appPassword=process.env.WMS_TEST_APP_PASSWORD;
+  try{
+  const production=await connect();
+- await check('empty schema dry-run rolls back every table; 172 apply, repeat and backup precondition',async()=>{
+-  let r=await migrate(production.client,{environment:'production',appPassword});assert.equal(r.added,172);assert.equal((await production.client.query("SELECT to_regclass('public.schema_migrations') value")).rows[0].value,null);
+-  r=await migrate(production.client,{environment:'production',apply:true,appPassword});assert.equal(r.added,172);await assert.rejects(()=>migrate(production.client,{environment:'production',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});assert.equal((await migrate(production.client,{environment:'production',apply:true,backupVerified:true})).added,0);
++ await check('empty schema dry-run rolls back every table; release apply, repeat and backup precondition',async()=>{
++  let r=await migrate(production.client,{environment:'production',appPassword});assert.equal(r.added,173);assert.equal((await production.client.query("SELECT to_regclass('public.schema_migrations') value")).rows[0].value,null);
++  r=await migrate(production.client,{environment:'production',apply:true,appPassword});assert.equal(r.added,173);await assert.rejects(()=>migrate(production.client,{environment:'production',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});assert.equal((await migrate(production.client,{environment:'production',apply:true,backupVerified:true})).added,0);
+  });
+  await check('bootstrap requires reviewed map, verified backup; dry-run/apply/retry preserve identities',async()=>{
+   const c=production.client,sourceHash=crypto.createHash('sha256').update('SYNTHETIC TEST GEOMETRY ONLY').digest('hex'),plan={admin:{username:'audit_bootstrap',displayName:'Synthetic bootstrap admin',language:'zh-CN'},project:{code:'AUDIT',name:'Synthetic audit project'},warehouse:{code:'AUDIT',name:'Synthetic audit warehouse'},formalCells:['P1-01'],mapSourceSha256:sourceHash},password=crypto.randomBytes(24).toString('base64url');
+@@ -17,19 +17,19 @@ test('isolated migration, initialization, business permission and concurrency ac
+  });
+  const old=await connect();
+  await check('138-entry old schema upgrades incrementally; database holes and checksum changes are rejected',async()=>{
+-  const c=old.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,138))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,34);const first=chain[0];await c.query('DELETE FROM schema_migrations WHERE version=$1',[first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_DATABASE_HISTORY_GAP'});await c.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[first.version,first.checksum]);await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',['0'.repeat(64),first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_CHECKSUM_CHANGED'});await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',[first.checksum,first.version]);
++  const c=old.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,138))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,35);const first=chain[0];await c.query('DELETE FROM schema_migrations WHERE version=$1',[first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_DATABASE_HISTORY_GAP'});await c.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[first.version,first.checksum]);await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',['0'.repeat(64),first.version]);await assert.rejects(()=>migrate(c,{environment:'test'}),{code:'MIGRATION_CHECKSUM_CHANGED'});await c.query('UPDATE schema_migrations SET checksum=$1 WHERE version=$2',[first.checksum,first.version]);
+  });
+  await check('preproduction CLI dry-run and confirmed apply use the same verified migration chain',async()=>{
+   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
+  });
+  const guard=await connect();
+  await check('172 refuses a drifted prerequisite function, rolls back, then applies once with exact snapshots',async()=>{
+-  const c=guard.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,-1))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");const prior=require('./fixtures/172-functions.json').before.find(f=>f.name==='ux10_plan_submission');await c.query(prior.definition.replace('BEGIN','BEGIN\n-- synthetic drift'));
+-  await assert.rejects(()=>migrate(c,{environment:'test',apply:true,backupVerified:true}),{code:'MIGRATION_172_FUNCTION_BASELINE_MISMATCH'});assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,171);await c.query(prior.definition);assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,1);await Chain.guard172(c,'after');
++  const c=guard.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,chain.findIndex(e=>e.version.startsWith('172_'))))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");const prior=require('./fixtures/172-functions.json').before.find(f=>f.name==='ux10_plan_submission');await c.query(prior.definition.replace('BEGIN','BEGIN\n-- synthetic drift'));
++  await assert.rejects(()=>migrate(c,{environment:'test',apply:true,backupVerified:true}),{code:'MIGRATION_172_FUNCTION_BASELINE_MISMATCH'});assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,171);await c.query(prior.definition);assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true} )).added,2);await Chain.guard172(c,'after');
+  });
+  const business=await connect();
+  await check('concurrent migrations serialize: exactly one applies, the other is an idempotent retry',async()=>{
+-  const second=new Client(E.options(business.name));open.push(second);await second.connect();const results=await Promise.all([migrate(business.client,{environment:'test',apply:true,backupVerified:true}),migrate(second,{environment:'test',apply:true,backupVerified:true})]);assert.deepEqual(results.map(r=>r.added).sort((a,b)=>a-b),[0,172]);
++  const second=new Client(E.options(business.name));open.push(second);await second.connect();const results=await Promise.all([migrate(business.client,{environment:'test',apply:true,backupVerified:true}),migrate(second,{environment:'test',apply:true,backupVerified:true})]);assert.deepEqual(results.map(r=>r.added).sort((a,b)=>a-b),[0,173]);
+  });
+  const f=await E.seed(business.client,business.name);app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};
+  const login=async role=>{const a=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.20.0.'+(f.accounts.indexOf(a)+1),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200,'login '+role);return sessions[role]={id:a.id,origin:f.appCfg.origin,cookie:r.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':r.json().csrfToken};};for(const a of f.accounts)await login(a.role);
+@@ -53,6 +53,6 @@ test('isolated migration, initialization, business permission and concurrency ac
+   const withoutScope=(await business.client.query("INSERT INTO projects(code,name) VALUES('OUTSIDE','Synthetic unscoped project') RETURNING id")).rows[0].id,wh=(await business.client.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'OUTSIDE','Synthetic unscoped warehouse') RETURNING id",[withoutScope])).rows[0].id;await api('admin',co,'/cobalt/preparations',{project_id:withoutScope,warehouse_id:wh,total_bags:1},403);
+  });
+  if(failed)throw Error('Acceptance subtests failed; no successful fixture published');
+- E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:172,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
++ E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:173,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
+  }finally{await app?.close();for(const c of open)await c.end();}
+ });
+diff --git a/tests/release/environment.cjs b/tests/release/environment.cjs
+index cb48738..d7e6c27 100644
+--- a/tests/release/environment.cjs
++++ b/tests/release/environment.cjs
+@@ -22,6 +22,7 @@ async function seed(client,name){
+  const location=(await client.query("INSERT INTO co_locations(zone_id,project_id,warehouse_id,code,x,y,width,height,updated_by) VALUES($1,$2,$3,'AUDIT-01',100,100,100,100,$4) RETURNING id",[zone,project,warehouse,admin])).rows[0].id;
+  const customers={};for(const co of [false,true]){const product=co?'CO_HYDROXIDE':'CU_CATHODE',code=co?'CO-AUDIT':'CU-AUDIT',id=(await client.query('INSERT INTO customers(project_id,code,name,product_code) VALUES($1,$2,$3,$4) RETURNING id',[project,code,'Synthetic '+code,product])).rows[0].id;if(co)await client.query('INSERT INTO co_customer_profiles(id,project_id,code,name,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$5)',[id,project,code,'Synthetic '+code,admin]);const table=co?'co_sales_contracts':'customer_contracts',extra=co?',updated_by':'',values=co?',$3':'';const contract=(await client.query(`INSERT INTO ${table}(project_id,customer_id,contract_no,effective_date,end_date,created_by${extra}) VALUES($1,$2,'AUDIT-'||$2::uuid::text,current_date-1,current_date+365,$3${values}) RETURNING id`,[project,id,admin])).rows[0].id;customers[product]={id,contract};}
+  const password=crypto.randomBytes(18).toString('base64url'),username='audit_customer_admin',id=(await client.query("INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,'Synthetic customer-scoped administrator',$2,'admin') RETURNING id",[username,hashPassword(password)])).rows[0].id;await client.query('INSERT INTO user_scopes(user_id,project_id,customer_id) VALUES($1,$2,$3)',[id,project,customers.CU_CATHODE.id]);accounts.push({id,role:'customer_admin',username,password});
++ for(const [label,permission] of [['limited_account_manager','users:manage'],['limited_role_manager','roles:manage'],['limited_viewer','inventory:read']]){const code='custom_'+crypto.randomBytes(8).toString('hex');await client.query('INSERT INTO roles(code,name,name_en,built_in,created_by) VALUES($1,$2,$2,false,$3)',[code,'Synthetic '+label,admin]);for(const p of new Set([permission,'inventory:read','master:read']))await client.query('INSERT INTO role_permissions VALUES($1,$2)',[code,p]);const password=crypto.randomBytes(18).toString('base64url'),username='audit_'+label,id=(await client.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Synthetic '+label,hashPassword(password),code])).rows[0].id;await client.query('INSERT INTO user_scopes(user_id,project_id) VALUES($1,$2)',[id,project]);accounts.push({id,role:label,username,password});}
+  return {database:name,appCfg:appConfig(name),project,warehouse,location,accounts,customers};
+ }
+ module.exports={root,runtime,configuration,options,database,appConfig,save,fixture,seed};
+diff --git a/tests/release/migrations.test.cjs b/tests/release/migrations.test.cjs
+index 9f3b397..f024f71 100644
+--- a/tests/release/migrations.test.cjs
++++ b/tests/release/migrations.test.cjs
+@@ -1,9 +1,9 @@
+ 'use strict';
+ const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),Chain=require('../../scripts/migration-chain.cjs');
+ const root=path.resolve(__dirname,'../..'),chain=Chain.load();
+-test('release migration baseline accepts the reviewed chain and known historical filename gaps',()=>{assert.equal(chain.length,172);assert.equal(chain.at(-1).version,'172_v469_configurable_admin_business_permissions.sql');assert(chain.some(e=>e.version==='004b_bundle_row_lock.sql'));});
++test('release migration baseline accepts the reviewed chain and known historical filename gaps',()=>{assert.equal(chain.length,173);assert.equal(chain.at(-1).version,'173_r3_security_scope_and_sessions.sql');assert(chain.some(e=>e.version==='004b_bundle_row_lock.sql'));});
+ test('applied migrations must be a checksum-matching prefix; unknown versions and holes fail closed',()=>{
+- assert.equal(Chain.applied([],chain).size,0);assert.equal(Chain.applied(chain.slice(0,138),chain).size,138);assert.equal(Chain.applied(chain,chain,{complete:true}).size,172);
++ assert.equal(Chain.applied([],chain).size,0);assert.equal(Chain.applied(chain.slice(0,138),chain).size,138);assert.equal(Chain.applied(chain,chain,{complete:true}).size,173);
+  for(const [rows,options,code] of [[[{version:'999_unknown.sql',checksum:'a'.repeat(64)}],{},'MIGRATION_DATABASE_VERSION_UNKNOWN'],[[{...chain[0],checksum:'a'.repeat(64)}],{},'MIGRATION_CHECKSUM_CHANGED'],[[chain[1]],{},'MIGRATION_DATABASE_HISTORY_GAP'],[chain.slice(0,-1),{complete:true},'MIGRATION_DATABASE_INCOMPLETE']])assert.throws(()=>Chain.applied(rows,chain,options),{code});
+ });
+ test('missing, injected, edited SQL and reordered baseline are rejected before any database query',()=>{
+diff --git a/tests/release/security-baseline.cjs b/tests/release/security-baseline.cjs
+new file mode 100644
+index 0000000..ce523c3
+--- /dev/null
++++ b/tests/release/security-baseline.cjs
+@@ -0,0 +1,30 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),E=require('./environment.cjs'),{migrate}=require('../../scripts/production-db.cjs'),{hashPassword}=require('../../server/security.cjs');
++test('first batch management security regressions',async t=>{
++ const d=await E.database(),c=d.client;let app,failed=false;const checks=[];
++ const check=(name,fn)=>t.test(name,async()=>{try{await fn();checks.push({name,status:'PASS'});}catch(e){failed=true;checks.push({name,status:'FAIL'});throw e;}});
++ try{
++ await migrate(c,{environment:'test',apply:true,backupVerified:true});const f=await E.seed(c,d.name),admin=f.accounts.find(a=>a.role==='admin');
++ const other=(await c.query("INSERT INTO projects(code,name) VALUES('SEC-OUTSIDE','Synthetic outside project') RETURNING id")).rows[0].id;
++ const account=async(label,role,scopes)=>{const username='sec_'+label,password=crypto.randomBytes(20).toString('base64url'),id=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Synthetic '+label,hashPassword(password),role])).rows[0].id;for(const s of scopes)await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id,customer_id) VALUES($1,$2,$3,$4)',[id,s.project_id,s.warehouse_id||null,s.customer_id||null]);return {id,username,password,role};};
++ const role=async(label,permissions)=>{const code='custom_'+crypto.randomBytes(8).toString('hex');await c.query('INSERT INTO roles(code,name,name_en,built_in,created_by) VALUES($1,$2,$2,false,$3)',[code,'Synthetic '+label,admin.id]);for(const p of require('../../server/role-catalog.cjs').expand(permissions))await c.query('INSERT INTO role_permissions(role_code,permission_code) VALUES($1,$2)',[code,p]);return code;};
++ const scope=[{project_id:f.project}],rm=await account('roles',await role('roles',['roles:manage','inventory:read','master:read']),scope),am=await account('accounts',await role('accounts',['users:manage','inventory:read','master:read']),scope),auditor=await account('auditor',await role('audit',['audit:read']),scope),viewerRole=await role('viewer',['inventory:read']),outsideAdmin=await account('outside_admin','admin',[{project_id:other}]),ownViewer=await account('viewer',viewerRole,scope),multiViewer=await account('multi',viewerRole,[...scope,{project_id:other}]);
++ const foreignLog=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_outside','projects',$2,$3) RETURNING id",[outsideAdmin.id,other,{project_id:other,marker:'Synthetic outside event'}])).rows[0].id;
++ const ownLog=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_inside','projects',$2,$3) RETURNING id",[admin.id,f.project,{project_id:f.project}])).rows[0].id;
++ app=await require('../../server/app.cjs').build({config:f.appCfg});let ip=10;
++ const login=async a=>{const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.40.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);return {origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};};
++ const api=(s,method,url,body,remoteAddress)=>app.inject({method,url:'/api/v1'+url,...(remoteAddress?{remoteAddress}:{}),headers:{...s,'x-product-code':'CU_CATHODE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});
++ const {Client}=require('pg'),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
++ const blocked=async(mode,relation=null)=>{const end=Date.now()+5000;while(Date.now()<end){const q=await c.query("SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE a.datname=$1 AND NOT l.granted AND (($3::text IS NULL AND l.locktype='advisory' AND l.objid=21002 AND l.mode=$2) OR ($3::text IS NOT NULL AND l.locktype='relation' AND l.relation=to_regclass($3))) LIMIT 1",[d.name,mode,relation]);if(q.rowCount)return;await wait(15);}throw Error('Expected isolated lock waiter was not observed');};
++ let root=await login(admin),manager=await login(am),roles=await login(rm),audit=await login(auditor),ordinary=await login(f.accounts.find(a=>a.role==='production_operator'));
++ await check('restricted role manager cannot add account management to its own role',async()=>{const v=(await c.query('SELECT version FROM roles WHERE code=$1',[rm.role])).rows[0].version;assert.equal((await api(roles,'PUT','/security/roles/'+rm.role,{version:v,permissions:['roles:manage','users:manage','inventory:read','master:read']})).statusCode,403);});
++ await check('restricted account listing excludes outside administrators and multi-project targets',async()=>{const r=await api(manager,'GET','/users');assert.equal(r.statusCode,200);assert(!r.json().items.some(u=>u.id===outsideAdmin.id||u.id===multiViewer.id));assert(r.json().items.some(u=>u.id===ownViewer.id));});
++ await check('restricted account manager cannot reset an outside administrator password',async()=>{assert([403,404].includes((await api(manager,'POST','/users/'+outsideAdmin.id+'/reset-password',{password:crypto.randomBytes(20).toString('base64url')})).statusCode));});
++ await check('restricted account manager cannot promote itself to administrator',async()=>{assert.equal((await api(manager,'PATCH','/users/'+am.id,{role_code:'admin'})).statusCode,403);});
++ await check('scoped audit list and count exclude another project',async()=>{const r=await api(audit,'GET','/v27/audit?action=security_outside');assert.equal(r.statusCode,200);assert.equal(r.json().total,0);assert.deepEqual(r.json().items,[]);});
++ await check('scoped audit details deny another project by ID',async()=>{assert.equal((await api(audit,'GET','/v27/audit/'+foreignLog)).statusCode,404);});
++ await check('legacy audit endpoint uses the same project isolation',async()=>{const r=await api(audit,'GET','/audit');assert.equal(r.statusCode,200);assert(!r.json().items.some(e=>e.id===foreignLog));assert(r.json().items.some(e=>e.id===ownLog));});
++ await check('ordinary operators have no management access; system administrator retains audit access',async()=>{for(const url of ['/users','/security/roles','/v27/audit'])assert.equal((await api(ordinary,'GET',url)).statusCode,403);assert.equal((await api(root,'GET','/v27/audit/'+foreignLog)).statusCode,200);});
++ E.save('security-baseline-results.json',{status:failed?'FAIL':'PASS',checks,database:d.name,workingDatabaseWrites:0,productionDatabaseWrites:0});
++ }finally{await app?.close();await c.end();}
++});
+diff --git a/tests/release/security.test.cjs b/tests/release/security.test.cjs
+new file mode 100644
+index 0000000..dd74297
+--- /dev/null
++++ b/tests/release/security.test.cjs
+@@ -0,0 +1,100 @@
++'use strict';
++const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),E=require('./environment.cjs'),{migrate}=require('../../scripts/production-db.cjs'),{hashPassword}=require('../../server/security.cjs');
++test('first batch management security regressions',async t=>{
++ const d=await E.database(),c=d.client;let app,failed=false;const checks=[];
++ const check=(name,fn)=>t.test(name,async()=>{try{await fn();checks.push({name,status:'PASS'});}catch(e){failed=true;checks.push({name,status:'FAIL'});throw e;}});
++ try{
++ await migrate(c,{environment:'test',apply:true,backupVerified:true});const f=await E.seed(c,d.name),admin=f.accounts.find(a=>a.role==='admin');
++ const other=(await c.query("INSERT INTO projects(code,name) VALUES('SEC-OUTSIDE','Synthetic outside project') RETURNING id")).rows[0].id;
++ const account=async(label,role,scopes)=>{const username='sec_'+label,password=crypto.randomBytes(20).toString('base64url'),id=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Synthetic '+label,hashPassword(password),role])).rows[0].id;for(const s of scopes)await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id,customer_id) VALUES($1,$2,$3,$4)',[id,s.project_id,s.warehouse_id||null,s.customer_id||null]);return {id,username,password,role};};
++ const role=async(label,permissions)=>{const code='custom_'+crypto.randomBytes(8).toString('hex');await c.query('INSERT INTO roles(code,name,name_en,built_in,created_by) VALUES($1,$2,$2,false,$3)',[code,'Synthetic '+label,admin.id]);for(const p of require('../../server/role-catalog.cjs').expand(permissions))await c.query('INSERT INTO role_permissions(role_code,permission_code) VALUES($1,$2)',[code,p]);return code;};
++ const scope=[{project_id:f.project}],rm=await account('roles',await role('roles',['roles:manage','inventory:read','master:read']),scope),am=await account('accounts',await role('accounts',['users:manage','inventory:read','master:read']),scope),auditor=await account('auditor',await role('audit',['audit:read']),scope),viewerRole=await role('viewer',['inventory:read']),outsideAdmin=await account('outside_admin','admin',[{project_id:other}]),ownViewer=await account('viewer',viewerRole,scope),multiViewer=await account('multi',viewerRole,[...scope,{project_id:other}]);
++ const foreignLog=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_outside','projects',$2,$3) RETURNING id",[outsideAdmin.id,other,{project_id:other,marker:'Synthetic outside event'}])).rows[0].id;
++ const ownLog=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_inside','projects',$2,$3) RETURNING id",[admin.id,f.project,{project_id:f.project}])).rows[0].id;
++ app=await require('../../server/app.cjs').build({config:f.appCfg});let ip=10;
++ const login=async a=>{const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.40.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);return {origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};};
++ const api=(s,method,url,body,remoteAddress)=>app.inject({method,url:'/api/v1'+url,...(remoteAddress?{remoteAddress}:{}),headers:{...s,'x-product-code':'CU_CATHODE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});
++ const {Client}=require('pg'),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
++ const blocked=async(mode,relation=null)=>{const end=Date.now()+5000;while(Date.now()<end){const q=await c.query("SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE a.datname=$1 AND NOT l.granted AND (($3::text IS NULL AND l.locktype='advisory' AND l.objid=21002 AND l.mode=$2) OR ($3::text IS NOT NULL AND l.locktype='relation' AND l.relation=to_regclass($3))) LIMIT 1",[d.name,mode,relation]);if(q.rowCount)return;await wait(15);}throw Error('Expected isolated lock waiter was not observed');};
++ let root=await login(admin),manager=await login(am),roles=await login(rm),audit=await login(auditor),ordinary=await login(f.accounts.find(a=>a.role==='production_operator'));
++ await check('restricted role manager cannot add account management to its own role',async()=>{const v=(await c.query('SELECT version FROM roles WHERE code=$1',[rm.role])).rows[0].version;assert.equal((await api(roles,'PUT','/security/roles/'+rm.role,{version:v,permissions:['roles:manage','users:manage','inventory:read','master:read']})).statusCode,403);});
++ await check('restricted account listing excludes outside administrators and multi-project targets',async()=>{const r=await api(manager,'GET','/users');assert.equal(r.statusCode,200);assert(!r.json().items.some(u=>u.id===outsideAdmin.id||u.id===multiViewer.id));assert(r.json().items.some(u=>u.id===ownViewer.id));});
++ await check('restricted account manager cannot reset an outside administrator password',async()=>{assert([403,404].includes((await api(manager,'POST','/users/'+outsideAdmin.id+'/reset-password',{password:crypto.randomBytes(20).toString('base64url')})).statusCode));});
++ await check('restricted account manager cannot promote itself to administrator',async()=>{assert.equal((await api(manager,'PATCH','/users/'+am.id,{role_code:'admin'})).statusCode,403);});
++ await check('scoped audit list and count exclude another project',async()=>{const r=await api(audit,'GET','/v27/audit?action=security_outside');assert.equal(r.statusCode,200);assert.equal(r.json().total,0);assert.deepEqual(r.json().items,[]);});
++ await check('scoped audit details deny another project by ID',async()=>{assert.equal((await api(audit,'GET','/v27/audit/'+foreignLog)).statusCode,404);});
++ await check('legacy audit endpoint uses the same project isolation',async()=>{const r=await api(audit,'GET','/audit');assert.equal(r.statusCode,200);assert(!r.json().items.some(e=>e.id===foreignLog));assert(r.json().items.some(e=>e.id===ownLog));});
++ await check('ordinary operators have no management access; system administrator retains audit access',async()=>{for(const url of ['/users','/security/roles','/v27/audit'])assert.equal((await api(ordinary,'GET',url)).statusCode,403);assert.equal((await api(root,'GET','/v27/audit/'+foreignLog)).statusCode,200);});
++ await check('system administrator account options retain every current built-in role',async()=>{const r=await api(root,'GET','/users/options');assert.equal(r.statusCode,200);assert(require('../../server/role-catalog.cjs').builtins.every(code=>r.json().roles.some(role=>role.code===code)));});
++ await check('restricted role creation and editing succeed only within the live permission ceiling',async()=>{
++  const created=await api(roles,'POST','/security/roles',{name:'Synthetic allowed role',permissions:['inventory:read']});assert.equal(created.statusCode,200,created.body);const r=created.json();assert.equal((await api(roles,'PUT','/security/roles/'+r.code,{version:r.version,permissions:['inventory:read','master:read']})).statusCode,200);const current=(await c.query('SELECT version FROM roles WHERE code=$1',[r.code])).rows[0];assert.equal((await api(roles,'PATCH','/security/roles/'+r.code,{version:current.version,name:'Synthetic renamed role'})).statusCode,200);assert.equal((await api(roles,'POST','/security/roles',{name:'Synthetic excessive grant',permissions:['users:manage']})).statusCode,403);
++ });
++ await check('own role, built-in roles and roles assigned outside the full scope cannot be changed',async()=>{
++  for(const [code,method,body] of [[rm.role,'PATCH',{name:'Synthetic forbidden rename'}],['admin','PUT',{permissions:['users:manage','roles:manage']}],[viewerRole,'PUT',{permissions:['inventory:read']}]]){const v=(await c.query('SELECT version FROM roles WHERE code=$1',[code])).rows[0].version;assert.equal((await api(roles,method,'/security/roles/'+code,{...body,version:v})).statusCode,403);}
++  const listing=(await api(roles,'GET','/security/roles')).json();assert(!listing.items.some(r=>r.code===rm.role||r.code==='admin'||r.code===viewerRole));
++ });
++ await check('restricted account creation cannot assign administrator, stronger roles or outside scopes',async()=>{
++  for(const [suffix,targetRole,scopes] of [['admin','admin',scope],['strong',rm.role,scope],['outside',viewerRole,[{project_id:other}]]]){const r=await api(manager,'POST','/users',{username:'sec_new_'+suffix,display_name:'Synthetic denied account',password:crypto.randomBytes(20).toString('base64url'),role_code:targetRole,scopes});assert.equal(r.statusCode,403);assert.equal((await c.query('SELECT 1 FROM users WHERE username=$1',['sec_new_'+suffix])).rowCount,0);}
++ });
++ await check('full target containment protects all account lifecycle endpoints, including multi-project users',async()=>{
++  for(const id of [outsideAdmin.id,multiViewer.id])for(const [method,suffix,body]of [['GET','/deletion-check',undefined],['PATCH','',{display_name:'Synthetic forbidden change'}],['DELETE','',{username:id===outsideAdmin.id?outsideAdmin.username:multiViewer.username,reason:'Synthetic rejected deletion'}],['POST','/restore',{password:crypto.randomBytes(20).toString('base64url'),role_code:viewerRole}]])assert([403,404].includes((await api(manager,method,'/users/'+id+suffix,body)).statusCode));
++  assert(!(await api(manager,'GET','/users/options')).json().roles.some(r=>r.code==='admin'));
++ });
++ await check('allowed account create, edit, reset, soft-delete and restore preserve identity and audit history',async()=>{
++  const created=await api(manager,'POST','/users',{username:'sec_allowed',display_name:'Synthetic managed viewer',password:crypto.randomBytes(20).toString('base64url'),role_code:viewerRole,scopes:scope});assert.equal(created.statusCode,200,created.body);const u=created.json();assert.equal((await api(manager,'PATCH','/users/'+u.id,{display_name:'Synthetic edited viewer'})).statusCode,200);assert.equal((await api(manager,'POST','/users/'+u.id+'/reset-password',{password:crypto.randomBytes(20).toString('base64url')})).statusCode,200);assert.equal((await api(manager,'DELETE','/users/'+u.id,{username:u.username,reason:'Synthetic lifecycle test'})).statusCode,200);assert.equal((await api(manager,'POST','/users/'+u.id+'/restore',{password:crypto.randomBytes(20).toString('base64url'),role_code:'admin'})).statusCode,403);assert.equal((await api(manager,'POST','/users/'+u.id+'/restore',{password:crypto.randomBytes(20).toString('base64url'),role_code:viewerRole})).statusCode,200);assert.equal((await c.query('SELECT id FROM users WHERE username=$1',[u.username])).rows[0].id,u.id);assert((await c.query("SELECT count(*)::int n FROM audit_logs WHERE entity_id=$1 AND action IN('user_created','user_updated','user_deleted','user_restored','password_reset')",[u.id])).rows[0].n>=5);
++ });
++ await check('registration queue and review are system-administrator-only; concurrent review commits once',async()=>{
++  const password=crypto.randomBytes(20).toString('base64url'),id=(await c.query("INSERT INTO registration_requests(username,display_name,password_hash,contact) VALUES('sec_registration','Synthetic registration',$1,'synthetic@example.invalid') RETURNING id",[hashPassword(password)])).rows[0].id;
++  assert.equal((await api(manager,'GET','/users/registration-requests')).statusCode,403);assert.equal((await api(manager,'POST','/users/registration-requests/'+id+'/review',{decision:'APPROVED',role_code:viewerRole,scopes:scope})).statusCode,403);assert.equal((await c.query('SELECT status FROM registration_requests WHERE id=$1',[id])).rows[0].status,'PENDING');const body={decision:'APPROVED',role_code:viewerRole,scopes:scope},r=await Promise.all([api(root,'POST','/users/registration-requests/'+id+'/review',body),api(root,'POST','/users/registration-requests/'+id+'/review',body)]);assert.deepEqual(r.map(x=>x.statusCode).sort(),[200,409]);assert.equal((await c.query("SELECT count(*)::int n FROM users WHERE username='sec_registration'")).rows[0].n,1);
++ });
++ await check('audit scope snapshots resist forged metadata and later actor/project reassignment',async()=>{
++  const id=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,scope_context) VALUES($1,'security_forged','projects',$2,$3) RETURNING id",[outsideAdmin.id,other,{kind:'SCOPED',scopes:[{project_id:f.project}]}])).rows[0].id;assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,404);await c.query('UPDATE user_scopes SET project_id=$1 WHERE user_id=$2',[f.project,outsideAdmin.id]);assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,404);assert.equal((await api(root,'GET','/v27/audit/'+id)).statusCode,200);assert.equal((await api(audit,'GET','/v27/audit/'+ownLog)).statusCode,200);
++ });
++ await check('audit scope attribution treats valid uppercase UUIDs as the same authorized project',async()=>{const id=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_uppercase_scope','projects',$2,$3) RETURNING id",[admin.id,f.project.toUpperCase(),{project_id:f.project.toUpperCase()}])).rows[0].id;assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,200);});
++ await check('unknown and system audit events stay administrator-only; history cannot be rewritten',async()=>{
++  const id=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_unknown','unknown_scope','unproven',$2) RETURNING id",[admin.id,{project_id:f.project}])).rows[0].id;assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,404);assert.equal((await api(root,'GET','/v27/audit/'+id)).statusCode,200);await assert.rejects(()=>c.query("UPDATE audit_logs SET scope_context='{}'::jsonb WHERE id=$1",[id]),e=>e.code==='23514'||e.code==='P0001');
++ });
++ await check('warehouse audit access requires exact warehouse coverage and project-wide records stay hidden',async()=>{
++  const wh2=(await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'SEC-WH-2','Synthetic other warehouse') RETURNING id",[f.project])).rows[0].id,a=await account('warehouse_audit',auditor.role,[{project_id:f.project,warehouse_id:f.warehouse}]),session=await login(a),ids=[];
++  for(const wh of [f.warehouse,wh2])ids.push((await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES($1,'security_warehouse','warehouses',$2) RETURNING id",[admin.id,wh])).rows[0].id);
++  assert.equal((await api(session,'GET','/v27/audit/'+ids[0])).statusCode,200);assert.equal((await api(session,'GET','/v27/audit/'+ids[1])).statusCode,404);assert.equal((await api(session,'GET','/v27/audit/'+ownLog)).statusCode,404);
++ });
++ await check('customer audit access does not expose another product/customer in the same project',async()=>{
++  const a=await account('customer_audit',auditor.role,[{project_id:f.project,customer_id:f.customers.CU_CATHODE.id}]),session=await login(a),ids=[];for(const customer of [f.customers.CU_CATHODE.id,f.customers.CO_HYDROXIDE.id])ids.push((await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES($1,'security_customer','customers',$2) RETURNING id",[admin.id,customer])).rows[0].id);assert.equal((await api(session,'GET','/v27/audit/'+ids[0])).statusCode,200);assert.equal((await api(session,'GET','/v27/audit/'+ids[1])).statusCode,404);
++ });
++ await check('all scope fragments must be authorized; partial coverage of a multi-project event is insufficient',async()=>{
++  const id=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,before_data,after_data) VALUES($1,'security_multi_scope','projects',$2,$3,$4) RETURNING id",[admin.id,f.project,{project_id:other},{project_id:f.project}])).rows[0].id;assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,404);assert.equal((await api(root,'GET','/v27/audit/'+id)).statusCode,200);
++ });
++ await check('permission and scope changes revoke every affected session without logging out unrelated users',async()=>{
++  const roleCode=await role('sessions',['inventory:read']),a=await account('sessions',roleCode,scope),one=await login(a),two=await login(a);await c.query("DELETE FROM role_permissions WHERE role_code=$1 AND permission_code='inventory:read'",[roleCode]);assert.equal((await api(one,'GET','/me')).statusCode,401);assert.equal((await api(two,'GET','/me')).statusCode,401);const three=await login(a);await c.query('UPDATE user_scopes SET warehouse_id=$1 WHERE user_id=$2',[f.warehouse,a.id]);assert.equal((await api(three,'GET','/me')).statusCode,401);assert.equal((await api(ordinary,'GET','/me')).statusCode,200);
++ });
++ await check('a queued management request rechecks its session after password/session revocation',async()=>{
++  const blocker=new Client(E.options(d.name));await blocker.connect();try{await blocker.query('BEGIN');await blocker.query('SELECT pg_advisory_xact_lock(21002)');const before=(await c.query('SELECT display_name FROM users WHERE id=$1',[ownViewer.id])).rows[0].display_name,pending=api(manager,'PATCH','/users/'+ownViewer.id,{display_name:'Synthetic stale request must fail'});await blocked('ExclusiveLock');await blocker.query('DELETE FROM sessions WHERE user_id=$1',[am.id]);await blocker.query('COMMIT');assert.equal((await pending).statusCode,401);assert.equal((await c.query('SELECT display_name FROM users WHERE id=$1',[ownViewer.id])).rows[0].display_name,before);}finally{await blocker.query('ROLLBACK');await blocker.end();}manager=await login(am);
++ });
++ await check('an ordinary write waiting for authorization cannot use revoked permission',async()=>{
++  const a=await account('waiting_export',await role('waiting_export',['inventory:read','inventory:export','master:read']),scope),session=await login(a),blocker=new Client(E.options(d.name));await blocker.connect();try{await blocker.query('BEGIN');await blocker.query('SELECT pg_advisory_xact_lock(21002)');const pending=api(session,'POST','/inventory/exports',{format:'csv',filters:{}});await blocked('ShareLock');await blocker.query("DELETE FROM role_permissions WHERE role_code=$1 AND permission_code='inventory:export'",[a.role]);await blocker.query('COMMIT');assert.equal((await pending).statusCode,401);}finally{await blocker.query('ROLLBACK');await blocker.end();}
++ });
++ await check('an in-flight write finishes before revocation commits; no old session survives the boundary',async()=>{
++  const a=await account('running_export',await role('running_export',['inventory:read','inventory:export','master:read']),scope),session=await login(a),blocker=new Client(E.options(d.name));await blocker.connect();try{await blocker.query('BEGIN');await blocker.query('LOCK TABLE bundles IN ACCESS EXCLUSIVE MODE');const running=api(session,'POST','/inventory/exports',{format:'csv',filters:{}});await blocked('AccessShareLock','public.bundles');const version=(await c.query('SELECT version FROM roles WHERE code=$1',[a.role])).rows[0].version,change=api(root,'PUT','/security/roles/'+a.role,{version,permissions:['inventory:read','master:read']});await blocked('ExclusiveLock');await blocker.query('COMMIT');assert.equal((await running).statusCode,200);assert.equal((await change).statusCode,200);assert.equal((await api(session,'GET','/me')).statusCode,401);}finally{await blocker.query('ROLLBACK');await blocker.end();}
++ });
++ await check('more concurrent writes than the pool size complete without authorization-pool starvation',async()=>{
++  const a=await account('parallel_export',await role('parallel_export',['inventory:read','inventory:export','master:read']),scope),session=await login(a),results=await Promise.all(Array.from({length:24},(_,i)=>api(session,'POST','/inventory/exports',{format:'csv',filters:{}},'127.42.0.'+(i+1))));assert(results.every(r=>r.statusCode===200),JSON.stringify(results.map(r=>r.statusCode)));
++ });
++ await check('language preference is ordered safely and does not revoke normal sessions',async()=>{const r=await api(ordinary,'POST','/me/language',{language:'en'});assert.equal(r.statusCode,200,r.body);assert.equal((await api(ordinary,'GET','/me')).statusCode,200);});
++ await check('role-code gates cannot be acquired by assigning another built-in role with matching raw grants',async()=>{
++  const permissions=(await c.query("SELECT permission_code FROM role_permissions WHERE role_code='production_manager'")).rows.map(r=>r.permission_code),a=await account('legacy_raw_manager',await role('legacy_raw_manager',[...permissions,'users:manage']),scope),session=await login(a);assert.equal((await api(session,'POST','/users',{username:'sec_builtin_gate',display_name:'Synthetic denied role gate',password:crypto.randomBytes(20).toString('base64url'),role_code:'production_manager',scopes:scope})).statusCode,403);
++ });
++ await check('case changes in UUID text cannot bypass the own-role change prohibition',async()=>{assert.equal((await api(manager,'PATCH','/users/'+am.id.toUpperCase(),{role_code:viewerRole})).statusCode,403);});
++ await check('catalog built-in roles remain protected when historical built_in flags are false',async()=>{
++  const ps=(await c.query("SELECT permission_code FROM role_permissions WHERE role_code='commerce_manager'")).rows.map(r=>r.permission_code),a=await account('catalog_gate',await role('catalog_gate',[...ps,'roles:manage','users:manage']),scope),session=await login(a),version=(await c.query("SELECT version FROM roles WHERE code='commerce_manager'")).rows[0].version;
++  const created=await api(session,'POST','/users',{username:'sec_catalog_builtin',display_name:'Synthetic blocked catalog role',password:crypto.randomBytes(20).toString('base64url'),role_code:'commerce_manager',scopes:scope}),changed=await api(session,'PUT','/security/roles/commerce_manager',{version,permissions:ps.filter(require('../../server/workflow-permissions.cjs').active)});assert.deepEqual([created.statusCode,changed.statusCode],[403,403]);
++ });
++ await check('172-to-173 upgrade preserves every historical account, grant, scope, session and audit row',async()=>{
++  const old=await E.database();try{const Chain=require('../../scripts/migration-chain.cjs'),prior=Chain.load().filter(e=>!e.version.startsWith('173_'));await old.client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of prior)await Chain.execute(old.client,e);await old.client.query("INSERT INTO system_info VALUES(true,'test')");const fixture=await E.seed(old.client,old.name),who=fixture.accounts.find(a=>a.role==='admin');await old.client.query("INSERT INTO sessions(token_hash,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[crypto.randomBytes(32).toString('hex'),who.id,crypto.randomBytes(32).toString('hex')]);const event=(await old.client.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_legacy','projects',$2,$3) RETURNING id",[who.id,fixture.project,{project_id:fixture.project}])).rows[0].id;
++   const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context')::text,'' ORDER BY (to_jsonb(t)-'scope_context')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,1);assert.deepEqual(await snapshot(),before);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
++   const oldApp=await require('../../server/app.cjs').build({config:fixture.appCfg});try{const r=await oldApp.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:fixture.appCfg.origin},payload:{username:who.username,password:who.password}});assert.equal(r.statusCode,200);const cookie=r.cookies.map(x=>x.name+'='+x.value).join('; ');assert.equal((await oldApp.inject({url:'/api/v1/v27/audit/'+event,headers:{cookie,origin:fixture.appCfg.origin}})).statusCode,200);}finally{await oldApp.close();}
++  }finally{await old.client.end();}
++ });
++ E.save('security-results.json',{status:failed?'FAIL':'PASS',checks,database:d.name,workingDatabaseWrites:0,productionDatabaseWrites:0});
++ }finally{await app?.close();await c.end();}
++});
+diff --git a/tests/release/ui.test.cjs b/tests/release/ui.test.cjs
+index 339e589..b846c9a 100644
+--- a/tests/release/ui.test.cjs
++++ b/tests/release/ui.test.cjs
+@@ -13,6 +13,10 @@ test('real browser: current cobalt stock, independent permissions and both langu
+  await go(viewer.page,'/inventory/'+f.preparation);assert.equal(await viewer.page.locator('[data-co2-select],#co2-place').count(),0);
+  await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').click();await page.locator('.s46-r2-matrix').waitFor();assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),67);assert.equal(await page.locator('.s46-r2-matrix tbody tr').count(),25);const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
+  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
+- assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:67,permissionModules:25,errors,workingDatabaseWrites:0});
++ assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.6.9-r3-rc1');
++ await page.goto(origin+'/workbench/accounts');await ready(page);await page.locator('#account-filter').waitFor();assert.equal(await page.locator('#account-registration-requests').count(),1);
++ const limited=await open('limited_account_manager');await limited.page.goto(origin+'/workbench/accounts');await ready(limited.page);await limited.page.locator('#account-filter').waitFor();assert.equal(await limited.page.locator('#account-registration-requests').count(),0);assert.equal(await limited.page.locator('#account-create').count(),1);const options=await limited.context.request.get(origin+'/api/v1/users/options');assert(options.ok());assert(!(await options.json()).roles.some(r=>r.code==='admin'));
++ const roleManager=await open('limited_role_manager');await roleManager.page.goto(origin+'/workbench/permissions');await ready(roleManager.page);await roleManager.page.locator('[data-role]').first().waitFor();assert.equal(await roleManager.page.locator('[data-role=admin]').count(),0);const own=await roleManager.page.evaluate(()=>CurrentUser.role_code);assert.equal(await roleManager.page.locator('[data-role="'+own+'"]').count(),0);await roleManager.page.locator('[data-role]').first().click();await roleManager.page.locator('.s46-r2-matrix').waitFor();const prohibited=roleManager.page.locator('.s46-r2-matrix input[value="users:manage"]');assert(await prohibited.count()===0||await prohibited.isDisabled());await limited.page.screenshot({path:path.join(E.runtime,'limited-accounts.png'),fullPage:true});await roleManager.page.screenshot({path:path.join(E.runtime,'limited-roles.png'),fullPage:true});
++ assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:67,permissionModules:25,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
+  }finally{await browser?.close();await app.close();}
+ });

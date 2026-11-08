@@ -1,289 +1,139 @@
 {
-  "version": "4.6.9-r2",
+  "version": "4.6.9-r3-rc1",
+  "baseCommit": "e4ba78537c2b5ed0af66f15ca5ddbf30fa512a9b",
+  "originalAuditCommit": "fed9fe79fbce46280fae383e2a914198b15986f2",
   "status": "PASS",
-  "checkedAt": "2026-11-08T18:14:25.078Z",
-  "scope": "local TEST; production deployment not performed",
-  "api": {
-    "status": "PASS",
-    "checks": [
-      "Native 51-bag single-site intake preserves exact weights, seals, positions and final receipt",
-      "Optional bounded page sizes retain native default 50/200 behavior and return continuous bags",
-      "Invalid sizes/history pages return 400; read-only role cannot relocate",
-      "Location history resolves bag numbers and recorded actor roles"
-    ],
-    "workingDatabaseWrites": 0
+  "runners": {
+    "unit": {
+      "suite": "unit",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T19:12:59.324Z"
+    },
+    "integration": {
+      "suite": "integration",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T19:13:07.717Z"
+    },
+    "security": {
+      "suite": "security",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T19:13:13.399Z"
+    },
+    "ui": {
+      "suite": "ui",
+      "status": "PASS",
+      "exitCode": 0,
+      "checkedAt": "2026-11-08T19:14:52.746Z"
+    }
   },
+  "unitCases": 12,
+  "integrationGroups": 8,
+  "securityGroups": 31,
   "ui": {
     "status": "PASS",
-    "checks": [
-      "Batch expansion, full bag/seal/weight/location fields, continuous pagination, exact one-bag relocation, whole-batch preview across filters/pages, stale-preview invalidation and real Excel export.",
-      "Read-only role keeps bag information and has no selection or location mutation controls.",
-      "25 horizontal module rows and 67 native checkboxes: separate initial/final stages, protected recovery permissions, independent toggle/reset, both languages and contained narrow-screen scrolling."
-    ],
     "shapes": [
       {
+        "page": "stock",
         "language": "zh-CN",
-        "width": 1440,
-        "page": "stock"
+        "width": 1440
       },
       {
+        "page": "stock",
         "language": "zh-CN",
-        "width": 1024,
-        "page": "stock"
+        "width": 768
       },
       {
+        "page": "stock",
         "language": "zh-CN",
-        "width": 768,
-        "page": "stock"
+        "width": 390
       },
       {
+        "page": "stock",
         "language": "zh-CN",
-        "width": 390,
-        "page": "stock"
+        "width": 320
       },
       {
+        "page": "stock",
+        "language": "en",
+        "width": 1440
+      },
+      {
+        "page": "stock",
+        "language": "en",
+        "width": 768
+      },
+      {
+        "page": "stock",
+        "language": "en",
+        "width": 390
+      },
+      {
+        "page": "stock",
+        "language": "en",
+        "width": 320
+      },
+      {
+        "page": "permissions",
         "language": "zh-CN",
-        "width": 320,
-        "page": "stock"
+        "width": 1440
       },
       {
-        "language": "en",
-        "width": 1440,
-        "page": "stock"
-      },
-      {
-        "language": "en",
-        "width": 1024,
-        "page": "stock"
-      },
-      {
-        "language": "en",
-        "width": 768,
-        "page": "stock"
-      },
-      {
-        "language": "en",
-        "width": 390,
-        "page": "stock"
-      },
-      {
-        "language": "en",
-        "width": 320,
-        "page": "stock"
-      },
-      {
+        "page": "permissions",
         "language": "zh-CN",
-        "width": 1440,
-        "page": "permissions"
+        "width": 390
       },
       {
+        "page": "permissions",
         "language": "zh-CN",
-        "width": 1024,
-        "page": "permissions"
+        "width": 320
       },
       {
-        "language": "zh-CN",
-        "width": 390,
-        "page": "permissions"
-      },
-      {
-        "language": "zh-CN",
-        "width": 320,
-        "page": "permissions"
-      },
-      {
+        "page": "permissions",
         "language": "en",
-        "width": 1440,
-        "page": "permissions"
+        "width": 1440
       },
       {
+        "page": "permissions",
         "language": "en",
-        "width": 1024,
-        "page": "permissions"
+        "width": 390
       },
       {
+        "page": "permissions",
         "language": "en",
-        "width": 390,
-        "page": "permissions"
-      },
-      {
-        "language": "en",
-        "width": 320,
-        "page": "permissions"
+        "width": 320
       }
+    ],
+    "permissionCheckboxes": 67,
+    "permissionModules": 25,
+    "managementViews": [
+      "admin-registration-entry",
+      "limited-account-manager",
+      "limited-role-manager"
     ],
     "errors": [],
     "workingDatabaseWrites": 0
   },
-  "restore": {
+  "backupRestore": {
     "status": "PASS",
-    "database": "musonoi_v469r2_restore_test",
-    "tables": 157,
-    "migrations": 172,
+    "database": "musonoi_audit_63dbb3f110_test",
+    "source": "unchanged encrypted r2 TEST backup",
+    "tablesChecked": 157,
+    "oldRowsDigestsUnchanged": true,
+    "addedMigrations": 1,
+    "totalMigrations": 173,
     "accounts": 11,
-    "encryptedRoundTripVerified": true
+    "sourceDatabaseAccessed": false,
+    "productionDatabaseAccessed": false
   },
-  "delivery": {
-    "status": "PASS",
-    "format": "ordinary-files",
-    "sourceFiles": 548,
-    "noPrivateFiles": true,
-    "noKeyOrCredentialPatterns": true,
-    "actualDecryptionHelperVerified": true
-  },
-  "service": {
-    "status": "PASS",
-    "url": "http://127.0.0.1:4176",
-    "version": "4.6.9",
-    "frontendRevision": "4.6.9-r2",
-    "environment": "test",
-    "database": "ok",
-    "requiredMigration": "172_v469_configurable_admin_business_permissions.sql",
-    "verifiedAssets": [
-      "index.html",
-      "boot.js",
-      "release.js",
-      "sw.js",
-      "approval-display468r10.js",
-      "approval-display468r10.css",
-      "system46-pages.js",
-      "cobalt-preparation469.js",
-      "v469.js",
-      "v469.css",
-      "gate-ui.js",
-      "cobalt-map-site.js",
-      "cobalt-stock469r2.js",
-      "cobalt-stock469r2.css",
-      "permissions469r2.js",
-      "permissions469r2.css"
-    ],
-    "sourceIntegrityRequired": true,
-    "workingDatabaseWrites": 0,
-    "checkedAt": "2026-11-08T18:13:22.235Z"
-  },
-  "audit": {
-    "baselineCommit": "fed9fe79fbce46280fae383e2a914198b15986f2",
-    "revision": "stage1-remediation-20261108",
-    "scope": "isolated local TEST; no production deployment",
-    "results": {
-      "unit": {
-        "suite": "unit",
-        "status": "PASS",
-        "exitCode": 0,
-        "checkedAt": "2026-11-08T18:13:22.046Z"
-      },
-      "integration": {
-        "suite": "integration",
-        "status": "PASS",
-        "exitCode": 0,
-        "checkedAt": "2026-11-08T18:12:00.887Z"
-      },
-      "ui": {
-        "suite": "ui",
-        "status": "PASS",
-        "exitCode": 0,
-        "checkedAt": "2026-11-08T18:12:05.999Z"
-      }
-    },
-    "unitCases": 12,
-    "integrationGroups": 8,
-    "ui": {
-      "status": "PASS",
-      "shapes": [
-        {
-          "page": "stock",
-          "language": "zh-CN",
-          "width": 1440
-        },
-        {
-          "page": "stock",
-          "language": "zh-CN",
-          "width": 768
-        },
-        {
-          "page": "stock",
-          "language": "zh-CN",
-          "width": 390
-        },
-        {
-          "page": "stock",
-          "language": "zh-CN",
-          "width": 320
-        },
-        {
-          "page": "stock",
-          "language": "en",
-          "width": 1440
-        },
-        {
-          "page": "stock",
-          "language": "en",
-          "width": 768
-        },
-        {
-          "page": "stock",
-          "language": "en",
-          "width": 390
-        },
-        {
-          "page": "stock",
-          "language": "en",
-          "width": 320
-        },
-        {
-          "page": "permissions",
-          "language": "zh-CN",
-          "width": 1440
-        },
-        {
-          "page": "permissions",
-          "language": "zh-CN",
-          "width": 390
-        },
-        {
-          "page": "permissions",
-          "language": "zh-CN",
-          "width": 320
-        },
-        {
-          "page": "permissions",
-          "language": "en",
-          "width": 1440
-        },
-        {
-          "page": "permissions",
-          "language": "en",
-          "width": 390
-        },
-        {
-          "page": "permissions",
-          "language": "en",
-          "width": 320
-        }
-      ],
-      "permissionCheckboxes": 67,
-      "permissionModules": 25,
-      "errors": [],
-      "workingDatabaseWrites": 0
-    },
-    "fastify": "5.12.8",
-    "immutableSqlMigrations": 172,
-    "workingDatabase": {
-      "status": "PASS",
-      "database": "musonoi_v26_development_test",
-      "mode": "READ ONLY",
-      "tables": 157,
-      "migrations": 172,
-      "accounts": 11,
-      "migration172FunctionBaseline": "PASS",
-      "writes": 0
-    },
-    "docker": {
-      "configurationChecks": "PASS",
-      "allManifestFilesCoveredByExplicitCopy": true,
-      "actualImageBuild": "NOT_RUN_DOCKER_UNAVAILABLE"
-    },
-    "publicRepositoryDecision": "User explicitly chose public source and encrypted database only",
-    "productionReady": false
-  }
+  "productionDatabaseAccessed": false,
+  "originalWorkingDatabaseAccessed": false,
+  "mainUpdated": false,
+  "productionDeployed": false,
+  "dockerImageBuilt": false,
+  "codeDelivery": "ordinary files; candidate branch only",
+  "runtimeMigrationCount": 173,
+  "backupBaselineMigrationCount": 172
 }

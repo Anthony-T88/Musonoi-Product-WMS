@@ -1,0 +1,88 @@
+✔ dispatch weight units, decimal comma and exact four-place tonne precision (1.0969ms)
+✔ loading order recognises multilingual weight headings and excludes trailer numbers (2.3509ms)
+✔ formula weight cells are rejected rather than treated as dispatch capacity (0.1895ms)
+✔ independent review rejects both document creator and submitter regardless of role (0.4696ms)
+✔ Docker uses explicit sources, default deny context and final sensitive-file exclusions (1.9032ms)
+✔ database target boundaries, owner separation and TLS bypass remain enforced (0.7017ms)
+✔ maintenance apply requires an explicit database confirmation (21.7622ms)
+✔ Fastify fix is installed and accepts streaming responses (154.8625ms)
+✔ release migration baseline accepts the reviewed chain and known historical filename gaps (0.501ms)
+✔ applied migrations must be a checksum-matching prefix; unknown versions and holes fail closed (0.768ms)
+✔ missing, injected, edited SQL and reordered baseline are rejected before any database query (83.346ms)
+✔ 172 exact signatures and function snapshots reject silent replacement drift and overloads (1.4649ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 269.5428
+▶ isolated migration, initialization, business permission and concurrency acceptance
+  ✔ empty schema dry-run rolls back every table; release apply, repeat and backup precondition (2065.0107ms)
+  ✔ bootstrap requires reviewed map, verified backup; dry-run/apply/retry preserve identities (134.7442ms)
+  ✔ 138-entry old schema upgrades incrementally; database holes and checksum changes are rejected (1005.5696ms)
+  ✔ preproduction CLI dry-run and confirmed apply use the same verified migration chain (226.626ms)
+  ✔ 172 refuses a drifted prerequisite function, rolls back, then applies once with exact snapshots (1000.0931ms)
+  ✔ concurrent migrations serialize: exactly one applies, the other is an idempotent retry (1007.5342ms)
+  ✔ both products: configurable admin review, revocation, two independent sales and closure stages (581.3518ms)
+  ✔ native cobalt intake: exact weights/seals, no self-review, final receipt and bounded stock history (130.7143ms)
+✔ isolated migration, initialization, business permission and concurrency acceptance (8261.2133ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8353.883
+▶ first batch management security regressions
+  ✔ restricted role manager cannot add account management to its own role (26.8713ms)
+  ✔ restricted account listing excludes outside administrators and multi-project targets (6.0135ms)
+  ✔ restricted account manager cannot reset an outside administrator password (3.8303ms)
+  ✔ restricted account manager cannot promote itself to administrator (2.9634ms)
+  ✔ scoped audit list and count exclude another project (4.4086ms)
+  ✔ scoped audit details deny another project by ID (2.045ms)
+  ✔ legacy audit endpoint uses the same project isolation (2.1325ms)
+  ✔ ordinary operators have no management access; system administrator retains audit access (5.5802ms)
+  ✔ system administrator account options retain every current built-in role (7.3002ms)
+  ✔ restricted role creation and editing succeed only within the live permission ceiling (12.1092ms)
+  ✔ own role, built-in roles and roles assigned outside the full scope cannot be changed (16.3109ms)
+  ✔ restricted account creation cannot assign administrator, stronger roles or outside scopes (78.3029ms)
+  ✔ full target containment protects all account lifecycle endpoints, including multi-project users (24.8675ms)
+  ✔ allowed account create, edit, reset, soft-delete and restore preserve identity and audit history (108.1253ms)
+  ✔ registration queue and review are system-administrator-only; concurrent review commits once (52.7015ms)
+  ✔ audit scope snapshots resist forged metadata and later actor/project reassignment (9.2769ms)
+  ✔ audit scope attribution treats valid uppercase UUIDs as the same authorized project (1.9513ms)
+  ✔ unknown and system audit events stay administrator-only; history cannot be rewritten (3.8461ms)
+  ✔ warehouse audit access requires exact warehouse coverage and project-wide records stay hidden (52.519ms)
+  ✔ customer audit access does not expose another product/customer in the same project (52.5598ms)
+  ✔ all scope fragments must be authorized; partial coverage of a multi-project event is insufficient (5.0228ms)
+  ✔ permission and scope changes revoke every affected session without logging out unrelated users (107.1263ms)
+  ✔ a queued management request rechecks its session after password/session revocation (58.1355ms)
+  ✔ an ordinary write waiting for authorization cannot use revoked permission (86.3437ms)
+  ✔ an in-flight write finishes before revocation commits; no old session survives the boundary (188.7851ms)
+  ✔ more concurrent writes than the pool size complete without authorization-pool starvation (270.2814ms)
+  ✔ language preference is ordered safely and does not revoke normal sessions (8.2403ms)
+  ✔ role-code gates cannot be acquired by assigning another built-in role with matching raw grants (82.2097ms)
+  ✔ case changes in UUID text cannot bypass the own-role change prohibition (2.4773ms)
+  ✔ catalog built-in roles remain protected when historical built_in flags are false (73.2534ms)
+  ✔ 172-to-173 upgrade preserves every historical account, grant, scope, session and audit row (1748.4066ms)
+✔ first batch management security regressions (5564.4299ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5647.1737
+✔ real browser: current cobalt stock, independent permissions and both languages at desktop/mobile widths (6393.5328ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6658.8999

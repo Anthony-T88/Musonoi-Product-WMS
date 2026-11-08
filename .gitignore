@@ -11,3 +11,6 @@ node_modules/
 *.backup
 *.zip
 *.log
+
+# Sanitized, intentionally public audit test evidence.
+!docs/security-r3-rc1/*.log

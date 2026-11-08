@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "release": "4.6.9-r2",
+  "release": "4.6.9-r3-rc1",
   "migrations": [
     {
       "version": "001_foundation.sql",
@@ -689,6 +689,10 @@
     {
       "version": "172_v469_configurable_admin_business_permissions.sql",
       "checksum": "45f812e8b586893c2759456741750bcb4958500f6824a860e41414dac3ed0a4a"
+    },
+    {
+      "version": "173_r3_security_scope_and_sessions.sql",
+      "checksum": "98cfc7ada7546320c491a277eec8e27b2285c9c4584018857137ba060b386e03"
     }
   ]
 }

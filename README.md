@@ -1,15 +1,13 @@
-# Musonoi Product WMS 4.6.9-r2
+# Musonoi Product WMS 4.6.9-r3-rc1
 
-当前以普通文件交付 4.6.9-r2，包含 server、dist、db、scripts、templates、deploy 及可复跑的 tests/release。第一阶段审计整改见 [AUDIT_REMEDIATION.md](AUDIT_REMEDIATION.md)。
+第一批安全整改候选分支，等待用户和 GPT 复审。仅提交独立 PR，不自动合并或部署。普通源码文件交付。
 
-- 氢氧化钴袋级库存采用批次展开清单；权限为横向勾选框，25 个模块、67 项权限。
-- 本次审计整改修复部署迁移链和初始化校验、测试交付、Docker 文件边界、第 172 条迁移的前后断言，并将 Fastify 升级至 5.12.8。
-- 现有 172 条 SQL 迁移原文与审计基线一致，保留历史数据及已确认的业务流程。
+[给 GPT 的完整修复报告](docs/security-r3-rc1/REPORT.txt) · [测试证据](docs/security-r3-rc1/TEST_RESULTS.json) · [回滚说明](docs/security-r3-rc1/ROLLBACK.txt)
 
-Node.js 22 以上，pnpm 11.25.0，PostgreSQL。`pnpm install --frozen-lockfile` 安装依赖；`pnpm test` 运行单元及规则测试；`pnpm run verify:integrity` 独立校验源码；`pnpm run test:acceptance` 执行数据库、接口、权限、并发及前端测试，所需独立 TEST 环境变量和浏览器设置见整改说明。
+修复角色自授权、账号跨范围及管理员操作、旧新审计入口隔离、权限变更后的会话及在途请求一致性。铜钴业务审批流程和独立审核规则保持原样。注册申请审批按用户确认限定为系统管理员。
 
-本机使用私有环境配置及 `pnpm start`；目标环境使用 `pnpm start:configured`，部署前完成 TLS、网络、地图、设备和环境验收。本机没有 Docker，镜像实际构建未验证，不能据此认定生产就绪。
+保留 172 条旧迁移原文，仅追加 173 安全迁移。原 r2 加密 TEST 备份保持不变，仍是 172 迁移基线；候选版启动需要先完成受控迁移至 173，不能直接运行于未迁移的原业务库。密钥和明文数据没有上传。
 
-仓库按用户决定保持公开。数据库备份来自本机 TEST，保留业务历史及账户，只提供 AES-256-GCM 加密文件 Musonoi-Database-V4.6.9-R2.dump.enc。密钥和明文备份仅保存在本机。
+运行测试需要 Node.js >=22、pnpm 11.25.0 和独立 TEST PostgreSQL。`pnpm install --frozen-lockfile`，`pnpm test`，`pnpm run verify:integrity`。设置报告列明的 TEST 环境及浏览器后，`pnpm run test:acceptance` 执行数据库、权限、并发和前端回归。测试仅创建随机审计库。
 
-解密：`node decrypt-database.cjs 数据库.enc 本地私钥.json 新输出.dump`。使用 PostgreSQL pg_restore 恢复到新建独立数据库。验证结果见 VALIDATION.json，全部发布文件校验见 RELEASE_MANIFEST.json。
+具体权限收紧、测试覆盖、连接池预算与剩余风险见报告。旧 AUDIT_REMEDIATION.md 是此前 r2 工程整改记录，本候选以本次报告为准。本次没有生产上线验收或 Docker 镜像构建，不代表生产就绪。
