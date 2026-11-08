@@ -1633,7 +1633,7 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "sha256": "cda973d4aa1ab4edc0a70806b3311807feeb152bfed2c8c1edf062a963164c89"
+      "sha256": "9be7b167b9a5dea8b3592111f56399e8343c238558c988586d22d27c23dbf77d"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -2197,7 +2197,7 @@
     },
     {
       "path": "tests/release/ci-setup.cjs",
-      "sha256": "a0d6943e881b14d36560a0d88cd0cfb16c5a6a42bc73434a0bbca2a6d3514a25"
+      "sha256": "e0a52114a82f6e6a5e42567896ebd6c34534fdb5f3a9dd94883eedbe94227c1a"
     },
     {
       "path": "tests/release/copper-core.cjs",

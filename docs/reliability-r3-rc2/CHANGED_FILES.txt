@@ -2,6 +2,7 @@
 .github/workflows/rc2-reliability.yml
 .gitignore
 README.md
+RELEASE_MANIFEST.json
 SOURCE_MANIFEST.json
 db/migration-baseline.json
 db/migrations/174_r3_reliable_audit_entity_scopes.sql
@@ -10,6 +11,7 @@ dist/index.html
 dist/release.js
 dist/sw.js
 docs/reliability-r3-rc2/CHANGED_FILES.txt
+docs/reliability-r3-rc2/CI_NOTES.txt
 docs/reliability-r3-rc2/REPORT.txt
 docs/reliability-r3-rc2/ROLLBACK.txt
 docs/reliability-r3-rc2/SOURCE_CHANGES.patch

@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 if(process.env.GITHUB_ACTIONS!=='true'||!process.env.GITHUB_ENV)throw Error('Ephemeral GitHub CI only');
 fs.mkdirSync('.runtime/ci-tls',{recursive:true});
 const owner=crypto.randomBytes(32).toString('base64url'),app=crypto.randomBytes(32).toString('base64url');
-const env={POSTGRES_PASSWORD:owner,WMS_TEST_OWNER_URL:'postgresql://postgres:'+owner+'@127.0.0.1:55432/postgres',WMS_TEST_APP_PASSWORD:app};
+const env={POSTGRES_PASSWORD:owner,WMS_TEST_OWNER_URL:'postgresql://musonoi_owner:'+owner+'@127.0.0.1:55432/postgres',WMS_TEST_APP_PASSWORD:app};
 for(const value of Object.values(env))console.log('::add-mask::'+value);
 fs.appendFileSync(process.env.GITHUB_ENV,Object.entries(env).map(([k,v])=>k+'='+v).join('\n')+'\n');
 execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','2','-subj','/CN=rc2-postgres','-addext','subjectAltName=DNS:rc2-postgres,IP:127.0.0.1','-keyout','.runtime/ci-tls/server.key','-out','.runtime/ci-tls/server.crt'],{stdio:'ignore'});

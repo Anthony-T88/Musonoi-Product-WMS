@@ -12,7 +12,7 @@ index 51f07f9..156a817 100644
 +TRUSTED_PROXY_IPS=
 diff --git a/.github/workflows/rc2-reliability.yml b/.github/workflows/rc2-reliability.yml
 new file mode 100644
-index 0000000..e230ee3
+index 0000000..8965c69
 --- /dev/null
 +++ b/.github/workflows/rc2-reliability.yml
 @@ -0,0 +1,56 @@
@@ -47,8 +47,8 @@ index 0000000..e230ee3
 +        run: |
 +          sudo chown 999:999 .runtime/ci-tls/server.key
 +          docker network create rc2-ci-net
-+          docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
-+          for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -U postgres && exit 0; sleep 1; done
++          docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_USER=musonoi_owner -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
++          for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -h 127.0.0.1 -U musonoi_owner -d postgres && exit 0; sleep 1; done
 +          exit 1
 +      - name: Unit, migration, 31 security groups, reliability, business and real browser regression
 +        run: node scripts/run-release-tests.cjs acceptance
@@ -331,7 +331,7 @@ index 49f95b5..3e707a9 100644
    "scripts": {
      "start": "node scripts/start-current.cjs",
 diff --git a/scripts/run-release-tests.cjs b/scripts/run-release-tests.cjs
-index 10d265b..54b5e67 100644
+index 10d265b..d63db66 100644
 --- a/scripts/run-release-tests.cjs
 +++ b/scripts/run-release-tests.cjs
 @@ -1,12 +1,12 @@
@@ -347,7 +347,7 @@ index 10d265b..54b5e67 100644
 - const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs'].includes(f)):[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':'ui.test.cjs'];
 - const run=spawnSync(process.execPath,['--test',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
 + if(['integration','security','reliability'].includes(suite)&&(!process.env.WMS_TEST_OWNER_URL||!process.env.WMS_TEST_APP_PASSWORD))throw Error('Integration tests require WMS_TEST_OWNER_URL and WMS_TEST_APP_PASSWORD for an isolated TEST server');
-+ const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs','reliability.test.cjs'].includes(f)):suite==='reliability'?['reliability.test.cjs','pool-reliability.cjs','core-flows.cjs','copper-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','lock-order.cjs']:[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':suite==='reliability'?'reliability.test.cjs':'ui.test.cjs'];
++ const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs','reliability.test.cjs'].includes(f)):suite==='reliability'?['reliability.test.cjs','pool-reliability.cjs','core-flows.cjs','copper-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','lock-order.cjs']:[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':suite==='reliability'?'reliability.test.cjs':'ui.test.cjs'];
 + const run=spawnSync(process.execPath,['--test','--test-concurrency=1',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
   const output=path.join(root,'.runtime/release-tests');fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'runner-'+suite+'.json'),JSON.stringify({suite,status:run.status===0?'PASS':'FAIL',exitCode:run.status,checkedAt:new Date().toISOString()},null,2));
   if(run.status!==0){process.exitCode=run.status||1;break;}
@@ -562,7 +562,7 @@ index d11d376..0f41491 100644
  module.exports={catalog,retired,active,assignable,present};
 diff --git a/tests/release/ci-setup.cjs b/tests/release/ci-setup.cjs
 new file mode 100644
-index 0000000..7db00ee
+index 0000000..34f44a2
 --- /dev/null
 +++ b/tests/release/ci-setup.cjs
 @@ -0,0 +1,13 @@
@@ -571,7 +571,7 @@ index 0000000..7db00ee
 +if(process.env.GITHUB_ACTIONS!=='true'||!process.env.GITHUB_ENV)throw Error('Ephemeral GitHub CI only');
 +fs.mkdirSync('.runtime/ci-tls',{recursive:true});
 +const owner=crypto.randomBytes(32).toString('base64url'),app=crypto.randomBytes(32).toString('base64url');
-+const env={POSTGRES_PASSWORD:owner,WMS_TEST_OWNER_URL:'postgresql://postgres:'+owner+'@127.0.0.1:55432/postgres',WMS_TEST_APP_PASSWORD:app};
++const env={POSTGRES_PASSWORD:owner,WMS_TEST_OWNER_URL:'postgresql://musonoi_owner:'+owner+'@127.0.0.1:55432/postgres',WMS_TEST_APP_PASSWORD:app};
 +for(const value of Object.values(env))console.log('::add-mask::'+value);
 +fs.appendFileSync(process.env.GITHUB_ENV,Object.entries(env).map(([k,v])=>k+'='+v).join('\n')+'\n');
 +execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','2','-subj','/CN=rc2-postgres','-addext','subjectAltName=DNS:rc2-postgres,IP:127.0.0.1','-keyout','.runtime/ci-tls/server.key','-out','.runtime/ci-tls/server.crt'],{stdio:'ignore'});

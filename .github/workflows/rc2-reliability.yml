@@ -29,8 +29,8 @@ jobs:
         run: |
           sudo chown 999:999 .runtime/ci-tls/server.key
           docker network create rc2-ci-net
-          docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
-          for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -U postgres && exit 0; sleep 1; done
+          docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_USER=musonoi_owner -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
+          for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -h 127.0.0.1 -U musonoi_owner -d postgres && exit 0; sleep 1; done
           exit 1
       - name: Unit, migration, 31 security groups, reliability, business and real browser regression
         run: node scripts/run-release-tests.cjs acceptance

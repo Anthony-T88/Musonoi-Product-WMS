@@ -1,0 +1,7 @@
+CI第1次实跑：https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/runs/42521363545
+提交：22b254e31d137d2c27f8a5d48578db7cbf4adc67
+源码/历史迁移、17单元、8集成、31安全组通过；可靠性组中铜入库确认及铜盘点因维护函数所有者不匹配失败，Docker步骤未执行。
+具体保护错误：Committed inventory history is immutable；Workflow transitions require authorized database function。
+原因：CI创建函数时使用postgres，但历史受控函数明确要求current_user=musonoi_owner。Windows本地独立库使用正确维护账号，因此本地不复现。
+修复仅针对临时CI数据库：PostgreSQL bootstrap账号及WMS_TEST_OWNER_URL统一为musonoi_owner，等待TCP服务就绪。没有改历史迁移、触发器、业务权限或放宽历史保护。
+后续实际运行结果以PR当前提交检查及最终交付报告为准。
