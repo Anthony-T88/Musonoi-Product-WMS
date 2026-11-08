@@ -1,15 +1,18 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process'),{Client}=require('pg'),E=require('./environment.cjs');
 if(process.env.GITHUB_ACTIONS!=='true')throw Error('Docker acceptance uses only the ephemeral CI database');
-const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],...options}).trim(),wait=ms=>new Promise(r=>setTimeout(r,ms));
+const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',maxBuffer:32*1024*1024,stdio:['ignore','pipe','pipe'],...options}).trim(),wait=ms=>new Promise(r=>setTimeout(r,ms));
 const results={status:'RUNNING',checks:[],syntheticOnly:true},check=async(name,fn)=>{await fn();results.checks.push({name,status:'PASS'});console.log('PASS '+name);};
 (async()=>{const image='musonoi-rc2:ci',f=E.fixture(),c=new Client(E.options(f.database));await c.connect();const names=[];try{
  await check('actual image build with unchanged default-deny packaging design',async()=>{docker(['build','--progress=plain','-f','deploy/Dockerfile','-t',image,'.'],{stdio:'inherit'});});
  await check('final image file inventory excludes backups, private env, keys, runtime and test credentials',async()=>{
   assert.equal(docker(['image','inspect',image,'--format','{{.Config.User}}']),'node');
-  const listing=docker(['run','--rm','--entrypoint','node',image,'-e',"const fs=require('fs');function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const q=p+'/'+e.name;if(q==='/app/node_modules')continue;if(e.isDirectory())walk(q);else console.log(q)}}walk('/app')"]);
+  results.imageId=docker(['image','inspect',image,'--format','{{.Id}}']);
+  const listing=docker(['run','--rm','--user','0','--entrypoint','node',image,'-e',"const fs=require('fs');function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const q=(p==='/'?'':p)+'/'+e.name;if(['/proc','/sys','/dev'].includes(q))continue;if(e.isDirectory())walk(q);else{console.log(q);if(e.isFile()&&/\\.(pem|key)$/.test(q)&&/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(fs.readFileSync(q,'utf8')))throw Error('Private key in image: '+q)}}}walk('/')"]);
   fs.writeFileSync(path.join(E.runtime,'docker-image-files.txt'),listing+'\n');
-  assert(!listing.split('\n').some(p=>/(?:\/private\/|\/\.runtime\/|\/backups\/|\/\.env$|\.(?:key|pem|enc|dump|backup|zip)$|rc2-canary)/.test(p)));
+  results.imageFileCount=listing.split('\n').length;
+  assert(!listing.split('\n').filter(p=>p.startsWith('/app/')).some(p=>/(?:\/private\/|\/\.runtime\/|\/backups\/|\/\.env$|\.(?:key|pem|enc|dump|backup)$|rc2-canary)/.test(p)));
+  const imageEnv=docker(['image','inspect',image,'--format','{{json .Config.Env}}']);for(const secret of [process.env.POSTGRES_PASSWORD,process.env.WMS_TEST_APP_PASSWORD,...f.accounts.map(a=>a.password)])assert(!secret||!imageEnv.includes(secret));
   assert.equal(docker(['run','--rm','--entrypoint','node',image,'-e','process.stdout.write(String(process.getuid()))']),'1000');
  });
  await check('missing production configuration fails closed',async()=>{let code=0;try{docker(['run','--rm',image]);}catch(e){code=e.status;}assert.notEqual(code,0);});

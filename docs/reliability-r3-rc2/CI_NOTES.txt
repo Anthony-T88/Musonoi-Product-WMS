@@ -5,3 +5,6 @@ CI第1次实跑：https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/run
 原因：CI创建函数时使用postgres，但历史受控函数明确要求current_user=musonoi_owner。Windows本地独立库使用正确维护账号，因此本地不复现。
 修复仅针对临时CI数据库：PostgreSQL bootstrap账号及WMS_TEST_OWNER_URL统一为musonoi_owner，等待TCP服务就绪。没有改历史迁移、触发器、业务权限或放宽历史保护。
 后续实际运行结果以PR当前提交检查及最终交付报告为准。
+
+CI第2次：https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/runs/42521676864
+维护身份修正后，完整单元/迁移/31安全组/铜钴业务/可靠性及真实浏览器步骤已实际成功，Docker实测正在运行。随后将镜像文件检查扩展到完整容器文件系统（含依赖，跳过proc/sys/dev虚拟挂载），同时核实镜像环境中没有临时凭据；公共CA证书不当作私钥，私钥内容另行检查。最终结果以当前提交CI为准。
