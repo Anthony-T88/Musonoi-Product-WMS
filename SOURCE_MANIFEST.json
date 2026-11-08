@@ -1633,7 +1633,7 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "sha256": "95153b03b17898b1fd606305f72ec99b1cf7632a1d9a56fbb844c6ece48bce0b"
+      "sha256": "34b2079fe682a16bd483e9c86403063f88820da80ad020fe78383c8134a77384"
     },
     {
       "path": "scripts/start-current.cjs",

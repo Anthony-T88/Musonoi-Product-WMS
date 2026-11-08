@@ -331,7 +331,7 @@ index 49f95b5..3e707a9 100644
    "scripts": {
      "start": "node scripts/start-current.cjs",
 diff --git a/scripts/run-release-tests.cjs b/scripts/run-release-tests.cjs
-index 10d265b..fb191c3 100644
+index 10d265b..020f1ef 100644
 --- a/scripts/run-release-tests.cjs
 +++ b/scripts/run-release-tests.cjs
 @@ -1,12 +1,12 @@
@@ -347,7 +347,7 @@ index 10d265b..fb191c3 100644
 - const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs'].includes(f)):[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':'ui.test.cjs'];
 - const run=spawnSync(process.execPath,['--test',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
 + if(['integration','security','reliability'].includes(suite)&&(!process.env.WMS_TEST_OWNER_URL||!process.env.WMS_TEST_APP_PASSWORD))throw Error('Integration tests require WMS_TEST_OWNER_URL and WMS_TEST_APP_PASSWORD for an isolated TEST server');
-+ const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs','reliability.test.cjs'].includes(f)):suite==='reliability'?['reliability.test.cjs','pool-reliability.cjs','core-flows.cjs','copper-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','stocktake-core.cjs','lock-order.cjs']:[suite==='integration'?'database.test.cjs':suite==='security'?'security.test.cjs':suite==='reliability'?'reliability.test.cjs':'ui.test.cjs'];
++ const files=suite==='unit'?fs.readdirSync(path.join(root,'tests/release')).filter(f=>f.endsWith('.test.cjs')&&!['database.test.cjs','ui.test.cjs','security.test.cjs','reliability.test.cjs'].includes(f)):{integration:['database.test.cjs'],security:['security.test.cjs'],ui:['ui.test.cjs'],reliability:['reliability.test.cjs','pool-reliability.cjs','core-flows.cjs','copper-core.cjs','stocktake-core.cjs','lock-order.cjs']}[suite];
 + const run=spawnSync(process.execPath,['--test','--test-concurrency=1',...files.map(f=>path.join(root,'tests/release',f))],{cwd:root,env:{...process.env},stdio:'inherit',windowsHide:true});
   const output=path.join(root,'.runtime/release-tests');fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'runner-'+suite+'.json'),JSON.stringify({suite,status:run.status===0?'PASS':'FAIL',exitCode:run.status,checkedAt:new Date().toISOString()},null,2));
   if(run.status!==0){process.exitCode=run.status||1;break;}

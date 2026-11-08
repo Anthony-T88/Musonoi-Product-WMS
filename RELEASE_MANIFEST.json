@@ -69,7 +69,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 81513,
-      "sha256": "f663384bb187c7f5b8bdfd9714905e9088c854a63b2a752518325a78b1949821"
+      "sha256": "d2c15cb2083e08a9299a47fbe2a38cd06192e4e07a767189096c96317aac19d3"
     },
     {
       "path": "VALIDATION.json",
@@ -2048,8 +2048,8 @@
     },
     {
       "path": "docs/reliability-r3-rc2/CI_NOTES.txt",
-      "bytes": 1678,
-      "sha256": "337d98a5a7a2bf782386416549ba38dce87e6837bc2301900ba3fe9d50cb2a8e"
+      "bytes": 1922,
+      "sha256": "3046ca6a9f9c9dfccc2144ae7aeab1b67c56083c4ac0dce0802d8bd78fcac973"
     },
     {
       "path": "docs/reliability-r3-rc2/REPORT.txt",
@@ -2063,8 +2063,8 @@
     },
     {
       "path": "docs/reliability-r3-rc2/SOURCE_CHANGES.patch",
-      "bytes": 197759,
-      "sha256": "7de93ff5ca984477a2112f476c84fed4a98770618fdb6a25d31b87d97b614fae"
+      "bytes": 197532,
+      "sha256": "e72aabd7e6599dea8bd00f3a1932bbff152368619fc35f89e67a9a328194f792"
     },
     {
       "path": "docs/reliability-r3-rc2/TEST_RESULTS.json",
@@ -2288,8 +2288,8 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "bytes": 1862,
-      "sha256": "95153b03b17898b1fd606305f72ec99b1cf7632a1d9a56fbb844c6ece48bce0b"
+      "bytes": 1635,
+      "sha256": "34b2079fe682a16bd483e9c86403063f88820da80ad020fe78383c8134a77384"
     },
     {
       "path": "scripts/start-current.cjs",
