@@ -2217,7 +2217,7 @@
     },
     {
       "path": "tests/release/docker-acceptance.cjs",
-      "sha256": "6a78b99260d7fd5633d74bd5e0273f36124ab4a8ceeb80ffd1fb86fb3d3fac69"
+      "sha256": "d2303bdf6b1f37126db36edac4b6d33b04d3fde5748db6c71d7e1c04e1b0624e"
     },
     {
       "path": "tests/release/environment.cjs",
