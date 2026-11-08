@@ -1633,7 +1633,7 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "sha256": "cf71e902ddf9cf21e8369f1a8baefdcd57a8817b1d088be550e69be81215dc48"
+      "sha256": "95153b03b17898b1fd606305f72ec99b1cf7632a1d9a56fbb844c6ece48bce0b"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -2217,7 +2217,7 @@
     },
     {
       "path": "tests/release/docker-acceptance.cjs",
-      "sha256": "c7650448aba1cecb39d2a83c9a76f6d2f69bcec32bfa349b2d3f5a646d81ada4"
+      "sha256": "6a78b99260d7fd5633d74bd5e0273f36124ab4a8ceeb80ffd1fb86fb3d3fac69"
     },
     {
       "path": "tests/release/environment.cjs",

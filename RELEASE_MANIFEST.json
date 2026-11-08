@@ -69,7 +69,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 81513,
-      "sha256": "987b04f3c5404441ad40b25bccabc189ff687df72e4f8c9d024f2623a617b768"
+      "sha256": "f663384bb187c7f5b8bdfd9714905e9088c854a63b2a752518325a78b1949821"
     },
     {
       "path": "VALIDATION.json",
@@ -2048,8 +2048,8 @@
     },
     {
       "path": "docs/reliability-r3-rc2/CI_NOTES.txt",
-      "bytes": 1395,
-      "sha256": "d978e29a140e98e623c027853fda96d05c60d1e6a4b3f7150e8391b0f6f6bfaa"
+      "bytes": 1678,
+      "sha256": "337d98a5a7a2bf782386416549ba38dce87e6837bc2301900ba3fe9d50cb2a8e"
     },
     {
       "path": "docs/reliability-r3-rc2/REPORT.txt",
@@ -2063,8 +2063,8 @@
     },
     {
       "path": "docs/reliability-r3-rc2/SOURCE_CHANGES.patch",
-      "bytes": 197732,
-      "sha256": "44e054a62c0eedab2fd9a2f5b069060f661848ee7565a2fb94ab46be11c7328b"
+      "bytes": 197759,
+      "sha256": "7de93ff5ca984477a2112f476c84fed4a98770618fdb6a25d31b87d97b614fae"
     },
     {
       "path": "docs/reliability-r3-rc2/TEST_RESULTS.json",
@@ -2288,8 +2288,8 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "bytes": 1841,
-      "sha256": "cf71e902ddf9cf21e8369f1a8baefdcd57a8817b1d088be550e69be81215dc48"
+      "bytes": 1862,
+      "sha256": "95153b03b17898b1fd606305f72ec99b1cf7632a1d9a56fbb844c6ece48bce0b"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -3018,8 +3018,8 @@
     },
     {
       "path": "tests/release/docker-acceptance.cjs",
-      "bytes": 5543,
-      "sha256": "c7650448aba1cecb39d2a83c9a76f6d2f69bcec32bfa349b2d3f5a646d81ada4"
+      "bytes": 5549,
+      "sha256": "6a78b99260d7fd5633d74bd5e0273f36124ab4a8ceeb80ffd1fb86fb3d3fac69"
     },
     {
       "path": "tests/release/environment.cjs",

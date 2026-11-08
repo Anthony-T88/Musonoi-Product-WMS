@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process'),{Client}=require('pg'),E=require('./environment.cjs');
 if(process.env.GITHUB_ACTIONS!=='true')throw Error('Docker acceptance uses only the ephemeral CI database');
-const docker=(args,options={})=>execFileSync('docker',args,{encoding:'utf8',maxBuffer:32*1024*1024,stdio:['ignore','pipe','pipe'],...options}).trim(),wait=ms=>new Promise(r=>setTimeout(r,ms));
+const docker=(args,options={})=>(execFileSync('docker',args,{encoding:'utf8',maxBuffer:32*1024*1024,stdio:['ignore','pipe','pipe'],...options})||'').trim(),wait=ms=>new Promise(r=>setTimeout(r,ms));
 const results={status:'RUNNING',checks:[],syntheticOnly:true},check=async(name,fn)=>{await fn();results.checks.push({name,status:'PASS'});console.log('PASS '+name);};
 (async()=>{const image='musonoi-rc2:ci',f=E.fixture(),c=new Client(E.options(f.database));await c.connect();const names=[];try{
  await check('actual image build with unchanged default-deny packaging design',async()=>{docker(['build','--progress=plain','-f','deploy/Dockerfile','-t',image,'.'],{stdio:'inherit'});});

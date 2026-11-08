@@ -8,3 +8,5 @@ CI第1次实跑：https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/run
 
 CI第2次：https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/runs/42521676864
 维护身份修正后，完整单元/迁移/31安全组/铜钴业务/可靠性及真实浏览器步骤已实际成功，Docker实测正在运行。随后将镜像文件检查扩展到完整容器文件系统（含依赖，跳过proc/sys/dev虚拟挂载），同时核实镜像环境中没有临时凭据；公共CA证书不当作私钥，私钥内容另行检查。最终结果以当前提交CI为准。
+
+CI第2次Docker构建实际成功，镜像sha256:fa392cce1302d6e9e144f42d4a75c20bfa104e0718aefda660732fb2c602ded9。验收工具因继承输出时返回null而调用trim报TypeError，后续镜像验收未执行；现已复现并修正工具空返回值处理，不改Dockerfile。
