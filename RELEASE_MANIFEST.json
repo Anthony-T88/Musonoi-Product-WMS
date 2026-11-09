@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 87228,
-      "sha256": "fcd1e8e7845ffe67717d14827569fdc76af87cb68b09e5cfa7183049dccc87e1"
+      "sha256": "056752c1900cf17e1869e24fd072d0be2eee1ccb6a7708f487c0e416e564fbe1"
     },
     {
       "path": "VALIDATION.json",
@@ -2343,8 +2343,8 @@
     },
     {
       "path": "docs/uiux/VISUAL.md",
-      "bytes": 2338,
-      "sha256": "c1c117eaf306925e8f545deac1bcf91655b01fa0bc177082edd3913930aacf80"
+      "bytes": 2503,
+      "sha256": "35655c18655c248e4f0dc85526daefab52fe4b9aea67cf2f321bfa8ce19d5568"
     },
     {
       "path": "package.json",
@@ -3213,8 +3213,8 @@
     },
     {
       "path": "tests/release/uiux-audit.cjs",
-      "bytes": 16812,
-      "sha256": "ab2b012142cf5a2ecbfa37246babf537054f50eecbe480ceb1faec028e97cf19"
+      "bytes": 16873,
+      "sha256": "2c7401ee188e43ddfa24d777dfa88e7a49c63061b03937bb57bde6876a57bb82"
     },
     {
       "path": "tests/release/uiux-baselines/inventory_CU_CATHODE_zh-CN_admin_390.png",
@@ -3253,38 +3253,38 @@
     },
     {
       "path": "tests/release/uiux-baselines/review.json",
-      "bytes": 1962,
-      "sha256": "65e3ce31355abaade5de0c5a01324e9ddb1c15d894bca7f6e5c0b746b48e4a36"
+      "bytes": 1986,
+      "sha256": "ef1c3010ce6e39c0e4b21545bf62b55a4b74b0fed3ee4a82f04a8e3df2223df8"
     },
     {
       "path": "tests/release/uiux-fixtures.cjs",
-      "bytes": 10883,
-      "sha256": "6b6e904b010c741e3372dbd10fce5fdfc0679fb94fa672c83c511aa2d0454f64"
+      "bytes": 11164,
+      "sha256": "f051114e33de7e9bbd69142757412bdde7901a8701d0ebdd4d7813dfab38e270"
     },
     {
       "path": "tests/release/uiux-gate.test.cjs",
-      "bytes": 4828,
-      "sha256": "6e85df4c5509b0dc40ef3fd90bd52f5c1f2fd33ecc11445b237423afb028033c"
+      "bytes": 4877,
+      "sha256": "3f80d8569d858aa73bb947e0413562220c954356af11bdedc250921e066349ae"
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "bytes": 24545,
-      "sha256": "7ed1701c217a675c0e70a52711c8c74110213dd49833dbb244146a386127a936"
+      "bytes": 24585,
+      "sha256": "cd8c774be42a867463558d9e52df4429dd3966c7c174bfef5518778d237948fa"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
-      "bytes": 6031,
-      "sha256": "31625bc575abbcbebc42e585704b1e387a4da6c1ca4734ccfa91ab4192c1726f"
+      "bytes": 6334,
+      "sha256": "7437cca5399af4258e18aa84f92b0ac975d3d52a9c5eb9facfa679c3563f24ce"
     },
     {
       "path": "tests/release/uiux-quality.cjs",
-      "bytes": 11230,
-      "sha256": "9e2381ad04193740f3286c2f47f8c5d685ac7c4866989c81d09421c4fdc4b411"
+      "bytes": 11830,
+      "sha256": "0d3e0016c9bc290a77c34a4855c8b9efbb1a71378ea78be05b6dbfd93a6b3c3e"
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "bytes": 13665,
-      "sha256": "37a0ebceeb4ef57d0d98b4bd22797875bd2f271a3fe66a47a2be3ece0727dab8"
+      "bytes": 13763,
+      "sha256": "e5d742a5de1309d3bcf147f80f3fb78e663c225413429f76b7f1e70c03ea1409"
     },
     {
       "path": "tests/release/uiux-verify.cjs",

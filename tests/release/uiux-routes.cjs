@@ -19,7 +19,7 @@ async function examples(client,fixture){
   cuReceipt:'SELECT id value FROM receipts ORDER BY created_at DESC LIMIT 1',
   cuReceiptDraft:"SELECT id value FROM receipts WHERE status='DRAFT' ORDER BY created_at DESC LIMIT 1",
   cuLot:'SELECT id value FROM allocations ORDER BY created_at DESC LIMIT 1',
-  cuSample:'SELECT allocation_id value FROM allocation_items WHERE sample_required IS TRUE LIMIT 1',
+  cuSample:"SELECT id value FROM sampling_batches WHERE code='UIUX-LEGACY-SAMPLE'",
   cuWeigh:'SELECT id value FROM weighings ORDER BY created_at DESC LIMIT 1',
   cuOutbound:'SELECT id value FROM outbound_orders ORDER BY created_at DESC LIMIT 1',
   cuBundle:'SELECT bundle_no value FROM bundles ORDER BY created_at DESC LIMIT 1',
@@ -114,11 +114,11 @@ function pages(ids){
  add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true});
  add('co-preparation-alias','/preparation/:id',[CO],{example:'coPrep'});
  add('co-work-alias','/preparation/:id/work',[CO],{example:'coPrepEditable'});
- add('cu-sampling','/preparation/history-sampling',[CU]);
- add('cu-sampling-detail','/preparation/history-sampling/:id',[CU],{example:'cuLot'});
- add('cu-weighings','/outbounds/weighings',[CU]);
+ add('cu-sampling','/preparation/history-sampling',[CU],{state:'retired permission'});
+ add('cu-sampling-detail','/preparation/history-sampling/:id',[CU],{example:'cuSample',state:'retired permission'});
+ add('cu-weighings','/outbounds/weighings',[CU],{state:'retired permission'});
  add('cu-weigh-new','/outbounds/weighings/new',[CU]);
- add('cu-weigh','/outbounds/weighings/:id',[CU],{example:'cuWeigh'});
+ add('cu-weigh','/outbounds/weighings/:id',[CU],{example:'cuWeigh',state:'retired permission'});
  add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager']});
  for(const [product,key,example] of [[CU,'cu-arrival','cuArrivalPending'],[CO,'co-arrival','coArrival']]){
   add(key,'/loading-plans',[product],{example,state:'waiting-arrival'});

@@ -601,7 +601,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "retired permission",
       "template": "/preparation/history-sampling"
     },
     {
@@ -609,7 +609,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "retired permission",
       "template": "/preparation/history-sampling/:id"
     },
     {
@@ -617,7 +617,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "retired permission",
       "template": "/outbounds/weighings"
     },
     {
@@ -633,7 +633,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "retired permission",
       "template": "/outbounds/weighings/:id"
     },
     {

@@ -16,6 +16,11 @@ const deniedCases=new Set([
 ]);
 // Each exception is scoped to one role, product, state and scenario. Expired entries fail the gate.
 const missingExceptions=[];
+const retiredRoutes=new Set(['cu-sampling','cu-sampling-detail','cu-weighings','cu-weigh']);
+const protectedEndpoint=(key,ids)=>({
+ 'cu-sampling':'/samples','cu-sampling-detail':'/samples/'+ids.cuSample,
+ 'cu-weighings':'/weighings','cu-weigh':'/weighings/'+ids.cuWeigh
+})[key];
 
 function matrix(mode,specs=R.pages({})){
  if(!['full','quick'].includes(mode))throw Error('Invalid scan mode: '+mode);
@@ -26,7 +31,7 @@ function matrix(mode,specs=R.pages({})){
   for(const product of guest?[null]:spec.products){
    const roles=guest?['guest']:['admin',...(mode==='quick'?quickRoles[spec.key]||[]:spec.roles)];
    for(const role of roles)for(const language of languages){
-    const apiDenial=spec.key==='cu-weigh';
+    const apiDenial=retiredRoutes.has(spec.key);
     const denied=apiDenial||deniedCases.has([role,product,spec.key].join('/'));
     const screenshot=apiDenial||!denied&&(guest||role==='admin'&&spec.screenshot);
     const viewports=spec.key==='register-dialog'?[phone]:mode==='quick'
@@ -100,5 +105,5 @@ function selectors(key,product,landing){
  return [...(!['login','register-dialog'].includes(key)?[main]:[]),...(checks[key]||[])];
 }
 
-module.exports={matrix,inventory,expectedLanding,selectors,rowId,imageName,comparable,languages,desktop,phone,missingExceptions};
+module.exports={matrix,inventory,expectedLanding,selectors,rowId,imageName,comparable,languages,desktop,phone,missingExceptions,protectedEndpoint};
 

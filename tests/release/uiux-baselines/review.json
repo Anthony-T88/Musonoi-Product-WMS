@@ -72,6 +72,7 @@
     },
     {
       "file": "metal-outbound_CO_HYDROXIDE_en_admin_1920.png",
+      "maxOffsetX": 10,
       "clip": {
         "x": 1354,
         "y": 472,

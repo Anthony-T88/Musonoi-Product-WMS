@@ -42,6 +42,9 @@ async function seed(){
    await c.query('BEGIN');
    try{
     await c.query("INSERT INTO yards(project_id,warehouse_id,code,name) VALUES($1,$2,'UIUX-YARD','Synthetic UIUX yard') ON CONFLICT(project_id,code) DO NOTHING",[f.project,f.warehouse]);
+    await c.query(`INSERT INTO sampling_batches(code,project_id,customer_id,sample_date,agency,status,created_by)
+     VALUES('UIUX-LEGACY-SAMPLE',$1,$2,$3,'Synthetic sample laboratory','REGISTERED',$4) ON CONFLICT(code) DO NOTHING`,
+    [f.project,f.customers[CU].id,day,actor]);
     await c.query(`INSERT INTO loading_orders(code,project_id,customer_id,vehicle_no,carrier,loading_point,loaded_at,status,created_by)
      VALUES('UIUX-LEGACY-LOADING',$1,$2,'SYNTHETIC-UIUX','Synthetic carrier','Synthetic dock',clock_timestamp(),'LOADED',$3)
      ON CONFLICT(code) DO NOTHING`,[f.project,f.customers[CU].id,actor]);

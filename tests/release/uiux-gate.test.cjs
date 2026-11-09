@@ -24,7 +24,8 @@ test('strict quick and full UI matrices reject missing routes, forged images, wr
   const routes=R.pages(fixtures),specs=new Map(routes.map(s=>[s.key,s])),sizes=new Map();
   const records=mode=>M.matrix(mode).map(entry=>{
    const {screenshot,...r}=entry,renderedUrl=M.expectedLanding(specs.get(r.key),r.product,fixtures);
-   const row={...r,renderedUrl,outcome:r.denied?'denied':'rendered',httpStatus:r.denied?403:200,...(r.apiDenial?{apiStatus:403}:{}),
+   const row={...r,renderedUrl,outcome:r.denied?'denied':'rendered',httpStatus:r.denied?403:200,
+    ...(r.apiDenial?{apiStatus:403,apiPath:M.protectedEndpoint(r.key,fixtures)}:{}),
     metrics:{verifiedControls:Object.fromEntries(M.selectors(r.key,r.product,renderedUrl).map(s=>[s,true])),
      overflow:0,actionClips:[],filterClips:[],noName:[],duplicates:[],contrastCandidates:[],forbiddenFields:[]}};
    if(screenshot){

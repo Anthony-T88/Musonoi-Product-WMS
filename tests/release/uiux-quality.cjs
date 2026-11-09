@@ -97,6 +97,7 @@ function compareLayout(evidence,dir,mode){
    errorsIf(row.outcome!=='denied'||(entry.apiDenial?row.apiStatus:row.httpStatus)!==403,'Expected HTTP 403 '+id);
    if(entry.apiDenial){
     errorsIf(row.renderedUrl!==M.expectedLanding(spec,row.product,evidence.fixtures),'Wrong denial page '+id);
+    errorsIf(row.apiPath!==M.protectedEndpoint(row.key,evidence.fixtures),'Wrong protected endpoint '+id);
     try{checkPng(dir,row);shots.add(row.screenshot);}catch(e){errors.push(id+': '+e.message);}
    }
    continue;
@@ -142,23 +143,31 @@ async function compareScreenshots(dir){
   const page=await browser.newPage();
   for(const shot of baseline.images){
    const imgs=[path.join(presets,shot.file),path.join(dir,shot.file)].map(p=>'data:image/png;base64,'+fs.readFileSync(p).toString('base64'));
-   const score=await page.evaluate(async({imgs,clip})=>{
-    const decode=async src=>{
+   const score=await page.evaluate(async({imgs,clip,maxOffsetX})=>{
+    const load=async src=>{
      const image=new Image();image.src=src;await image.decode();
+     return image;
+    };
+    const pixels=(image,offsetX)=>{
      const c=document.createElement('canvas');c.width=256;c.height=Math.round(256*clip.height/clip.width);
      const ctx=c.getContext('2d');
-     ctx.drawImage(image,clip.x,clip.y,clip.width,clip.height,0,0,c.width,c.height);
+     ctx.drawImage(image,clip.x+offsetX,clip.y,clip.width,clip.height,0,0,c.width,c.height);
      return ctx.getImageData(0,0,c.width,c.height).data;
     };
-    const [a,b]=await Promise.all(imgs.map(decode));let changed=0,sum=0;
-    for(let i=0;i<a.length;i+=4){
-     const delta=(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]))/3;
-     sum+=delta;if(delta>32)changed++;
+    const [baseline,current]=await Promise.all(imgs.map(load)),a=pixels(baseline,0),candidates=[];
+    for(let offsetX=-maxOffsetX;offsetX<=maxOffsetX;offsetX++){
+     if(clip.x+offsetX<0||clip.x+clip.width+offsetX>current.naturalWidth)continue;
+     const b=pixels(current,offsetX);let changed=0,sum=0;
+     for(let i=0;i<a.length;i+=4){
+      const delta=(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2]))/3;
+      sum+=delta;if(delta>32)changed++;
+     }
+     candidates.push({mean:sum/(a.length/4)/255,changed:changed/(a.length/4),offsetX});
     }
-    return {mean:sum/(a.length/4)/255,changed:changed/(a.length/4)};
-   },{imgs,clip:shot.clip});
+    return candidates.sort((a,b)=>a.mean-b.mean||Math.abs(a.offsetX)-Math.abs(b.offsetX))[0];
+   },{imgs,clip:shot.clip,maxOffsetX:shot.maxOffsetX||0});
    const pass=score.mean<=shot.meanTolerance&&score.changed<=shot.changedTolerance;
-   scores.push({file:shot.file,...score,meanTolerance:shot.meanTolerance,changedTolerance:shot.changedTolerance,pass});
+   scores.push({file:shot.file,...score,maxOffsetX:shot.maxOffsetX||0,meanTolerance:shot.meanTolerance,changedTolerance:shot.changedTolerance,pass});
   }
  }finally{await browser.close();}
  fs.writeFileSync(path.join(dir,'pixel-results.json'),JSON.stringify({status:scores.every(x=>x.pass)?'PASS':'FAIL',browser:capturedBrowser,scores},null,2)+'\n');

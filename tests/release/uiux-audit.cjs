@@ -158,9 +158,12 @@ async function scan({out,phase='current',mode='full'}){
    row.metrics=failure?{}:await inspect(page,row.role==='guest',checks);
    row.outcome=failure?'failed':outcome(row.metrics,errors,httpStatus);
    row.httpStatus=httpStatus;row.errors=[...errors];
-  if(entry.apiDenial)row.apiStatus=await page.evaluate(async id=>{
-   const response=await fetch('/api/v1/weighings/'+id,{headers:{'X-Product-Code':'CU_CATHODE'}});return response.status;
-  },ids.cuWeigh);
+  if(entry.apiDenial){
+   row.apiPath=M.protectedEndpoint(row.key,ids);
+   row.apiStatus=await page.evaluate(async endpoint=>{
+    const response=await fetch('/api/v1'+endpoint,{headers:{'X-Product-Code':'CU_CATHODE'}});return response.status;
+   },row.apiPath);
+  }
    if(failure)row.reason=failure;
    evidence.cases.push(row);
    const anomalous=row.outcome!==(row.denied?'denied':'rendered')||row.outcome==='rendered'&&(
