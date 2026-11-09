@@ -2209,7 +2209,7 @@
     },
     {
       "path": "tests/release/database.test.cjs",
-      "sha256": "fa7b604efc0be3a49db30371bddf3b4a6ec2e62deeae7fa2e67ff5f4129930c2"
+      "sha256": "c7be641488002a12b20d2378b672bba5b0bca98299559b6f3e4cef5262561568"
     },
     {
       "path": "tests/release/deployment.test.cjs",

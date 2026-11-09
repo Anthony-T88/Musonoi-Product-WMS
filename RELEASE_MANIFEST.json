@@ -69,7 +69,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 81652,
-      "sha256": "499bd1a6f44962b4cca5b34fc886aaab60d4746379a08ec42252174bd9e0a604"
+      "sha256": "2ae7f9ec421e6d376e8c8cad1f9707da9ab926ed922276c68e30c3b757a70fdc"
     },
     {
       "path": "VALIDATION.json",
@@ -3023,8 +3023,8 @@
     },
     {
       "path": "tests/release/database.test.cjs",
-      "bytes": 18917,
-      "sha256": "fa7b604efc0be3a49db30371bddf3b4a6ec2e62deeae7fa2e67ff5f4129930c2"
+      "bytes": 19041,
+      "sha256": "c7be641488002a12b20d2378b672bba5b0bca98299559b6f3e4cef5262561568"
     },
     {
       "path": "tests/release/deployment.test.cjs",

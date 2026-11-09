@@ -57,8 +57,10 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,from);
    assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,174-from);
    assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,0);
-   const applied=(await c.query('SELECT version,checksum FROM schema_migrations ORDER BY version')).rows;
-   assert.deepEqual(applied,chain.map(({version,checksum})=>({version,checksum})));
+   const {rows:applied}=await c.query('SELECT version,checksum FROM schema_migrations');
+   const checksums=new Map(applied.map(({version,checksum})=>[version,checksum]));
+   assert.equal(checksums.size,chain.length);
+   for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
    const afterCatalog=await catalog(),priorKeys=new Set(beforeCatalog.map(({kind,relation,name})=>[kind,relation,name].join('/')));
