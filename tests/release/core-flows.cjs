@@ -6,7 +6,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  try{
  await c.query("INSERT INTO role_permissions SELECT 'logistics_field_operator',unnest(ARRAY['loading-plan:match','load:write','load:execute']) ON CONFLICT DO NOTHING");app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
  for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.93.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
- const request=(url,role='admin',body)=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});
+ const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(url,role,body,expected=200)=>{const r=await request(url,role,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),salt=crypto.randomBytes(4).toString('hex'),customer=f.customers.CO_HYDROXIDE;
  let sales,prep,plan,matched,review,preview;
@@ -50,9 +50,38 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  });
  await check('formal outbound alone deducts inventory after independent load, logistics and production approvals',async()=>{
   const base='/cobalt/execution/orders/'+matched.order.id,act=async(action,role,extra={})=>{const d=await api(base);await api(base+'/'+action,role,{...(action==='start'?{order_version:d.order.version}:{version:d.execution.version}),note:'Synthetic rc2 '+action,...extra});};
+  await api('/cobalt/packing/orders/'+matched.order.id,'admin',undefined,409);
   await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
-  assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);await act('production-approve','production_manager');assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
+  assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);const d=await api(base),key=crypto.randomUUID(),body={version:d.execution.version,note:'Synthetic rc3 final approval'};
+  const approvals=await Promise.all([request(base+'/production-approve','production_manager',body,key),request(base+'/production-approve','production_manager',body,key)]);
+  assert.equal(approvals[0].statusCode,200,approvals[0].body);
+  assert.equal(approvals[1].statusCode,200,approvals[1].body);
+  assert.deepEqual(approvals[0].json(),approvals[1].json());
+  assert.equal((await c.query('SELECT count(*)::int n FROM co_outbounds WHERE order_id=$1',[matched.order.id])).rows[0].n,1);
+  assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
   await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET reason='tamper' WHERE id=$1",[review.id]));
+ });
+ await check('archived Packing List reconciles bag, seal and physical weight with the final outbound report',async()=>{
+  const base='/cobalt/packing/orders/'+matched.order.id;
+  const details=await api(base);
+  const generated=await api(base+'/generate','admin',{expected_revision:0,source_signature:details.source_signature,reason:'Synthetic rc3 integration evidence'});
+  const downloaded=await request(base+'/file');assert.equal(downloaded.statusCode,200);
+  assert.equal(crypto.createHash('sha256').update(downloaded.rawPayload).digest('hex'),generated.file_sha256);
+  assert.equal(downloaded.headers['x-content-sha256'],generated.file_sha256);
+  const book=new(require('exceljs').Workbook)();await book.xlsx.load(downloaded.rawPayload);
+  const sheet=book.worksheets[0],bag=(await api('/cobalt/stock/batches/'+prep.id)).items[0];
+  assert.equal(sheet.getCell('C30').value,bag.bag_no);
+  assert.equal(sheet.getCell('E30').value,'RC2-SEAL-'+salt);
+  assert.equal(sheet.getCell('F30').value,647.123);
+  assert.equal(sheet.getCell('G30').value,650.123);
+  const report=await api('/cobalt/reports');
+  assert.equal(report.shippingSummary.arecoms_mt,'1.23456789');
+  const outbound=report.outbound.find(item=>item.document_no===generated.document_no);
+  assert(outbound);assert.equal(Number(outbound.actual_net_kg),647.123);
+  const exported=await request('/cobalt/reports/export','admin',{filters:report.filters,signature:report.signature});
+  assert.equal(exported.statusCode,200,exported.body.slice(0,200));
+  const reportsBook=new(require('exceljs').Workbook)();await reportsBook.xlsx.load(exported.rawPayload);
+  assert(JSON.stringify(reportsBook.worksheets.map(ws=>ws.getSheetValues())).includes('1.23456789'));
  });
  }finally{await app?.close();await c.end();E.save('rc2-core-results.json',{checks,status:checks.every(x=>x.status==='PASS')?'PASS':'FAIL',syntheticOnly:true});}
 });

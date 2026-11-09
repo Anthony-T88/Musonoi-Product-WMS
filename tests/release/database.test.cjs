@@ -22,6 +22,53 @@ test('isolated migration, initialization, business permission and concurrency ac
  await check('preproduction CLI dry-run and confirmed apply use the same verified migration chain',async()=>{
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
+ const upgradeEvidence=[];
+ for(const from of [172,173]){
+  await check(`direct ${from} → 174 preserves every existing synthetic business table and refuses wrong environment`,async()=>{
+   const {client:c,name}=await connect();
+   await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
+   for(const entry of chain.slice(0,from))await Chain.execute(c,entry);
+   await c.query("INSERT INTO system_info VALUES(true,'test')");
+   const fixture=await E.seed(c,name);
+   await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,outcome) VALUES($1,'synthetic_upgrade','customers',$2,'COMMITTED')",[fixture.accounts[0].id,fixture.customers.CU_CATHODE.id]);
+   const tables=(await c.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'schema_migrations' ORDER BY tablename")).rows.map(r=>r.tablename);
+   const snapshot=async()=>{
+    const result={};
+    for(const table of tables){
+     const qualified='public."'+table.replaceAll('"','""')+'"';
+     const projected=table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":"to_jsonb(t)";
+     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t) snapshot ORDER BY value COLLATE "C"`)).rows;
+     result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
+    }
+    return result;
+   };
+   const catalog=async()=>{
+    const {rows}=await c.query(`
+     SELECT 'constraint' AS kind, conrelid::regclass::text AS relation, conname AS name, pg_get_constraintdef(oid) AS definition
+     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0
+     UNION ALL
+     SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
+     FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
+     ORDER BY 1,2,3`);
+    return rows;
+   };
+   const before=await snapshot(),beforeCatalog=await catalog();
+   await assert.rejects(()=>migrate(c,{environment:'production',apply:true,backupVerified:true}),{code:'MIGRATION_TEST_CONVERSION_FORBIDDEN'});
+   assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,from);
+   assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,174-from);
+   assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,0);
+   const applied=(await c.query('SELECT version,checksum FROM schema_migrations ORDER BY version')).rows;
+   assert.deepEqual(applied,chain.map(({version,checksum})=>({version,checksum})));
+   await Chain.guard172(c,'after');
+   assert.deepEqual(await snapshot(),before);
+   const afterCatalog=await catalog(),priorKeys=new Set(beforeCatalog.map(({kind,relation,name})=>[kind,relation,name].join('/')));
+   assert.deepEqual(afterCatalog.filter(({kind,relation,name})=>priorKeys.has([kind,relation,name].join('/'))),beforeCatalog);
+   assert(afterCatalog.some(t=>t.relation==='audit_logs'&&t.name==='aa_security_r3_audit_scope'));
+   const rights=(await c.query("SELECT has_table_privilege('musonoi_app','security_schema_status','SELECT') can_read, has_function_privilege('musonoi_app','security_r3_entity_scopes(text,text)','EXECUTE') can_forge")).rows[0];
+   assert.deepEqual(rights,{can_read:true,can_forge:false});
+   upgradeEvidence.push({from,to:174,tablesChecked:tables.length,existingConstraintsAndTriggersChecked:beforeCatalog.length,unchangedSyntheticRows:Object.values(before).reduce((n,t)=>n+t.rows,0),accounts:before.users.rows,wrongEnvironmentRefused:true});
+  });
+ }
  const guard=await connect();
  await check('172 refuses a drifted prerequisite function, rolls back, then applies once with exact snapshots',async()=>{
   const c=guard.client;await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of chain.slice(0,chain.findIndex(e=>e.version.startsWith('172_'))))await Chain.execute(c,e);await c.query("INSERT INTO system_info VALUES(true,'test')");const prior=require('./fixtures/172-functions.json').before.find(f=>f.name==='ux10_plan_submission');await c.query(prior.definition.replace('BEGIN','BEGIN\n-- synthetic drift'));
@@ -47,12 +94,16 @@ test('isolated migration, initialization, business permission and concurrency ac
  });
  await check('native cobalt intake: exact weights/seals, no self-review, final receipt and bounded stock history',async()=>{
   const co='CO_HYDROXIDE',key=crypto.randomUUID(),body={project_id:f.project,warehouse_id:f.warehouse,total_bags:3},responses=await Promise.all([request('logistics_field_operator',co,'/cobalt/preparations',body,undefined,key),request('logistics_field_operator',co,'/cobalt/preparations',body,undefined,key)]);assert.equal(responses[0].statusCode,200,responses[0].body);assert.deepEqual(responses[0].json(),responses[1].json());const p=responses[0].json(),url='/cobalt/preparations/'+p.id;f.preparation=p.id;
-  await api('logistics_field_operator',co,url+'/submit',{version:p.version});let work=await api('logistics_field_operator',co,url+'/work');await api('logistics_field_operator',co,url+'/work/save',{batch_version:work.work.version,bags:work.bags.map((b,i)=>({bag_id:b.bag_id,version:b.version,actual_gross_kg:i?'651.25':'650',seal_no:'AUDIT-'+p.id+'-'+i,sampled:true}))});work=await api('logistics_field_operator',co,url+'/work');const layout=await api('admin',co,'/cobalt/stock/layout'),loc=layout.locations.find(l=>l.id===f.location),place={preparation_id:p.id,batch_version:work.work.version,selection:'ALL',target_location_id:loc.id,target_version:loc.version,source:'PREPARATION'},pv=await api('site_supervisor',co,'/cobalt/stock/place-preview',place);await api('site_supervisor',co,'/cobalt/stock/place',{...place,preview_hash:pv.preview_hash});await api('logistics_field_operator',co,url+'/work/submit',{batch_version:work.work.version});
+  await api('logistics_field_operator',co,url+'/submit',{version:p.version});let work=await api('logistics_field_operator',co,url+'/work');
+  const duplicates=work.bags.slice(0,2).map(b=>({bag_id:b.bag_id,version:b.version,actual_gross_kg:'650',seal_no:'DUPLICATE-'+p.id,sampled:true}));
+  await api('logistics_field_operator',co,url+'/work/save',{batch_version:work.work.version,bags:duplicates},409);
+  assert.equal((await api('logistics_field_operator',co,url+'/work')).work.version,work.work.version);
+  await api('logistics_field_operator',co,url+'/work/save',{batch_version:work.work.version,bags:work.bags.map((b,i)=>({bag_id:b.bag_id,version:b.version,actual_gross_kg:i?'651.25':'650',seal_no:'AUDIT-'+p.id+'-'+i,sampled:true}))});work=await api('logistics_field_operator',co,url+'/work');const layout=await api('admin',co,'/cobalt/stock/layout'),loc=layout.locations.find(l=>l.id===f.location),place={preparation_id:p.id,batch_version:work.work.version,selection:'ALL',target_location_id:loc.id,target_version:loc.version,source:'PREPARATION'},pv=await api('site_supervisor',co,'/cobalt/stock/place-preview',place);await api('site_supervisor',co,'/cobalt/stock/place',{...place,preview_hash:pv.preview_hash});await api('logistics_field_operator',co,url+'/work/submit',{batch_version:work.work.version});
   work=await api('site_supervisor',co,url+'/work');await api('logistics_field_operator',co,url+'/work/approve',{batch_version:work.work.version},403);await api('site_supervisor',co,url+'/work/approve',{batch_version:work.work.version});let d=await api('production_manager',co,url);assert.equal(d.inventory.physical_bags,0);await api('production_manager',co,url+'/production-approve',{version:d.version});d=await api('admin',co,url);assert.equal(d.inventory.physical_bags,3);
   const stock=await api('admin',co,'/cobalt/stock/batches/'+p.id+'?page_size=20');assert.equal(stock.items.length,3);assert.equal(stock.items[0].seal_no.startsWith('AUDIT-'),true);assert.equal(stock.items[0].actual_gross_kg,'650');await api('admin',co,'/cobalt/stock?page_size=6',undefined,400);await api('admin',co,'/cobalt/stock/history?page=0',undefined,400);const history=await api('admin',co,'/cobalt/stock/history?preparation_id='+p.id);assert(history.items.some(e=>e.bag_no&&e.actor_role_name_snapshot));await api('production_operator',co,'/cobalt/stock/place-preview',{...place,reason:'Unauthorized'},403);
   const withoutScope=(await business.client.query("INSERT INTO projects(code,name) VALUES('OUTSIDE','Synthetic unscoped project') RETURNING id")).rows[0].id,wh=(await business.client.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'OUTSIDE','Synthetic unscoped warehouse') RETURNING id",[withoutScope])).rows[0].id;await api('admin',co,'/cobalt/preparations',{project_id:withoutScope,warehouse_id:wh,total_bags:1},403);
  });
  if(failed)throw Error('Acceptance subtests failed; no successful fixture published');
- E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:174,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
+ E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:174,upgradeEvidence,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
  }finally{await app?.close();for(const c of open)await c.end();}
 });

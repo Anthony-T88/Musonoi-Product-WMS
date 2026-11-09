@@ -1,7 +1,7 @@
 {
-  "version": "4.6.9-r3-rc2",
-  "revision": "4.6.9-r3-rc2",
-  "auditRevision": "batch2-reliability-20261108",
+  "version": "4.6.9-r3-rc3",
+  "revision": "4.6.9-r3-rc3",
+  "auditRevision": "r3-integration-rc3",
   "files": [
     {
       "path": ".dockerignore",
@@ -25,7 +25,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "b998c06941e5083d23fc70c514e9d262b4849da41573eda2548e64546c809dd3"
+      "sha256": "d1d4c50ad3e3efee8c9d45692fc6e1018f738919a0dba2f814582a5e1aa3e04f"
     },
     {
       "path": "db/MIGRATIONS.md",
@@ -1097,7 +1097,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "9a40539ea89c44e302bfdb4d427b1ed91764b8dbd559309a0a4291097af2c30f"
+      "sha256": "c45d9848672876e096d437ea993cc7fac49981a8c2031548bc388db5a2173cfb"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1269,7 +1269,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "3fa464461f7192d6faf677b794a15af917c55202572d126991fd016c7f62cb3f"
+      "sha256": "5f014ba1cfdd066e933e305a63bae463afd9d058b8b521367397612ac8e6d341"
     },
     {
       "path": "dist/reports463.js",
@@ -1309,7 +1309,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "cce37cfff3d3f1c5d475ab8642580a99e81ebe144b911abf4648ba6db3384075"
+      "sha256": "323dea2a1c4a90144ce2ac3b229b837dfa7fdd36163caeb6656a5c27c54462dd"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1597,7 +1597,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "1ea219089b8fcdc033c4b5910483067ecdc14a1b57e33fa67faa29b900266926"
+      "sha256": "1d4507f548b08f043c595aec98893801a278d7e5a9a5be5fece6426e9343b6a5"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -2201,15 +2201,15 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "sha256": "fcc4f17a134b29a6b6fc6f545e2775f40a1b6ba4490d177e480265c1f3edcf73"
+      "sha256": "1e9475c2081f742766d05e44d3d1fa9e43b3543aeb9bc7999660025e12e4fc7c"
     },
     {
       "path": "tests/release/core-flows.cjs",
-      "sha256": "8f5f6391e4314c0378d0fc211da6fdc786fec8b09bdcfa6424a4ad03c7b5bd3d"
+      "sha256": "6fa2608a4da04b0d2a4ef7b7e62b5daecfc9a0bdc76def957f52c76d75580c76"
     },
     {
       "path": "tests/release/database.test.cjs",
-      "sha256": "1596ad3a63a30bd33410308f4c770309b5e1657b04bbae8c34f782c45bc5e9ef"
+      "sha256": "fa7b604efc0be3a49db30371bddf3b4a6ec2e62deeae7fa2e67ff5f4129930c2"
     },
     {
       "path": "tests/release/deployment.test.cjs",
@@ -2217,7 +2217,7 @@
     },
     {
       "path": "tests/release/docker-acceptance.cjs",
-      "sha256": "d2303bdf6b1f37126db36edac4b6d33b04d3fde5748db6c71d7e1c04e1b0624e"
+      "sha256": "22a38a936ecff1b8ae125ef6f5f61d6eca2c4470ef111000c7a6084a7c3a46ca"
     },
     {
       "path": "tests/release/environment.cjs",
@@ -2241,7 +2241,7 @@
     },
     {
       "path": "tests/release/pool-reliability.cjs",
-      "sha256": "446acf7188472062b0152aa74fd6a1e44bc8f5e17c4d76d0137825e2124f9bbc"
+      "sha256": "22b478efbbdbc8261fcb05a19bfeaea935abd4a109b8c3b5c4999299a1b02330"
     },
     {
       "path": "tests/release/reliability-unit.test.cjs",
@@ -2265,7 +2265,7 @@
     },
     {
       "path": "tests/release/source-check.cjs",
-      "sha256": "14c0cd0f3c5bc687f020a0956d910a22bcb15a00451f9ca652ed890aa1b3c219"
+      "sha256": "ad718397e4d185fc6937f22cf27efbabed9e9299cdcfc336cba5641b2f4723f1"
     },
     {
       "path": "tests/release/stocktake-core.cjs",
@@ -2273,7 +2273,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "b171f59b2f7d8b470abb161e5c5542d771c869e4d337af0d129db89ee8d29cd8"
+      "sha256": "8f01dc54b41873bebc5778ca58b94194e2b5b2883fc4652800a54af98769abc3"
     }
   ]
 }

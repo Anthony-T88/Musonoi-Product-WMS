@@ -12,9 +12,17 @@ test('isolated authorization pools, cancellation, recovery and execution plans',
  const write=(name,key=crypto.randomUUID())=>app.inject({method:'POST',url:'/api/v1/masters/warehouses',headers:{...headers,'idempotency-key':key},payload:{project_id:f.project,code:name,name,active:true}});
  const percentile=(a,p)=>Number([...a].sort((a,b)=>a-b)[Math.max(0,Math.ceil(a.length*p)-1)]?.toFixed(3)||0);
  for(const n of [10,24,50])await check(n+' concurrent authorized business writes complete with both pools drained',async()=>{
-  waits.forEach(a=>a.length=0);const elapsed=[],start=performance.now(),salt=crypto.randomBytes(4).toString('hex').toUpperCase();const responses=await Promise.all(Array.from({length:n},async(_,i)=>{const s=performance.now(),r=await write('RC2-'+salt+'-'+i);elapsed.push(performance.now()-s);return r;}));const total=performance.now()-start;
+  waits.forEach(a=>a.length=0);
+  const countConnections=()=>pools.reduce((total,pool)=>total+pool.totalCount,0);
+  let peakPoolConnections=countConnections();
+  const observeConnections=()=>{peakPoolConnections=Math.max(peakPoolConnections,countConnections());};
+  for(const pool of pools)pool.on('connect',observeConnections);
+  const elapsed=[],start=performance.now(),salt=crypto.randomBytes(4).toString('hex').toUpperCase();const responses=await Promise.all(Array.from({length:n},async(_,i)=>{const s=performance.now(),r=await write('RC2-'+salt+'-'+i);elapsed.push(performance.now()-s);return r;}));const total=performance.now()-start;
+  for(const pool of pools)pool.off('connect',observeConnections);
+  const {connections}= (await owner.query("SELECT count(*)::int connections FROM pg_stat_activity WHERE datname=current_database() AND usename='musonoi_app' AND backend_type='client backend'")).rows[0];
+  assert(connections>0&&connections<=peakPoolConnections&&peakPoolConnections<=metrics.maximumApplicationConnections);
   assert(responses.every(r=>r.statusCode===200),responses.find(r=>r.statusCode!==200)?.body);assert.equal(new Set(responses.map(r=>r.json().id)).size,n);assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code LIKE $1',['RC2-'+salt+'-%'])).rows[0].n,n);
-  assert.equal(pools[1].waitingCount,0);assert.equal(pools[1].idleCount,pools[1].totalCount);metrics.concurrency.push({requests:n,totalMs:Number(total.toFixed(3)),requestsPerSecond:Number((1000*n/total).toFixed(2)),requestP50Ms:percentile(elapsed,.5),requestP95Ms:percentile(elapsed,.95),businessPoolWaitP95Ms:percentile(waits[0],.95),authorizationPoolWaitP95Ms:percentile(waits[1],.95)});
+  assert.equal(pools[1].waitingCount,0);assert.equal(pools[1].idleCount,pools[1].totalCount);metrics.concurrency.push({requests:n,peakPoolConnections,postgresApplicationConnections:connections,totalMs:Number(total.toFixed(3)),requestsPerSecond:Number((1000*n/total).toFixed(2)),requestP50Ms:percentile(elapsed,.5),requestP95Ms:percentile(elapsed,.95),businessPoolWaitP95Ms:percentile(waits[0],.95),authorizationPoolWaitP95Ms:percentile(waits[1],.95)});
  });
  await check('duplicate submission preserves one business row and one result',async()=>{const code='RC2-DUP-'+crypto.randomBytes(4).toString('hex').toUpperCase(),key=crypto.randomUUID(),rs=await Promise.all([write(code,key),write(code,key)]);assert.deepEqual(rs[0].json(),rs[1].json());assert.equal((await owner.query('SELECT count(*)::int n FROM warehouses WHERE code=$1',[code])).rows[0].n,1);});
  await check('pool exhaustion has a finite queue timeout and later requests recover',async()=>{const p=new Pool({...config,max:1,connectionTimeoutMillis:500});try{const held=await p.connect();await assert.rejects(()=>p.connect(),/timeout|connection/i);held.release();assert.equal((await p.query('SELECT 1 n')).rows[0].n,1);assert.equal(p.waitingCount,0);}finally{await p.end();}});

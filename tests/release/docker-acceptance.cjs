@@ -8,6 +8,11 @@ const results={status:'RUNNING',checks:[],syntheticOnly:true},check=async(name,f
  await check('final image file inventory excludes backups, private env, keys, runtime and test credentials',async()=>{
   assert.equal(docker(['image','inspect',image,'--format','{{.Config.User}}']),'node');
   results.imageId=docker(['image','inspect',image,'--format','{{.Id}}']);
+  const version=require('../../package.json').version;
+  const packaged=JSON.parse(docker(['run','--rm','--entrypoint','node',image,'-e',"process.stdout.write(JSON.stringify(require('./server/release.cjs')))"]));
+  assert.deepEqual(packaged,require('../../server/release.cjs'));
+  assert.equal(packaged.version,version);
+  results.release=packaged;
   const needles=[process.env.POSTGRES_PASSWORD,process.env.WMS_TEST_APP_PASSWORD,...f.accounts.map(a=>a.password)].filter(Boolean);
   const listing=docker(['run','--rm','--user','0','-e','SCAN_NEEDLES','--entrypoint','node',image,'-e',"const fs=require('fs'),needles=JSON.parse(process.env.SCAN_NEEDLES).map(v=>Buffer.from(v));function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const q=(p==='/'?'':p)+'/'+e.name;if(['/proc','/sys','/dev'].includes(q))continue;if(e.isDirectory())walk(q);else{console.log(q);if(e.isFile()&&fs.statSync(q).size<16777216){const b=fs.readFileSync(q);if(needles.some(n=>b.includes(n)))throw Error('CI credential in image: '+q);if(/\\.(pem|key)$/.test(q)&&/-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----/.test(b.toString()))throw Error('Private key in image: '+q)}}}}walk('/')"],{env:{...process.env,SCAN_NEEDLES:JSON.stringify(needles)}});
   fs.writeFileSync(path.join(E.runtime,'docker-image-files.txt'),listing+'\n');
@@ -26,6 +31,9 @@ const results={status:'RUNNING',checks:[],syntheticOnly:true},check=async(name,f
  await check('public database CA mount, production TLS, migration verification and real application startup',async()=>{
   docker(['run','-d','--name','rc2-app',...args,'-p','127.0.0.1:4174:4174','-v','rc2-ci-uploads:/app/uploads',image],{env});names.push('rc2-app');
   let healthy=false;for(let i=0;i<100;i++){try{const r=await fetch('http://127.0.0.1:4174/api/v1/health');if(r.ok&&(await r.json()).database==='ok'){healthy=true;break;}}catch{}await wait(200);}if(!healthy){console.log(docker(['logs','rc2-app']).replaceAll(url.href,'[DATABASE_URL REDACTED]'));}assert(healthy,'production TLS startup');
+  const response=await fetch('http://127.0.0.1:4174/api/v1/config');assert.equal(response.status,200);
+  const live=await response.json();
+  for(const key of ['version','displayVersion','frontendRevision'])assert.equal(live[key],results.release[key]);
  });
  await check('uploads volume persists across independent non-root containers',async()=>{
   docker(['exec','rc2-app','node','-e',"require('fs').writeFileSync('/app/uploads/rc2-persistence','synthetic attachment')"]);

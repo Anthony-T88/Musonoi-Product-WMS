@@ -1,139 +1,21 @@
 {
-  "version": "4.6.9-r3-rc1",
+  "version": "4.6.9-r3-rc3",
   "baseCommit": "e4ba78537c2b5ed0af66f15ca5ddbf30fa512a9b",
-  "originalAuditCommit": "fed9fe79fbce46280fae383e2a914198b15986f2",
-  "status": "PASS",
-  "runners": {
-    "unit": {
-      "suite": "unit",
-      "status": "PASS",
-      "exitCode": 0,
-      "checkedAt": "2026-11-08T19:12:59.324Z"
-    },
-    "integration": {
-      "suite": "integration",
-      "status": "PASS",
-      "exitCode": 0,
-      "checkedAt": "2026-11-08T19:13:07.717Z"
-    },
-    "security": {
-      "suite": "security",
-      "status": "PASS",
-      "exitCode": 0,
-      "checkedAt": "2026-11-08T19:13:13.399Z"
-    },
-    "ui": {
-      "suite": "ui",
-      "status": "PASS",
-      "exitCode": 0,
-      "checkedAt": "2026-11-08T19:14:52.746Z"
-    }
+  "batch1Commit": "28988c4b814d1120414effc787c9566bf91c022f",
+  "batch2Commit": "7e25ec3d1b4e20ec75dd9671b16b7003354f6a47",
+  "status": "DRAFT_REQUIRES_CANDIDATE_CI",
+  "runtimeMigrationCount": 174,
+  "backupBaselineMigrationCount": 172,
+  "ciAcceptance": "Use exact PR head and simulated-merge workflow result",
+  "historicalValidation": {
+    "batch1Snapshot": "https://github.com/Anthony-T88/Musonoi-Product-WMS/blob/28988c4b814d1120414effc787c9566bf91c022f/VALIDATION.json",
+    "batch2Workflow": "https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/runs/42562965976"
   },
-  "unitCases": 12,
-  "integrationGroups": 8,
-  "securityGroups": 31,
-  "ui": {
-    "status": "PASS",
-    "shapes": [
-      {
-        "page": "stock",
-        "language": "zh-CN",
-        "width": 1440
-      },
-      {
-        "page": "stock",
-        "language": "zh-CN",
-        "width": 768
-      },
-      {
-        "page": "stock",
-        "language": "zh-CN",
-        "width": 390
-      },
-      {
-        "page": "stock",
-        "language": "zh-CN",
-        "width": 320
-      },
-      {
-        "page": "stock",
-        "language": "en",
-        "width": 1440
-      },
-      {
-        "page": "stock",
-        "language": "en",
-        "width": 768
-      },
-      {
-        "page": "stock",
-        "language": "en",
-        "width": 390
-      },
-      {
-        "page": "stock",
-        "language": "en",
-        "width": 320
-      },
-      {
-        "page": "permissions",
-        "language": "zh-CN",
-        "width": 1440
-      },
-      {
-        "page": "permissions",
-        "language": "zh-CN",
-        "width": 390
-      },
-      {
-        "page": "permissions",
-        "language": "zh-CN",
-        "width": 320
-      },
-      {
-        "page": "permissions",
-        "language": "en",
-        "width": 1440
-      },
-      {
-        "page": "permissions",
-        "language": "en",
-        "width": 390
-      },
-      {
-        "page": "permissions",
-        "language": "en",
-        "width": 320
-      }
-    ],
-    "permissionCheckboxes": 67,
-    "permissionModules": 25,
-    "managementViews": [
-      "admin-registration-entry",
-      "limited-account-manager",
-      "limited-role-manager"
-    ],
-    "errors": [],
-    "workingDatabaseWrites": 0
-  },
-  "backupRestore": {
-    "status": "PASS",
-    "database": "musonoi_audit_63dbb3f110_test",
-    "source": "unchanged encrypted r2 TEST backup",
+  "encryptedBackupRestore": {
+    "status": "PASS_IN_ISOLATED_LOCAL_TEST",
+    "baseline": 172,
+    "target": 174,
     "tablesChecked": 157,
-    "oldRowsDigestsUnchanged": true,
-    "addedMigrations": 1,
-    "totalMigrations": 173,
-    "accounts": 11,
-    "sourceDatabaseAccessed": false,
-    "productionDatabaseAccessed": false
-  },
-  "productionDatabaseAccessed": false,
-  "originalWorkingDatabaseAccessed": false,
-  "mainUpdated": false,
-  "productionDeployed": false,
-  "dockerImageBuilt": false,
-  "codeDelivery": "ordinary files; candidate branch only",
-  "runtimeMigrationCount": 173,
-  "backupBaselineMigrationCount": 172
+    "accountsPreserved": 11
+  }
 }
