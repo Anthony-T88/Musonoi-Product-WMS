@@ -136,7 +136,7 @@ async function run(out){
      return {landing:pathname(page),documentId:pending.id,status:response.status(),before,after,modal:'Escape and confirm',focusReturned:true};
     });
    }
-   await check('mobile-filter',product,'admin',language,async page=>{
+   await check('mobile-filter',product,'logistics_manager',language,async page=>{
     await go(page,'/loading-plans/query');assert.equal(pathname(page),'/loading-plans/query');
     const form=page.locator('.r9-document-filter').first(),input=form.locator('input[name=search]');
     await input.click();await page.keyboard.type('UIUX');
@@ -157,7 +157,7 @@ async function run(out){
     await page.waitForURL(url=>url.searchParams.get('search')==='UIUX');await ready(page);
     return {screenshot,keyboard:['type UIUX','Tab → '+next,'Enter'],url:M.comparable(page.url()),controls:trail};
    },M.phone);
-   await check('stock-map-control',product,'admin',language,async page=>{
+   await check('stock-map-control',product,'logistics_manager',language,async page=>{
     await go(page,product===R.CO?'/stock-map?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse}):'/stock-map');
     assert.equal(pathname(page),'/stock-map');
     const canvas=product===R.CU?'#stock-map-canvas':'#co-map-canvas';
@@ -196,7 +196,19 @@ async function run(out){
     const formats=sheet.getColumn(index).values.slice(2).map((value,i)=>value==null?null:sheet.getCell(i+2,index).numFmt).filter(Boolean);
     assert(formats.length&&formats.every(x=>x==='0.'+'0'.repeat(precision)),key+' must show '+precision+' decimal places');
    }
-   return {landing:pathname(page),export:'Excel',netPrecision:4,estimatedPrecision:5,actualPrecision:5};
+   const stock=await context.request.get(origin+'/api/v1/cobalt/stock/export?language=en',{headers:{'X-Product-Code':R.CO}});
+   assert.equal(stock.status(),200);
+   const stockBook=new(require('exceljs').Workbook)();await stockBook.xlsx.load(await stock.body());
+   for(const tab of stockBook.worksheets){
+    const headers=tab.getRow(1).values;
+    assert(headers.includes('Preparation Batch')&&!headers.some(v=>/production batch|生产批次/i.test(String(v))));
+    for(const header of ['Expected Net kg','Confirmed Net kg','Confirmed Actual Net kg']){
+     const col=headers.indexOf(header);if(col<0)continue;
+     const values=tab.getColumn(col).values.slice(2).filter(Boolean);
+     assert(values.length&&values.every(v=>/^\d+\.\d{4}$/.test(String(v))),header+' must show four decimal places');
+    }
+   }
+   return {landing:pathname(page),exports:['Metal Excel','Stock Excel'],netPrecision:4,estimatedPrecision:5,actualPrecision:5};
   });
   await check('injected-visual-regression',R.CU,'admin','en',async page=>{
    await go(page,'/loading-plans/query');

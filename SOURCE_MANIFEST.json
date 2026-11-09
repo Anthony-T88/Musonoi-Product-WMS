@@ -1821,7 +1821,7 @@
     },
     {
       "path": "server/cobalt-stock.cjs",
-      "sha256": "1b0bf616d232e2367a7330a56cd7547dc9746343c88706d816d33013fd4d2b6a"
+      "sha256": "99ccda0b662f761199d8733898c28dc870f97b65c9b2188ff8ab1b5edac7ebf3"
     },
     {
       "path": "server/cobalt-stocktaking.cjs",
@@ -2421,7 +2421,7 @@
     },
     {
       "path": "tests/release/uiux-workflows.cjs",
-      "sha256": "76d738bea20d264f7604185d2368b98feb71e67c46bdf302af410da052078737"
+      "sha256": "a09852bbf5b1110547c0546e53c41c4af4ca7f2a0ba631e8d013ff51f44286e2"
     }
   ]
 }

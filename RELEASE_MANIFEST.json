@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 87228,
-      "sha256": "04c36e97f5ca7721ca2d28bc681b01977b6d0a00ff1fb8442d6ab3e220b1de2d"
+      "sha256": "fcd1e8e7845ffe67717d14827569fdc76af87cb68b09e5cfa7183049dccc87e1"
     },
     {
       "path": "VALIDATION.json",
@@ -2543,8 +2543,8 @@
     },
     {
       "path": "server/cobalt-stock.cjs",
-      "bytes": 25451,
-      "sha256": "1b0bf616d232e2367a7330a56cd7547dc9746343c88706d816d33013fd4d2b6a"
+      "bytes": 25550,
+      "sha256": "99ccda0b662f761199d8733898c28dc870f97b65c9b2188ff8ab1b5edac7ebf3"
     },
     {
       "path": "server/cobalt-stocktaking.cjs",
@@ -3293,8 +3293,8 @@
     },
     {
       "path": "tests/release/uiux-workflows.cjs",
-      "bytes": 15387,
-      "sha256": "76d738bea20d264f7604185d2368b98feb71e67c46bdf302af410da052078737"
+      "bytes": 16247,
+      "sha256": "a09852bbf5b1110547c0546e53c41c4af4ca7f2a0ba631e8d013ff51f44286e2"
     }
   ],
   "fixedBaseline": "16097779a3f19edf5465c324f9a2833a52d14ef1"
