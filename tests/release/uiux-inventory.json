@@ -1,0 +1,1061 @@
+{
+  "registry": {
+    "CU_CATHODE": [
+      "^\\/(?:sales-plans|preparation\\/plans)\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/audit$",
+      "^\\/cobalt-metal$",
+      "^\\/customers$",
+      "^\\/customers\\/contracts\\/([0-9a-f-]{36})$",
+      "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/customers\\/master-data$",
+      "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
+      "^\\/export-shipments$",
+      "^\\/export-shipments\\/([0-9a-f-]{36})$",
+      "^\\/inventory$",
+      "^\\/inventory\\/([^/]+)$",
+      "^\\/inventory\\/([^/]+)\\/history$",
+      "^\\/loading-plans$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})\\/cancel$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})\\/edit$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})\\/orders\\/new$",
+      "^\\/loading-plans\\/execution\\/([0-9a-f-]{36})$",
+      "^\\/loading-plans\\/new$",
+      "^\\/loading-plans\\/orders\\/([0-9a-f-]{36})$",
+      "^\\/loading-plans\\/orders\\/([0-9a-f-]{36})\\/cancel$",
+      "^\\/loading-plans\\/orders\\/([0-9a-f-]{36})\\/edit$",
+      "^\\/loading-plans\\/query$",
+      "^\\/outbounds$",
+      "^\\/outbounds\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/([0-9a-f-]{36})\\/packing-list$",
+      "^\\/outbounds\\/corrections$",
+      "^\\/outbounds\\/corrections\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/loads$",
+      "^\\/outbounds\\/loads\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/loads\\/([0-9a-f-]{36})\\/matching$",
+      "^\\/outbounds\\/loads\\/new$",
+      "^\\/outbounds\\/packing-list\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/templates$",
+      "^\\/outbounds\\/weighings$",
+      "^\\/outbounds\\/weighings\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/weighings\\/new$",
+      "^\\/outbounds\\/weight-settings$",
+      "^\\/overview$",
+      "^\\/overview\\/details$",
+      "^\\/overview\\/warning-settings$",
+      "^\\/preparation$",
+      "^\\/preparation\\/([0-9a-f-]{36})$",
+      "^\\/preparation\\/([0-9a-f-]{36})\\/work$",
+      "^\\/preparation\\/history-sampling$",
+      "^\\/preparation\\/history-sampling\\/([0-9a-f-]{36})$",
+      "^\\/preparation\\/new$",
+      "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/receipts$",
+      "^\\/receipts\\/([0-9a-f-]{36})$",
+      "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/receipts\\/import$",
+      "^\\/reports$",
+      "^\\/sales-plans$",
+      "^\\/sales-plans\\/([0-9a-f-]{36})$",
+      "^\\/sales-plans\\/([0-9a-f-]{36})\\/dispatch$",
+      "^\\/sales-plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/stock-map$",
+      "^\\/stock-map\\/relocate$",
+      "^\\/stocktaking$",
+      "^\\/stocktaking\\/([0-9a-f-]{36})$",
+      "^\\/stocktaking\\/adjustments\\/([0-9a-f-]{36})$",
+      "^\\/stocktaking\\/new$",
+      "^\\/workbench$",
+      "^\\/workbench\\/accounts$",
+      "^\\/workbench\\/permissions$"
+    ],
+    "CO_HYDROXIDE": [
+      "^\\/(?:sales-plans|preparation\\/plans)\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/audit$",
+      "^\\/cobalt-metal$",
+      "^\\/customers$",
+      "^\\/customers\\/contracts\\/([0-9a-f-]{36})$",
+      "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/customers\\/master-data$",
+      "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
+      "^\\/export-shipments$",
+      "^\\/export-shipments\\/([0-9a-f-]{36})$",
+      "^\\/inventory$",
+      "^\\/inventory\\/([^/]+)$",
+      "^\\/inventory\\/([^/]+)\\/history$",
+      "^\\/loading-plans$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})\\/cancel$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})\\/edit$",
+      "^\\/loading-plans\\/([0-9a-f-]{36})\\/orders\\/new$",
+      "^\\/loading-plans\\/execution\\/([0-9a-f-]{36})$",
+      "^\\/loading-plans\\/new$",
+      "^\\/loading-plans\\/orders\\/([0-9a-f-]{36})$",
+      "^\\/loading-plans\\/orders\\/([0-9a-f-]{36})\\/cancel$",
+      "^\\/loading-plans\\/orders\\/([0-9a-f-]{36})\\/edit$",
+      "^\\/loading-plans\\/query$",
+      "^\\/outbounds$",
+      "^\\/outbounds\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/([0-9a-f-]{36})\\/packing-list$",
+      "^\\/outbounds\\/corrections$",
+      "^\\/outbounds\\/corrections\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/loads$",
+      "^\\/outbounds\\/loads\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/loads\\/([0-9a-f-]{36})\\/matching$",
+      "^\\/outbounds\\/loads\\/new$",
+      "^\\/outbounds\\/packing-list\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/templates$",
+      "^\\/outbounds\\/weighings$",
+      "^\\/outbounds\\/weighings\\/([0-9a-f-]{36})$",
+      "^\\/outbounds\\/weighings\\/new$",
+      "^\\/outbounds\\/weight-settings$",
+      "^\\/overview$",
+      "^\\/overview\\/details$",
+      "^\\/overview\\/warning-settings$",
+      "^\\/preparation$",
+      "^\\/preparation\\/([0-9a-f-]{36})$",
+      "^\\/preparation\\/([0-9a-f-]{36})\\/work$",
+      "^\\/preparation\\/history-sampling$",
+      "^\\/preparation\\/history-sampling\\/([0-9a-f-]{36})$",
+      "^\\/preparation\\/new$",
+      "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/receipts$",
+      "^\\/receipts\\/([0-9a-f-]{36})$",
+      "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/receipts\\/import$",
+      "^\\/reports$",
+      "^\\/sales-plans$",
+      "^\\/sales-plans\\/([0-9a-f-]{36})$",
+      "^\\/sales-plans\\/([0-9a-f-]{36})\\/dispatch$",
+      "^\\/sales-plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/stock-map$",
+      "^\\/stock-map\\/relocate$",
+      "^\\/stocktaking$",
+      "^\\/stocktaking\\/([0-9a-f-]{36})$",
+      "^\\/stocktaking\\/adjustments\\/([0-9a-f-]{36})$",
+      "^\\/stocktaking\\/new$",
+      "^\\/workbench$",
+      "^\\/workbench\\/accounts$",
+      "^\\/workbench\\/permissions$"
+    ]
+  },
+  "scenarios": [
+    {
+      "key": "login",
+      "products": [],
+      "state": "standard",
+      "template": "/"
+    },
+    {
+      "key": "register-dialog",
+      "products": [],
+      "state": "registration dialog",
+      "template": "/"
+    },
+    {
+      "key": "overview",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/overview"
+    },
+    {
+      "key": "todo",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/overview"
+    },
+    {
+      "key": "overview-detail",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/overview/details"
+    },
+    {
+      "key": "warnings",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/overview/warning-settings"
+    },
+    {
+      "key": "inventory",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/inventory"
+    },
+    {
+      "key": "cu-bag",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/inventory/:id"
+    },
+    {
+      "key": "cu-bag-history",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/inventory/:id/history"
+    },
+    {
+      "key": "co-stock-detail",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/inventory/:id"
+    },
+    {
+      "key": "co-stock-history-alias",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/inventory/:id/history"
+    },
+    {
+      "key": "map",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/stock-map"
+    },
+    {
+      "key": "map-move",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/stock-map/relocate"
+    },
+    {
+      "key": "customers",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/customers"
+    },
+    {
+      "key": "co-customer-edit",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/customers"
+    },
+    {
+      "key": "co-contract-edit",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/customers"
+    },
+    {
+      "key": "master",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data"
+    },
+    {
+      "key": "master-customers-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/customers/new"
+    },
+    {
+      "key": "master-customers-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/customers/:id"
+    },
+    {
+      "key": "master-batches-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/batches/new"
+    },
+    {
+      "key": "master-batches-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/batches/:id"
+    },
+    {
+      "key": "master-warehouses-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/warehouses/new"
+    },
+    {
+      "key": "master-warehouses-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/warehouses/:id"
+    },
+    {
+      "key": "master-yards-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/yards/new"
+    },
+    {
+      "key": "master-yards-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/yards/:id"
+    },
+    {
+      "key": "master-locations-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/locations/new"
+    },
+    {
+      "key": "master-locations-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/master-data/locations/:id"
+    },
+    {
+      "key": "cu-contract-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/contracts/new"
+    },
+    {
+      "key": "cu-contract-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/contracts/:id"
+    },
+    {
+      "key": "cu-contract-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/customers/contracts/:id/edit"
+    },
+    {
+      "key": "sales",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans"
+    },
+    {
+      "key": "sales-new",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans/new"
+    },
+    {
+      "key": "cu-sales-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "approved",
+      "template": "/sales-plans/:id"
+    },
+    {
+      "key": "cu-sales-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans/:id/edit"
+    },
+    {
+      "key": "cu-dispatch",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans/:id/dispatch"
+    },
+    {
+      "key": "co-sales-detail",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "approved",
+      "template": "/sales-plans/:id"
+    },
+    {
+      "key": "co-sales-edit",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans/:id/edit"
+    },
+    {
+      "key": "co-dispatch",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans/:id/dispatch"
+    },
+    {
+      "key": "cu-sales-shipping",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/sales-plans/:id/shipping"
+    },
+    {
+      "key": "legacy-sales-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/preparation/plans/new"
+    },
+    {
+      "key": "legacy-sales-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/preparation/plans/:id/edit"
+    },
+    {
+      "key": "legacy-sales-shipping",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/preparation/plans/:id/shipping"
+    },
+    {
+      "key": "receipts",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/receipts"
+    },
+    {
+      "key": "receipt-new",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/receipts/new"
+    },
+    {
+      "key": "cu-receipt",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/receipts/:id"
+    },
+    {
+      "key": "cu-receipt-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "draft",
+      "template": "/receipts/:id/edit"
+    },
+    {
+      "key": "cu-receipt-import",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/receipts/import"
+    },
+    {
+      "key": "co-prep",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "completed",
+      "template": "/receipts/:id"
+    },
+    {
+      "key": "co-prep-work",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "editable",
+      "template": "/receipts/:id"
+    },
+    {
+      "key": "co-prep-draft",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "draft",
+      "template": "/receipts/:id"
+    },
+    {
+      "key": "co-prep-alias",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/receipts/:id/work"
+    },
+    {
+      "key": "preparation",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/preparation"
+    },
+    {
+      "key": "preparation-new",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/preparation/new"
+    },
+    {
+      "key": "cu-lot",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/preparation/:id"
+    },
+    {
+      "key": "co-preparation-alias",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/preparation/:id"
+    },
+    {
+      "key": "co-work-alias",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/preparation/:id/work"
+    },
+    {
+      "key": "cu-sampling",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/preparation/history-sampling"
+    },
+    {
+      "key": "cu-sampling-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/preparation/history-sampling/:id"
+    },
+    {
+      "key": "cu-weighings",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/weighings"
+    },
+    {
+      "key": "cu-weigh-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/weighings/new"
+    },
+    {
+      "key": "cu-weigh",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/weighings/:id"
+    },
+    {
+      "key": "arrivals",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans"
+    },
+    {
+      "key": "cu-arrival",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "waiting-arrival",
+      "template": "/loading-plans"
+    },
+    {
+      "key": "co-arrival",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "waiting-arrival",
+      "template": "/loading-plans"
+    },
+    {
+      "key": "loading-search",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/query"
+    },
+    {
+      "key": "loading-new",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/new"
+    },
+    {
+      "key": "cu-plan-group",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/:id"
+    },
+    {
+      "key": "cu-plan-group-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/:id/edit"
+    },
+    {
+      "key": "cu-plan-group-cancel",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/:id/cancel"
+    },
+    {
+      "key": "cu-plan-order-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/:id/orders/new"
+    },
+    {
+      "key": "cu-loading-plan",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/orders/:id"
+    },
+    {
+      "key": "cu-loading-plan-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/orders/:id/edit"
+    },
+    {
+      "key": "cu-loading-plan-cancel",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/orders/:id/cancel"
+    },
+    {
+      "key": "co-loading-plan",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/orders/:id"
+    },
+    {
+      "key": "co-loading-edit",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "draft",
+      "template": "/loading-plans/:id/edit"
+    },
+    {
+      "key": "co-loading-execution",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/loading-plans/execution/:id"
+    },
+    {
+      "key": "outbounds",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds"
+    },
+    {
+      "key": "outbound-vehicles",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds"
+    },
+    {
+      "key": "printers",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds"
+    },
+    {
+      "key": "templates",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/templates"
+    },
+    {
+      "key": "weight-settings",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/weight-settings"
+    },
+    {
+      "key": "cu-loads",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/loads"
+    },
+    {
+      "key": "cu-load-new",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/loads/new"
+    },
+    {
+      "key": "cu-load-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "posted",
+      "template": "/outbounds/loads/:id"
+    },
+    {
+      "key": "cu-load-matching",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "pending",
+      "template": "/outbounds/loads/:id/matching"
+    },
+    {
+      "key": "cu-outbound-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/:id"
+    },
+    {
+      "key": "co-outbound-detail",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "posted",
+      "template": "/outbounds/:id"
+    },
+    {
+      "key": "cu-corrections",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/corrections"
+    },
+    {
+      "key": "cu-correction-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/corrections/:id"
+    },
+    {
+      "key": "cu-packing-legacy",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/packing-list/:id"
+    },
+    {
+      "key": "co-packing",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/:id/packing-list"
+    },
+    {
+      "key": "shipping",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/export-shipments"
+    },
+    {
+      "key": "cu-invoice",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/export-shipments/:id"
+    },
+    {
+      "key": "metal",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/cobalt-metal"
+    },
+    {
+      "key": "metal-outbound",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "confirmed and pending",
+      "template": "/cobalt-metal"
+    },
+    {
+      "key": "metal-confirmations",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/cobalt-metal"
+    },
+    {
+      "key": "stocktakes",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/stocktaking"
+    },
+    {
+      "key": "stocktake-new",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/stocktaking/new"
+    },
+    {
+      "key": "cu-stocktake",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/stocktaking/:id"
+    },
+    {
+      "key": "co-stocktake",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/stocktaking/:id"
+    },
+    {
+      "key": "adjustment",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/stocktaking/adjustments/:id"
+    },
+    {
+      "key": "reports",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/reports"
+    },
+    {
+      "key": "reports-outbound",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/reports"
+    },
+    {
+      "key": "reports-inventory",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/reports"
+    },
+    {
+      "key": "reports-monthly",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/reports"
+    },
+    {
+      "key": "workbench",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/workbench"
+    },
+    {
+      "key": "accounts",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/workbench/accounts"
+    },
+    {
+      "key": "permissions",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/workbench/permissions"
+    },
+    {
+      "key": "diagnostics",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/workbench/diagnostics"
+    },
+    {
+      "key": "former-design-entry",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/workbench/design"
+    },
+    {
+      "key": "audit",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/audit"
+    }
+  ]
+}

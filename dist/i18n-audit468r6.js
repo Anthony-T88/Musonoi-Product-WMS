@@ -1132,6 +1132,7 @@ Object.assign(TRANSLATIONS.en,{
 
 Object.assign(TRANSLATIONS.en,{
  "风险提示：所选权限可能超出本角色日常职责，或包含账户、权限及日志管理能力。允许保存，请确认实际职责与授权范围。": "Selected permissions exceed routine duties or include account, permission or audit administration. Verify the role’s actual responsibilities before saving.",
+ "请按实际工作职责选择权限。": "Select permissions for the role’s actual responsibilities.",
  "销售计划数量": "Sales Plans",
  "限制单据岗位": "Document Role Restrictions",
  "出库审批岗位": "Outbound Approval Roles",

@@ -129,6 +129,14 @@ html body .workspace #page-content :is(.p46-table-card,.loading465-table)>h2{tex
 html[data-release-ui="46"] #co-overview-filter>.form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px;margin:0;}
 #co-overview-filter>.business-toolbar{display:flex;flex-wrap:nowrap;gap:8px;margin:0;white-space:nowrap;}
 #co-overview-filter input,#co-overview-filter select{width:100%;min-width:0;}
+@media(max-width:900px){
+ #co-overview-filter{grid-template-columns:minmax(0,1fr);overflow:visible;}
+ html[data-release-ui="46"] #co-overview-filter>.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ #co-overview-filter>.business-toolbar{flex-wrap:wrap;white-space:normal;}
+}
+@media(max-width:480px){
+ html[data-release-ui="46"] #co-overview-filter>.form-grid{grid-template-columns:minmax(0,1fr)!important;}
+}
 #v261-create .v470-lot-plan :is(.v470-lot-plan-grid,.overview-ledger){display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;}
 #v261-create .v470-lot-plan .v470-lot-plan-grid>*{flex:1 1 145px;}
 #v261-create .v470-lot-plan .overview-ledger>*{flex:1 1 145px;margin:0;}

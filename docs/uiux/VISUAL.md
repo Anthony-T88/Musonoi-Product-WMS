@@ -1,33 +1,41 @@
 # 自动化视觉回归测试说明
 
-## 准备隔离数据
+## 从干净检出运行
 
-按现有发行测试方式配置 `WMS_TEST_OWNER_URL` 和 `WMS_TEST_APP_PASSWORD`，使用回环地址上的 TEST PostgreSQL。运行下列命令。
+使用 Node.js 24 和锁定依赖。按发行测试配置回环地址上的 WMS_TEST_OWNER_URL 和 WMS_TEST_APP_PASSWORD。每次完整验收生成随机命名的隔离合成 TEST 库。
 
 ```sh
-pnpm run test:acceptance
+pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
+node tests/release/uiux-verify.cjs .runtime/release-tests/uiux/verification
+```
+
+Windows 像素验收使用已复核的 Chromium 版本。必要时设置 CHROME_EXECUTABLE 指向同版本浏览器，并添加 --pixel。使用新的输出目录再次运行可生成独立数据集和对照结果。
+
+```sh
+node tests/release/uiux-verify.cjs .runtime/release-tests/uiux/verification-2 --pixel
+```
+
+## 分步复核
+
+```sh
+node tests/release/uiux-quality.cjs static
+node scripts/run-release-tests.cjs acceptance
 node tests/release/uiux-fixtures.cjs
-pnpm run test:uiux -- current .runtime/release-tests/uiux/current
-pnpm run test:uiux:gate -- .runtime/release-tests/uiux/current
+node tests/release/uiux-audit.cjs current .runtime/uiux/quick --quick
+node tests/release/uiux-quality.cjs layout .runtime/uiux/quick quick
+node tests/release/uiux-audit.cjs current .runtime/uiux/full
+node tests/release/uiux-quality.cjs layout .runtime/uiux/full full
+node tests/release/uiux-quality.cjs compare .runtime/uiux/full full
+node tests/release/uiux-workflows.cjs .runtime/uiux/workflows
 ```
 
-发行测试会建立随机命名的隔离库。可选的补充脚本通过正式业务接口生成待到厂、草稿入库和草稿装车计划场景。脚本输出受业务前置条件阻挡的样本。扫描会更新隔离测试账号的语言偏好。
+快速和完整扫描由不同的必测矩阵驱动。布局门禁从源码重算矩阵，并检查产品路由锁、精确落地地址、关键控件、授权拒绝、截图像素尺寸和文件哈希。已停用的旧检斤入口以历史样本和接口 403 验证，权限沿用当前版本。缺少合成样本默认失败。
 
-## 覆盖与判定
+## 证据
 
-- 浏览器记录实际注册的路由正则和可见导航。清单补充产品专用入口、查询参数、旧链接和单据状态。
-- 管理员覆盖铜钴两个产品及中英文。按角色增加导航、列表、审批或权限场景。核心页面采集 1366×768、1440×900、1920×1080 的截图，重点页面再检查 390 像素窄屏。
-- 采集文档宽度、控件文字裁切、表格及筛选区、标题和操作重复、无名称控件及低对比度候选。浏览器异常、数据缺失、权限拒绝和正常渲染分别记录。
-- `--quick` 用于持续集成，覆盖代表性页面和已注册路由登记。全站专项验收运行完整模式。
-
-## 截图基准
-
-已复核的基准位于 `tests/release/uiux-baselines/`。每个场景声明用于比较的稳定矩形、平均色差和显著差异像素比例的容差。以相同操作系统、Chromium、视口和语言采集截图后运行下列命令。
-
-```sh
-pnpm run test:uiux:compare -- .runtime/release-tests/uiux/current
-```
-
-稳定矩形应避开日期、真实身份、动态任务数量和表格中的随机单号。渲染关闭动画并隐藏光标。跨平台使用布局门禁，避免系统字体渲染差异产生像素噪声。
-
-出现差异时先打开当前图、基准图和对应页面，判断是业务数据变化、浏览器差异还是界面回归。基准变更按场景审核，保留原图及替换理由。
+- coverage.json 包含提交、产品、角色、语言、分辨率、业务状态、落地地址、控件和页面问题。
+- pixel-results.json 逐图记录平均色差、显著差异像素比例、容差及结果。权限矩阵、库存金属量和正式出库净重及确认值均有稳定裁剪区域。
+- workflows.json 记录实际审批、旧入口操作、键盘筛选及 Excel 下载结果。filter-390 PNG 包含完整筛选区域。
+- exits.json 记录每个执行阶段退出码。shipment-results.json 汇总发运测试的 8 项子检查。failed PNG 留存失败页面。
+- 截图基准按图审核。另一个操作系统或浏览器版本以布局和操作门禁为准，像素对比使用匹配环境。

@@ -55,7 +55,7 @@ window.System46={
  tools(parent,zh,en,s){const bar=UI46Pages.el('div','s46-toolbar',parent,s),p=UI46Pages.el('p','s46-muted',bar,s);p.innerHTML=this.L(zh,en);return bar;},
  permissions(root,shell,s){s.composition.family='permissions';root.dataset.pageFamily='permissions';const content=root.querySelector('#account-content'),native=content.querySelector('.account-role-layout'),form=content.querySelector('#account-role-form');
   const tools=this.tools(shell,'角色、功能与数据范围集中维护','Maintain roles, permissions and assigned data scopes',s),actions=UI46Pages.el('div','s46-actions',tools,s);
-  const create=root.querySelector('#account-create-role');if(create)UI46.move(create,actions,s);
+  const create=root.querySelector('#account-create-role');if(create){create.classList.remove('primary');create.classList.add('secondary');UI46.move(create,actions,s);}
   const save=form.querySelector('#role-save');save.setAttribute('form','account-role-form');UI46.move(save,actions,s);s.composition.classes.push({node:save,name:'s46-external-submit'});save.classList.add('s46-external-submit');
   UI46.move(content,shell,s);UI46Pages.cls(native,'s46-permissions-layout',s);UI46Pages.cls(native,'p46-permissions',s);UI46Pages.cls(form,'s46-role-form',s);
   const picker=native.querySelector('.account-role-picker');UI46Pages.cls(picker,'s46-role-picker',s);UI46Pages.hide(picker.querySelector('h2'),s);

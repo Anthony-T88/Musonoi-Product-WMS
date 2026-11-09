@@ -2,11 +2,14 @@ name: Isolated WMS release and Docker acceptance
 on:
   pull_request:
     branches: [main, fix/v4.6.9-r3-rc1-security]
+  push:
+    branches: [local/uiux-governance-v471]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   isolated-acceptance:
+    name: WMS TEST and UIUX quality gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -58,12 +61,8 @@ jobs:
           docker run -d --name rc2-postgres --network rc2-ci-net -p 127.0.0.1:55432:5432 -e POSTGRES_USER=musonoi_owner -e POSTGRES_PASSWORD -v "$PWD/.runtime/ci-tls:/tls:ro" postgres:16 -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key
           for i in $(seq 1 60); do docker exec rc2-postgres pg_isready -h 127.0.0.1 -U musonoi_owner -d postgres && exit 0; sleep 1; done
           exit 1
-      - name: Unit, migration, 31 security groups, reliability, business and real browser regression
-        run: node scripts/run-release-tests.cjs acceptance
-      - name: Check core browser layout and registered-route coverage
-        run: |
-          node tests/release/uiux-audit.cjs current .runtime/release-tests/uiux/current --quick
-          node tests/release/uiux-quality.cjs layout .runtime/release-tests/uiux/current
+      - name: Verify business, required UI matrices and browser workflows
+        run: node tests/release/uiux-verify.cjs .runtime/release-tests/uiux/verification
       - name: Actual Docker build, final image inspection and production-mode synthetic startup
         run: node tests/release/docker-acceptance.cjs
       - name: Upload only explicitly approved sanitized evidence
@@ -78,6 +77,14 @@ jobs:
             .runtime/release-tests/docker-image-files.txt
             .runtime/release-tests/stock-*.png
             .runtime/release-tests/permissions-*.png
+            .runtime/release-tests/uiux/verification/exits.json
+            .runtime/release-tests/uiux/verification/*-results.json
+            .runtime/release-tests/uiux/verification/*/coverage.json
+            .runtime/release-tests/uiux/verification/*/pixel-results.json
+            .runtime/release-tests/uiux/verification/*/failed-*.png
+            .runtime/release-tests/uiux/verification/workflows/workflows.json
+            .runtime/release-tests/uiux/verification/workflows/filter-390-*.png
+            .runtime/release-tests/uiux/verification/workflows/expected-rejection-*.png
       - name: Remove temporary containers and volume
         if: always()
         run: |

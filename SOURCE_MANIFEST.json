@@ -941,11 +941,11 @@
     },
     {
       "path": "dist/cobalt-execution-ui.js",
-      "sha256": "d3899c55190b79af26ea2052ac9be6817a3038a7e9de9c68945ed72d4374806b"
+      "sha256": "d4a9546158c6dbb6ceb90b0d2c361cad6902f5b57bdbcecc31c6f39e1a494fd7"
     },
     {
       "path": "dist/cobalt-loading-ui.js",
-      "sha256": "c7a851f6250d5bef924d80c278b2a3eb8216b9a126b36e8f4e457a3da901620d"
+      "sha256": "bb431adae77a20eeabaa7b6b7304474a109f13d633bee890d03db6b74bcdbd69"
     },
     {
       "path": "dist/cobalt-management.js",
@@ -997,7 +997,7 @@
     },
     {
       "path": "dist/cobalt-stock-ui.js",
-      "sha256": "47501a7affbce4a389059de8c7fc45afe1de39cc33dc4f8fa9e241fc3e7aab88"
+      "sha256": "14829aa8be462b2b68a942dc4038c64f3427e4e79a00cabc0b663e22646d7a91"
     },
     {
       "path": "dist/cobalt-stock469r2.css",
@@ -1009,11 +1009,11 @@
     },
     {
       "path": "dist/cobalt-ui.js",
-      "sha256": "e44597e2e9b2b1a87f9f8b91dbf536d2dbd38cdea867d6fd27aa3d17bbd08129"
+      "sha256": "0f10dbae9ea1dfd3dab37e8f9811f62cfcf44ae3be41b474a161bbf8e9995001"
     },
     {
       "path": "dist/cobalt-work-ui.js",
-      "sha256": "1de40aeff588dc4908d5f97ff4271180806c031af5da4168ead75039aca851ff"
+      "sha256": "c7a5b789a400464829c1bca275315f1235c106146566db0fe7d2ab20bbf1ccb4"
     },
     {
       "path": "dist/cobalt461.js",
@@ -1085,7 +1085,7 @@
     },
     {
       "path": "dist/i18n-audit468r6.js",
-      "sha256": "77ef456b7658a8d0f150a3000603f38432bb28d2be1f4a42c8e19caadc3c5491"
+      "sha256": "1f6713f47487b120fe5f0a99a0e35324bd28fb1d096b074206e0887954cca826"
     },
     {
       "path": "dist/i18n-dictionary.js",
@@ -1225,7 +1225,7 @@
     },
     {
       "path": "dist/operations468r4.js",
-      "sha256": "caf512c22a4e11746061791c9ba1447656159a7b54fed37f058c2e05dc2368c5"
+      "sha256": "7c112e8499aa0a619f0c8a2ecee854ebfff9b5f39f8565b56b6ec87e2b3611f0"
     },
     {
       "path": "dist/overview-analysis.css",
@@ -1385,7 +1385,7 @@
     },
     {
       "path": "dist/system46.js",
-      "sha256": "6d9e35d5f41e26b72a9973546e15f8c1412450ad09081186de924cfa510f6ace"
+      "sha256": "295f63919266ffe9d4eef0a7f4c306604c45883032736dc23e7b870541037bf6"
     },
     {
       "path": "dist/task-notifications.js",
@@ -1441,7 +1441,7 @@
     },
     {
       "path": "dist/ui465.css",
-      "sha256": "97103f934bc04ca4941032896a12d136f0c0377f3aa0d9962563991b961eb06f"
+      "sha256": "f23f185388bb65abe56c69a4de5ab9b9ada2af3d14016dc577d77fc8cf0adffd"
     },
     {
       "path": "dist/ui465.js",
@@ -1457,7 +1457,7 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "sha256": "a0c946c48b4869baf417a2f46045400dc5c7e86f5ae4c56fb8e393e7d4cbf53d"
+      "sha256": "29fdff9d3b399b18e15e8ef321bed8bff8ec47565d81ea21abace1c694146969"
     },
     {
       "path": "dist/ux-r4.css",
@@ -1561,7 +1561,7 @@
     },
     {
       "path": "dist/v31-single-plan.js",
-      "sha256": "a62cc8c546796b073c50c056a90d6e0ba562f3314e1d453b4002b71542d893f0"
+      "sha256": "6540f1e099199fa064b3cb80a4341aa4d7391df3f6358e62b243414faa8d5fdc"
     },
     {
       "path": "dist/v31-ui.js",
@@ -1585,7 +1585,7 @@
     },
     {
       "path": "dist/v34-interactions.js",
-      "sha256": "0011ee2057989413735b37fcac20de7d41a91d8ea509deb5ac7699cc1f9f826c"
+      "sha256": "431ff3cb2e29c338920a6fb045a0adbf5985cf78877bf738186feed8a5b23080"
     },
     {
       "path": "dist/v34-ui.js",
@@ -1653,7 +1653,7 @@
     },
     {
       "path": "dist/vehicle-arrivals.js",
-      "sha256": "b2476269b3f07f8323dfd0723dc2754d02cf57df98600df558d37efec425d53b"
+      "sha256": "25282bd97910163d555d8c697f57ede3e3e95d4fc5608538bb90d4784178768e"
     },
     {
       "path": "dist/workflows.js",
@@ -2337,7 +2337,7 @@
     },
     {
       "path": "tests/release/shipment-reports.cjs",
-      "sha256": "eff666db0babfc004f45d7a9bc5729a2519ef11c9a327a4286ec2094ab43697e"
+      "sha256": "bbc24aed5d57cea83b837a55d23cd3ea2214640806fab06fc351068cc7161953"
     },
     {
       "path": "tests/release/source-check.cjs",
@@ -2352,48 +2352,76 @@
       "sha256": "9bb4dbe2800b25b3f162424b02ded346ca335c26b8753a7301e706085c543c24"
     },
     {
+      "path": "tests/release/uiux-accessibility.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
       "path": "tests/release/uiux-audit.cjs",
-      "sha256": "785c117d89c3bdf344a493fcc3b36eda267a4b437c4049e06c7049b4af0af68e"
+      "sha256": "ab2b012142cf5a2ecbfa37246babf537054f50eecbe480ceb1faec028e97cf19"
     },
     {
       "path": "tests/release/uiux-baselines/inventory_CU_CATHODE_zh-CN_admin_390.png",
-      "sha256": "3c1b819e9648a9301eb8437c4a6557a8f2363f62c0a35881cdc0210c06ea49d2"
+      "sha256": "b307901fb9f4c791ad0424b964d4501e6d0f46efcfbf29cc61864b4782642504"
     },
     {
       "path": "tests/release/uiux-baselines/loading-search_CU_CATHODE_zh-CN_admin_390.png",
-      "sha256": "cc552b89268888661090e291c7ea48b8ba76c21591d76ffaae1932372d4eb14c"
+      "sha256": "b28909beb3579aafe004a6f0b371b0dcfd440408cead66c058b5354eedfba324"
     },
     {
       "path": "tests/release/uiux-baselines/login_public_zh-CN_guest_1440.png",
-      "sha256": "bbbc85de0094ab53869844dcbfef5cfa9a29247f4b13ff25cf39d5733b1af289"
+      "sha256": "1a4d9720c2fc3fc4372485f95a4cab84f2afe157d9f62283d833a8169d2fc2bc"
+    },
+    {
+      "path": "tests/release/uiux-baselines/metal-outbound_CO_HYDROXIDE_en_admin_1920.png",
+      "sha256": "87b5bd95375c0715766d0a7e2c253a048d118725f662a2150850af8d484fb5a4"
     },
     {
       "path": "tests/release/uiux-baselines/metal_CO_HYDROXIDE_en_admin_1366.png",
-      "sha256": "a8d7a0698e8a0138bb594243af338138a4d3eda167789d34d8c1c77a5c5a47cb"
+      "sha256": "f78da934b3e58c541406caecaaa3fb9a64ee47e792593b906b3d1bf18a002568"
     },
     {
       "path": "tests/release/uiux-baselines/overview_CO_HYDROXIDE_en_admin_1440.png",
-      "sha256": "105af6ffff0213fd65499ab5f9397d4cf7d70c5d5f02659581e2dae7acef0410"
+      "sha256": "27a2eb0ee1ff45b4ae2d643a859b2a9894887d414bb2175da8913a0e45456fce"
     },
     {
       "path": "tests/release/uiux-baselines/permissions_CU_CATHODE_en_admin_1440.png",
-      "sha256": "6925be9121b619717a2dd14a0fe7f30fa611e28363c5c775329aeb6e195a9946"
+      "sha256": "5187ba3dd8e56e878c165ec0d013c24c657d78076cec61881f64f39bb2385b6c"
     },
     {
       "path": "tests/release/uiux-baselines/review.json",
-      "sha256": "378f686caf5ff91b5d851113529426fd306457bc46feafa5abb07777ad6fcfe8"
+      "sha256": "65e3ce31355abaade5de0c5a01324e9ddb1c15d894bca7f6e5c0b746b48e4a36"
     },
     {
       "path": "tests/release/uiux-fixtures.cjs",
-      "sha256": "2a245ccf3667aa1c9ab53668bf3c019a4083080188368b31cb4ed42f7f17d40f"
+      "sha256": "6b6e904b010c741e3372dbd10fce5fdfc0679fb94fa672c83c511aa2d0454f64"
+    },
+    {
+      "path": "tests/release/uiux-gate.test.cjs",
+      "sha256": "6e85df4c5509b0dc40ef3fd90bd52f5c1f2fd33ecc11445b237423afb028033c"
+    },
+    {
+      "path": "tests/release/uiux-inventory.json",
+      "sha256": "7ed1701c217a675c0e70a52711c8c74110213dd49833dbb244146a386127a936"
+    },
+    {
+      "path": "tests/release/uiux-matrix.cjs",
+      "sha256": "31625bc575abbcbebc42e585704b1e387a4da6c1ca4734ccfa91ab4192c1726f"
     },
     {
       "path": "tests/release/uiux-quality.cjs",
-      "sha256": "ccfee5a20d20e09e83d6cc194f73305c714d2957e23cdbe1f156d3f42bf78133"
+      "sha256": "9e2381ad04193740f3286c2f47f8c5d685ac7c4866989c81d09421c4fdc4b411"
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "a0051a621f3f0851453cea9659670e55b120f4dc83c090c0c05fc239c551f026"
+      "sha256": "37a0ebceeb4ef57d0d98b4bd22797875bd2f271a3fe66a47a2be3ece0727dab8"
+    },
+    {
+      "path": "tests/release/uiux-verify.cjs",
+      "sha256": "4afedb8ad01b4afedbd7c71972bf015abb42ed97e09fe019e3cbd6f3a8bc8f60"
+    },
+    {
+      "path": "tests/release/uiux-workflows.cjs",
+      "sha256": "76d738bea20d264f7604185d2368b98feb71e67c46bdf302af410da052078737"
     }
   ]
 }

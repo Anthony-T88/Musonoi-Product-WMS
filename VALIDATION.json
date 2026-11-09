@@ -22,5 +22,11 @@
     "screenshotsAfter": 362,
     "businessTestsPassed": 115,
     "newMigrations": 0
+  },
+  "uiuxRemediation": {
+    "baseline": "5bf7a47ac86d535ba56f758bb321f30fa99a2d69",
+    "scope": "Isolated synthetic TEST only",
+    "evidence": "uiux-verify.cjs archives commit-bound exit codes, browser matrices and workflow results",
+    "databaseMigrationsAdded": 0
   }
 }

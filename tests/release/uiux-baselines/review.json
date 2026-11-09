@@ -2,7 +2,7 @@
   "platform": "win32",
   "browser": "156.0.8078.81",
   "reviewedOn": "2026-11-09",
-  "review": "Manually checked in isolated TEST. Stable crops omit live dates, identities, counts and identifiers.",
+  "review": "Reviewed independently in synthetic TEST. Stable clips include permissions actions and matrix, metal and net weight cards, and wet net/estimated/confirmed values on outbound rows.",
   "images": [
     {
       "file": "login_public_zh-CN_guest_1440.png",
@@ -51,10 +51,10 @@
     {
       "file": "metal_CO_HYDROXIDE_en_admin_1366.png",
       "clip": {
-        "x": 273,
-        "y": 114,
-        "width": 1076,
-        "height": 76
+        "x": 280,
+        "y": 195,
+        "width": 856,
+        "height": 138
       },
       "meanTolerance": 0.016,
       "changedTolerance": 0.065
@@ -62,10 +62,21 @@
     {
       "file": "permissions_CU_CATHODE_en_admin_1440.png",
       "clip": {
-        "x": 273,
-        "y": 77,
-        "width": 1150,
-        "height": 143
+        "x": 550,
+        "y": 166,
+        "width": 865,
+        "height": 621
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    },
+    {
+      "file": "metal-outbound_CO_HYDROXIDE_en_admin_1920.png",
+      "clip": {
+        "x": 1354,
+        "y": 472,
+        "width": 447,
+        "height": 144
       },
       "meanTolerance": 0.016,
       "changedTolerance": 0.065

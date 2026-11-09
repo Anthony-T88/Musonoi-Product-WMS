@@ -13,9 +13,9 @@ async function examples(client,fixture){
   cuArrival:'SELECT dispatch_vehicle_id value FROM vehicle_arrivals ORDER BY registered_at DESC LIMIT 1',
   cuArrivalPending:'SELECT v.id value FROM sales_dispatch_vehicles v LEFT JOIN vehicle_arrivals a ON a.dispatch_vehicle_id=v.id WHERE a.id IS NULL AND v.cancelled_at IS NULL LIMIT 1',
   cuPlanDoc:'SELECT id value FROM loading_plan_documents ORDER BY created_at DESC LIMIT 1',
-  cuPlanGroup:'SELECT id value FROM loading_plan_groups ORDER BY created_at DESC LIMIT 1',
-  cuLoad:'SELECT id value FROM loading_orders ORDER BY created_at DESC LIMIT 1',
-  cuLoadPending:"SELECT id value FROM loading_orders WHERE status NOT IN('OUTBOUND','CANCELLED') ORDER BY created_at DESC LIMIT 1",
+  cuPlanGroup:"SELECT id value FROM loading_plan_groups WHERE name NOT LIKE 'Synthetic UIUX %' ORDER BY created_at DESC LIMIT 1",
+  cuLoad:"SELECT id value FROM loading_orders WHERE code NOT LIKE 'UIUX-LEGACY-%' ORDER BY created_at DESC LIMIT 1",
+  cuLoadPending:"SELECT id value FROM loading_orders WHERE code NOT LIKE 'UIUX-LEGACY-%' AND status NOT IN('OUTBOUND','CANCELLED') ORDER BY created_at DESC LIMIT 1",
   cuReceipt:'SELECT id value FROM receipts ORDER BY created_at DESC LIMIT 1',
   cuReceiptDraft:"SELECT id value FROM receipts WHERE status='DRAFT' ORDER BY created_at DESC LIMIT 1",
   cuLot:'SELECT id value FROM allocations ORDER BY created_at DESC LIMIT 1',
@@ -24,7 +24,7 @@ async function examples(client,fixture){
   cuOutbound:'SELECT id value FROM outbound_orders ORDER BY created_at DESC LIMIT 1',
   cuBundle:'SELECT bundle_no value FROM bundles ORDER BY created_at DESC LIMIT 1',
   cuCount:'SELECT id value FROM stocktakes ORDER BY created_at DESC LIMIT 1',
-  cuCorrection:'SELECT id value FROM outbound_corrections ORDER BY created_at DESC LIMIT 1',
+  cuCorrection:'SELECT id value FROM outbound_corrections ORDER BY requested_at DESC LIMIT 1',
   cuAdjustment:'SELECT id value FROM stock_adjustments ORDER BY created_at DESC LIMIT 1',
   cuMasterBatch:'SELECT id value FROM batches LIMIT 1',
   cuMasterYard:'SELECT id value FROM yards LIMIT 1',
@@ -39,11 +39,21 @@ async function examples(client,fixture){
   coCount:'SELECT id value FROM co_stocktakes ORDER BY created_at DESC LIMIT 1',
   permit:'SELECT id value FROM gate_permits ORDER BY created_at DESC LIMIT 1'
  };
- const ids={coPrep:fixture.preparation,coPrepEditable:fixture.estimatedPreparation,warehouse:fixture.warehouse};
+ const ids={coPrep:fixture.preparation,coPrepEditable:fixture.estimatedPreparation,warehouse:fixture.warehouse,project:fixture.project};
  for(const [key,sql] of Object.entries(specs)){
   try{ids[key]=await find(sql);}
   catch(e){if(!['42P01','42703'].includes(e.code))throw e;ids[key]=null;}
  }
+ if(ids.cuPlanGroup){
+  const {docSQL}=require('../../server/loading-plans.cjs');
+  const {rows}=await client.query(docSQL+' WHERE d.group_id=$1',[ids.cuPlanGroup]);
+  if(rows.length===1){ids.cuGroupChild=rows[0].id;ids.cuGroupLocked=['OUTBOUND','CANCELLED'].includes(rows[0].status);}
+ }
+ if(ids.cuCorrection)ids.cuCorrectionLoad=(await client.query('SELECT loading_id FROM outbound_corrections WHERE id=$1',[ids.cuCorrection])).rows[0].loading_id;
+ const admin=fixture.accounts.find(a=>a.role==='admin').id;
+ ids.coMapDefault=(await client.query(`SELECT w.id,w.project_id FROM warehouses w WHERE EXISTS(SELECT 1 FROM user_scopes s
+  WHERE s.user_id=$1 AND s.project_id=w.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id) AND s.customer_id IS NULL)
+  ORDER BY w.name LIMIT 1`,[admin])).rows[0];
  return ids;
 }
 
@@ -145,6 +155,7 @@ function pages(ids){
  add('shipping','/export-shipments',BOTH,{screenshot:true});
  add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true});
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
+ add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
  add('stocktakes','/stocktaking',BOTH,{screenshot:true,roles:['site_supervisor','production_manager']});
  add('stocktake-new','/stocktaking/new',BOTH);

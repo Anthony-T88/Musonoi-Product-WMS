@@ -31,6 +31,12 @@ html[data-release-ui="46"] :where(.workspace, #login-panel, dialog)
   outline: .1875rem solid var(--uix-focus);
   outline-offset: .125rem;
 }
+#login-panel.login46[data-login-layout="reference"] .login46-language-choices > button:not([aria-pressed="true"]) {
+  color: var(--uix-muted);
+}
+html[data-release-ui="46"] #page-content:has(.co-count-page) a[data-ui46-generated]:not(.button) {
+  color: var(--uix-text);
+}
 
 html[data-release-ui="46"] #business-page .page-heading h1 {
   color: var(--uix-text);
@@ -95,8 +101,14 @@ html[data-release-ui="46"] body #inventory th[data-sort] > button {
   color: var(--uix-text);
 }
 html[data-release-ui="46"] body #inventory #reset,
-html[data-release-ui="46"] body #page-content.s46-root #role-reset {
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content.s46-root #role-reset {
   color: var(--uix-brand);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content.s46-root
+  .s46-role-picker > [data-role].selected,
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content.s46-root
+  .s46-role-picker > [data-role] small {
+  color: var(--uix-muted);
 }
 html[data-release-ui="46"] #page-content .c461-settings-nav button,
 html[data-release-ui="46"] body #page-content.s46-root .s46-tabs > a:not([aria-current="page"]) {
