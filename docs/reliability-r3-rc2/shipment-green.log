@@ -1,0 +1,17 @@
+▶ cobalt shipment reconciliation through report API, workbook and page presentation
+  ✔ two confirmed vehicles sum exactly, including a JSON numeric snapshot (43.7748ms)
+  ✔ all unknown (including blank) stays NULL in shipping and execution (23.0483ms)
+  ✔ mixed customer, contract and month groups reconcile without filling unknowns (13.7419ms)
+  ✔ confirmed zero is known, and an empty plan is not confirmed zero (27.4521ms)
+  ✔ sales plan filters compose with customer, contract and date; execution stays cumulative (29.3022ms)
+  ✔ signed Excel export agrees with API for confirmed, mixed, unknown and zero (186.8802ms)
+  ✔ active report page distinguishes subtotal, unknown and confirmed zero (17.899ms)
+✔ cobalt shipment reconciliation through report API, workbook and page presentation (906.4435ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 982.1627

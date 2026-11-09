@@ -3,7 +3,7 @@
   "version": "4.6.9-r3-rc2",
   "status": "Draft candidate; local acceptance passed; CI and Docker require actual workflow result",
   "runtimeRequiredMigrations": 174,
-  "sourceFiles": 567,
+  "sourceFiles": 568,
   "keyIncluded": false,
   "encryptedDatabaseBackup": {
     "path": "Musonoi-Database-V4.6.9-R2.dump.enc",
@@ -33,8 +33,8 @@
     },
     {
       "path": ".github/workflows/rc2-reliability.yml",
-      "bytes": 2484,
-      "sha256": "d8d4eaaf7e5be19257d6220305c42032fab5d31ab135f1f5f7beb1b9f0212cd5"
+      "bytes": 2490,
+      "sha256": "2b7f5db0da1c4aaa36fff13852bac10dbaa80f36e6a47d17320bdd066f166986"
     },
     {
       "path": ".gitignore",
@@ -68,8 +68,8 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "bytes": 81513,
-      "sha256": "d06aeabe335a8c9808caf1e4f1d9d2d9ee732930f694dd38f669e16d9f9c4299"
+      "bytes": 81661,
+      "sha256": "24692cd01da9ecec2163777d925b6b32a30bd3afc458b4335daf1e0e3e303ffc"
     },
     {
       "path": "VALIDATION.json",
@@ -1418,8 +1418,8 @@
     },
     {
       "path": "dist/index.html",
-      "bytes": 15905,
-      "sha256": "cb66ae881942d1cfdd4e168e047fd7b8993a584fafd98f3de284657f1fd643e1"
+      "bytes": 15913,
+      "sha256": "9a40539ea89c44e302bfdb4d427b1ed91764b8dbd559309a0a4291097af2c30f"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1638,8 +1638,8 @@
     },
     {
       "path": "dist/reports463.js",
-      "bytes": 33300,
-      "sha256": "0311216804b9a6ba3a7bebbdfeefd4b45cd3faa9c4f19f6ac2ff98f0e5c0e6bb"
+      "bytes": 34593,
+      "sha256": "34d01ef39581028265e020393fd29c9e972ec28a917a36583c223b2e22ca1231"
     },
     {
       "path": "dist/route-permissions.js",
@@ -2062,6 +2062,11 @@
       "sha256": "f2fc4f1a7d35ca741a2f3a5edb4046e86651c71ba288f9a875d471086cd15012"
     },
     {
+      "path": "docs/reliability-r3-rc2/SHIPMENT_REVIEW.txt",
+      "bytes": 1892,
+      "sha256": "576b48808747654772543b930f59a4f125403b62b2d43aaf3ee3c45778ec9841"
+    },
+    {
       "path": "docs/reliability-r3-rc2/SOURCE_CHANGES.patch",
       "bytes": 198197,
       "sha256": "0a0988efb8308e218a9818c2a69d83cccff443bf27997bf07b8518a7e4a4262b"
@@ -2177,6 +2182,16 @@
       "sha256": "765ad3fce589acaaa3be4c203a8286618e7c1b0b01dad2a1aa762d86a9bd4c19"
     },
     {
+      "path": "docs/reliability-r3-rc2/shipment-green.log",
+      "bytes": 936,
+      "sha256": "0e6646dec3a17e9f917df77c0ce3524692cd0244441eca92619e20ff7b72f42b"
+    },
+    {
+      "path": "docs/reliability-r3-rc2/shipment-red.log",
+      "bytes": 8169,
+      "sha256": "8915feb175035ecb88d5adbc42f4efbc849dea76597c9d5aaaed07bf53f5dd1d"
+    },
+    {
       "path": "docs/reliability-r3-rc2/ui-results.json",
       "bytes": 1428,
       "sha256": "7e0cad934c28103cf63147d83ade1bf6e8ecf580fa8168553dc1516e8d34ff13"
@@ -2288,8 +2303,8 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "bytes": 1635,
-      "sha256": "34b2079fe682a16bd483e9c86403063f88820da80ad020fe78383c8134a77384"
+      "bytes": 1658,
+      "sha256": "cf1612b02d265044e86334756ab338c7be1b2d1cbe93b210ace1796ccc74636a"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -2423,8 +2438,8 @@
     },
     {
       "path": "server/cobalt-reports.cjs",
-      "bytes": 24958,
-      "sha256": "af0c93bf717db27e295f604ed9cb046602e00f6555525d0781027aa4b904e2e9"
+      "bytes": 26187,
+      "sha256": "919ea54a0cfac16d71961ec4fe31ee005fe11c6eafd40fd48dfee029e5dbe201"
     },
     {
       "path": "server/cobalt-sales.cjs",
@@ -3072,9 +3087,14 @@
       "sha256": "719cfe0d6ce0b04dfba4aa3e9f887a840b4bffc6bb14a0a009b605c1d8bb8ded"
     },
     {
+      "path": "tests/release/shipment-reports.cjs",
+      "bytes": 9009,
+      "sha256": "0dc92d933fd5b8ea895d812735da496413c02199ec242ea3c8b5f6ba7f1f7248"
+    },
+    {
       "path": "tests/release/source-check.cjs",
-      "bytes": 1052,
-      "sha256": "6c448cab92b61401cfdbc391971555f5635955a607589769d45c2100cff261bc"
+      "bytes": 1185,
+      "sha256": "14c0cd0f3c5bc687f020a0956d910a22bcb15a00451f9ca652ed890aa1b3c219"
     },
     {
       "path": "tests/release/stocktake-core.cjs",
@@ -3083,8 +3103,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "bytes": 5946,
-      "sha256": "1822afe2fc489ae86d2a897ca59ae589984492ef9f6e74f0075d9be9b0472983"
+      "bytes": 6546,
+      "sha256": "b171f59b2f7d8b470abb161e5c5542d771c869e4d337af0d129db89ee8d29cd8"
     }
   ],
   "fixedBaseline": "28988c4b814d1120414effc787c9566bf91c022f"

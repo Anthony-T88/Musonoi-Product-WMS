@@ -1097,7 +1097,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "cb66ae881942d1cfdd4e168e047fd7b8993a584fafd98f3de284657f1fd643e1"
+      "sha256": "9a40539ea89c44e302bfdb4d427b1ed91764b8dbd559309a0a4291097af2c30f"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1273,7 +1273,7 @@
     },
     {
       "path": "dist/reports463.js",
-      "sha256": "0311216804b9a6ba3a7bebbdfeefd4b45cd3faa9c4f19f6ac2ff98f0e5c0e6bb"
+      "sha256": "34d01ef39581028265e020393fd29c9e972ec28a917a36583c223b2e22ca1231"
     },
     {
       "path": "dist/route-permissions.js",
@@ -1633,7 +1633,7 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "sha256": "34b2079fe682a16bd483e9c86403063f88820da80ad020fe78383c8134a77384"
+      "sha256": "cf1612b02d265044e86334756ab338c7be1b2d1cbe93b210ace1796ccc74636a"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -1741,7 +1741,7 @@
     },
     {
       "path": "server/cobalt-reports.cjs",
-      "sha256": "af0c93bf717db27e295f604ed9cb046602e00f6555525d0781027aa4b904e2e9"
+      "sha256": "919ea54a0cfac16d71961ec4fe31ee005fe11c6eafd40fd48dfee029e5dbe201"
     },
     {
       "path": "server/cobalt-sales.cjs",
@@ -2260,8 +2260,12 @@
       "sha256": "719cfe0d6ce0b04dfba4aa3e9f887a840b4bffc6bb14a0a009b605c1d8bb8ded"
     },
     {
+      "path": "tests/release/shipment-reports.cjs",
+      "sha256": "0dc92d933fd5b8ea895d812735da496413c02199ec242ea3c8b5f6ba7f1f7248"
+    },
+    {
       "path": "tests/release/source-check.cjs",
-      "sha256": "6c448cab92b61401cfdbc391971555f5635955a607589769d45c2100cff261bc"
+      "sha256": "14c0cd0f3c5bc687f020a0956d910a22bcb15a00451f9ca652ed890aa1b3c219"
     },
     {
       "path": "tests/release/stocktake-core.cjs",
@@ -2269,7 +2273,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "1822afe2fc489ae86d2a897ca59ae589984492ef9f6e74f0075d9be9b0472983"
+      "sha256": "b171f59b2f7d8b470abb161e5c5542d771c869e4d337af0d129db89ee8d29cd8"
     }
   ]
 }

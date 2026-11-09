@@ -1,7 +1,7 @@
 name: rc2 isolated reliability and Docker acceptance
 on:
   pull_request:
-    branches: [fix/v4.6.9-r3-rc1-security]
+    branches: [main, fix/v4.6.9-r3-rc1-security]
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,7 +21,7 @@ jobs:
           npm install --global pnpm@11.25.0
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
-      - name: Verify syntax, source integrity and all 173 historical migrations
+      - name: Verify syntax, source integrity and all 174 historical migrations
         run: node tests/release/source-check.cjs
       - name: Generate temporary CI credentials and TLS
         run: node tests/release/ci-setup.cjs
