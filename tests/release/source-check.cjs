@@ -8,8 +8,9 @@ let count=0;for(const dir of ['server','scripts','tests/release','dist']){const 
 const source=require('../../server/release-integrity.cjs').verify(process.cwd());
 const release=require('../../server/release.cjs'),manifest=require('../../RELEASE_MANIFEST.json');
 assert.equal(manifest.version,release.version);
-assert.equal(manifest.runtimeRequiredMigrations,historical.length);
-assert.equal(release.requiredMigration,historical.at(-1).version);
+const chain=require('../../scripts/migration-chain.cjs').load();
+assert.equal(manifest.runtimeRequiredMigrations,chain.length);
+assert.equal(release.requiredMigration,chain.at(-1).version);
 assert.equal(manifest.sourceFiles,source.files);
 const vm=require('node:vm'),client={};
 vm.runInNewContext(fs.readFileSync('dist/release.js','utf8'),client);

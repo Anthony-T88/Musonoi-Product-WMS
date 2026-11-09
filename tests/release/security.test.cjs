@@ -47,6 +47,40 @@ test('first batch management security regressions',async t=>{
   const password=crypto.randomBytes(20).toString('base64url'),id=(await c.query("INSERT INTO registration_requests(username,display_name,password_hash,contact) VALUES('sec_registration','Synthetic registration',$1,'synthetic@example.invalid') RETURNING id",[hashPassword(password)])).rows[0].id;
   assert.equal((await api(manager,'GET','/users/registration-requests')).statusCode,403);assert.equal((await api(manager,'POST','/users/registration-requests/'+id+'/review',{decision:'APPROVED',role_code:viewerRole,scopes:scope})).statusCode,403);assert.equal((await c.query('SELECT status FROM registration_requests WHERE id=$1',[id])).rows[0].status,'PENDING');const body={decision:'APPROVED',role_code:viewerRole,scopes:scope},r=await Promise.all([api(root,'POST','/users/registration-requests/'+id+'/review',body),api(root,'POST','/users/registration-requests/'+id+'/review',body)]);assert.deepEqual(r.map(x=>x.statusCode).sort(),[200,409]);assert.equal((await c.query("SELECT count(*)::int n FROM users WHERE username='sec_registration'")).rows[0].n,1);
  });
+ await check('custom usernames and separate contacts are validated, stored and editable within account scope',async()=>{
+  const data={display_name:'Synthetic contact account',password:crypto.randomBytes(20).toString('base64url'),role_code:viewerRole,scopes:scope};
+  assert.equal((await api(manager,'POST','/users',data)).statusCode,400);
+  assert.equal((await api(manager,'POST','/users',{...data,username:'UpperCase'})).statusCode,400);
+  assert.equal((await api(manager,'POST','/users',{...data,username:'contact_custom',contact_phone:'wrong'})).statusCode,400);
+  const fields={...data,username:'contact_custom',contact_phone:'+243 810 000 001',contact_email:'account@example.invalid'};
+  const created=await api(manager,'POST','/users',fields);assert.equal(created.statusCode,200,created.body);
+  const u=created.json();assert.equal(u.username,fields.username);assert.equal(u.contact_phone,fields.contact_phone);assert.equal(u.contact_email,fields.contact_email);
+  assert.equal((await api(manager,'POST','/users',fields)).statusCode,409);
+  assert.equal((await api(manager,'PATCH','/users/'+u.id,{contact_email:'invalid'})).statusCode,400);
+  assert.equal((await api(manager,'PATCH','/users/'+u.id,{contact_phone:''})).statusCode,200);
+  const list=(await api(manager,'GET','/users?q=contact_custom')).json().items;
+  assert.equal(list.length,1);assert.equal(list[0].contact_phone,null);assert.equal(list[0].contact_email,fields.contact_email);
+  const audit=(await c.query("SELECT before_data,after_data FROM audit_logs WHERE entity_type='users' AND entity_id=$1",[u.id])).rows;
+  assert(!JSON.stringify(audit).includes(fields.contact_email));
+ });
+ await check('public registration keeps the chosen account and transfers both contacts at approval',async()=>{
+  const base='/api/v1/auth/',remoteAddress='127.88.0.47',origin=f.appCfg.origin;
+  const token=await app.inject({url:base+'registration-token',remoteAddress});
+  const headers={origin,cookie:token.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':token.json().csrfToken};
+  const payload={username:'registration_custom',display_name:'Synthetic applicant',password:crypto.randomBytes(20).toString('base64url')};
+  const submit=fields=>app.inject({method:'POST',url:base+'registration-requests',headers,remoteAddress,payload:{...payload,...fields}});
+  assert.equal((await submit({contact_phone:'',contact_email:''})).statusCode,400);
+  assert.equal((await submit({contact_email:'invalid'})).statusCode,400);
+  const fields={contact_phone:'+243 810 000 002',contact_email:'registration@example.invalid'};
+  const submitted=await submit(fields);assert.equal(submitted.statusCode,201,submitted.body);
+  assert.equal((await submit(fields)).statusCode,409);
+  const id=submitted.json().id,requests=(await api(root,'GET','/users/registration-requests')).json().items;
+  const item=requests.find(r=>r.id===id);assert.equal(item.username,payload.username);assert.equal(item.contact_phone,fields.contact_phone);assert.equal(item.contact_email,fields.contact_email);
+  assert.equal((await api(root,'POST','/users/registration-requests/'+id+'/review',{decision:'APPROVED',role_code:viewerRole,scopes:scope})).statusCode,200);
+  assert.deepEqual((await c.query('SELECT contact_phone,contact_email FROM users WHERE username=$1',[payload.username])).rows[0],fields);
+  const login=await app.inject({method:'POST',url:base+'login',remoteAddress,headers:{origin},payload:{username:payload.username,password:payload.password}});
+  assert.equal(login.statusCode,200);
+ });
  await check('audit scope snapshots resist forged metadata and later actor/project reassignment',async()=>{
   const id=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,scope_context) VALUES($1,'security_forged','projects',$2,$3) RETURNING id",[outsideAdmin.id,other,{kind:'SCOPED',scopes:[{project_id:f.project}]}])).rows[0].id;assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,404);await c.query('UPDATE user_scopes SET project_id=$1 WHERE user_id=$2',[f.project,outsideAdmin.id]);assert.equal((await api(audit,'GET','/v27/audit/'+id)).statusCode,404);assert.equal((await api(root,'GET','/v27/audit/'+id)).statusCode,200);assert.equal((await api(audit,'GET','/v27/audit/'+ownLog)).statusCode,200);
  });
@@ -91,7 +125,7 @@ test('first batch management security regressions',async t=>{
  });
  await check('172-to-173 upgrade preserves every historical account, grant, scope, session and audit row',async()=>{
   const old=await E.database();try{const Chain=require('../../scripts/migration-chain.cjs'),prior=Chain.load().filter(e=>e.version<'173_');await old.client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of prior)await Chain.execute(old.client,e);await old.client.query("INSERT INTO system_info VALUES(true,'test')");const fixture=await E.seed(old.client,old.name),who=fixture.accounts.find(a=>a.role==='admin');await old.client.query("INSERT INTO sessions(token_hash,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[crypto.randomBytes(32).toString('hex'),who.id,crypto.randomBytes(32).toString('hex')]);const event=(await old.client.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_legacy','projects',$2,$3) RETURNING id",[who.id,fixture.project,{project_id:fixture.project}])).rows[0].id;
-   const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context')::text,'' ORDER BY (to_jsonb(t)-'scope_context')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();await old.client.query('BEGIN');try{await Chain.execute(old.client,Chain.load().find(e=>e.version.startsWith('173_')));await old.client.query('COMMIT');}catch(e){await old.client.query('ROLLBACK');throw e;}assert.deepEqual(await snapshot(),before);await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,1);assert.deepEqual(await snapshot(),before);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
+   const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email')::text,'' ORDER BY (to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();await old.client.query('BEGIN');try{await Chain.execute(old.client,Chain.load().find(e=>e.version.startsWith('173_')));await old.client.query('COMMIT');}catch(e){await old.client.query('ROLLBACK');throw e;}assert.deepEqual(await snapshot(),before);await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,Chain.load().length-173);assert.deepEqual(await snapshot(),before);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
    const oldApp=await require('../../server/app.cjs').build({config:fixture.appCfg});try{const r=await oldApp.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:fixture.appCfg.origin},payload:{username:who.username,password:who.password}});assert.equal(r.statusCode,200);const cookie=r.cookies.map(x=>x.name+'='+x.value).join('; ');assert.equal((await oldApp.inject({url:'/api/v1/v27/audit/'+event,headers:{cookie,origin:fixture.appCfg.origin}})).statusCode,200);}finally{await oldApp.close();}
   }finally{await old.client.end();}
  });

@@ -1,0 +1,167 @@
+:root {
+  --uix-canvas: #f4f6f4;
+  --uix-surface: #fff;
+  --uix-text: #23382d;
+  --uix-muted: #52645a;
+  --uix-border: #cbd6ce;
+  --uix-brand: #256447;
+  --uix-danger: #952b29;
+  --uix-warning: #73531d;
+  --uix-success: #246142;
+  --uix-focus: #235e87;
+  --uix-title: clamp(1.375rem, 2vw, 1.625rem);
+  --uix-section: 1.125rem;
+  --uix-body: .875rem;
+  --uix-caption: .8125rem;
+  --uix-gap-xs: .375rem;
+  --uix-gap-sm: .625rem;
+  --uix-gap: .875rem;
+  --uix-radius: .5rem;
+  --uix-control: 2.375rem;
+  --uix-touch: 2.75rem;
+}
+
+html[data-release-ui="46"] .workspace { background: var(--uix-canvas); }
+html[data-release-ui="46"]:lang(en) body .product-switch button {
+  white-space: normal;
+  line-height: 1.25;
+}
+html[data-release-ui="46"] :where(.workspace, #login-panel, dialog)
+  :is(button, a[href], input, select, textarea, summary):focus-visible {
+  outline: .1875rem solid var(--uix-focus);
+  outline-offset: .125rem;
+}
+
+html[data-release-ui="46"] #business-page .page-heading h1 {
+  color: var(--uix-text);
+  font-size: var(--uix-title);
+  line-height: 1.25;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+html[data-release-ui="46"] #business-page .page-heading > div { min-inline-size: 0; }
+html[data-release-ui="46"] #page-content :is(.p46-card-title, .oa-panel > header > h2, .co-metal-section > h2) {
+  font-size: var(--uix-section);
+  line-height: 1.35;
+}
+
+html[data-release-ui="46"] #page-content :is(.muted, .v34-definition, .overview-scope) {
+  color: var(--uix-muted);
+}
+html[data-release-ui="46"] #page-content .dialog-notice { color: var(--uix-warning); }
+html[data-release-ui="46"] .oa-checks > .is-pass { color: var(--uix-success); }
+html[data-release-ui="46"] #page-content :is(.error, [role="alert"].error) {
+  color: var(--uix-danger);
+  overflow-wrap: anywhere;
+}
+
+html[data-release-ui="46"] #page-content :is(.business-toolbar, .r9-filter-actions, .co-arrival-actions) {
+  gap: var(--uix-gap-sm);
+}
+html[data-release-ui="46"] #page-content :is(.business-toolbar, form.filters) .button:not(.compact) {
+  min-block-size: var(--uix-control);
+  border-radius: var(--uix-radius);
+  font-size: var(--uix-body);
+}
+html[data-release-ui="46"] #page-content .business-toolbar .danger:not(:first-child) {
+  margin-inline-start: var(--uix-gap-xs);
+}
+html[data-release-ui="46"] #page-content form.filters :is(input, select):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+  min-block-size: var(--uix-control);
+  min-inline-size: 0;
+  font-size: var(--uix-body);
+  border-radius: var(--uix-radius);
+}
+
+html[data-release-ui="46"] #page-content :is(.business-table, .table-scroll, .v34-table-wrap, .co469-table-wrap, .co-work-table-wrap) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) :is(th, td) {
+  line-height: 1.45;
+  vertical-align: middle;
+}
+html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) th {
+  font-size: var(--uix-caption);
+  font-weight: 600;
+}
+html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) .button {
+  white-space: normal;
+}
+html[data-release-ui="46"] :is(#page-content, #inventory) .v34-sort,
+html[data-release-ui="46"] body #inventory th[data-sort] > button {
+  color: var(--uix-text);
+}
+html[data-release-ui="46"] body #inventory #reset,
+html[data-release-ui="46"] body #page-content.s46-root #role-reset {
+  color: var(--uix-brand);
+}
+html[data-release-ui="46"] #page-content .c461-settings-nav button,
+html[data-release-ui="46"] body #page-content.s46-root .s46-tabs > a:not([aria-current="page"]) {
+  color: var(--uix-muted);
+}
+html[data-release-ui="46"] #page-content .c461-settings-nav button[aria-selected="true"] {
+  color: var(--uix-brand);
+}
+html[data-release-ui="46"] #page-content .op-table .op-code {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+html[data-release-ui="46"] #page-content .c461-tabs a:not([aria-current="page"]) {
+  color: var(--uix-text);
+}
+html[data-release-ui="46"] :is(#page-content, #inventory, #dashboard)
+  :is(.p46-stat, .oa-kpi, .v34-kpi) strong {
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-release-ui="46"] dialog :is(.dialog-header, .task-notice-actions) {
+  gap: var(--uix-gap);
+}
+
+.mobile-nav-shell { display: none; }
+@media (max-width: 900px) {
+  html[data-release-ui="46"] .mobile-nav-shell {
+    display: block;
+    padding: 0 var(--uix-gap);
+    background: var(--uix-surface);
+    border-block-end: 1px solid var(--uix-border);
+  }
+  html[data-release-ui="46"] .mobile-nav-shell > summary {
+    display: list-item;
+    min-block-size: var(--uix-touch);
+    padding-block: var(--uix-gap-sm);
+    color: var(--uix-brand);
+    font-size: var(--uix-body);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  html[data-release-ui="46"] .mobile-nav-shell > .mobile-primary {
+    padding: 0 0 var(--uix-gap-sm);
+  }
+  html[data-release-ui="46"] .mobile-nav-shell > .product-switch {
+    margin-block: 0 var(--uix-gap-sm);
+  }
+  html[data-release-ui="46"] .mobile-nav-shell > .mobile-primary .ux-nav-label {
+    min-inline-size: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  html[data-release-ui="46"] #page-content .business-toolbar .button:not(.compact) {
+    min-block-size: var(--uix-touch);
+  }
+}
+
+@media (max-width: 640px) {
+  html[data-release-ui="46"] #business-page .page-heading {
+    align-items: start;
+    gap: var(--uix-gap-sm);
+  }
+  html[data-release-ui="46"] #page-content .r9-document-filter {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+}

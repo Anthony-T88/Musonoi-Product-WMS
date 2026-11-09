@@ -1,8 +1,18 @@
 'use strict';
 // Exact labels from the existing bilingual UI owners.
 Object.assign(TRANSLATIONS.en,{
+ "联系号码": "Phone Number",
+ "联系邮箱": "Email Address",
+ "3–40位小写字母、数字或下划线，以字母开头": "3–40 lowercase letters, digits or underscores, starting with a letter",
+ "登录账号须为3–40位小写字母、数字或下划线，以字母开头": "Username must use 3–40 lowercase letters, digits or underscores, starting with a letter",
+ "请输入有效联系号码": "Enter a valid phone number",
+ "请输入有效联系邮箱": "Enter a valid email address",
+ "请填写联系号码或联系邮箱": "Enter a phone number or email address",
  "业务明细": "Business Details",
  "填写摘要": "Entry Summary",
+ "销售计划信息": "Sales Plan Information",
+ "批次号与归属": "Batch Number and Ownership",
+ "备货捆包明细": "Preparation Bundle Details",
  "办理提示": "Guidance",
  "当前办理": "Current Actions",
  "办理记录": "Activity",

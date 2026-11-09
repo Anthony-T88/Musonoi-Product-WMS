@@ -1,0 +1,33 @@
+.co-metal-section{margin:20px 0;min-width:0}
+.co-metal-section h2,.co-metal-section h3{text-align:left}
+.co-metal-page>.v34-kpi-grid,.co-metal-section>.v34-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin-bottom:14px}
+.co-metal-section .business-toolbar,.co-metal-page .business-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.co-metal-page .co-metal-filters{display:flex;align-items:end;flex-wrap:wrap;gap:10px 14px;margin:14px 0}
+.co-metal-filters>label{display:grid;gap:5px;min-width:130px;flex:1}
+.co-metal-filters>label:has(input[type=search]){flex:2;min-width:min(100%,250px)}
+.co-metal-filters label input,.co-metal-filters label select{min-width:0;width:100%}
+.co-metal-filters>.business-toolbar{margin:0}
+#co-metal-list th,#co-metal-list td,#co-metal-history th,#co-metal-history td{vertical-align:middle}
+#co-metal-months meter{width:clamp(40px,12vw,190px);height:14px;vertical-align:middle}
+#co-metal-months strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+#co-metal-months .co-metal-estimate::-webkit-meter-optimum-value{background:#416f9b}
+#co-metal-months .co-metal-confirmed::-webkit-meter-optimum-value{background:#42835a}
+#co-metal-detail form{margin:12px 0;max-width:540px}
+@media(max-width:640px){.co-metal-section>.v34-kpi-grid,.co-metal-page>.v34-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.co-metal-filters>.business-toolbar{width:100%}}
+@media print{.co-metal-filters,#co-metal-detail form,.co-metal-page .business-toolbar{display:none!important}}
+.workspace:has(.co-metal-page) #business-page>.page-heading .eyebrow{display:none}
+.co-metal-page .v34-kpi strong small,.co-metal-section .v34-kpi strong small{font-size:.55em;white-space:nowrap}
+
+.co469-page .co-seal-feedback{display:block;color:#a32924;font-size:12px;line-height:1.4;margin-top:4px}
+.co469-page .co-seal-feedback:empty{display:none}
+.co469-page input[aria-invalid=true]{border-color:#bd4337}
+.co-arrival-actions{display:flex;gap:6px;margin:0}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section{margin:12px 0}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section>.v34-kpi-grid{gap:9px;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));margin:8px 0 12px}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section .v34-kpi{padding:10px 12px;min-height:66px}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section .v34-kpi strong{font-size:clamp(14px,1.5vw,20px);line-height:1.3}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section .v34-kpi span{font-size:12px;line-height:1.35}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section h2{font-size:18px}
+.oa467[data-product="CO_HYDROXIDE"] .co-metal-section h3{font-size:15px}
+#co-execution-actions>button{margin:0 6px 6px 0}
+@media(max-width:640px){.oa467[data-product="CO_HYDROXIDE"] .co-metal-section>.v34-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

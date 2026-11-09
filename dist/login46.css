@@ -86,3 +86,4 @@ body:has(#login-panel:not([hidden])){overflow:auto;}
  #login-panel.login46[data-login-layout="reference"] .login46-art{display:block;height:100%;align-self:stretch;overflow:visible;clip-path:none}
  #login-panel.login46[data-login-layout="reference"] .login46-geology{position:absolute;left:0;right:0;bottom:0;margin:0 auto;width:min(100%,calc((100dvh - 220px)*2));height:auto;max-width:none;max-height:none;object-fit:fill;object-position:center;transform:none;transform-origin:center}
 }
+#login-panel.login46 .login46-title-version{display:inline-block;margin-inline-start:.24em;font-size:.82em;font-weight:600;white-space:nowrap;letter-spacing:-.025em}

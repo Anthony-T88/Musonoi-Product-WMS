@@ -6,7 +6,7 @@ const V26={
  fixed(n){return `${n/10000n}.${String(n%10000n).padStart(4,'0')}`;},
  weight(v){return v===null||v===undefined?'未检斤':Number(v).toFixed(4);},
  table(items){return `<div class="business-table"><table><thead><tr><th>捆包编号</th><th>生产批次</th><th>实际货位</th><th>毛重(t)</th><th>净重(t)</th></tr></thead><tbody>${items.map(b=>`<tr><td>${esc(b.bundle_no)}</td><td>${esc(b.batch||'—')}</td><td>${esc(b.location||b.location_id)}</td><td>${esc(this.weight(b.gross_weight))}</td><td>${esc(this.weight(b.net_weight))}</td></tr>`).join('')}</tbody></table></div>`;},
- async reviews(type,id){const r=await API.request('/v26/reviews/'+type+'/'+id);return `<h3>审批与操作记录</h3><ol>${r.items.map(x=>`<li>${esc(x.occurred_at)} · ${esc(x.actor_name)} · ${esc(x.action)} · ${esc(x.note)}</li>`).join('')}</ol>`;},
+ async reviews(type,id){const r=await API.request('/v26/reviews/'+type+'/'+id);if(!r.items.length)return '';return `<h3>审批与操作记录</h3><ol>${r.items.map(x=>`<li>${esc(x.occurred_at)} · ${esc(x.actor_name)} · ${esc(x.action)} · ${esc(x.note)}</li>`).join('')}</ol>`;},
  bind(actions,run){for(const b of document.querySelectorAll('[data-v26-action]'))b.onclick=async()=>{b.disabled=true;try{await run(b.dataset.v26Action);window.dispatchEvent(new Event('inventory-changed'));}catch(e){notify(e.message);b.disabled=false;}};},
  async receiptEditor(r={}){
  if(r.id&&r.workflow_version!=='2.6')return this.legacyReceiptEditor(r);

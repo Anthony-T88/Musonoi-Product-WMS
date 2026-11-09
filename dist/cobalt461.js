@@ -17,7 +17,7 @@ window.Cobalt461={...Copper461,ready:false,data:null,preferences:[],co:true,base
  }catch(e){System46.lastFailure={route:this.route(),message:e.message,status:e.statusCode||0};Router.page(this.t('页面暂不可用','Page Unavailable'),'<p class="error">'+esc(e.message)+'</p>');}finally{Router.rendering=false;UnifiedNavigation.refresh();AdaptiveLayout.queue();window.scrollTo({top:0});}};
  RoutePermissions.register('cobalt461',p=>this.activeRoute(p),p=>this.permission(p));const set=I18n.set.bind(I18n);I18n.set=(...args)=>{const r=set(...args);if(this.activeRoute())this.language();return r;};this.installNotifier();
  },
- page(title,en,code,html){if(title==='铜销售合同'){title='销售合同';en='Sales Contracts';}Router.page(this.t(title,en),'<div class="c461-page" data-c461-page="'+code.replace(/^CU-/,'CO-')+'"><p class="c461-subtitle">'+this.L('穆松尼项目 · 氢氧化钴','Musonoi Project · Cobalt Hydroxide')+'</p>'+html+'</div>');document.querySelector('.breadcrumb strong').textContent=this.t(title,en);},
+ page(title,en,code,html){if(title==='铜销售合同'){title='销售合同';en='Sales Contracts';}Router.page(this.t(title,en),'<div class="c461-page" data-c461-page="'+code.replace(/^CU-/,'CO-')+'">'+html+'</div>');document.querySelector('.breadcrumb strong').textContent=this.t(title,en);},
  matches(root){return this.enabled()&&!!root.querySelector('.c461-page');},
  compose(root,s){s.composition={classes:[],hidden:[],watch:[],family:'cobalt461'};UI46Pages.cls(root,'c461-root',s);root.dataset.pageFamily='cobalt461';s.composition.anchor=s.anchor=root.querySelector('.c461-page');UI46Pages.finish(root,s);this.refresh(s);},
  refresh(){this.language();},

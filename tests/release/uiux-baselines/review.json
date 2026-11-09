@@ -1,0 +1,74 @@
+{
+  "platform": "win32",
+  "browser": "156.0.8078.81",
+  "reviewedOn": "2026-11-09",
+  "review": "Manually checked in isolated TEST. Stable crops omit live dates, identities, counts and identifiers.",
+  "images": [
+    {
+      "file": "login_public_zh-CN_guest_1440.png",
+      "clip": {
+        "x": 1036,
+        "y": 159,
+        "width": 365,
+        "height": 443
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    },
+    {
+      "file": "inventory_CU_CATHODE_zh-CN_admin_390.png",
+      "clip": {
+        "x": 0,
+        "y": 152,
+        "width": 390,
+        "height": 109
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    },
+    {
+      "file": "loading-search_CU_CATHODE_zh-CN_admin_390.png",
+      "clip": {
+        "x": 11,
+        "y": 714,
+        "width": 368,
+        "height": 130
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    },
+    {
+      "file": "overview_CO_HYDROXIDE_en_admin_1440.png",
+      "clip": {
+        "x": 273,
+        "y": 78,
+        "width": 1150,
+        "height": 112
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    },
+    {
+      "file": "metal_CO_HYDROXIDE_en_admin_1366.png",
+      "clip": {
+        "x": 273,
+        "y": 114,
+        "width": 1076,
+        "height": 76
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    },
+    {
+      "file": "permissions_CU_CATHODE_en_admin_1440.png",
+      "clip": {
+        "x": 273,
+        "y": 77,
+        "width": 1150,
+        "height": 143
+      },
+      "meanTolerance": 0.016,
+      "changedTolerance": 0.065
+    }
+  ]
+}

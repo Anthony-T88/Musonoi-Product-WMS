@@ -1,2 +1,21 @@
 
 .map465-grid:has(#co-map-detail[hidden]){grid-template-columns:minmax(0,1fr)}#co-map-detail[hidden]{display:none!important}
+/* Side detail and full-width directories around the existing cobalt map. */
+.map465 #co-stock-filter{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px 10px;align-items:end;padding:12px 14px}
+.map465 #co-stock-filter :is(label,select,input:not([type=checkbox])){min-width:0}
+.map465 #co-stock-filter :is(select,input:not([type=checkbox])){width:100%}
+.map465 #co-stock-filter>.button{justify-self:start;min-width:84px}
+.map465 .map465-grid:has(>#co-map-detail:not([hidden])){grid-template-columns:minmax(0,1fr) minmax(260px,30%);align-items:start;gap:12px}
+.map465 #co-map-detail:not([hidden]){min-width:0;max-height:clamp(420px,75vh,850px);overflow:auto;align-self:start;padding:14px}
+.map465 #co-map-detail h3{margin:0 0 5px;font-size:18px;overflow-wrap:anywhere}
+.map465 #co-map-detail h4{margin:8px 0;padding-bottom:8px;border-bottom:1px solid #e5ece7;overflow-wrap:anywhere}
+.map465 #co-map-detail .map465-detail-body>dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0}
+.map465 #co-map-detail .map465-detail-body>dl>div{min-width:0;padding:6px 8px;border:1px solid #e5ece7;border-radius:6px}
+.map465 #co-map-detail .map465-detail-links{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.map465 #co-map-detail .map465-bags{grid-template-columns:1fr}
+.map465 .map465-location-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr));gap:9px}
+.map465 .v47-map-temporary{margin-top:12px}
+@media(max-width:980px){
+ .map465 .map465-grid:has(>#co-map-detail:not([hidden])){grid-template-columns:minmax(0,1fr)}
+ .map465 #co-map-detail:not([hidden]){max-height:none}
+}

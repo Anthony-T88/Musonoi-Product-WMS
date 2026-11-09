@@ -1,0 +1,2 @@
+[data-page-text-selected]{outline:2px solid #2b7d63!important;outline-offset:3px}
+body[data-page-text-picking] :is(#inventory,#dashboard,#business-page,#field,#dialog[open]) :is(h1,h2,h3,h4,button,a.button,label,legend,th,dt,p,summary,caption,[role=tab],.oa-kpi>span){cursor:text}

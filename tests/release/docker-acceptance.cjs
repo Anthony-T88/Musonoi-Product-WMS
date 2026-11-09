@@ -42,7 +42,7 @@ const results={status:'RUNNING',checks:[],syntheticOnly:true},check=async(name,f
  });
  await check('valid but untrusted CA certificate causes TLS handshake failure',async()=>{let code=0,error='';const badArgs=args.map(v=>v===path.resolve('.runtime/ci-tls/server.crt')+':/certs/root.crt:ro'?path.resolve('.runtime/ci-tls/wrong.crt')+':/certs/root.crt:ro':v);try{docker(['run','--rm',...badArgs,image],{env});}catch(e){code=e.status;error=String(e.stderr);}assert.notEqual(code,0);assert.match(error,/DEPTH_ZERO_SELF_SIGNED_CERT|SELF_SIGNED_CERT_IN_CHAIN|UNABLE_TO_VERIFY_LEAF_SIGNATURE/);});
  await check('missing latest migration is refused at startup even with valid database TLS',async()=>{
-  await c.query("DELETE FROM schema_migrations WHERE version='174_r3_reliable_audit_entity_scopes.sql'");let code=0,error='';try{docker(['run','--rm',...args,image],{env});}catch(e){code=e.status;error=String(e.stderr);}assert.notEqual(code,0);assert.match(error,/DB_SECURITY_SCHEMA_REQUIRED/);
+  await c.query("DELETE FROM schema_migrations WHERE version='175_v470_account_contacts.sql'");let code=0,error='';try{docker(['run','--rm',...args,image],{env});}catch(e){code=e.status;error=String(e.stderr);}assert.notEqual(code,0);assert.match(error,/DB_SECURITY_SCHEMA_REQUIRED/);
  });
  results.status='PASS';
  }finally{for(const name of names){try{docker(['rm','-f',name]);}catch{}}await c.end();if(results.status!=='PASS')results.status='FAIL';E.save('docker-results.json',results);}

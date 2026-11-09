@@ -16,7 +16,7 @@ test('second batch isolated reliability acceptance',async t=>{
   await c.query('BEGIN');try{
    await c.query('CREATE TEMP TABLE co_work_batches AS SELECT * FROM public.co_work_batches');
    await c.query("UPDATE co_work_batches SET arecoms_quantity_mt=0,reviewed_at=now(),amendment_status='NONE' WHERE preparation_id=$1",[f.preparation]);
-   const S=require('../../server/cobalt-stock.cjs'),req={query:{preparation_id:f.preparation},user:{id:admin.id},url:'/api/v1/cobalt/stock/summary'},filter=await S.filter(c,req);let s=await S.summary(c,filter);assert.equal(Number(s.completed_arecoms_mt),0);assert.equal(s.completed_arecoms_display_mt,'0.0000');assert.equal(s.confirmed_arecoms_batches,1);assert.equal(s.unconfirmed_arecoms_batches,0);
+   const S=require('../../server/cobalt-stock.cjs'),req={query:{preparation_id:f.preparation},user:{id:admin.id},url:'/api/v1/cobalt/stock/summary'},filter=await S.filter(c,req);let s=await S.summary(c,filter);assert.equal(Number(s.completed_arecoms_mt),0);assert.equal(s.completed_arecoms_display_mt,'0.00000');assert.equal(s.confirmed_arecoms_batches,1);assert.equal(s.unconfirmed_arecoms_batches,0);
    await c.query('UPDATE co_work_batches SET arecoms_quantity_mt=NULL WHERE preparation_id=$1',[f.preparation]);s=await S.summary(c,filter);assert.equal(s.completed_arecoms_mt,null);assert.equal(s.unconfirmed_arecoms_batches,1);
    await c.query('CREATE TEMP TABLE co_inventory AS SELECT * FROM public.co_inventory');await c.query("UPDATE co_inventory SET status='OUTBOUND'");s=await S.summary(c,filter);assert.equal(s.completed_arecoms_mt,null);assert.equal(s.confirmed_arecoms_batches,0);assert.equal(s.unconfirmed_arecoms_batches,0);
   }finally{await c.query('ROLLBACK');}

@@ -1,7 +1,7 @@
 'use strict';
 window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false,
  isCopper(){return this.code==='CU_CATHODE';},
- cobaltPage(path){return !this.isCopper()&&(window.AppConfig?.cobaltReportsV441&&path==='/reports'||window.AppConfig?.cobaltPackingV44&&/^\/outbounds\/[0-9a-f-]{36}\/packing-list$/.test(path)||window.AppConfig?.cobaltExecutionV43&&(/^\/loading-plans\/execution\/[0-9a-f-]{36}$/.test(path)||/^\/outbounds(?:\/[0-9a-f-]{36})?$/.test(path))||window.AppConfig?.cobaltLoadingV42&&/^\/loading-plans\/(?:query|new|orders\/[0-9a-f-]{36}|[0-9a-f-]{36}\/edit)$/.test(path)||window.AppConfig?.cobaltSalesV41&&/^\/(?:sales-plans(?:\/(?:new|[0-9a-f-]{36}(?:\/(?:edit|dispatch))?))?|customers|loading-plans)$/.test(path)||window.AppConfig?.cobaltStockV40&&/^\/(?:inventory(?:\/[0-9a-f-]{36})?|overview|stock-map)$/.test(path)||window.AppConfig?.cobaltV38&&/^\/preparation(?:\/(?:new|[0-9a-f-]{36}(?:\/work)?))?$/.test(path));},
+ cobaltPage(path){return !this.isCopper()&&(window.AppConfig?.cobaltMetalV471&&path==='/cobalt-metal'||window.AppConfig?.cobaltReportsV441&&path==='/reports'||window.AppConfig?.cobaltPackingV44&&/^\/outbounds\/[0-9a-f-]{36}\/packing-list$/.test(path)||window.AppConfig?.cobaltExecutionV43&&(/^\/loading-plans\/execution\/[0-9a-f-]{36}$/.test(path)||/^\/outbounds(?:\/[0-9a-f-]{36})?$/.test(path))||window.AppConfig?.cobaltLoadingV42&&/^\/loading-plans\/(?:query|new|orders\/[0-9a-f-]{36}|[0-9a-f-]{36}\/edit)$/.test(path)||window.AppConfig?.cobaltSalesV41&&/^\/(?:sales-plans(?:\/(?:new|[0-9a-f-]{36}(?:\/(?:edit|dispatch))?))?|customers|loading-plans)$/.test(path)||window.AppConfig?.cobaltStockV40&&/^\/(?:inventory(?:\/[0-9a-f-]{36})?|overview|stock-map)$/.test(path)||window.AppConfig?.cobaltV38&&/^\/preparation(?:\/(?:new|[0-9a-f-]{36}(?:\/work)?))?$/.test(path));},
  globalPage(path){return /^\/workbench(?:\/|$)/.test(path)||path==='/audit';},
  text(zh,en){return window.I18n?.language==='en'?en:zh;},
  async init(){
@@ -23,11 +23,13 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
   const box=document.createElement('div');box.className='product-switch';box.dataset.noI18n='';box.setAttribute('role','group');
   box.setAttribute('aria-label',this.text('产品切换','Switch Product'));
   for(const [code,zh,en] of [['CU_CATHODE','阴极铜','Copper Cathodes'],['CO_HYDROXIDE','氢氧化钴','Cobalt Hydroxide']]){const b=document.createElement('button');b.type='button';b.dataset.productSwitch=code;b.textContent=this.text(zh,en);b.setAttribute('aria-pressed',String(code===this.code));b.onclick=()=>this.switchTo(code);box.append(b);}
-  document.querySelector('.sidebar').append(box);
-  const originalSet=I18n.set.bind(I18n);I18n.set=language=>{originalSet(language);box.setAttribute('aria-label',this.text('产品切换','Switch Product'));const names=this.text(['阴极铜','氢氧化钴'],['Copper Cathodes','Cobalt Hydroxide']);[...box.children].forEach((b,i)=>b.textContent=names[i]);if(!this.isCopper()&&!this.globalPage(location.pathname)){if(this.cobaltPage(location.pathname))CobaltUI.languageChanged().catch(e=>notify(CobaltUI.error(e)));else this.placeholder();}};
+  const narrow=matchMedia('(max-width: 900px)'),sidebar=document.querySelector('.sidebar');
+  const place=()=>{const menu=narrow.matches&&document.querySelector('.mobile-nav-shell');(menu||sidebar).append(box);};
+  place();narrow.addEventListener('change',place);
+  const originalSet=I18n.set.bind(I18n);I18n.set=language=>{originalSet(language);box.setAttribute('aria-label',this.text('产品切换','Switch Product'));const names=this.text(['阴极铜','氢氧化钴'],['Copper Cathodes','Cobalt Hydroxide']);[...box.children].forEach((b,i)=>b.textContent=names[i]);if(!this.isCopper()&&!this.globalPage(location.pathname)){if(location.pathname==='/cobalt-metal'&&this.cobaltPage(location.pathname))Router.show();else if(this.cobaltPage(location.pathname))CobaltUI.languageChanged().catch(e=>notify(CobaltUI.error(e)));else this.placeholder();}};
  },
  placeholder(){
-  Router.page(this.text('氢氧化钴','Cobalt Hydroxide'),'<div class="product-construction" data-no-i18n role="status"><h2>'+this.text('功能建设中','Under Construction')+'</h2><p>'+this.text('氢氧化钴业务功能尚未开放。','Cobalt hydroxide business functions are not available yet.')+'</p></div>');
+  Router.page(this.text('氢氧化钴','Cobalt Hydroxide'),'<div class="product-construction" data-no-i18n role="status"><h2>'+this.text('当前产品无此页面','Page unavailable for this product')+'</h2></div>');
  },
  async switchTo(code){
   if(this.switching||code===this.code)return;this.switching=true;
@@ -42,7 +44,7 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
    try{localStorage.setItem(this.key,code);}catch{}
    // Full reload destroys records, forms, selected IDs, closures and in-flight callbacks.
    // Keep only the menu section, never a detail ID, filters or query parameters.
-   const path=location.pathname,q=new URLSearchParams(location.search),gateView=window.AppConfig?.gatePermits&&path==='/outbounds'&&['departures','printers'].includes(q.get('view'))?'?view='+q.get('view'):'',target=this.globalPage(path)?path:'/'+(path.split('/')[1]||'overview')+gateView;
+   const path=location.pathname,q=new URLSearchParams(location.search),gateView=window.AppConfig?.gatePermits&&path==='/outbounds'&&['departures','printers'].includes(q.get('view'))?'?view='+q.get('view'):'',target=this.globalPage(path)?path:path==='/cobalt-metal'?'/overview':'/'+(path.split('/')[1]||'overview')+gateView;
    document.querySelector('.workspace').setAttribute('inert','');document.querySelector('.workspace').hidden=true;
    location.replace(target);
   }catch(e){alert(e.message);}finally{this.switching=false;}

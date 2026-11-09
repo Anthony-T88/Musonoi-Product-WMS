@@ -72,7 +72,7 @@ const definitions={
  'audit:read':['系统操作及授权变更日志查看','View Operation and Authorization Audit Logs']
 };
 const fixedRoles={
- 'plan:write':['sales_operator'],'plan:approve':['sales_manager'],'plan:commerce-approve':['commerce_manager'],
+ 'plan:write':['sales_operator','sales_manager'],'plan:approve':['sales_manager'],'plan:commerce-approve':['commerce_manager'],
  'co:site-review':['site_supervisor'],'co:production-review':['production_manager'],
  'co:completion-review':['site_supervisor'],'co:amend-review':['site_supervisor'],'co:loading-review':['site_supervisor'],
  'gate:exit':['sales_operator','sales_manager']

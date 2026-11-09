@@ -9,5 +9,5 @@ async function send(req,reply,data,co){
  sheet.views=[{state:'frozen',ySplit:1}];sheet.autoFilter={from:'A1',to:'I'+Math.max(1,sheet.rowCount)};sheet.eachRow((row,i)=>{row.alignment={horizontal:'center',vertical:'middle',wrapText:true};if(i===1){row.font={bold:true,color:{argb:'FFFFFFFF'}};row.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF316D4B'}};}row.height=i===1?28:36;});
  const bytes=await book.xlsx.writeBuffer();return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition','attachment; filename="Loading-Plans-'+(co?'CO':'CU')+'.xlsx"').send(bytes);
 }
-function filters(body){const keys=['shipment_month','customer_id','status','search','sort','direction','language'];if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!keys.includes(k))||Object.values(body).some(v=>typeof v!=='string'))throw B.error(400,'装车计划筛选无效');const q={...body};delete q.language;return q;}
+function filters(body){const keys=['shipment_month','customer_id','status','search','sort','direction','language','arrival_date','planned_load_date'];if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!keys.includes(k))||Object.values(body).some(v=>typeof v!=='string'))throw B.error(400,'装车计划筛选无效');const q={...body};delete q.language;return q;}
 module.exports={send,filters};

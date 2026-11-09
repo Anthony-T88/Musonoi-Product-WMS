@@ -9,14 +9,59 @@ window.Permissions469R2={
  'document:generate':['生成 / 归档','Generate / archive'],'packing-template:write':['模板维护','Maintain templates'],'gate:read':['查看列表 / 历史','View list / history'],'gate:issue':['生成 / 修订出门证','Issue / revise permit'],'gate:print':['预览 / 下载 / 打印','Preview / download / print'],'gate:exit':['确认实际出厂','Confirm actual exit'],'printer:manage':['打印配置','Printer setup'],'stocktake:read':['查看盘点任务','View stocktakes'],'stocktake:write':['建单 / 实盘 / 提交','Create / count / submit'],'stocktake:review':['独立审核','Independent review'],'adjust:read':['查看调整单','View adjustments'],'adjust:write':['申请 / 维护','Request / maintain'],'adjust:approve':['独立审批','Independent approval'],'move:write':['调整实际货位','Adjust physical location'],'users:manage':['账户 / 密码 / 注册审批','Accounts / passwords / registration'],'roles:manage':['岗位 / 权限','Roles / permissions'],'system:manage':['系统 / 业务预警','System / alerts'],'audit:read':['查看操作日志','View audit log']
  },
  init(){if(this.installed)return;this.installed=true;const original=System46.permissionMatrix.bind(System46);System46.permissionMatrix=s=>{original(s);this.render(s);};},
- render(s){const area=document.getElementById('account-permissions');if(!area)return;const catalog=Accounts.permissionCatalog?.workflow||{},t=(z,e)=>I18n.language==='en'?e:z;area.classList.remove('s46-permission-groups');area.classList.add('s46-r2-permission-area');let table=area.querySelector('.s46-r2-matrix');
-  if(!table){const labels=[...area.querySelectorAll('label.check-row')],groups=new Map();if(!labels.length)return;for(const label of labels){const code=label.querySelector('input')?.value,definition=catalog[code];if(!definition)continue;let group=groups.get(definition.module);if(!group){group={definition,labels:[]};groups.set(definition.module,group);}group.labels.push(label);}const wrap=document.createElement('div');wrap.className='s46-r2-matrix-scroll';table=document.createElement('table');table.className='s46-matrix s46-r2-matrix';table.dataset.v34Enhanced='true';table.setAttribute('aria-label',t('按模块横向配置业务权限','Configure workflow permissions by module'));table.innerHTML='<thead><tr>'+Array.from({length:5},()=>'<th></th>').join('')+'</tr></thead><tbody></tbody>';wrap.append(table);area.append(wrap);s.generated.push(wrap);
-   for(const [module,group]of groups){const row=table.tBodies[0].insertRow();row.dataset.permissionModule=module;const title=document.createElement('th');title.scope='row';row.append(title);for(let column=0;column<4;column++){const cell=row.insertCell();cell.dataset.permissionColumn=column;const items=group.labels.filter(label=>System46.column(label.querySelector('input').value)===column);if(!items.length){cell.textContent='—';cell.className='s46-r2-empty';}for(const label of items)UI46.move(label,cell,s);}}
-   for(const n of [...area.children])if(n!==wrap)UI46Pages.hide(n,s);
+ render(s){
+  const area=document.getElementById('account-permissions');if(!area)return;
+  const catalog=Accounts.permissionCatalog?.workflow||{},t=(z,e)=>I18n.language==='en'?e:z;
+  const columns=[['权限模块','Permission Module'],['查看 / 导出','View / Export'],['新建 / 办理','Create / Process'],['审核 / 批准','Review / Approve'],['管理 / 配置','Manage / Configure']];
+  area.classList.remove('s46-permission-groups');area.classList.add('s46-r2-permission-area');
+  let table=area.querySelector('.s46-r2-matrix');
+  const count=details=>{
+   const inputs=[...details.querySelectorAll('input[type=checkbox]')];
+   const text=t('已选 ','Selected ')+inputs.filter(input=>input.checked).length+' / '+inputs.length;
+   const summary=details.querySelector('summary');if(summary.textContent!==text)summary.textContent=text;
+  };
+  if(!table){
+   const groups=new Map();
+   for(const label of area.querySelectorAll('label.check-row')){
+    const definition=catalog[label.querySelector('input')?.value];if(!definition)continue;
+    if(!groups.has(definition.module))groups.set(definition.module,[]);
+    groups.get(definition.module).push(label);
+   }
+   if(!groups.size)return;
+   const wrap=document.createElement('div');wrap.className='s46-r2-matrix-scroll';
+   table=document.createElement('table');table.className='s46-matrix s46-r2-matrix';table.dataset.v34Enhanced='true';
+   table.innerHTML='<thead><tr>'+columns.map(()=>'<th scope="col" data-no-i18n></th>').join('')+'</tr></thead><tbody></tbody>';
+   for(const [module,labels] of groups){
+    const row=table.tBodies[0].insertRow();row.dataset.permissionModule=module;
+    const heading=document.createElement('th');heading.scope='row';heading.dataset.noI18n='';row.append(heading);
+    for(let column=0;column<4;column++){
+     const cell=row.insertCell();cell.dataset.permissionColumn=column;
+     const items=labels.filter(label=>System46.column(label.querySelector('input').value)===column);
+     if(!items.length){cell.textContent='—';cell.className='s46-r2-empty';continue;}
+     let target=cell;
+     if(items.length>1){
+      const details=document.createElement('details');details.className='s46-permission-items';
+      const summary=document.createElement('summary');summary.dataset.noI18n='';details.append(summary);
+      cell.append(details);target=details;
+      details.addEventListener('change',()=>count(details));
+     }
+     for(const label of items)UI46.move(label,target,s);
+    }
+   }
+   wrap.append(table);area.append(wrap);s.generated.push(wrap);
+   for(const node of [...area.children])if(node!==wrap)UI46Pages.hide(node,s);
   }
-  const columns=[['权限模块','Permission Module'],['查看 / 导出','View / Export'],['新建 / 办理','Create / Process'],['审核 / 批准','Review / Approve'],['管理 / 配置','Manage / Configure']];for(const[i,cell]of [...table.tHead.rows[0].cells].entries()){cell.dataset.noI18n='';const value=t(...columns[i]);if(cell.textContent!==value)cell.textContent=value;}
-  for(const row of table.tBodies[0].rows){const code=row.querySelector('input')?.value,definition=catalog[code],title=definition?.[I18n.language==='en'?'module_en':'module_zh'];if(title&&row.cells[0].textContent!==title)row.cells[0].textContent=title;row.cells[0].dataset.noI18n='';}
-  for(const input of table.querySelectorAll('input[value]')){const definition=catalog[input.value],label=input.closest('label'),span=label.querySelector('span'),name=this.names[input.value];if(!definition||!span)continue;const full=t(definition.zh,definition.en),short=name?t(...name):full;label.title=full;input.setAttribute('aria-label',full);span.dataset.noI18n='';span.dataset.permissionLanguage=I18n.language;const roles=definition.product_roles?.CO_HYDROXIDE,html=esc(short)+(roles?'<small class="permission-product-limit">'+t('钴：','Cobalt: ')+roles.map(code=>esc(Accounts.roleName(code))).join(' / ')+'</small>':'');if(span.innerHTML!==html)span.innerHTML=html;}
+  for(const [i,cell] of [...table.tHead.rows[0].cells].entries()){const title=t(...columns[i]);if(cell.textContent!==title)cell.textContent=title;}
+  for(const row of table.tBodies[0].rows){
+   const definition=catalog[row.querySelector('input')?.value],title=definition?.[I18n.language==='en'?'module_en':'module_zh'];
+   if(title&&row.cells[0].textContent!==title)row.cells[0].textContent=title;
+  }
+  for(const details of table.querySelectorAll('.s46-permission-items'))count(details);
+  for(const input of table.querySelectorAll('input[value]')){
+   const definition=catalog[input.value],label=input.closest('label'),span=label.querySelector('span'),name=this.names[input.value];if(!definition||!span)continue;
+   const full=t(definition.zh,definition.en),short=name?t(...name):full;label.title=full;input.setAttribute('aria-label',full);span.dataset.noI18n='';span.dataset.permissionLanguage=I18n.language;
+   const roles=definition.product_roles?.CO_HYDROXIDE,html=esc(short)+(roles?'<small class="permission-product-limit">'+t('钴：','Cobalt: ')+roles.map(code=>esc(Accounts.roleName(code))).join(' / ')+'</small>':'');if(span.innerHTML!==html)span.innerHTML=html;
+  }
  }
 };
 window.V469R2={init(){if(this.installed)return;this.installed=true;CobaltStock469R2.init();Permissions469R2.init();}};

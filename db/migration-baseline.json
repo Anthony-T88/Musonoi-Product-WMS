@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "release": "4.6.9-r3-rc2",
+  "release": "4.7.1",
   "migrations": [
     {
       "version": "001_foundation.sql",
@@ -697,6 +697,26 @@
     {
       "version": "174_r3_reliable_audit_entity_scopes.sql",
       "checksum": "7f26f3a2492531c0a4218586a2d2d2bc37b88b49c0c5edfa5afed460ce062759"
+    },
+    {
+      "version": "175_v470_account_contacts.sql",
+      "checksum": "26840ca1dc312be1a404ad180bd8ec929781093189c0b80325de3b1c8808c676"
+    },
+    {
+      "version": "176_v470_map_and_workflows.sql",
+      "checksum": "24d9b67c037c952c828c1339eb509d8147999df37916f153b11e348e4a4b8848"
+    },
+    {
+      "version": "177_v470_shared_page_layout.sql",
+      "checksum": "6a69e3bf313fc10f5f176673dd25eada090396cdbdc1f06e64297191118199af"
+    },
+    {
+      "version": "178_v470_workflow_filters.sql",
+      "checksum": "2a266fb4bf70f7b4563c33ae314e438cd5b4338ffadedf0e7c62ae1807911409"
+    },
+    {
+      "version": "179_v471_cobalt_metal.sql",
+      "checksum": "b9d119935dd69025a7628037258d45cfa95991945f5a4591d7f5bc9f86af4074"
     }
   ]
 }

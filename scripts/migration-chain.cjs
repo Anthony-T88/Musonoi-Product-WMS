@@ -21,6 +21,14 @@ async function guard172(client,stage){
  if(!['before','after'].includes(stage))DB.fail('MIGRATION_GUARD_STAGE_INVALID');
  const spec=JSON.parse(fs.readFileSync(path.join(root,'db/migration-guards/172-admin-permissions.json'),'utf8'));
  const actual=(await client.query("SELECT p.oid::regprocedure::text signature,p.prosrc body,p.prosecdef security_definer,p.proconfig configuration FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY($1) ORDER BY p.oid::regprocedure::text",[spec.names])).rows;
+ const managerSubmission=stage==='after'&&(await client.query("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version='176_v470_map_and_workflows.sql') applied")).rows[0].applied;
+ if(managerSubmission){
+  for(const r of actual.filter(r=>/^(ux10_plan_submission|v468_submit_legacy_plan_edit)\(/.test(r.signature))){
+   const expanded="u.role_code IN('sales_operator','admin','sales_manager')";
+   if(!r.body.includes(expanded))DB.fail('MIGRATION_176_SALES_FUNCTION_MISMATCH');
+   r.body=r.body.replaceAll(expanded,"u.role_code IN('sales_operator','admin')");
+  }
+ }
  const expected=new Map(spec[stage].map(r=>[r.signature,r]));
  if(actual.length!==expected.size||actual.some(r=>{const e=expected.get(r.signature);return !e||digest(r.body)!==e.bodySha256||r.security_definer!==e.security_definer||JSON.stringify(r.configuration)!==JSON.stringify(e.configuration);}))DB.fail('MIGRATION_172_FUNCTION_BASELINE_MISMATCH');
 }

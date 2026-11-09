@@ -51,3 +51,13 @@ html[data-release-ui="46"] .b461-root .preparation-tree>summary{font-size:13px;c
 .co-batch-identity{padding:18px;background:#edf4e9;border:1px solid #bed0ba;border-radius:9px;margin-bottom:22px}.co-batch-identity label{display:grid;text-align:center;gap:10px}.co-batch-identity input{font-size:21px!important;font-weight:550;text-align:center;width:100%;min-width:0;box-sizing:border-box;background:#f7faf5!important;color:#2c6544}.co-batch-identity small{color:#718177}
 
 .co-batch-detail{margin:10px 0 0;padding:12px;width:min(100%,460px);box-sizing:border-box}.co-batch-detail input{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.v470-lot-plan{margin-bottom:14px}
+.v470-lot-plan>h2,.v470-lot-plan>.p46-card-title{text-align:center}
+.v470-lot-plan :is(.v470-lot-plan-grid,.lot-context-grid,.overview-ledger){display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px;margin:8px 0}
+.v470-lot-plan :is(.v470-lot-plan-grid,.lot-context-grid,.overview-ledger)>*{text-align:center;min-width:0;overflow-wrap:anywhere;padding:8px 10px;border:0;background:#f4f8f5;border-radius:7px}
+.v470-lot-plan :is(dt,article>span,.overview-ledger>p>span){color:#52675b}
+.v470-lot-plan dd{margin:4px 0 0;font-weight:600}
+#page-content .v470-lot-plan :is(dt,dd,.lot-context-grid>article>span,.lot-context-grid>article>strong,.overview-ledger>p){text-align:center}
+#v261-create .v470-lot-section{margin:0 0 12px;padding:14px 16px}
+#v261-create .v470-lot-section>h2{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:16px}
+#v261-create .v470-lot-section>h2>span{display:grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#e9f2ec;color:#285940}

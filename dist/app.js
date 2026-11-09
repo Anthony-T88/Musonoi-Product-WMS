@@ -17,7 +17,25 @@ function audit(action){logs.unshift({time:new Date().toLocaleString('zh-CN'),rol
 function dialog(title,html){$('dialog').classList.remove('business-dialog');$('dialog-title').textContent=title;$('dialog-content').innerHTML=html;$('dialog').showModal();}
 function format(n){return Tonnes.format(n,true);}
 async function populateOptions(){const options=remote?await API.request('/inventory/options'):Object.fromEntries(['location','batch','customer'].map(k=>[k,[...new Set(I.data.map(r=>r[k]))].sort()]));for(const k of (remote?['location','batch','customer','allocated_customer']:['location','batch','customer'])){const previous=$(k).value;const first=document.createElement('option');first.value='';first.textContent={location:'全部货位',batch:'全部批次',customer:'全部客户',allocated_customer:'全部分配客户'}[k];$(k).replaceChildren(first);for(const value of [...new Set([...options[k],...(previous?[previous]:[])])]){const o=document.createElement('option');o.value=value;o.textContent=value;$(k).append(o);}$(k).value=previous;}if(typeof I18n!=='undefined')I18n.apply();}
-function updateMetrics(t=I.totals(filtered)){const cards=[['在库净重',format(t.weight),'吨','▤',`仅在库 + 已预留`],['可用捆包',t.available,'捆','▦',`已预留 <b>${t.reserved}</b> 捆 · 不计入可用`],['待完成取样',t.pending,'捆','◈','在库范围 · 未取样 + 取样中'],['在库捆包',t.stock_count??t.count,'捆','≡','当前筛选范围 · 不含已出库']];if(remote){cards[0][0]='现场已知净重';cards[0][1]=format(t.physical_weight);cards[0][4]='未检斤 '+(t.unweighed_count||0)+' 捆；未知重量不汇总';cards.splice(1,0,['有效锁定净重',format(t.locked_weight),'吨','▣','整捆锁定 · 不减少实物'],['可用库存净重',format(t.available_weight),'吨','▤','实物库存 − 有效锁定']);}$('metrics').innerHTML=cards.map(c=>`<article class="metric"><div class="metric-top"><span>${c[0]}</span><span class="metric-icon" aria-hidden="true">${c[3]}</span></div><div class="metric-value">${c[1]}<small>${c[2]}</small></div><div class="metric-bottom">${c[4]}</div></article>`).join('');}
+function updateMetrics(t=I.totals(filtered)){
+ if(t.stock_categories){
+  const categories=[
+   ['available','可用捆包','▦'],
+   ['preparing','备货作业中捆包','▣'],
+   ['sampling','取样中捆包','◈'],
+   ['prepared','已备货可用库存','▤'],
+   ['assigned','已匹配装车库存','▧'],
+   ['loaded','完成装车待出库库存','↗']
+  ];
+  const stats=t.stock_categories;
+  const other=stats.other?.bundles||0;
+  $('metrics').innerHTML=categories.map(([key,label,icon],i)=>{
+   const row=stats[key],weight=i>=3&&row?.known_net_weight!=null?'<span data-i18n>已知净重</span> '+format(row.known_net_weight)+' MT':'';
+   return `<article class="metric"><div class="metric-top"><span data-i18n>${label}</span><span class="metric-icon" aria-hidden="true">${icon}</span></div><div class="metric-value">${row?.bundles||0}<small data-i18n>捆</small></div>${weight?'<div class="metric-bottom">'+weight+'</div>':''}</article>`;
+  }).join('')+(other?`<p class="inventory-other-stock"><span data-i18n>其他锁定库存（如待处理库存调整）</span> · ${other} <span data-i18n>捆</span></p>`:'');
+  return;
+ }
+const cards=[['在库净重',format(t.weight),'吨','▤',`仅在库 + 已预留`],['可用捆包',t.available,'捆','▦',`已预留 <b>${t.reserved}</b> 捆 · 不计入可用`],['待完成取样',t.pending,'捆','◈','在库范围 · 未取样 + 取样中'],['在库捆包',t.stock_count??t.count,'捆','≡','当前筛选范围 · 不含已出库']];if(remote){cards[0][0]='现场已知净重';cards[0][1]=format(t.physical_weight);cards[0][4]='未检斤 '+(t.unweighed_count||0)+' 捆；未知重量不汇总';cards.splice(1,0,['有效锁定净重',format(t.locked_weight),'吨','▣','整捆锁定 · 不减少实物'],['可用库存净重',format(t.available_weight),'吨','▤','实物库存 − 有效锁定']);}$('metrics').innerHTML=cards.map(c=>`<article class="metric"><div class="metric-top"><span>${c[0]}</span><span class="metric-icon" aria-hidden="true">${c[3]}</span></div><div class="metric-value">${c[1]}<small>${c[2]}</small></div><div class="metric-bottom">${c[4]}</div></article>`).join('');}
 async function render(){
   const sequence=++requestSequence;
   const f=filterValues(),badFormat=['start','end'].some(k=>dateValue($(k).value)===null),invalid=badFormat||(f.start&&f.end&&f.start>f.end);$('date-error').textContent=badFormat?'请输入有效日期，格式 yyyy/mm/dd':'开始日期不能晚于结束日期';if(!badFormat)for(const k of ['start','end'])$(k).value=f[k].replaceAll('-','/');
@@ -66,7 +84,6 @@ $('csv').onclick=()=>download('csv');$('excel').onclick=()=>download('xlsx');
 $('close-dialog').onclick=()=>$('dialog').close();$('dialog').onclick=e=>{if(e.target===$('dialog')){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('dialog').close();}};
 document.querySelectorAll('[data-info]').forEach(b=>b.onclick=()=>dialog(b.dataset.info+' · 功能范围',`<p>本次原型实现库存查询与导出。${esc(b.dataset.info)}列为后续模块，尚未实现。</p><p>后续接入数据库时，可在此建立相应的业务单据与审批流程。</p>`));
 $('audit-nav').onclick=async()=>{if(remote){try{const r=await API.request('/audit');dialog('服务端操作日志','<p>最近 100 条授权日志，时间由服务端记录。</p><ol>'+r.items.map(l=>'<li>'+esc(l.occurred_at)+' · '+esc(l.username||'系统')+' · '+esc(typeof AuditLabels!=='undefined'?AuditLabels.label(l.action):l.action)+'<br>'+esc(JSON.stringify(l.after_data||{}))+'</li>').join('')+'</ol>');}catch(error){notify(error.message);}return;}dialog('演示操作记录',`<p class="dialog-notice">仅保存在当前页面内存，刷新后清空。正式审计日志需由服务端持久化。</p>${logs.length?'<ol>'+logs.map(l=>`<li>${esc(l.time)} · ${esc(l.role)}<br>${esc(typeof AuditLabels!=='undefined'?AuditLabels.label(l.action):l.action)}</li>`).join('')+'</ol>':'<p>暂无操作记录。</p>'}`);};
-$('guide').onclick=()=>{if(remote){dialog('V2.2 数据库模式说明','<p>当前为 '+esc(AppConfig.environment)+' 环境，数据来自 PostgreSQL。角色和数据范围由服务端验证；没有模拟数据回退。</p><p>保留搜索、筛选、排序、分页、跨页勾选和导出。未勾选时导出全部筛选结果；有勾选时只导出选中记录；筛选改变后移除不再匹配的勾选。单次导出上限 10000 条。悬停重量可查看完整精度，导出统一四位小数，数据库保留历史原始精度。</p><p>业务入口提供基础资料、入库草稿/审核、Excel导入、销售计划与整捆锁定。暂不开放取样、装车、出库和冲销。演示回归入口为 /demo，独立于数据库模式。</p>');return;}dialog('使用说明与权限',`<p class="dialog-notice">128 条确定性演示数据 · 快照日期 2026-10-28 · 未连接数据库</p><ol><li>输入捆包号、批次、客户或货位，组合筛选实时生效；日期按入库日期，包含开始及结束日。</li><li>点击列标题切换升序/降序；在表格底部翻页或调整每页条数。</li><li>指标按全部筛选结果计算。在库净重 = 在库 + 已预留；可用捆包仅指“在库”；待完成取样仅统计仍在库的未取样与取样中捆包。</li><li>未勾选时导出全部筛选结果；勾选后仅导出已选捆包，可跨页选择。改变筛选后自动移除不再匹配的已选项。CSV 使用 UTF-8 BOM；Excel 为真正的 .xlsx 格式，重量为数值。</li><li>顶部可切换演示角色。只读访客可查询和查看详情；管理员可导出。这是前端交互演示，不能替代服务端鉴权。</li><li>筛选、角色和操作记录不持久化，刷新会重置。入库、出库与取样业务办理不在本原型范围。</li></ol><p>后续方案：HTTPS API + PostgreSQL，服务端统一处理权限、筛选、统计、导出及审计。详细接口和数据结构见交付文件 README.md。</p>`);};
 
 if(!window.ProductContext||ProductContext.isCopper())populateOptions().then(render).catch(serviceError);
 

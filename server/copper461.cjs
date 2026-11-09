@@ -42,7 +42,7 @@ async function tasks(c,req,context=null){const x=context||await M.context(c,req,
   const sales=d.status==='PENDING'&&['sales_manager','admin'].includes(req.user.role_code)&&can(req,'plan:approve')&&(d.submitted_by||d.created_by)!==req.user.id;
   const commerce=d.status==='COMMERCE_PENDING'&&['commerce_manager','admin'].includes(req.user.role_code)&&can(req,'plan:commerce-approve')&&(d.submitted_by||d.created_by)!==req.user.id&&d.sales_reviewed_by!==req.user.id;
   if(sales||commerce)pending.push({...d,kind:sales?'SALES_REVIEW':'COMMERCE_REVIEW'});
-  if(d.status==='REJECTED'&&['sales_operator','admin'].includes(req.user.role_code)&&d.submitted_by===req.user.id&&can(req,'plan:write'))pending.push({...d,kind:'SALES_EDIT'});
+  if(d.status==='REJECTED'&&['sales_operator','sales_manager','admin'].includes(req.user.role_code)&&d.submitted_by===req.user.id&&can(req,'plan:write'))pending.push({...d,kind:'SALES_EDIT'});
  }
  if(can(req,'gate:read')&&['sales_manager','sales_operator','admin'].includes(req.user.role_code))for(const d of await M.outbound(c,x,false)){
   const g=(await c.query('SELECT id,state,document_no FROM gate_permits WHERE cu_loading_id=$1',[d.id])).rows[0];

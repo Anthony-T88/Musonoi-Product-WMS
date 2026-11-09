@@ -9,16 +9,16 @@ function select(co){const t=tables(co);return `SELECT p.*,p.${co?'shipment_month
 async function access(c,req,plan){const co=req.productCode==='CO_HYDROXIDE',r=(await c.query(select(co)+` WHERE p.id=$2 AND ${scope(co)}`,[req.user.id,B.uuid(plan)])).rows[0];if(!r)throw B.error(404,'SALES_PLAN_NOT_FOUND');return r;}
 async function submission(c,req,product,plan=null){
  if(!await enabled(c))return;
- if(!plan){if(!['sales_operator','admin'].includes(req.user.role_code))throw B.error(403,'SALES_OPERATOR_REQUIRED');return;}
+ if(!plan){if(!['sales_operator','sales_manager','admin'].includes(req.user.role_code))throw B.error(403,'SALES_OPERATOR_REQUIRED');return;}
  const a=(await c.query('SELECT * FROM sales_plan_approvals WHERE plan_id=$1 AND product_code=$2',[plan,product])).rows[0];
  if(!a){
   await access(c,req,plan);
-  if(!['sales_operator','admin'].includes(req.user.role_code))throw B.error(403,'SALES_OPERATOR_REQUIRED');
+  if(!['sales_operator','sales_manager','admin'].includes(req.user.role_code))throw B.error(403,'SALES_OPERATOR_REQUIRED');
   const approval=(await c.query('SELECT * FROM v468_submit_legacy_plan_edit($1,$2,$3,$4)',[product,plan,req.user.id,B.version(req.body?.version)])).rows[0];
   await B.audit(c,req,'sales_plan_edit_submitted','sales_plan_review',plan,null,{...approval,product_code:product});return;
  }
  if(['APPROVED','COMMERCE_PENDING'].includes(a.state))throw B.error(409,'SALES_APPROVED_PLAN_LOCKED');
- if(!['sales_operator','admin'].includes(req.user.role_code)||a.submitted_by!==req.user.id)throw B.error(403,'SALES_PLAN_SUBMITTER_REQUIRED');
+ if(!['sales_operator','sales_manager','admin'].includes(req.user.role_code)||a.submitted_by!==req.user.id)throw B.error(403,'SALES_PLAN_SUBMITTER_REQUIRED');
 }
 async function register({app,pool,permitted,csrf}){
  if(!await enabled(pool))return;
@@ -38,7 +38,7 @@ async function register({app,pool,permitted,csrf}){
    if(q.shipment_month){if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(q.shipment_month))throw B.error(400,'SALES_FILTER_INPUT');add('p.'+(co?'shipment_month':'preparation_month')+'=?',q.shipment_month);}
    if(q.customer_id)add('p.customer_id=?',B.uuid(q.customer_id));
    const summaryWhere=[...where],summaryValues=[...v];
-   if(q.status){if(['CLOSE_PENDING','CLOSE_COMMERCE_PENDING','CLOSE_REJECTED'].includes(q.status))add('cr.state=?',q.status.slice(6));else if(['PENDING','COMMERCE_PENDING','REJECTED','APPROVED'].includes(q.status))add('a.state=?',q.status);else if(['OPEN','CLOSED'].includes(q.status)){add('p.status=?',q.status);where.push("coalesce(a.state,'APPROVED')='APPROVED'");}else throw B.error(400,'SALES_FILTER_INPUT');}
+   if(q.status){if(q.status==='APPROVAL_IN_PROGRESS')where.push("a.state IN ('PENDING','COMMERCE_PENDING')");else if(q.status==='CLOSING')where.push("cr.state IN ('PENDING','COMMERCE_PENDING')");else if(['CLOSE_PENDING','CLOSE_COMMERCE_PENDING','CLOSE_REJECTED'].includes(q.status))add('cr.state=?',q.status.slice(6));else if(['PENDING','COMMERCE_PENDING','REJECTED','APPROVED'].includes(q.status))add('a.state=?',q.status);else if(['OPEN','CLOSED'].includes(q.status)){add('p.status=?',q.status);where.push("coalesce(a.state,'APPROVED')='APPROVED'");}else throw B.error(400,'SALES_FILTER_INPUT');}
    const from=select(co),filtered=from+' WHERE '+where.join(' AND '),items=(await c.query(filtered+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET '+(page-1)*50,v)).rows;
    const summary=(await c.query("SELECT count(*)::int all,count(*) FILTER(WHERE approval_state='PENDING')::int sales_pending,count(*) FILTER(WHERE approval_state='COMMERCE_PENDING')::int commerce_pending,count(*) FILTER(WHERE approval_state IN('APPROVED','LEGACY') AND status='OPEN')::int open FROM ("+select(co)+' WHERE '+summaryWhere.join(' AND ')+') scoped',summaryValues)).rows[0];
    return {items:await Close.enrich(c,req,items),total:Number((await c.query('SELECT count(*) FROM ('+filtered+') scoped',v)).rows[0].count),page,page_size:50,summary};

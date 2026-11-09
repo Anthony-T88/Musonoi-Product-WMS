@@ -1,21 +1,26 @@
 {
-  "version": "4.6.9-r3-rc3",
-  "baseCommit": "e4ba78537c2b5ed0af66f15ca5ddbf30fa512a9b",
-  "batch1Commit": "28988c4b814d1120414effc787c9566bf91c022f",
-  "batch2Commit": "7e25ec3d1b4e20ec75dd9671b16b7003354f6a47",
-  "status": "DRAFT_REQUIRES_CANDIDATE_CI",
-  "runtimeMigrationCount": 174,
-  "backupBaselineMigrationCount": 172,
-  "ciAcceptance": "Use exact PR head and simulated-merge workflow result",
-  "historicalValidation": {
-    "batch1Snapshot": "https://github.com/Anthony-T88/Musonoi-Product-WMS/blob/28988c4b814d1120414effc787c9566bf91c022f/VALIDATION.json",
-    "batch2Workflow": "https://github.com/Anthony-T88/Musonoi-Product-WMS/actions/runs/42562965976"
-  },
-  "encryptedBackupRestore": {
-    "status": "PASS_IN_ISOLATED_LOCAL_TEST",
-    "baseline": 172,
-    "target": 174,
-    "tablesChecked": 157,
-    "accountsPreserved": 11
+  "version": "4.7.1",
+  "baseCommit": "16097779a3f19edf5465c324f9a2833a52d14ef1",
+  "runtimeMigrationCount": 179,
+  "status": "LOCAL_TEST_ACCEPTED",
+  "historicalMigrationFilesUnchanged": 178,
+  "mapDesigns": "review only",
+  "baseline": "4.7.0-ui16",
+  "revision": "4.7.1-ui1",
+  "uiux": {
+    "branch": "local/uiux-governance-v471",
+    "browser": "156.0.8078.81",
+    "routeScenarios": 110,
+    "registeredProductRoutePatterns": 134,
+    "unmapped": 0,
+    "checks": 620,
+    "renderedChecks": 599,
+    "failedChecks": 0,
+    "missingFixtureChecks": 12,
+    "expectedDenials": 9,
+    "screenshotsBefore": 362,
+    "screenshotsAfter": 362,
+    "businessTestsPassed": 115,
+    "newMigrations": 0
   }
 }

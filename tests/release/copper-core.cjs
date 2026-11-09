@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),crypto=requ
 test('native copper receipt, preparation, sampling, weighing and formal outbound',async()=>{
  const f=E.fixture(),c=new Client(E.options(f.database));await c.connect();let app;const steps=[];
  try{
- for(const [role,permissions]of [['production_operator',['receipt:write','receipt:read']],['logistics_field_operator',['load:write','load:execute','allocation:write','allocation:read']]])for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2) ON CONFLICT DO NOTHING',[role,p]);
+ for(const [role,permissions]of [['production_operator',['receipt:write','receipt:read']],['sales_manager',['plan:write']],['logistics_field_operator',['load:write','load:execute','allocation:write','allocation:read']]])for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2) ON CONFLICT DO NOTHING',[role,p]);
  app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
  for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.95.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
  const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CU_CATHODE','idempotency-key':key},...(body?{payload:body}:{})});
@@ -11,6 +11,9 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),seq=String(Date.now()),customer=f.customers.CU_CATHODE;
  const contract=await api('/contracts','admin',{project_id:f.project,customer_id:customer.id,contract_no:'RC3-CU-'+seq,effective_date:today,end_date:'2099-12-31',active:true});
  assert.equal((await api('/contracts/'+contract.id)).validity,'VALID');
+ const managerPlan=await api('/plans','sales_manager',{project_id:f.project,customer_id:customer.id,contract_id:contract.id,target_weight:'20',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic manager submission'});
+ const managerApproval=await api('/sales-workflow/plans/'+managerPlan.id);
+ await api('/sales-workflow/plans/'+managerPlan.id+'/review','sales_manager',{version:managerApproval.approval_version,decision:'APPROVED'},409);
  const plan=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:contract.id,target_weight:'100',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic rc2 copper'});
  for(const role of ['sales_manager','commerce_manager']){const p=await api('/sales-workflow/plans/'+plan.id);await api('/sales-workflow/plans/'+plan.id+'/review',role,{version:p.approval_version,decision:'APPROVED'});}steps.push('sales plan two independent approvals');
  const number='MUS-'+today.slice(0,4)+'-020-'+seq,otherNumber='MUS-'+today.slice(0,4)+'-021-'+seq;
@@ -20,7 +23,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  receipt=await api('/receipts/'+receipt.id+'/submit','production_operator',{version:receipt.version});await api('/receipts/'+receipt.id+'/confirm','production_manager',{version:receipt.version});const {rows:received}=await c.query('SELECT id,bundle_no FROM bundles WHERE receipt_id=$1',[receipt.id]);
  const bundle=received.find(b=>b.bundle_no===number),other=received.find(b=>b.bundle_no===otherNumber);assert(bundle&&other);assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'IN_STOCK');steps.push('new contract, scoped stock lookup, unique bundle and independent receipt review');
  await c.query("UPDATE stock_map_source SET status='VERIFIED',source_sha256=$1,source_name='Synthetic CI geometry',notes='Synthetic test geometry only'",[crypto.createHash('sha256').update('RC2-SYNTHETIC-MAP').digest('hex')]);await c.query("UPDATE stock_map_cells SET x=0,y=0,width=100,height=100 WHERE code IN('P1-01','P5')");const location=(await c.query("SELECT * FROM locations WHERE project_id=$1 AND code='P1-01'",[f.project])).rows[0]||await api('/masters/locations','admin',{project_id:f.project,warehouse_id:f.warehouse,code:'P1-01',active:true});
- await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-01' WHERE id=$1",[location.id]);let lot=await api('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:'RMM-CU-'+today.slice(0,4)+'-01',planned_location_id:location.id,items:[{bundle_id:bundle.id,sample_required:true}]});
+ await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-01' WHERE id=$1",[location.id]);const suggestion=await api('/v261/lots/suggestion','logistics_field_operator');assert.match(suggestion.lot_no,/^RMM-CU-\d{4}-\d{2}$/);let lot=await api('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:suggestion.lot_no,planned_location_id:location.id,items:[{bundle_id:bundle.id,sample_required:true}]});
  const occupied=await request('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:'RMM-CU-'+today.slice(0,4)+'-02',planned_location_id:location.id,items:[{bundle_id:other.id,sample_required:false}]});
  assert.equal(occupied.statusCode,409,occupied.body);
  assert.equal((await c.query('SELECT count(*)::int n FROM lot_location_claims WHERE location_id=$1 AND released_at IS NULL',[location.id])).rows[0].n,1);
@@ -34,27 +37,76 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  }
  lot=(await api('/v262/lots/'+lot.id+'/weigh','logistics_field_operator',{version:lot.version,items:lot.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'RC2-CU-'+seq}))})).lot;
  assert.equal((await c.query('SELECT (net_weight=2.0325::numeric) v FROM bundles WHERE id=$1',[bundle.id])).rows[0].v,true);
- lot=await api('/v261/lots/'+lot.id+'/submit','logistics_field_operator',{version:lot.version});await api('/v261/lots/'+lot.id+'/approve','site_supervisor',{version:lot.version,all_weighed_and_stored:true});steps.push('native sampling, repacking, location assignment and gross minus 2.5kg');
+ const inventory=await api('/inventory?'+new URLSearchParams({business_status:'备货作业中',search:number}));
+ assert.equal(inventory.items.length,1);assert.equal(inventory.items[0].business_status,'备货作业中');
+ const overviewUrl='/v34/overview?'+new URLSearchParams({project_id:f.project,from:today,to:today});
+ const earlier=new Date(Date.parse(today)-86400000).toISOString().slice(0,10);
+ const prior=await api('/v34/overview?'+new URLSearchParams({project_id:f.project,from:earlier,to:earlier}));
+ assert.equal(prior.window.history_unavailable,true);assert.equal(prior.chart_trend.rows[0].period,earlier);
+ assert.equal(prior.chart_trend.rows[0].stock_units,null);
+ const workingOverview=await api(overviewUrl);
+ assert.equal(workingOverview.metrics.preparing.bundles,1);
+ assert.equal(workingOverview.metrics.preparing.batches,1);
+ assert.equal(workingOverview.chart_trend.rows[0].stock_units,workingOverview.metrics.physical.bundles);
+ assert.equal(workingOverview.chart_trend.rows[0].inbound_units,2);
+ assert.equal(workingOverview.analysis.states.find(s=>s.key==='preparing').quantity,1);
+ assert.equal(workingOverview.chart_trend.rows[0].inbound_bundles,2);
+ const mapQuery=new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,preparation_batch:suggestion.lot_no.slice(-5),bundle_no:number.slice(-6)});
+ const map=await api('/stock-map?'+mapQuery);assert.equal(map.summary.bundle_count,1);
+ assert.equal(map.summary.net_weight,null);
+ assert.equal((await c.query('SELECT weight,gross_weight FROM inventory_view WHERE uuid=$1',[bundle.id])).rows[0].weight,null);
+ lot=await api('/v261/lots/'+lot.id+'/submit','logistics_field_operator',{version:lot.version});
+ assert.equal((await api('/stock-map?'+mapQuery)).summary.net_weight,null);
+ await api('/v261/lots/'+lot.id+'/approve','site_supervisor',{version:lot.version,all_weighed_and_stored:true});
+ assert.equal(Number((await api('/stock-map?'+mapQuery)).summary.net_weight),2.0325);
+ const approvedOverview=await api(overviewUrl);
+ assert.equal(approvedOverview.metrics.prepared_pending_outbound.batches,1);
+ assert.equal(approvedOverview.metrics.prepared_pending_outbound.bundles,1);
+ assert.equal(approvedOverview.metrics.preparing.bundles,0);
+ assert.equal(Number(approvedOverview.chart_trend.rows[0].inbound_net_weight),2.0325);
+ const detail=await api('/stock-map/locations/'+location.id+'?'+mapQuery);assert.equal(detail.items[0].id,number);steps.push('native sampling, repacking, location assignment and gross minus 2.5kg');
  const workbook=new(require('exceljs').Workbook)();
  const dispatchSheet=workbook.addWorksheet('Dispatch'),plate='RC3-CU-'+seq;
  dispatchSheet.addRows([['Horse','Trailer','Capacity'],[plate,'RC3-TRAILER',30],['ALT-'+seq,'RC3-ALT',30]]);
  const dispatchPath='/plans/'+plan.id+'/dispatch',shipment_month=today.slice(0,7);
- const dispatchBody={file_name:'synthetic-rc3.xlsx',file_base64:Buffer.from(await workbook.xlsx.writeBuffer()).toString('base64'),shipment_month};
+ const dispatchBody={file_name:'synthetic-rc3.xlsx',file_base64:Buffer.from(await workbook.xlsx.writeBuffer()).toString('base64')};
+ const wrongMonth=await request(dispatchPath+'/import-preview','admin',{...dispatchBody,shipment_month:'2000-01'});
+ assert.equal(wrongMonth.statusCode,409);
  const preview=await api(dispatchPath+'/import-preview','admin',dispatchBody);
  assert.equal(preview.items.length,2);
  const imported=await api(dispatchPath,'admin',{...dispatchBody,preview_sha256:preview.file_sha256});
  assert.equal(imported.added_count,2);
  const {vehicles}=await api(dispatchPath+'?shipment_month='+shipment_month);
- const arrivals=[];
- for(const vehicle of [vehicles.find(v=>v.truck_no===plate),vehicles.find(v=>v.truck_no==='ALT-'+seq)]){
+ const arrivals=[],arrivalVehicles=[vehicles.find(v=>v.truck_no===plate),vehicles.find(v=>v.truck_no==='ALT-'+seq)];
+ const arrivalBody={arrived_at:new Date().toISOString(),trailer_one:'RC3-TRAILER-'+seq,driver_name:'Synthetic Driver '+seq,passport_no:'Synthetic Passport '+seq,transporter:'Synthetic Transport'};
+ for(const [i,vehicle] of arrivalVehicles.entries()){
   assert.equal(Number(vehicle.capacity_tonnes),30);
-  arrivals.push(await api('/loading-plans/arrivals/'+vehicle.id,'admin',{arrived_at:new Date().toISOString(),trailer_one:vehicle.truck_no===plate?'RC3-TRAILER':'RC3-ALT',driver_name:'Synthetic Driver',passport_no:'Synthetic Passport',transporter:'Synthetic Transport'}));
+  const url='/loading-plans/arrivals/'+vehicle.id;
+  if(i){
+   const conflict=await api(url,'admin',{...arrivalBody,trailer_one:'RC3-ALT',trailer_two:arrivalBody.trailer_one.toLowerCase().replaceAll('-',' ')},409);
+   assert(conflict.error.includes(plate));
+   assert(conflict.error.includes('Synthetic CU-AUDIT'));
+  }
+  const body=i?{...arrivalBody,trailer_one:'RC3-ALT-'+seq,driver_name:'Alternate Driver '+seq,passport_no:'Alternate Passport '+seq}:arrivalBody;
+  arrivals.push(await api(url,'admin',body));
  }
  const planBody={sales_plan_id:plan.id,arrival_id:arrivals[0].id,invoice_no:'RC3-INV-'+seq,export_license_no:'RC3-LICENSE',transporter:'Synthetic Transport',destination:'Synthetic Destination',planned_load_date:today,allocation_ids:[lot.id]};
  const document=await api('/loading-plans/unified','admin',planBody);
  assert.equal(document.packing_list_no,planBody.invoice_no+'-PL');
+ const byArrival=await api('/v34/lists/loading?arrival_date='+today);
+ assert(byArrival.items.some(r=>r.id===document.id));
+ assert(!(await api('/v34/lists/loading?arrival_date=2000-01-01')).items.some(r=>r.id===document.id));
+ for(const search of [planBody.invoice_no,document.packing_list_no,suggestion.lot_no,contract.contract_no]){
+  const filtered=await api('/v34/lists/loading?'+new URLSearchParams({search,planned_load_date:today}));
+  assert(filtered.items.some(r=>r.id===document.id),search);
+ }
+ assert(!(await api('/v34/lists/loading?planned_load_date=2000-01-01')).items.some(r=>r.id===document.id));
  await api('/loading-plans/unified','admin',{...planBody,arrival_id:arrivals[1].id,invoice_no:'RC3-ALT-'+seq},409);
  let load=await api('/v31/loads','admin',{document_id:document.id,document_version:document.version,bundle_ids:[bundle.id]});
+ const loadingOverview=await api(overviewUrl);
+ assert.equal(loadingOverview.metrics.loading.batches,1);
+ assert.equal(loadingOverview.metrics.loading.bundles,1);
+ assert.equal(loadingOverview.metrics.prepared_pending_outbound.bundles,0);
  steps.push('Excel dispatch capacity, arrival registration, native loading plan and duplicate batch lock');
  for(const [action,role,extra]of [['approve','site_supervisor',{}],['depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()}],['logistics-approve','logistics_manager',{}]])load=await api('/v26/loads/'+load.id+'/'+action,role,{version:load.version,...extra});
  assert.notEqual((await c.query('SELECT physical_status FROM bundles WHERE id=$1',[bundle.id])).rows[0].physical_status,'OUTBOUND');const final='/v26/loads/'+load.id+'/manager-approve',finalBody={version:load.version},key=crypto.randomUUID();
@@ -62,15 +114,37 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(results[0].statusCode,200,results[0].body);assert.equal(results[1].statusCode,200,results[1].body);
  assert.deepEqual(results[0].json(),results[1].json());
  assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'OUTBOUND');
+ const shipping=await api('/shipping/'+load.id),generate={expected_revision:0,transport_version:shipping.transport.version,source_signature:shipping.source_signature,unit_price_usd:'1234.56'};
+ await api('/shipping/'+load.id+'/packing-list','admin',{...generate,unit_price_usd:'-1'},400);
+ await api('/shipping/'+load.id+'/packing-list','admin',generate);
+ const archive=await request('/shipping/'+load.id+'/packing-list.xlsx');
+ assert.equal(archive.statusCode,200);
+ const invoiceBook=new(require('exceljs').Workbook)();await invoiceBook.xlsx.load(archive.rawPayload);
+ const inv=invoiceBook.getWorksheet('INV');
+ assert.equal(inv.getCell('F30').value,1234.56);
+ assert.equal(inv.getCell('F31').value,50);
+ assert.equal(inv.getCell('G30').result,2509.24);
+ assert.equal(inv.getCell('G31').result,101.75);
+ assert.equal(inv.getCell('G33').result,2610.99);
+ const reuse='/loading-plans/arrivals/'+arrivalVehicles[1].id;
+ await api(reuse,'admin',{...arrivalBody,version:arrivals[1].version},409);
+ const gate=await api('/gate-permits/from/'+load.id,'admin',{});
+ const gatePath='/gate-permits/'+gate.permit_id,issued=await api(gatePath);
+ await api(gatePath+'/print','admin',{version:issued.permit.version});
+ const printed=await api(gatePath);
+ await api(gatePath+'/exit','sales_manager',{version:printed.permit.version,actual_exit_at:new Date().toISOString(),actual_exit:true,printed_permit_checked:true});
+ await api(reuse,'admin',{...arrivalBody,version:arrivals[1].version});
+
  const report=await api('/v34/reports?type=outbound&group_by=vehicle_no&from='+today+'&to='+today+'&contract_id='+contract.id);
  const line=report.items.find(item=>item.vehicle_no===plate);assert(line);
  assert.equal(line.bundles,1);assert.equal(Number(line.net_weight),2.0325);
+ const chart=(await api(overviewUrl)).chart_trend.rows[0];assert.equal(chart.vehicles,1);assert.equal(Number(chart.net_weight),2.0325);
  const exported=await request('/v34/reports/export','admin',{type:'outbound',group_by:'vehicle_no',from:today,to:today,contract_id:contract.id});
  assert.equal(exported.statusCode,200,exported.body.slice(0,200));
  const exportedBook=new(require('exceljs').Workbook)();await exportedBook.xlsx.load(exported.rawPayload);
  const cells=JSON.stringify(exportedBook.worksheets.map(sheet=>sheet.getSheetValues()));
  assert(cells.includes('2.0325'));
  steps.push('independent approvals, idempotent final inventory deduction, outbound report and Excel agreement');
- E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true});
+ E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id});
  }finally{await app?.close();await c.end();}
 });

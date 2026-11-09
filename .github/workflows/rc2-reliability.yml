@@ -45,8 +45,10 @@ jobs:
           npm install --global pnpm@11.25.0
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
-      - name: Verify syntax, source integrity and all 174 historical migrations
+      - name: Verify syntax, source integrity and the migration chain
         run: node tests/release/source-check.cjs
+      - name: Check shared UI tokens and scenario inventory
+        run: node tests/release/uiux-quality.cjs static
       - name: Generate temporary CI credentials and TLS
         run: node tests/release/ci-setup.cjs
       - name: Start an independent temporary PostgreSQL 16 server
@@ -58,6 +60,10 @@ jobs:
           exit 1
       - name: Unit, migration, 31 security groups, reliability, business and real browser regression
         run: node scripts/run-release-tests.cjs acceptance
+      - name: Check core browser layout and registered-route coverage
+        run: |
+          node tests/release/uiux-audit.cjs current .runtime/release-tests/uiux/current --quick
+          node tests/release/uiux-quality.cjs layout .runtime/release-tests/uiux/current
       - name: Actual Docker build, final image inspection and production-mode synthetic startup
         run: node tests/release/docker-acceptance.cjs
       - name: Upload only explicitly approved sanitized evidence
