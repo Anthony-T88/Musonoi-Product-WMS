@@ -177,3 +177,14 @@ html[data-release-ui="46"] dialog :is(.dialog-header, .task-notice-actions) {
     max-inline-size: 100%;
   }
 }
+
+/* Inventory filters share full-width columns and collapse at narrow widths. */
+html[data-release-ui="46"] #inventory #filter-form .filter-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+html[data-release-ui="46"] #inventory #filter-form .filter-grid>label{grid-column:auto}
+html[data-release-ui="46"] #inventory #filter-form .filter-grid .input-icon{min-width:0}
+@media(max-width:1100px){
+ html[data-release-ui="46"] #inventory #filter-form .filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:480px){
+ html[data-release-ui="46"] #inventory #filter-form .filter-grid{grid-template-columns:minmax(0,1fr)}
+}

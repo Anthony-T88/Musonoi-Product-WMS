@@ -1,8 +1,8 @@
 {
   "platform": "win32",
   "browser": "156.0.8078.81",
-  "reviewedOn": "2026-11-09",
-  "review": "Reviewed independently in synthetic TEST. Stable clips include permissions actions and matrix, metal and net weight cards, and wet net/estimated/confirmed values on outbound rows.",
+  "reviewedOn": "2026-11-10",
+  "review": "Reviewed in isolated synthetic TEST. Updated the Cobalt Metal cards and repositioned the outbound wet net, estimated and confirmed values clip after the deliberate layout changes.",
   "images": [
     {
       "file": "login_public_zh-CN_guest_1440.png",
@@ -51,10 +51,10 @@
     {
       "file": "metal_CO_HYDROXIDE_en_admin_1366.png",
       "clip": {
-        "x": 280,
-        "y": 195,
-        "width": 856,
-        "height": 138
+        "x": 282,
+        "y": 199,
+        "width": 1060,
+        "height": 379
       },
       "meanTolerance": 0.016,
       "changedTolerance": 0.065
@@ -75,9 +75,9 @@
       "maxOffsetX": 10,
       "clip": {
         "x": 1354,
-        "y": 472,
+        "y": 495,
         "width": 447,
-        "height": 144
+        "height": 156
       },
       "meanTolerance": 0.016,
       "changedTolerance": 0.065

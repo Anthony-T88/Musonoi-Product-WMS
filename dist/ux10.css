@@ -15,3 +15,19 @@ body.database-mode .form-grid>label{min-width:0}body.database-mode .form-grid>la
 .ux10-sales .user-form .form-grid{gap:16px 18px}.ux10-sales .user-form .form-grid>label{display:grid;gap:7px;margin:0;line-height:1.35}.ux10-sales .user-form .form-grid input,.ux10-sales .user-form .form-grid select{height:40px}
 .database-mode .mobile-primary a[hidden],.database-mode .sidebar nav>a[hidden]{display:none!important}.ux10-workflow .current .ux10-flow-circle{box-shadow:0 0 0 4px #e1eee7}
 body.database-mode #page-content .form-grid:not(.ux10-four-filters){grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--ux10-field-min,260px)),1fr))}body.database-mode .ux10-one-line-label{white-space:nowrap}body.database-mode .ux10-one-line-label textarea,body.database-mode .ux10-one-line-label .field-help{white-space:normal}
+
+#sales-invoice-batches{max-width:none}
+#sales-invoice-batches #sales-invoice-table{table-layout:fixed;width:100%;min-width:0}
+#sales-invoice-batches #sales-invoice-table :is(th,td,small){white-space:normal!important;overflow-wrap:anywhere;vertical-align:middle}
+#sales-invoice-table :is(th,td):nth-child(3){width:15%}
+#sales-invoice-table small{display:block;color:var(--uix-muted)}
+#sales-invoice-table input{width:100%;min-width:0}
+#sales-invoice-table .button{max-width:100%;white-space:normal}
+@media(max-width:650px){
+ #sales-invoice-table thead{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+ #sales-invoice-table,#sales-invoice-table tbody{display:block}
+ #sales-invoice-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid var(--uix-border)}
+ #sales-invoice-table td{display:block;min-width:0;width:auto!important;text-align:left}
+ #sales-invoice-table td::before{content:attr(data-label);display:block;color:var(--uix-muted);font-size:var(--uix-caption)}
+ #sales-invoice-table td:last-child{grid-column:1/-1}
+}

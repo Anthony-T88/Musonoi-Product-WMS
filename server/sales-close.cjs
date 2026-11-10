@@ -7,7 +7,8 @@ async function enrich(c,req,rows){
  if(!rows.length)return rows;
  const ids=rows.map(p=>p.id),co=req.productCode==='CO_HYDROXIDE';
  const values=co?(await c.query(`SELECT p.id,jsonb_build_object('planned_net_weight',p.target_weight::text,'outbound_net_weight',coalesce(sum((o.snapshot->'order'->>'actual_net_kg')::numeric)/1000,0)::text,'remaining_weight',greatest(0,p.target_weight-coalesce(sum((o.snapshot->'order'->>'actual_net_kg')::numeric)/1000,0))::text) control FROM co_sales_plans p LEFT JOIN co_loading_orders l ON l.sales_plan_id=p.id AND l.status IN('WAITING','OUTBOUND') LEFT JOIN co_outbounds o ON o.order_id=l.id WHERE p.id=ANY($1::uuid[]) GROUP BY p.id`,[ids])).rows:(await c.query('SELECT id,v265_plan_progress(id) control FROM sales_plans WHERE id=ANY($1::uuid[])',[ids])).rows;
- const controls=new Map(values.map(r=>[r.id,r.control])),dispatch=await require('./sales-dispatch-summary.cjs').counts(c,req.productCode,ids);return rows.map(p=>({...p,control:controls.get(p.id)||null,dispatch_counts:dispatch.get(p.id)}));
+ const invoiced=await require('./sales-invoices.cjs').totals(c,req.productCode,ids);
+ const controls=new Map(values.map(r=>{const total=invoiced.get(r.id);return [r.id,{...r.control,invoiced_net_weight:total?.unknown_packages?null:total?.net_mt||'0',invoiced_unknown_packages:total?.unknown_packages||0}];})),dispatch=await require('./sales-dispatch-summary.cjs').counts(c,req.productCode,ids);return rows.map(p=>({...p,control:controls.get(p.id)||null,dispatch_counts:dispatch.get(p.id)}));
 }
 async function detail(c,req,plan){
  const [history,readiness]=await Promise.all([

@@ -5,8 +5,17 @@ test('isolated migration, initialization, business permission and concurrency ac
  try{
  const production=await connect();
  await check('empty schema dry-run rolls back every table; release apply, repeat and backup precondition',async()=>{
-  let r=await migrate(production.client,{environment:'production',appPassword});assert.equal(r.added,179);assert.equal((await production.client.query("SELECT to_regclass('public.schema_migrations') value")).rows[0].value,null);
-  r=await migrate(production.client,{environment:'production',apply:true,appPassword});assert.equal(r.added,179);await assert.rejects(()=>migrate(production.client,{environment:'production',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});assert.equal((await migrate(production.client,{environment:'production',apply:true,backupVerified:true})).added,0);
+  let r=await migrate(production.client,{environment:'production',appPassword});assert.equal(r.added,chain.length);assert.equal((await production.client.query("SELECT to_regclass('public.schema_migrations') value")).rows[0].value,null);
+  r=await migrate(production.client,{environment:'production',apply:true,appPassword});assert.equal(r.added,chain.length);await assert.rejects(()=>migrate(production.client,{environment:'production',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});assert.equal((await migrate(production.client,{environment:'production',apply:true,backupVerified:true})).added,0);
+ });
+ await check('new document serials start at 01 and continue beyond 99 without truncating',async()=>{
+  const c=production.client;
+  const {rows}=await c.query('SELECT short_document_serial(n) code FROM unnest(ARRAY[1,2,9,10,99,100]::bigint[]) n');
+  assert.deepEqual(rows.map(r=>r.code),['01','02','09','10','99','100']);
+  const {rows:[loading]}=await c.query("SELECT next_loading_document_code('CU_CATHODE') cu, next_loading_document_code('CO_HYDROXIDE') co");
+  assert.match(loading.cu,/^LOAD-\d{8}-01$/);assert.equal(loading.co,loading.cu);
+  const {rows:[plan]}=await c.query("SELECT 'SP-'||short_document_serial(nextval('sales_plan_numbers')) code");
+  assert.equal(plan.code,'SP-01');
  });
  await check('bootstrap requires reviewed map, verified backup; dry-run/apply/retry preserve identities',async()=>{
   const c=production.client,sourceHash=crypto.createHash('sha256').update('SYNTHETIC TEST GEOMETRY ONLY').digest('hex'),plan={admin:{username:'audit_bootstrap',displayName:'Synthetic bootstrap admin',language:'zh-CN'},project:{code:'AUDIT',name:'Synthetic audit project'},warehouse:{code:'AUDIT',name:'Synthetic audit warehouse'},formalCells:['P1-01'],mapSourceSha256:sourceHash},password=crypto.randomBytes(24).toString('base64url');
@@ -23,13 +32,16 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178]){
-  await check(`direct ${from} → 179 preserves every existing synthetic business table and refuses wrong environment`,async()=>{
+ for(const from of [172,173,174,175,176,177,178,179,180]){
+  await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
    for(const entry of chain.slice(0,from))await Chain.execute(c,entry);
    await c.query("INSERT INTO system_info VALUES(true,'test')");
    const fixture=await E.seed(c,name);
+   const insertPlan=()=>c.query("INSERT INTO sales_plans(project_id,customer_id,target_weight,created_by,contract_id,quantity_tolerance,preparation_month,planned_lot_count) VALUES($1,$2,1,$3,$4,0,to_char(current_date,'YYYY-MM'),1) RETURNING id,code",
+    [fixture.project,fixture.customers.CU_CATHODE.id,fixture.accounts[0].id,fixture.customers.CU_CATHODE.contract]);
+   if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-00000001');
    await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,outcome) VALUES($1,'synthetic_upgrade','customers',$2,'COMMITTED')",[fixture.accounts[0].id,fixture.customers.CU_CATHODE.id]);
    const tables=(await c.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'schema_migrations' ORDER BY tablename")).rows.map(r=>r.tablename);
    const snapshot=async()=>{
@@ -55,7 +67,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const before=await snapshot(),beforeCatalog=await catalog();
    await assert.rejects(()=>migrate(c,{environment:'production',apply:true,backupVerified:true}),{code:'MIGRATION_TEST_CONVERSION_FORBIDDEN'});
    assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,from);
-   assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,179-from);
+   assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,chain.length-from);
    assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,0);
    const {rows:applied}=await c.query('SELECT version,checksum FROM schema_migrations');
    const checksums=new Map(applied.map(({version,checksum})=>[version,checksum]));
@@ -63,6 +75,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
+   if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-02');
    assert.equal((await c.query("SELECT count(*)::int n FROM role_permission_caps WHERE role_code='sales_manager' AND permission_code='plan:write'")).rows[0].n,1);
    for(const table of ['users','registration_requests'])assert.equal((await c.query('SELECT count(*)::int n FROM '+table+' WHERE contact_phone IS NOT NULL OR contact_email IS NOT NULL')).rows[0].n,0);
    const afterCatalog=await catalog(),priorKeys=new Set(beforeCatalog.map(({kind,relation,name})=>[kind,relation,name].join('/')));
@@ -70,7 +83,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert(afterCatalog.some(t=>t.relation==='audit_logs'&&t.name==='aa_security_r3_audit_scope'));
    const rights=(await c.query("SELECT has_table_privilege('musonoi_app','security_schema_status','SELECT') can_read, has_function_privilege('musonoi_app','security_r3_entity_scopes(text,text)','EXECUTE') can_forge")).rows[0];
    assert.deepEqual(rights,{can_read:true,can_forge:false});
-   upgradeEvidence.push({from,to:179,tablesChecked:tables.length,existingConstraintsAndTriggersChecked:beforeCatalog.length,unchangedSyntheticRows:Object.values(before).reduce((n,t)=>n+t.rows,0),accounts:before.users.rows,wrongEnvironmentRefused:true});
+   upgradeEvidence.push({from,to:chain.length,tablesChecked:tables.length,existingConstraintsAndTriggersChecked:beforeCatalog.length,unchangedSyntheticRows:Object.values(before).reduce((n,t)=>n+t.rows,0),accounts:before.users.rows,wrongEnvironmentRefused:true});
   });
  }
  const guard=await connect();
@@ -80,7 +93,7 @@ test('isolated migration, initialization, business permission and concurrency ac
  });
  const business=await connect();
  await check('concurrent migrations serialize: exactly one applies, the other is an idempotent retry',async()=>{
-  const second=new Client(E.options(business.name));open.push(second);await second.connect();const results=await Promise.all([migrate(business.client,{environment:'test',apply:true,backupVerified:true}),migrate(second,{environment:'test',apply:true,backupVerified:true})]);assert.deepEqual(results.map(r=>r.added).sort((a,b)=>a-b),[0,179]);
+  const second=new Client(E.options(business.name));open.push(second);await second.connect();const results=await Promise.all([migrate(business.client,{environment:'test',apply:true,backupVerified:true}),migrate(second,{environment:'test',apply:true,backupVerified:true})]);assert.deepEqual(results.map(r=>r.added).sort((a,b)=>a-b),[0,chain.length]);
  });
  const f=await E.seed(business.client,business.name);app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};
  const login=async role=>{const a=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.20.0.'+(f.accounts.indexOf(a)+1),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200,'login '+role);return sessions[role]={id:a.id,origin:f.appCfg.origin,cookie:r.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':r.json().csrfToken};};for(const a of f.accounts)await login(a.role);
@@ -147,6 +160,6 @@ test('isolated migration, initialization, business permission and concurrency ac
   assert.equal(mixed.net_mt,'1.3041');assert.equal(mixed.estimated_mt,'0.46949');
  });
  if(failed)throw Error('Acceptance subtests failed; no successful fixture published');
- E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:179,upgradeEvidence,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
+ E.save('fixture.json',f);E.save('database-results.json',{status:'PASS',database:business.name,migrations:chain.length,upgradeEvidence,productionDatabaseWrites:0,workingDatabaseWrites:0,fastify:require('fastify/package.json').version});
  }finally{await app?.close();for(const c of open)await c.end();}
 });

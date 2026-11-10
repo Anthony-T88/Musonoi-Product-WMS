@@ -32,7 +32,7 @@ async function cobalt(c,req,data){
  const card=(...keys)=>{const rows=keys.map(k=>states.get(k)),total=rows.reduce((a,b)=>({quantity:a.quantity+b.quantity,batches:a.batches+b.batches,knownMt:a.knownMt+b.knownMt,unknown:a.unknown+b.unknown}));return toRow(total);};
  return {execution:req.user.permissions.includes('plan:read')?data.execution:null,current_customers:[...groups.values()].map(toRow),
   states:[...states].map(([key,row])=>({key,...toRow(row)})),
-  stock_cards:{preparing:card('preparing','review'),prepared:card('prepared'),loading:card('assigned','loaded'),
+  stock_cards:{preparing:card('preparing','review'),prepared:card('prepared'),loading:card('assigned'),loaded:card('loaded'),
    outbound:{batches:new Set(data.outbound.map(r=>r.preparation_id)).size,quantity:Number(data.shippingSummary.bags),known_net_mt:kgToMt(data.shippingSummary.actual_net_kg)}}};
 
 }

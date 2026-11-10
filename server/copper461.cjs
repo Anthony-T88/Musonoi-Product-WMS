@@ -67,10 +67,10 @@ async function contracts(c,req){const rows=(await c.query(`SELECT k.*,p.name pro
  const plans=can(req,'plan:read')?(await c.query(`SELECT p.*,k.contract_no,c.name customer_name,coalesce(a.state,'LEGACY') approval_state FROM sales_plans p
  JOIN customer_contracts k ON k.id=p.contract_id JOIN copper_customers c ON c.id=p.customer_id LEFT JOIN sales_plan_approvals a ON a.plan_id=p.id AND a.product_code='CU_CATHODE'
  WHERE ${customerScope('p')} AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.customer_id IS NULL OR s.customer_id=p.customer_id) AND s.warehouse_id IS NULL) ORDER BY p.created_at DESC,p.id`,[req.user.id])).rows:[];
- for(const p of plans)p.progress=await require('./v265.cjs').progress(c,p.id);
- const outboundUnknown=plans.length?(await c.query(`SELECT a.plan_id,count(*)::int n FROM loading_items i JOIN loading_orders l ON l.id=i.loading_id JOIN allocations a ON a.id=l.allocation_id WHERE a.plan_id=ANY($1::uuid[]) AND i.active AND l.workflow_state='OUTBOUND' AND l.status='DEPARTED' AND i.original_weight IS NULL GROUP BY a.plan_id`,[plans.map(p=>p.id)])).rows:[];
+ const invoiced=await require('./sales-invoices.cjs').totals(c,'CU_CATHODE',plans.map(p=>p.id));
+ for(const p of plans){const total=invoiced.get(p.id);p.progress={invoiced_net_weight:total?.net_mt||'0',invoiced_unknown_packages:total?.unknown_packages||0};}
  for(const k of rows){k.plans=plans.filter(p=>p.contract_id===k.id);const known=can(req,'plan:read')&&k.full_plan_scope;
-  const progress=k.plans.map(p=>({net_weight:p.progress?.outbound_net_weight??null}));k.fulfilled_net_weight=known?M.sum(progress).net_weight:null;k.fulfilled_unknown_weights=known?k.plans.reduce((n,p)=>n+(outboundUnknown.find(r=>r.plan_id===p.id)?.n||0),0):null;
+  const progress=k.plans.map(p=>({net_weight:p.progress?.invoiced_net_weight??null}));k.fulfilled_net_weight=known?M.sum(progress).net_weight:null;k.fulfilled_unknown_weights=known?k.plans.reduce((n,p)=>n+p.progress.invoiced_unknown_packages,0):null;
   const tonnes=require('../dist/tonnes.js');k.fulfilment_available=known;k.remaining_contract_weight=known&&!k.fulfilled_unknown_weights&&k.contract_net_weight!=null&&k.fulfilled_net_weight!=null?tonnes.fixed(tonnes.scaled(k.contract_net_weight,6)-tonnes.scaled(k.fulfilled_net_weight,6),6):null;
  }
  return rows;

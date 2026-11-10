@@ -90,6 +90,7 @@ function pages(ids){
  add('cu-contract-detail','/customers/contracts/:id',[CU],{example:'cuContract'});
  add('cu-contract-edit','/customers/contracts/:id/edit',[CU],{example:'cuContract'});
  add('sales','/sales-plans',BOTH,{screenshot:true,roles:['sales_operator','sales_manager','commerce_manager','customer_admin']});
+ add('export-licenses','/export-licenses',BOTH,{screenshot:true});
  add('sales-new','/sales-plans/new',BOTH,{roles:['sales_operator']});
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});

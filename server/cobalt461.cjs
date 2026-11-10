@@ -21,16 +21,10 @@ async function contracts(c,req){
  const readProgress=can(req,'plan:read')&&(can(req,'load:read')||can(req,'outbound:read'));
  const plans=can(req,'plan:read')?(await c.query(`SELECT p.*,p.shipment_month preparation_month,coalesce(a.state,'LEGACY') approval_state
  FROM co_sales_plans p LEFT JOIN sales_plan_approvals a ON a.plan_id=p.id AND a.product_code='CO_HYDROXIDE' WHERE ${scope()} ORDER BY p.created_at DESC,p.id`,[req.user.id])).rows:[];
- // Exactly the immutable, final-approved outbound snapshot used by the existing
- // cobalt report, divided in PostgreSQL to retain kilogram decimal precision.
- const sums=readProgress&&plans.length?(await c.query(`SELECT o.sales_plan_id,
- (coalesce(sum(CASE WHEN ob.snapshot#>>'{order,actual_net_kg}'~'^[0-9]+(\\.[0-9]+)?$' THEN (ob.snapshot#>>'{order,actual_net_kg}')::numeric END),0)/1000)::text net,
- count(*) FILTER(WHERE ob.snapshot#>>'{order,actual_net_kg}' IS NULL OR NOT(ob.snapshot#>>'{order,actual_net_kg}'~'^[0-9]+(\\.[0-9]+)?$'))::int unknown
- FROM co_outbounds ob JOIN co_loading_orders o ON o.id=ob.order_id JOIN co_load_executions e ON e.order_id=o.id
- WHERE o.sales_plan_id=ANY($1::uuid[]) AND o.product_code='CO_HYDROXIDE' AND o.status='OUTBOUND' AND e.state='OUTBOUND' GROUP BY o.sales_plan_id`,[plans.map(p=>p.id)])).rows:[];
- for(const p of plans){const sum=sums.find(s=>s.sales_plan_id===p.id);p.progress={outbound_net_weight:readProgress?sum?.net||'0':null,unknown_bundles:readProgress?sum?.unknown||0:null};}
- for(const k of rows){k.plans=plans.filter(p=>p.contract_id===k.id);k.fulfilment_available=readProgress&&k.full_plan_scope;k.fulfilled_unknown_weights=k.fulfilment_available?k.plans.reduce((n,p)=>n+p.progress.unknown_bundles,0):null;
-  k.fulfilled_net_weight=k.fulfilment_available?T.fixed(k.plans.reduce((n,p)=>n+T.scaled(p.progress.outbound_net_weight,9),0n),9):null;
+ const sums=readProgress?await require('./sales-invoices.cjs').totals(c,'CO_HYDROXIDE',plans.map(p=>p.id)):new Map();
+ for(const p of plans){const sum=sums.get(p.id);p.progress={invoiced_net_weight:readProgress?sum?.net_mt||'0':null,invoiced_unknown_packages:readProgress?sum?.unknown_packages||0:null};}
+ for(const k of rows){k.plans=plans.filter(p=>p.contract_id===k.id);k.fulfilment_available=readProgress&&k.full_plan_scope;k.fulfilled_unknown_weights=k.fulfilment_available?k.plans.reduce((n,p)=>n+p.progress.invoiced_unknown_packages,0):null;
+  k.fulfilled_net_weight=k.fulfilment_available?T.fixed(k.plans.reduce((n,p)=>n+T.scaled(p.progress.invoiced_net_weight,9),0n),9):null;
   k.remaining_contract_weight=k.fulfilment_available&&!k.fulfilled_unknown_weights&&k.contract_net_weight!=null?T.fixed(T.scaled(k.contract_net_weight,9)-T.scaled(k.fulfilled_net_weight,9),9):null;
  }return rows;
 }

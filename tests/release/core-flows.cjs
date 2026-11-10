@@ -74,6 +74,25 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
   await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET reason='tamper' WHERE id=$1",[review.id]));
  });
+ await check('sales confirmation alone adds posted cobalt net weight to fulfilment',async()=>{
+  const path='/cobalt/sales-workflow/plans/'+sales.id,detail=await api(path);
+  const batch=detail.posted_batches.find(row=>row.loading_id===matched.order.id);
+  assert.equal(batch.batch_id,prep.id);assert.equal(batch.confirmed_at,null);
+  assert.equal(Number(detail.control.invoiced_net_weight),0);
+  assert((await api('/cobalt/stock?stock_state=OUTBOUND&phase=OUTBOUND')).items.some(row=>row.preparation_id===prep.id));
+  assert((await api('/cobalt/export-licenses?search=RC2-LICENSE')).items.some(row=>row.id===plan.id));
+  const body={loading_id:matched.order.id,batch_id:prep.id,invoice_no:batch.source_invoice_no||'SYNTHETIC-CO-INVOICE'};
+  await api(path+'/confirm-invoice','logistics_field_operator',body,403);
+  await api(path+'/confirm-invoice','sales_operator',{...body,batch_id:crypto.randomUUID()},404);
+  await api(path+'/confirm-invoice','sales_operator',body);
+  await api(path+'/confirm-invoice','sales_operator',body);
+  const updated=await api(path);
+  assert.equal(Number(updated.control.invoiced_net_weight),0.647123);
+  assert.equal(updated.posted_batches[0].invoice_no,body.invoice_no);
+  const report=await api('/cobalt/reports?sales_plan_id='+sales.id);
+  assert.equal(Number(report.execution[0].invoiced_net_kg),647.123);
+  assert.equal((await api('/cobalt/metal/outbounds/'+matched.order.id)).shipment_status,'PENDING_ARECOMS');
+ });
  await check('estimated cobalt and independent ARECOMS confirmation remain separate from physical posting',async()=>{
   const base='/cobalt/metal/outbounds/'+matched.order.id,initial=await api(base);
   assert.equal(initial.shipment_status,'PENDING_ARECOMS');assert.equal(initial.legacy_metal_mt,'1.23456789');

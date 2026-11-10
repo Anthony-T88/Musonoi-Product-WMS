@@ -717,6 +717,14 @@
     {
       "version": "179_v471_cobalt_metal.sql",
       "checksum": "b9d119935dd69025a7628037258d45cfa95991945f5a4591d7f5bc9f86af4074"
+    },
+    {
+      "version": "180_v471_short_document_numbers.sql",
+      "checksum": "d0d9e2fa301028b056b0fb953af82826e9cdedea585a7b2497a48bf0d1247832"
+    },
+    {
+      "version": "181_v471_sales_invoice_confirmation.sql",
+      "checksum": "0d8a18af0e5d7c1279e7af263f1d6286795f9e0bd27838571c3090f54106d583"
     }
   ]
 }

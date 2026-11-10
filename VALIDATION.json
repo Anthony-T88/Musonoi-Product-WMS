@@ -1,9 +1,9 @@
 {
   "version": "4.7.1",
   "baseCommit": "16097779a3f19edf5465c324f9a2833a52d14ef1",
-  "runtimeMigrationCount": 179,
+  "runtimeMigrationCount": 181,
   "status": "LOCAL_TEST_ACCEPTED",
-  "historicalMigrationFilesUnchanged": 178,
+  "historicalMigrationFilesUnchanged": 180,
   "mapDesigns": "review only",
   "baseline": "4.7.0-ui16",
   "revision": "4.7.1-ui1",

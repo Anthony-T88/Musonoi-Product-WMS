@@ -13,6 +13,16 @@
 
 .oa467{--oa-inbound:#9a6d2f}.oa467 .oa-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;margin-top:14px}.oa467 .oa-legend span:before{content:'';display:inline-block;width:9px;height:9px;background:var(--oa-green);margin-right:6px}.oa467 .oa-legend .is-inbound:before{background:var(--oa-inbound);border-radius:50%}.oa467 .oa-bar.oa-inbound,.oa467 .oa-dot.oa-inbound{fill:var(--oa-inbound)}.oa467 .oa-line.oa-inbound{stroke:var(--oa-inbound);stroke-dasharray:5 3}.oa467 .oa-bundle-plot{height:180px;min-width:0}.oa467 .oa-bundle-plot svg{display:block;width:100%;height:100%}.oa467 .oa-chart-footer{justify-content:flex-start;gap:24px}.oa467 .oa-receipt-bundles{margin-bottom:8px}
 .oa467 .oa-plot,.oa467 .oa-bundle-plot{position:relative}
+.oa467 .oa-kpis-cobalt,.oa467 .oa-kpis-confirmation{grid-template-columns:repeat(3,minmax(0,1fr))}
+.oa467.co-metal-kpis{background:transparent;padding:0;margin-bottom:16px}
+.oa467 .oa-arecoms h2{font-size:15px;margin:0 0 10px}
+.oa467 .oa-kpis-cobalt .oa-kpi strong,.oa467 .oa-kpis-confirmation .oa-kpi strong{font-size:clamp(15px,1.45vw,21px);overflow-wrap:anywhere}
+.oa467 .oa-kpis-cobalt .oa-kpi small,.oa467 .oa-kpis-confirmation .oa-kpi small{font-size:13px}
+.oa467 .oa-kpi p:empty{display:none}
+.oa467 .oa-metal-chart #co-metal-months{table-layout:fixed;min-width:0}
+.oa467 .oa-metal-chart #co-metal-months :is(th,td){padding:10px 6px;white-space:normal;overflow-wrap:anywhere}
+.oa467 .oa-metal-chart #co-metal-months meter{display:block;width:100%;max-width:78px}
+@media(max-width:760px){.oa467 .oa-kpis-cobalt,.oa467 .oa-kpis-confirmation{grid-template-columns:repeat(2,minmax(0,1fr))}.oa467 .oa-kpis-confirmation>:last-child{grid-column:1/-1}}
 .oa467 .oa-plot-empty{position:absolute;inset:38% 14px auto;text-align:center;color:var(--oa-muted);pointer-events:none;font-size:12px}
 
 .oa467 .oa-kpi .oa-batch-value strong{font-size:clamp(13px,1.25vw,19px);line-height:1.55;white-space:normal;}

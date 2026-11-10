@@ -151,3 +151,11 @@ html[data-release-ui="46"] #co-overview-filter>.form-grid{display:grid;grid-temp
 @media(max-width:420px){#page-content:has(.r5-packing-preview) .invoice-prices{grid-template-columns:1fr;}}
 
 #page-content:has(.r5-packing-preview) .r5-document-toolbar:empty{display:none;}
+
+/* Keep location details above the map without resizing it. */
+.map465 .map465-grid{grid-template-columns:minmax(0,1fr)}
+.map465 #co-map-detail[hidden]{display:none!important}
+.map465 #co-map-detail:not([hidden]){position:fixed;z-index:20;inset:auto 22px 22px auto;width:min(390px,calc(100vw - 32px));max-height:min(68vh,720px);overflow:auto;padding:14px;box-shadow:0 12px 32px #20332833}
+.map465 #co-map-detail .map465-close{float:right;margin:0 0 6px 10px}
+.map465 .map465-grid:fullscreen #co-map-detail:not([hidden]){position:absolute}
+@media(max-width:480px){.map465 #co-map-detail:not([hidden]){right:16px;bottom:16px}}

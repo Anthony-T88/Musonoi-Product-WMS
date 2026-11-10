@@ -57,13 +57,31 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.goto(origin+'/workbench/accounts');await ready(page);await page.locator('#account-filter').waitFor();assert.equal(await page.locator('#account-registration-requests').count(),1);
  await page.locator('#account-create').click();for(const name of ['username','contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
- await go(page,'/overview');await page.locator('.oa467 .co-metal-section').first().waitFor();
- assert.equal(await page.locator('.oa467 .co-metal-section').count(),3);
- assert(await page.locator('.oa467 .co-metal-section .v34-kpi strong').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)<=20));
+ await page.evaluate(()=>I18n.set('zh-CN'));
+ await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
+ assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','已装车待出库','在库库存金属量','销售计划履约']);
+ assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),3);
+ assert.match(await page.locator('.oa-kpis-cobalt .oa-kpi').nth(4).innerText(),/\d+\.\d{5}\s*金属吨/);
+ assert.equal(await page.getByText('查看待确认车辆',{exact:true}).count(),0);
+ assert.equal(await page.getByRole('heading',{name:'月度发运金属量统计',exact:true}).count(),1);
+ const legacyOverview='**/api/v1/cobalt/overview?*';
+ await page.route(legacyOverview,async route=>{
+  const response=await route.fetch(),data=await response.json();
+  delete data.metal.period;delete data.analysis.stock_cards.loaded;
+  await route.fulfill({response,json:data});
+ });
+ await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
+ assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),3);
+ await page.unroute(legacyOverview);
  await go(page,'/inventory/'+f.preparation);
+ assert.deepEqual(await page.locator('#co-stock-filter > label').evaluateAll(labels=>labels.slice(0,4).map(label=>label.querySelector('select').name)),['location_id','stock_state','phase','zone_id']);
+ assert.equal(await page.locator('#co-stock-filter details').count(),0);
+ await page.locator('.co2-filter').screenshot({path:path.join(E.runtime,'cobalt-inventory-filters.png')});
  const headers=await page.evaluate(()=>I18n.language)==='en'?['Batch No.','Location','Bags','Net Weight (MT)','Stock Status','Workflow Status','Receipt Date','Sampling Status','Actions']:
   ['批次号','货位','吨包数','净重（MT）','库存状态','业务状态','入库日期','取样状态','操作'];
  assert.deepEqual(await page.locator('.co2-batches thead th').allTextContents(),headers);
+ assert.match(await page.locator('.co2-batches tbody td:nth-child(4)').first().innerText(),/\d+\.\d{4}\b/);
+ assert.equal(await page.locator('.co2-batches tbody td:nth-child(8)').first().evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
  const plan=await page.evaluate(async()=>{const rows=(await API.request('/cobalt/sales/arrivals')).items;return rows.find(r=>r.registration_state==='PLANNED')?.sales_plan_id;});
  assert(plan);
  await go(page,'/sales-plans/'+plan+'/dispatch');
@@ -75,6 +93,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('#co-metal-months meter').first().waitFor();
  await go(page,'/cobalt-metal?view=outbound&status=COMPLETED');await page.locator('#co-metal-list').waitFor();
  assert.match(await page.locator('#co-metal-list').innerText(),/0\.35641/);
+ assert.equal(await page.locator('.co-metal-kpis .oa-kpis-confirmation .oa-kpi').count(),3);
  assert.equal(await page.locator('.sidebar [data-primary-route=cobalt-metal]').count(),1);
  for(const language of ['zh-CN','en']){
   await page.evaluate(l=>I18n.set(l),language);
@@ -110,14 +129,25 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await go(page,'/receipts/new');await page.locator('input[name=total_bags]').waitFor();
  assert.equal(await page.locator('input[name=production_batch],input[name=production_batch_code],select[name=production_batch_id]').count(),0);
  await go(page,'/overview');
- for(const chart of ['net','vehicles','receipts','stock']){
+ for(const chart of ['net','vehicles','stock']){
   await page.locator('[data-oa-plot="'+chart+'"] svg').waitFor();
   for(const mode of ['line','bar']){await page.locator('[data-oa-key="'+chart+'"][data-oa-type="'+mode+'"]').click();assert.equal(await page.locator('[data-oa-plot="'+chart+'"]').getAttribute('data-chart-type'),mode);}
  }
+ assert.equal(await page.locator('.oa-charts > section').count(),4);
+ assert.equal(await page.locator('.oa-metal-chart .v34-table-tools').count(),0);
+ await page.locator('.oa-metal-chart').screenshot({path:path.join(E.runtime,'overview-monthly-metal.png')});
  await go(page,'/overview','CU_CATHODE');
  await page.locator('[data-oa-plot="net"] svg').waitFor();
  await page.locator('[data-oa-plot="vehicles"] svg').waitFor();
  assert.match(await page.locator('.oa-kpis .oa-kpi').nth(1).innerText(),/备货作业中捆包|Bundles in Preparation/);
+ assert.equal(await page.locator('.oa-design-intro').count(),0);
+ await go(page,'/inventory','CU_CATHODE');
+ await page.locator('#filter-form .filter-grid').waitFor();
+ assert(await page.locator('#filter-form .filter-grid').evaluate(grid=>{
+  const cells=[...grid.querySelectorAll(':scope > label')].filter(label=>label.getClientRects().length).map(label=>label.getBoundingClientRect());
+  return cells.length===10&&Math.abs(cells[0].left-cells[5].left)<2&&Math.abs(cells[4].right-cells[9].right)<2;
+ }),'copper inventory filters align across both desktop rows');
+ await page.locator('#filter-form').screenshot({path:path.join(E.runtime,'copper-inventory-filters.png')});
  await go(page,'/stock-map?project_id='+f.project+'&warehouse_id='+f.warehouse,'CU_CATHODE');
  await page.locator('.stock-map-layout #stock-map-canvas').waitFor();
  assert.equal(await page.locator('.map-filter-box').evaluate(el=>el.tagName),'SECTION');
@@ -137,12 +167,40 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('#map465-temporary-list').isVisible());
  await page.locator('#map465-location-list [data-map465-location="'+f.location+'"]').click();
  await page.locator('#co-map-detail').waitFor();
- assert(await page.locator('#co-map-detail').evaluate(el=>el.getBoundingClientRect().x>=document.getElementById('co-map-stage').getBoundingClientRect().right));
+ assert(await page.locator('#co-map-detail').evaluate(el=>getComputedStyle(el).position==='fixed'&&el.getBoundingClientRect().right<=innerWidth));
  assert(await page.locator('#co-map-adjust').isEnabled());
+ await page.screenshot({path:path.join(E.runtime,'cobalt-map-floating-detail.png')});
+ await page.setViewportSize({width:390,height:844});
+ assert(await page.locator('#co-map-detail').evaluate(el=>{const bounds=el.getBoundingClientRect();return bounds.left>=0&&bounds.right<=innerWidth&&bounds.bottom<=innerHeight;}));
+ await page.locator('.map465-close').press('Escape');
+ assert(await page.locator('#co-map-detail').isHidden());
+ await page.setViewportSize({width:1440,height:1000});
  await page.locator('#co-map-adjust').click();await ready(page);
  await page.locator('details.co2-placement[open] #co2-place').waitFor();
- for(const field of ['status','phase'])assert(await page.locator('#co-stock-filter [name='+field+']').isVisible(),field);
+ for(const field of ['stock_state','phase'])assert(await page.locator('#co-stock-filter [name='+field+']').isVisible(),field);
  assert.equal(new URL(page.url()).searchParams.get('location_id'),f.location);
+ for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+  await go(page,'/export-licenses',product);
+  await page.locator('#export-license-table a').first().waitFor();
+  assert(await page.locator('.sidebar [data-primary-route=sales-plans] + [data-primary-route=export-licenses]').isVisible());
+ }
+ const invoicePlan=await page.evaluate(async()=>{
+  const data=await API.request('/cobalt/sales-workflow/plans');
+  return data.items.find(p=>p.remark==='Synthetic rc2 flow')?.id;
+ });
+ assert(invoicePlan);
+ await go(page,'/sales-plans/'+invoicePlan);
+ const invoiceRow=page.locator('#sales-invoice-table tbody tr').filter({hasText:'NO-ASSAY-'});
+ const fits=()=>page.locator('#sales-invoice-table').evaluate(table=>table.parentElement.scrollWidth<=table.parentElement.clientWidth+2);
+ assert(await fits());
+ await page.setViewportSize({width:390,height:844});
+ assert(await fits());
+ await page.setViewportSize({width:1440,height:1000});
+ await invoiceRow.locator('[data-confirm-invoice]').click();
+ await page.locator('#operation-confirm-accept').click();
+ await invoiceRow.getByText(/^(Confirmed|已确认)$/).waitFor();
+ assert.equal(await invoiceRow.locator('[data-confirm-invoice]').count(),0);
+ await page.locator('#sales-invoice-batches').screenshot({path:path.join(E.runtime,'cobalt-confirmed-invoice.png')});
  await go(page,'/receipts/new','CU_CATHODE');
  await page.locator('.r10-draft-flow').waitFor();
  assert.equal(await page.locator('.ui46-entry-summary').count(),0);

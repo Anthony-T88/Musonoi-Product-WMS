@@ -8,3 +8,19 @@ html[data-release-ui="46"] .co469r2-stock table{width:100%;table-layout:fixed;bo
 
 @media(max-width:800px){html[data-release-ui="46"] .co469r2-stock .co2-history{overflow:hidden}html[data-release-ui="46"] .co469r2-stock .co2-history table{min-width:0!important}.co2-history table,.co2-history tbody,.co2-history tr,.co2-history td{display:block;width:auto!important}.co2-history thead{display:none}.co2-history tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px;border-bottom:1px solid #dfe7df}.co2-history td{min-width:0;padding:0!important;border:0!important;white-space:normal!important;overflow-wrap:anywhere}.co2-history td:before{display:block;content:attr(data-label);font-size:11px;color:#7a887c;margin-bottom:5px}.co2-history td:first-child,.co2-history td:nth-child(2),.co2-history td:nth-child(3),.co2-history td:last-child{grid-column:1/-1}}
 @media(max-width:480px){.co2-filter #co-stock-filter{grid-template-columns:minmax(0,1fr)}}
+
+html[data-release-ui="46"] .co2-panel.co2-filter{padding:0}
+.co2-filter #co-stock-filter{padding:16px 20px!important}
+.co2-filter label :is(input:not([type=checkbox]),select){width:100%}
+@media(min-width:801px){
+ html[data-release-ui="46"] .co469r2-stock table.co2-batches{table-layout:auto;min-width:max-content!important}
+ .co469r2-stock .co2-batches th{width:auto}
+ .co469r2-stock .co2-batches :is(th,td,.button){white-space:nowrap!important}
+ .co469r2-stock .co2-batches td small{display:inline;margin:0;color:#526556}
+}
+@media(max-width:480px){
+ .co2-filter #co-stock-filter{padding:14px!important}
+}
+
+.co2-filter #co-stock-filter>label:has([type=checkbox]){display:flex;align-items:center;gap:8px}
+@media(min-width:1101px){.co2-filter #co-stock-filter>.co2-filter-actions{grid-column:3/-1;align-self:end}}

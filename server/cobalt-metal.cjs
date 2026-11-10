@@ -60,14 +60,17 @@ async function summary(c,req,f={},window){
  const currentMonth="date_trunc('month',clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')";
  const month=(await c.query('SELECT '+shipTotals+' '+outboundFrom+o.where()+
   ' AND m.posted_at >= ('+currentMonth+" AT TIME ZONE 'Africa/Lubumbashi') AND m.posted_at < (("+currentMonth+"+interval '1 month') AT TIME ZONE 'Africa/Lubumbashi')",o.args)).rows[0];
- let months=[];
+ let period=month,months=[];
  if(window){
+  const selected=outboundFilter(req.user,{...f,from:window.from,to:window.to});
+  period=(await c.query('SELECT '+shipTotals+' '+outboundFrom+selected.where(),selected.args)).rows[0];
   const start="(date_trunc('month',?::date::timestamp) AT TIME ZONE 'Africa/Lubumbashi')";
   const end="((date_trunc('month',?::date::timestamp)+interval '1 month') AT TIME ZONE 'Africa/Lubumbashi')";
-  o.add('m.posted_at >= '+start,window.from);o.add('m.posted_at < '+end,window.to);
-  months=(await c.query(`SELECT to_char(${postedDay},'YYYY-MM') period,${shipTotals} ${outboundFrom}${o.where()} GROUP BY 1 ORDER BY 1`,o.args)).rows;
+  const monthly=outboundFilter(req.user,{...f,from:null,to:null});
+  monthly.add('m.posted_at >= '+start,window.from);monthly.add('m.posted_at < '+end,window.to);
+  months=(await c.query(`SELECT to_char(${postedDay},'YYYY-MM') period,${shipTotals} ${outboundFrom}${monthly.where()} GROUP BY 1 ORDER BY 1`,monthly.args)).rows;
  }
- return {inventory,status,month,months};
+ return {inventory,status,month,period,months};
 }
 async function preparation(c,id){
  return (await c.query(`SELECT
@@ -172,9 +175,21 @@ async function decide(c,req,action){
 async function register({app,pool,permitted,csrf}){
  const read=req=>permitted(req.query.view==='outbound'?'outbound:read':'co:read')(req);
  app.get(base,{preHandler:read},req=>C.readTransaction(pool,async c=>{
-  const result=await list(c,req,req.query),totals=await summary(c,req);
+  const result=await list(c,req,req.query),scope=Object.fromEntries(filters.filter(k=>req.query[k]).map(k=>[k,req.query[k]]));
+  const dated=result.view==='outbound'&&(req.query.from||req.query.to),totals=await summary(c,req,scope);
+  if(dated){
+   const selected=outboundFilter(req.user,{...scope,from:req.query.from,to:req.query.to});
+   totals.period=(await c.query('SELECT '+shipTotals+' '+outboundFrom+selected.where(),selected.args)).rows[0];
+  }
+  if(result.view==='inventory'){
+   const report=await require('./cobalt-reports.cjs').build(c,req,scope);
+   const analysis=await require('./overview-analysis.cjs').cobalt(c,req,report);
+   const {preparing,prepared,loading,loaded}=analysis.stock_cards;
+   totals.stock_cards={preparing,prepared,loading,loaded};
+   totals.execution=analysis.execution?.map(({planned_physical_mt,invoiced_net_kg})=>({planned_physical_mt,invoiced_net_kg}));
+  }
   if(!req.user.permissions.includes('co:read'))delete totals.inventory;
-  if(!req.user.permissions.includes('outbound:read')){delete totals.status;delete totals.month;}
+  if(!req.user.permissions.includes('outbound:read')){delete totals.status;delete totals.month;delete totals.period;}
   return {...result,summary:totals};
  }));
  app.get(base+'/export',{preHandler:[read,permitted('inventory:export')]},async(req,reply)=>{

@@ -9,6 +9,7 @@
       "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
       "^\\/customers\\/master-data$",
       "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
+      "^\\/export-licenses$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
@@ -78,6 +79,7 @@
       "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
       "^\\/customers\\/master-data$",
       "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
+      "^\\/export-licenses$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
@@ -390,6 +392,15 @@
       ],
       "state": "standard",
       "template": "/sales-plans"
+    },
+    {
+      "key": "export-licenses",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/export-licenses"
     },
     {
       "key": "sales-new",
