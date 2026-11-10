@@ -99,8 +99,9 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await licenseAction('ISSUE',{license_no:'RC3-LICENSE',valid_from:today,valid_until:'2099-12-30'});
  const expired=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:'2020-01-01',proforma_no:'SYNTH-EXPIRED-'+seq,quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});
  const expiredPath='/export-permits/'+expired.id;
- const expiredIssue=await api(expiredPath+'/actions','sales_operator',{action:'ISSUE',payload:{license_no:'SYNTH-EXPIRED-'+seq,valid_from:'2020-01-01',valid_until:'2020-12-31'},version:expired.version,reason:'Synthetic expired licence'});
- assert.equal((await api(expiredPath+'/actions/'+expiredIssue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic historical verification'})).status,'EXPIRED');
+ const expiredIssue=await api(expiredPath+'/actions','sales_manager',{action:'ISSUE',payload:{license_no:'SYNTH-EXPIRED-'+seq,valid_from:'2020-01-01',valid_until:'2020-12-31'},version:expired.version,reason:'Synthetic expired licence'});
+ await api(expiredPath+'/actions/'+expiredIssue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic self review attempt'},409);
+ assert.equal((await api(expiredPath+'/actions/'+expiredIssue.id,'commerce_manager',{decision:'APPROVED',note:'Synthetic historical verification'})).status,'EXPIRED');
  assert((await api('/export-permits?status=EXPIRED')).items.some(x=>x.id===expired.id));
  await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:permit.proforma_no.toLowerCase(),quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'},409);
  await api(permitPath,'production_operator',undefined,403);
@@ -116,7 +117,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api(permitPath+'/actions','sales_operator',{action:'CLOSE',payload:{closed_on:today,reference:'Synthetic closure with active reservation'},version:quota.version,reason:'Synthetic guard check'},409);
  await api('/loading-plan-documents/'+firstDocument.id+'/cancel','admin',{version:firstDocument.version,reason:'Synthetic release'});
  quota=await api(permitPath);assert.equal(Number(quota.reserved),0);assert.equal(Number(quota.available),7500);
- const race=await Promise.all([request('/loading-plans/unified','admin',planBody),request('/loading-plans/unified','admin',planBody)]);
+ const race=await Promise.all([request('/loading-plans/unified','admin',planBody),request('/loading-plans/unified','logistics_manager',planBody)]);
  assert.deepEqual(race.map(r=>r.statusCode).sort(),[200,409],race.map(r=>r.body).join(' '));
  const document=race.find(r=>r.statusCode===200).json();
  const editResponse=await app.inject({method:'PATCH',url:'/api/v1/loading-plans/unified/documents/'+document.id,headers:{...sessions.admin,'x-product-code':'CU_CATHODE','idempotency-key':crypto.randomUUID()},payload:{...planBody,version:document.version}});

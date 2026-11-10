@@ -1065,7 +1065,7 @@
     },
     {
       "path": "dist/export-licenses.js",
-      "sha256": "ddeb5ff498d60cbed7266bc433160fb17a348df2a96a3f77db71c21b7784b726"
+      "sha256": "f2386715e4f345b6932f4adf323668b3b3a5a1811f80bf178993cc2239bea80c"
     },
     {
       "path": "dist/field.css",
@@ -1473,7 +1473,7 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "sha256": "5b3debc9e3f2acbf8cbc8c547425db188526fa419ee09266b25c17b7f2e66fea"
+      "sha256": "e26a2ed7206934980c5ce936389e72a9a3b8295d66b478b247a7c4c8d3b99386"
     },
     {
       "path": "dist/ux-r4.css",
@@ -2309,7 +2309,7 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "sha256": "713bd8a796e8371a9b7fd98ab340d35c9d8882cf7c890897eb9cb470a7aadaa1"
+      "sha256": "a0de0f6a3cc3896c7f91145431bc66548e0811c2657f47fedc3dc84b97ab07d2"
     },
     {
       "path": "tests/release/core-flows.cjs",

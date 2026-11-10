@@ -206,3 +206,16 @@ html[data-release-ui="46"] #inventory #filter-form .filter-grid .input-icon{min-
 @media(max-width:700px){.export-license-picker{grid-template-columns:minmax(0,1fr)}}
 
 html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-brand);text-decoration:underline;text-underline-offset:.15em}
+
+.export-license-page #export-license-filter{
+  display:grid;
+  grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto auto;
+  align-items:end;
+  gap:var(--uix-gap-sm);
+}
+.export-license-page #export-license-filter label{min-width:0}
+@media(max-width:700px){
+  .export-license-page #export-license-filter{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .export-license-page #export-license-filter label{grid-column:1/-1}
+  .export-license-page #export-license-filter :is(button,a){justify-content:center;text-align:center}
+}
