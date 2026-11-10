@@ -4,6 +4,11 @@
   "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
   "entries": [
     {
+      "entity": "export_licenses",
+      "policy": "ADMIN_ONLY",
+      "basis": "Scoped operational history is available in license detail. Global audit uses the conservative administrator-only fallback."
+    },
+    {
       "entity": "allocations",
       "policy": "AUTHORITATIVE",
       "basis": "plan_id -> sales_plans + planned location warehouse"

@@ -32,6 +32,10 @@ async function examples(client,fixture){
   coPlan:"SELECT id value FROM co_sales_plans ORDER BY (status='OPEN') DESC,created_at DESC LIMIT 1",
   coArrival:'SELECT v.id value FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id WHERE a.id IS NULL AND v.cancelled_at IS NULL LIMIT 1',
   coArrivalDoc:'SELECT id value FROM co_vehicle_arrivals ORDER BY registered_at DESC LIMIT 1',
+  cuPermit:"SELECT l.id value FROM export_licenses l WHERE l.product_code='CU_CATHODE' AND EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.license_id=l.id) ORDER BY l.created_at DESC LIMIT 1",
+  cuPermitDraft:"SELECT id value FROM export_licenses WHERE product_code='CU_CATHODE' AND state='APPLYING' ORDER BY created_at DESC LIMIT 1",
+  coPermit:"SELECT l.id value FROM export_licenses l WHERE l.product_code='CO_HYDROXIDE' AND EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.license_id=l.id) ORDER BY l.created_at DESC LIMIT 1",
+  coPermitDraft:"SELECT id value FROM export_licenses WHERE product_code='CO_HYDROXIDE' AND state='APPLYING' ORDER BY created_at DESC LIMIT 1",
   coPlanDoc:'SELECT id value FROM co_loading_plans ORDER BY created_at DESC LIMIT 1',
   coDraftPlan:"SELECT id value FROM co_loading_plans WHERE status='DRAFT' ORDER BY created_at DESC LIMIT 1",
   coLoad:'SELECT id value FROM co_loading_orders ORDER BY created_at DESC LIMIT 1',
@@ -90,7 +94,13 @@ function pages(ids){
  add('cu-contract-detail','/customers/contracts/:id',[CU],{example:'cuContract'});
  add('cu-contract-edit','/customers/contracts/:id/edit',[CU],{example:'cuContract'});
  add('sales','/sales-plans',BOTH,{screenshot:true,roles:['sales_operator','sales_manager','commerce_manager','customer_admin']});
- add('export-licenses','/export-licenses',BOTH,{screenshot:true});
+ add('export-licenses','/export-licenses',BOTH,{screenshot:true,roles:['sales_operator','commerce_manager','logistics_field_operator','production_operator']});
+ add('legacy-export-licenses','/export-licenses',BOTH,{query:'?view=legacy',state:'historical'});
+ add('export-license-new','/export-licenses/new',BOTH,{screenshot:true});
+ add('cu-export-license','/export-licenses/:id',[CU],{example:'cuPermit',screenshot:true});
+ add('co-export-license','/export-licenses/:id',[CO],{example:'coPermit',screenshot:true});
+ add('cu-export-license-edit','/export-licenses/:id/edit',[CU],{example:'cuPermitDraft',state:'applying'});
+ add('co-export-license-edit','/export-licenses/:id/edit',[CO],{example:'coPermitDraft',state:'applying'});
  add('sales-new','/sales-plans/new',BOTH,{roles:['sales_operator']});
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});

@@ -188,3 +188,21 @@ html[data-release-ui="46"] #inventory #filter-form .filter-grid .input-icon{min-
 @media(max-width:480px){
  html[data-release-ui="46"] #inventory #filter-form .filter-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Export licenses use the same page shell and input tokens as sales plans. */
+.export-license-page{display:grid;gap:var(--uix-gap);min-width:0}
+.export-license-page .business-toolbar,.export-license-page .filters{flex-wrap:wrap}
+.export-license-page .export-license-section{padding:var(--uix-gap)}
+.export-license-section h2{font-size:var(--uix-section);margin:0 0 var(--uix-gap)}
+.export-license-page :is(.business-table td,.business-table th){white-space:normal;overflow-wrap:anywhere}
+.export-license-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:var(--uix-gap);margin:0}
+.export-license-facts :is(dt,dd){margin:0;overflow-wrap:anywhere}
+.export-license-facts dt,.export-license-page small{display:block;color:var(--uix-muted)}
+.export-license-history article{border-top:1px solid var(--uix-border);padding:var(--uix-gap) 0}
+.export-license-history form{display:flex;flex-wrap:wrap;align-items:end;gap:var(--uix-gap)}
+.export-license-picker{display:grid;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--uix-gap)}
+.export-license-picker p{grid-column:1/-1;margin:0;color:var(--uix-muted)}
+.export-license-picker :is(select,input){min-width:0;width:100%}
+@media(max-width:700px){.export-license-picker{grid-template-columns:minmax(0,1fr)}}
+
+html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-brand);text-decoration:underline;text-underline-offset:.15em}

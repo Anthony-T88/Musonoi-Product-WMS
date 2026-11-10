@@ -9,7 +9,7 @@
       "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
       "^\\/customers\\/master-data$",
       "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
-      "^\\/export-licenses$",
+      "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
@@ -79,7 +79,7 @@
       "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
       "^\\/customers\\/master-data$",
       "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
-      "^\\/export-licenses$",
+      "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
@@ -401,6 +401,56 @@
       ],
       "state": "standard",
       "template": "/export-licenses"
+    },
+    {
+      "key": "legacy-export-licenses",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "historical",
+      "template": "/export-licenses"
+    },
+    {
+      "key": "export-license-new",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/export-licenses/new"
+    },
+    {
+      "key": "cu-export-license",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/export-licenses/:id"
+    },
+    {
+      "key": "co-export-license",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/export-licenses/:id"
+    },
+    {
+      "key": "cu-export-license-edit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "applying",
+      "template": "/export-licenses/:id/edit"
+    },
+    {
+      "key": "co-export-license-edit",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "applying",
+      "template": "/export-licenses/:id/edit"
     },
     {
       "key": "sales-new",

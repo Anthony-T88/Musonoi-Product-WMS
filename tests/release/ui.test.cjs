@@ -9,9 +9,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  const go=async(p,url,product='CO_HYDROXIDE')=>{await p.goto(origin+'/overview');await ready(p);await p.evaluate(code=>localStorage.setItem(ProductContext.key,code),product);await p.goto(origin+url);await ready(p);};
  const guest=await browser.newPage({viewport:{width:390,height:860}});guest.on('pageerror',e=>errors.push(e.message));await guest.goto(origin);
  await guest.locator('.login46-brand .login46-title-version').waitFor();
- assert.equal(await guest.locator('.login46-title-version').innerText(),'V4.7.1');
+ assert.equal(await guest.locator('.login46-title-version').innerText(),'V4.7.2');
  assert(await guest.locator('.login46-brand h1').evaluate(el=>parseFloat(getComputedStyle(el.querySelector('.login46-title-version')).fontSize)<parseFloat(getComputedStyle(el).fontSize)));
- await guest.locator('[data-login-language="en"]').click();assert.match(await guest.locator('.login46-brand h1').innerText(),/Product Warehouse Management System\s*V4\.7\.1/);
+ await guest.locator('[data-login-language="en"]').click();assert.match(await guest.locator('.login46-brand h1').innerText(),/Product Warehouse Management System\s*V4\.7\.2/);
  await guest.locator('.login46-registration').click();await guest.locator('#registration-modal input[name=username]').waitFor();
  for(const name of ['contact_phone','contact_email'])assert(await guest.locator('#registration-modal input[name='+name+']').isVisible());
  await guest.close();
@@ -28,9 +28,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await ready(page);assert.equal(await page.locator('[data-primary-route=cobalt-metal]').count(),0);
  await go(page,'/inventory/'+f.preparation);
  await go(viewer.page,'/inventory/'+f.preparation);assert.equal(await viewer.page.locator('[data-co2-select],#co2-place').count(),0);
- await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===66);
- assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),66);
- assert.equal(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').count(),25);
+ await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===69);
+ assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),69);
+ assert.equal(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').count(),26);
  assert(await page.locator('.s46-r2-matrix thead').isVisible());
  const cobalt=page.locator('.s46-permission-items').filter({has:page.locator('input[value="co:create"]')});
  assert.equal(await cobalt.count(),1);
@@ -47,7 +47,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  if(await planGroup.count())await planGroup.locator('summary').click();
  const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
- assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.1-ui1');
+ assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.2-ui1');
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
  await page.waitForFunction(()=>window.Reports463?.current?.view==='shipping'&&document.querySelector('.r463-stats'));
@@ -183,6 +183,21 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await go(page,'/export-licenses',product);
   await page.locator('#export-license-table a').first().waitFor();
   assert(await page.locator('.sidebar [data-primary-route=sales-plans] + [data-primary-route=export-licenses]').isVisible());
+  await page.locator('a[href="/export-licenses/new"]').click();
+  const form=page.locator('#export-license-application');
+  await form.locator('[name=contract_id]').selectOption({index:1});
+  const reference='SYNTH-UI-'+product+'-'+Date.now();
+  await form.locator('[name=proforma_no]').fill(reference);
+  await form.locator('[name=quantity]').fill('12.345678');
+  await form.locator('button[type=submit],button.primary').click();
+  await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
+  assert.match(await page.locator('.export-license-facts').first().innerText(),new RegExp(reference));
+  await page.locator('a[href$="/edit"]').click();
+  await page.locator('#export-license-application [name=note]').fill('Synthetic browser edit');
+  await page.locator('#export-license-application button.primary').click();
+  await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
+  assert.match(await page.locator('.export-license-page').innerText(),/Synthetic browser edit/);
+  await page.screenshot({path:path.join(E.runtime,'export-license-'+product+'.png'),fullPage:true});
  }
  const invoicePlan=await page.evaluate(async()=>{
   const data=await API.request('/cobalt/sales-workflow/plans');
@@ -275,6 +290,6 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('#co469-location').isVisible());
  const limited=await open('limited_account_manager');await limited.page.goto(origin+'/workbench/accounts');await ready(limited.page);await limited.page.locator('#account-filter').waitFor();assert.equal(await limited.page.locator('#account-registration-requests').count(),0);assert.equal(await limited.page.locator('#account-create').count(),1);const options=await limited.context.request.get(origin+'/api/v1/users/options');assert(options.ok());assert(!(await options.json()).roles.some(r=>r.code==='admin'));
  const roleManager=await open('limited_role_manager');await roleManager.page.goto(origin+'/workbench/permissions');await ready(roleManager.page);await roleManager.page.locator('[data-role]').first().waitFor();assert.equal(await roleManager.page.locator('[data-role=admin]').count(),0);const own=await roleManager.page.evaluate(()=>CurrentUser.role_code);assert.equal(await roleManager.page.locator('[data-role="'+own+'"]').count(),0);await roleManager.page.locator('[data-role]').first().click();await roleManager.page.locator('.s46-r2-matrix').waitFor();const prohibited=roleManager.page.locator('.s46-r2-matrix input[value="users:manage"]');assert(await prohibited.count()===0||await prohibited.isDisabled());await limited.page.screenshot({path:path.join(E.runtime,'limited-accounts.png'),fullPage:true});await roleManager.page.screenshot({path:path.join(E.runtime,'limited-roles.png'),fullPage:true});
- assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:66,permissionModules:25,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
+ assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:69,permissionModules:26,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
  }finally{await browser?.close();await app.close();}
 });

@@ -9,7 +9,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(url,role,body,expected=200)=>{const r=await request(url,role,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),salt=crypto.randomBytes(4).toString('hex'),customer=f.customers.CO_HYDROXIDE;
- let sales,prep,plan,matched,review,preview;
+ let sales,prep,plan,matched,review,preview,licensePath;
  await check('two independent sales approvals and a dispatch arrival feed the loading plan',async()=>{
   sales=await api('/cobalt/sales/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:customer.contract,target_weight:'100',shipment_month:today.slice(0,7),planned_vehicle_count:2,status:'OPEN',remark:'Synthetic rc2 flow'});
   assert.equal(sales.warehouse_id,f.warehouse);
@@ -35,7 +35,14 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  await check('matching requires current versions and a complete independent preparation',async()=>{
   const options=await api('/cobalt/loading/options?sales_plan_id='+sales.id),a=options.arrivals.find(a=>a.id===f.rc2arrival.id);assert(a);
   preview=await api('/cobalt/loading/preview?sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);
-  plan=await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,destination:'Synthetic destination',invoice_no:'RC2-INV-'+salt,export_license_no:'RC2-LICENSE',remark:'Synthetic rc2 matching',...preview.versions});
+  const permit=await api('/cobalt/export-permits','sales_operator',{contract_id:customer.contract,applied_on:today,proforma_no:'RMM-CO-'+salt,quantity:'30',unit_basis:'COBALT_MT',unit:'Co MT',currency:'USD'});
+  const path=licensePath='/cobalt/export-permits/'+permit.id,issue=await api(path+'/actions','sales_operator',{action:'ISSUE',payload:{license_no:'RC2-LICENSE',valid_from:today,valid_until:'2099-12-31'},version:permit.version,reason:'Synthetic cobalt licence'});
+  await api(path+'/actions/'+issue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic independent cobalt review'});
+  plan=await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,destination:'Synthetic destination',license_id:permit.id,remark:'Synthetic rc2 matching',...preview.versions});
+  assert.equal(plan.invoice_no,permit.proforma_no+'-01');
+  assert.equal(plan.packing_list_no,plan.invoice_no+'-PL');
+  assert.equal(Number((await api(path)).reserved),0.23296428);
+  assert.equal(Number((await api(path)).used),0);
   const registered=await api('/cobalt/sales/arrivals?sales_plan_id='+sales.id+'&arrival_state=PLANNED');
   assert.equal(registered.items[0].loading_plan_id,plan.id);assert.equal(registered.state_counts.PLANNED,1);
   await api('/cobalt/sales/arrivals/'+a.dispatch_vehicle_id,'logistics_field_operator',{
@@ -119,6 +126,18 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const decisions=await Promise.all([request(base+'/confirm','production_manager',decision),request(base+'/confirm','production_manager',decision)]);
   assert.deepEqual(decisions.map(r=>r.statusCode).sort(),[200,409]);
   const complete=await api(base);assert.equal(complete.shipment_status,'COMPLETED');assert.equal(complete.confirmed_mt,'0.35641');
+  const quota=await api(licensePath);
+  assert.equal(Number(quota.pending),0.35641);
+  assert.equal(Number(quota.used),0);
+  const allocation=quota.allocations.find(x=>x.plan_id===plan.id);
+  const reconcile=await api(licensePath+'/actions','sales_operator',{action:'SETTLE',version:quota.version,reason:'Synthetic verified customs declaration',payload:{allocation_id:allocation.id,quantity:'0.34019',reference:'Synthetic customs reference'}});
+  const decisionBody={decision:'APPROVED',note:'Independent verification of synthetic declaration'};
+  const receipts=await Promise.all([request(licensePath+'/actions/'+reconcile.id,'sales_manager',decisionBody),request(licensePath+'/actions/'+reconcile.id,'sales_manager',decisionBody)]);
+  assert.deepEqual(receipts.map(x=>x.statusCode).sort(),[200,409]);
+  const settled=await api(licensePath);
+  assert.equal(Number(settled.used),0.34019);
+  assert.equal(Number(settled.pending),0);
+  assert.equal((await api(base)).confirmed_mt,'0.35641');
   assert.equal(complete.difference_mt,'0.12345');assert.equal(complete.history.length,2);assert(complete.confirmed_by&&complete.confirmed_at);
   assert(!(await api(pending)).items.some(r=>r.order_id===matched.order.id));
   const period=await api('/cobalt/overview?from='+today+'&to='+today);

@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -49,7 +49,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
      const projected=table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":"to_jsonb(t)";
-     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write')":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
+     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%'":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%'":table==='permissions'?"WHERE code NOT LIKE 'export-license:%'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
     return result;
@@ -107,7 +107,7 @@ test('isolated migration, initialization, business permission and concurrency ac
  });
  await check('both products: configurable admin review, revocation, two independent sales and closure stages',async()=>{
   const role=async()=>(await api('admin','CU_CATHODE','/security/roles')).items.find(r=>r.code==='admin'),original=await role();
-  assert.equal(Object.keys((await api('admin','CU_CATHODE','/security/roles')).catalog.workflow).length,67);const set=async permissions=>{const r=await role();await api('admin','CU_CATHODE','/security/roles/admin',{version:r.version,permissions},200,'PUT');await login('admin');};
+  assert.equal(Object.keys((await api('admin','CU_CATHODE','/security/roles')).catalog.workflow).length,70);const set=async permissions=>{const r=await role();await api('admin','CU_CATHODE','/security/roles/admin',{version:r.version,permissions},200,'PUT');await login('admin');};
   await api('admin','CU_CATHODE','/security/roles/admin',{version:original.version,permissions:original.permissions.filter(p=>p!=='roles:manage')},400,'PUT');
   const today=(await business.client.query("SELECT (clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date::text d")).rows[0].d;
   for(const co of [false,true]){const product=co?'CO_HYDROXIDE':'CU_CATHODE',customer=f.customers[product],base=(co?'/cobalt':'')+'/sales-workflow',save=co?'/cobalt/sales/plans':'/plans',body={project_id:f.project,customer_id:customer.id,contract_id:customer.contract,target_weight:'100',remark:'Synthetic audit plan',...(co?{warehouse_id:f.warehouse,shipment_month:today.slice(0,7),planned_vehicle_count:1,destination:'Synthetic audit destination',status:'OPEN'}:{quantity_tolerance:'5',preparation_month:today.slice(0,7)})};

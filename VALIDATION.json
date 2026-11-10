@@ -1,32 +1,10 @@
 {
-  "version": "4.7.1",
-  "baseCommit": "16097779a3f19edf5465c324f9a2833a52d14ef1",
-  "runtimeMigrationCount": 181,
-  "status": "LOCAL_TEST_ACCEPTED",
-  "historicalMigrationFilesUnchanged": 180,
+  "version": "4.7.2",
+  "baseCommit": "82e98ca01277de68654673882aff7615025396e7",
+  "runtimeMigrationCount": 182,
+  "status": "IN_DEVELOPMENT",
+  "historicalMigrationFilesUnchanged": 181,
   "mapDesigns": "review only",
-  "baseline": "4.7.0-ui16",
-  "revision": "4.7.1-ui1",
-  "uiux": {
-    "branch": "local/uiux-governance-v471",
-    "browser": "156.0.8078.81",
-    "routeScenarios": 110,
-    "registeredProductRoutePatterns": 134,
-    "unmapped": 0,
-    "checks": 620,
-    "renderedChecks": 599,
-    "failedChecks": 0,
-    "missingFixtureChecks": 12,
-    "expectedDenials": 9,
-    "screenshotsBefore": 362,
-    "screenshotsAfter": 362,
-    "businessTestsPassed": 115,
-    "newMigrations": 0
-  },
-  "uiuxRemediation": {
-    "baseline": "5bf7a47ac86d535ba56f758bb321f30fa99a2d69",
-    "scope": "Isolated synthetic TEST only",
-    "evidence": "uiux-verify.cjs archives commit-bound exit codes, browser matrices and workflow results",
-    "databaseMigrationsAdded": 0
-  }
+  "baseline": "4.7.1-ui1",
+  "revision": "4.7.2-ui1"
 }

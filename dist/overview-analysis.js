@@ -57,7 +57,7 @@ window.OverviewAnalysis={
  this.card(t('本期正式出库','Formal Outbound'),this.number(model.outbound),t('吨','MT'),model.vehicles+' '+t('辆','vehicles')))+
  this.card(t('销售计划履约','Sales Fulfilment'),model.rate==null?'—':this.number(model.rate,1),'%','')+'</div>')+
  '<div class="oa-grid oa-charts">'+['net','vehicles','receipts','stock'].map(key=>co&&data.metal&&key==='receipts'?this.panel('月度发运金属量统计','Monthly Shipment Metal','',CobaltMetal.chart(data.metal.months),'oa-chart oa-metal-chart'):this.chart(model,key)).join('')+'</div><div class="oa-grid oa-three">'+(unavailable?'':this.stock(model)+this.customers(model))+this.attention(model)+'</div>'+this.execution(model)+this.flow(model)+(this.can('report:read')?this.panel('收发存与月度预检','Stock Balance & Monthly Precheck',t('产品＋仓库＋自然月 · 只读，不锁账','Product + warehouse + calendar month · Read-only'),'<div data-oa-balance>'+t('正在读取整仓月度预检…','Loading warehouse monthly precheck…')+'</div>','oa-balance-panel'):'');
- parent.replaceChildren(...(filter?[filter]:[]),root);this.bindCharts(root,model);if(this.can('report:read'))this.loadBalance(this.current,model);
+ parent.replaceChildren(...(filter?[filter]:[]),root);this.bindCharts(root,model);window.ExportLicenses?.mountOverview(root);if(this.can('report:read'))this.loadBalance(this.current,model);
  },
  chartDefinition(model,key){
   const t=this.t,quantity=model.unit,weight=t('已知净重（吨）','Known Net (MT)'),unknown=t('重量待确认数量','Unconfirmed Weight Count');

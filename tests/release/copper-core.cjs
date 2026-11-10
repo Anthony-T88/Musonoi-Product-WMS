@@ -90,13 +90,46 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   const body=i?{...arrivalBody,trailer_one:'RC3-ALT-'+seq,driver_name:'Alternate Driver '+seq,passport_no:'Alternate Passport '+seq}:arrivalBody;
   arrivals.push(await api(url,'admin',body));
  }
- const planBody={sales_plan_id:plan.id,arrival_id:arrivals[0].id,invoice_no:'RC3-INV-'+seq,export_license_no:'RC3-LICENSE',transporter:'Synthetic Transport',destination:'Synthetic Destination',planned_load_date:today,allocation_ids:[lot.id]};
- const document=await api('/loading-plans/unified','admin',planBody);
- assert.equal(document.packing_list_no,planBody.invoice_no+'-PL');
+ const permit=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:'RMM-2609-CU-MECR-7500',quantity:'7500',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD',unit_price:'1234.567891',price_unit:'USD/MT'});
+ const permitPath='/export-permits/'+permit.id,licenseAction=async(action,payload)=>{
+  const current=await api(permitPath),pending=await api(permitPath+'/actions','sales_operator',{action,payload,version:current.version,reason:'Synthetic licence acceptance'});
+  await api(permitPath+'/actions/'+pending.id,'sales_operator',{decision:'APPROVED',note:'Unauthorized self approval'},403);
+  return api(permitPath+'/actions/'+pending.id,'sales_manager',{decision:'APPROVED',note:'Synthetic independent review'});
+ };
+ await licenseAction('ISSUE',{license_no:'RC3-LICENSE',valid_from:today,valid_until:'2099-12-30'});
+ const expired=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:'2020-01-01',proforma_no:'SYNTH-EXPIRED-'+seq,quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});
+ const expiredPath='/export-permits/'+expired.id;
+ const expiredIssue=await api(expiredPath+'/actions','sales_operator',{action:'ISSUE',payload:{license_no:'SYNTH-EXPIRED-'+seq,valid_from:'2020-01-01',valid_until:'2020-12-31'},version:expired.version,reason:'Synthetic expired licence'});
+ assert.equal((await api(expiredPath+'/actions/'+expiredIssue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic historical verification'})).status,'EXPIRED');
+ assert((await api('/export-permits?status=EXPIRED')).items.some(x=>x.id===expired.id));
+ await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:permit.proforma_no.toLowerCase(),quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'},409);
+ await api(permitPath,'production_operator',undefined,403);
+ await api('/export-permits','limited_viewer',undefined,403);
+ const file=await api(permitPath+'/attachments','sales_operator',{category:'PROFORMA',filename:'Synthetic proforma.pdf',base64:Buffer.from('%PDF-1.7\n% Synthetic attachment\n%%EOF\n').toString('base64')});
+ assert.match(file.sha256,/^[0-9a-f]{64}$/);
+ assert.equal((await request(permitPath+'/attachments/'+file.id,'sales_operator')).statusCode,200);
+ const planBody={sales_plan_id:plan.id,arrival_id:arrivals[0].id,license_id:permit.id,transporter:'Synthetic Transport',destination:'Synthetic Destination',planned_load_date:today,allocation_ids:[lot.id]};
+ await api('/loading-plans/unified','admin',{...planBody,license_id:expired.id},409);
+ const firstDocument=await api('/loading-plans/unified','admin',planBody);
+ assert.equal(firstDocument.invoice_no,permit.proforma_no+'-01');
+ let quota=await api(permitPath);assert.equal(Number(quota.reserved),2.0325);assert.equal(Number(quota.used),0);assert.equal(Number(quota.remaining),7500);
+ await api(permitPath+'/actions','sales_operator',{action:'CLOSE',payload:{closed_on:today,reference:'Synthetic closure with active reservation'},version:quota.version,reason:'Synthetic guard check'},409);
+ await api('/loading-plan-documents/'+firstDocument.id+'/cancel','admin',{version:firstDocument.version,reason:'Synthetic release'});
+ quota=await api(permitPath);assert.equal(Number(quota.reserved),0);assert.equal(Number(quota.available),7500);
+ const race=await Promise.all([request('/loading-plans/unified','admin',planBody),request('/loading-plans/unified','admin',planBody)]);
+ assert.deepEqual(race.map(r=>r.statusCode).sort(),[200,409],race.map(r=>r.body).join(' '));
+ const document=race.find(r=>r.statusCode===200).json();
+ const editResponse=await app.inject({method:'PATCH',url:'/api/v1/loading-plans/unified/documents/'+document.id,headers:{...sessions.admin,'x-product-code':'CU_CATHODE','idempotency-key':crypto.randomUUID()},payload:{...planBody,version:document.version}});
+ assert.equal(editResponse.statusCode,200,editResponse.body);
+ assert.equal(editResponse.json().id,document.id);
+ assert.equal(editResponse.json().invoice_no,document.invoice_no);
+ document.version=editResponse.json().version;
+ assert.equal(document.invoice_no,permit.proforma_no+'-02');
+ assert.equal(document.packing_list_no,document.invoice_no+'-PL');
  const byArrival=await api('/v34/lists/loading?arrival_date='+today);
  assert(byArrival.items.some(r=>r.id===document.id));
  assert(!(await api('/v34/lists/loading?arrival_date=2000-01-01')).items.some(r=>r.id===document.id));
- for(const search of [planBody.invoice_no,document.packing_list_no,suggestion.lot_no,contract.contract_no]){
+ for(const search of [document.invoice_no,document.packing_list_no,suggestion.lot_no,contract.contract_no]){
   const filtered=await api('/v34/lists/loading?'+new URLSearchParams({search,planned_load_date:today}));
   assert(filtered.items.some(r=>r.id===document.id),search);
  }
@@ -114,6 +147,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(results[0].statusCode,200,results[0].body);assert.equal(results[1].statusCode,200,results[1].body);
  assert.deepEqual(results[0].json(),results[1].json());
  assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'OUTBOUND');
+ quota=await api(permitPath);assert.equal(Number(quota.pending),2.0325);assert.equal(Number(quota.used),0);
+ await licenseAction('SETTLE',{allocation_id:quota.allocations.find(a=>a.plan_id===document.id).id,quantity:'2.0325',reference:'Synthetic customs declaration'});
+ quota=await api(permitPath);assert.equal(Number(quota.reserved),0);assert.equal(Number(quota.used),2.0325);
+ assert.equal(Number(quota.remaining),7497.9675);
+ const usedId=quota.allocations.find(a=>a.plan_id===document.id).id;
+ await licenseAction('CORRECT',{allocation_id:usedId,quantity:'2.0319',reference:'Synthetic corrected customs declaration'});
+ assert.equal(Number((await api(permitPath)).used),2.0319);
+ await licenseAction('EXTEND',{extension_on:today,extended_until:'2099-12-31',reference:'Synthetic extension'});
+ assert.match((await api(permitPath)).valid_until,/2099-12-30/);
+ const closed=await licenseAction('CLOSE',{closed_on:today,reference:'Synthetic closure'});
+ assert.equal(closed.status,'CLOSED');
  const shipping=await api('/shipping/'+load.id),generate={expected_revision:0,transport_version:shipping.transport.version,source_signature:shipping.source_signature,unit_price_usd:'1234.56'};
  await api('/shipping/'+load.id+'/packing-list','admin',{...generate,unit_price_usd:'-1'},400);
  await api('/shipping/'+load.id+'/packing-list','admin',generate);

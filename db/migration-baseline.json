@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "release": "4.7.1",
+  "release": "4.7.2",
   "migrations": [
     {
       "version": "001_foundation.sql",
@@ -725,6 +725,10 @@
     {
       "version": "181_v471_sales_invoice_confirmation.sql",
       "checksum": "0d8a18af0e5d7c1279e7af263f1d6286795f9e0bd27838571c3090f54106d583"
+    },
+    {
+      "version": "182_v472_export_licenses.sql",
+      "checksum": "00cf27e5fb87e180b3cfec690120e356236fbc134b847ca80dd8772d308a3862"
     }
   ]
 }

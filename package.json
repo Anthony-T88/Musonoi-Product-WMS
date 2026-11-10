@@ -1,6 +1,6 @@
 {
   "name": "musonoi-product-wms",
-  "version": "4.7.1",
+  "version": "4.7.2",
   "private": true,
   "scripts": {
     "start": "node scripts/start-current.cjs",
