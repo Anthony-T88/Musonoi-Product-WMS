@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main, fix/v4.6.9-r3-rc1-security]
   push:
-    branches: [local/uiux-governance-v471, local/v4.7.2]
+    branches: [local/uiux-governance-v471, local/v4.7.2, release/v4.7.2]
   workflow_dispatch:
 permissions:
   contents: read

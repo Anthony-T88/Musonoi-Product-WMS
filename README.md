@@ -4,6 +4,8 @@ V4.7.2 从 V4.7.1-ui1（迁移 181）增量开发，新增独立铜钴出口许�
 
 许可证核销、销售开票确认、ARECOMS 确认和正式出库分别保留独立依据。迁移给指定岗位新增权限，并沿用现有授权变更后的重新登录规则。
 
+V4.7.2 发布分支保留当前源码、配置样例及文档。历史加密备份、配套工具与旧测试日志保存在原历史提交。[历史归档](https://github.com/Anthony-T88/Musonoi-Product-WMS/tree/16097779a3f19edf5465c324f9a2833a52d14ef1)
+
 下文保留既有可靠性和运行环境说明。
 [第二批报告](docs/reliability-r3-rc2/REPORT.txt) · [实体映射](docs/reliability-r3-rc2/audit-entity-matrix.json) · [回滚说明](docs/reliability-r3-rc2/ROLLBACK.txt) · [第一批报告](docs/security-r3-rc1/REPORT.txt)
 

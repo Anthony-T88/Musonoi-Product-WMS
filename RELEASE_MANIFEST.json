@@ -23,13 +23,13 @@
     },
     {
       "path": ".github/workflows/rc2-reliability.yml",
-      "bytes": 4815,
-      "sha256": "df9a56a985bd235e3ed0037cccfd689b96546084281164c0a8ca7c5dea9b78a8"
+      "bytes": 4831,
+      "sha256": "adfbc604e6c1b01ebf33468f4e80340a5bdf05eee6b4e0b91a6f6133db9b94cf"
     },
     {
       "path": ".gitignore",
-      "bytes": 263,
-      "sha256": "46eee76154bac34619a0fcc823bdf5ece010e8ba5a67d40fb776cf0d0495c0f8"
+      "bytes": 173,
+      "sha256": "2628874fe83c0470535b0c8cb185e250cf50e24bbfe350557075b1b79ef2ab59"
     },
     {
       "path": "AGENTS.md",
@@ -53,13 +53,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 1833,
-      "sha256": "6338edc933b7007ee097b837963a0bc53d95036688d7c8cf3799ba6e8832b3fc"
+      "bytes": 2089,
+      "sha256": "c668383243704480725a3092e632f52071e16a705f5d1101a28989d192e6dd80"
     },
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 88574,
-      "sha256": "ed5b9489385ed61c6efbe4f617edf93819940c1260ecdd6b1e5d2326ffb9b2e4"
+      "sha256": "263cf7a0ef72625181cea2794574ff8cf4af873282f01c5585552ae6c5280056"
     },
     {
       "path": "VALIDATION.json",
@@ -1060,11 +1060,6 @@
       "path": "db/stock-map-layout.json",
       "bytes": 23275,
       "sha256": "d55c5de869870da1347335b0d9839d8d7831a1c01a97be403bc80d774138170f"
-    },
-    {
-      "path": "decrypt-database.cjs",
-      "bytes": 650,
-      "sha256": "3841913df71d95be5b38bcbfc8dc1e3768c71e4fcd5560356362dd640357d08a"
     },
     {
       "path": "deploy/Dockerfile",
@@ -2187,16 +2182,6 @@
       "sha256": "dcde6800fe865682acba694f5867afb577179ddabbda85b5cb293a3eb8366492"
     },
     {
-      "path": "docs/reliability-r3-rc2/local-acceptance.log",
-      "bytes": 9614,
-      "sha256": "639954c4f3a04bd8176e4ca56fedfa4df7eeedec573ce1256fc9299cdae481a2"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/migration-checkpoint.log",
-      "bytes": 3300,
-      "sha256": "19cbbc3ae5f9070dd3d39e4660c6da32b868094f275a5a9005faa26e79e00796"
-    },
-    {
       "path": "docs/reliability-r3-rc2/rc2-copper-results.json",
       "bytes": 310,
       "sha256": "8c4f8849a403cf77b12656498f7d3c560c7532062ea257be5424f8db202473c4"
@@ -2225,26 +2210,6 @@
       "path": "docs/reliability-r3-rc2/rc2-stocktake-results.json",
       "bytes": 175,
       "sha256": "20b34387fd7eed8f623320c22ab1197c18cefdeaa306b59864d79d4d6445018d"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/red-api.log",
-      "bytes": 5034,
-      "sha256": "7d1da36f5cc731f08c8ef7066221d9407c7010d48b45418fbe103ee93c7f81e1"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/red-db-disconnect.log",
-      "bytes": 9882,
-      "sha256": "6b2d28fe7000aa6dadc451987d6964f72f09074f1c248d9696ca9d10c1c32e4f"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/red-lock-order.log",
-      "bytes": 5041,
-      "sha256": "c677bf3296181cceb5bb12badc3f57938f658aa1f27bd53e6532ec2024e32224"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/red-unit.log",
-      "bytes": 3599,
-      "sha256": "ffb8e8bd1408bfe740530208f776688e8bc11b78e8819ef1882ef4d5c30cf54e"
     },
     {
       "path": "docs/reliability-r3-rc2/runner-integration.json",
@@ -2277,29 +2242,9 @@
       "sha256": "765ad3fce589acaaa3be4c203a8286618e7c1b0b01dad2a1aa762d86a9bd4c19"
     },
     {
-      "path": "docs/reliability-r3-rc2/shipment-green.log",
-      "bytes": 936,
-      "sha256": "0e6646dec3a17e9f917df77c0ce3524692cd0244441eca92619e20ff7b72f42b"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/shipment-red.log",
-      "bytes": 8169,
-      "sha256": "8915feb175035ecb88d5adbc42f4efbc849dea76597c9d5aaaed07bf53f5dd1d"
-    },
-    {
       "path": "docs/reliability-r3-rc2/ui-results.json",
       "bytes": 1428,
       "sha256": "7e0cad934c28103cf63147d83ade1bf6e8ecf580fa8168553dc1516e8d34ff13"
-    },
-    {
-      "path": "docs/security-r3-rc1/ACCEPTANCE.log",
-      "bytes": 5984,
-      "sha256": "f4bee953e4e5b6f64e394d1ecf4f3197669c18212d210f3567072b53f1fc8035"
-    },
-    {
-      "path": "docs/security-r3-rc1/CATALOG_RED.log",
-      "bytes": 4221,
-      "sha256": "61f8f2193d30d20b3a50bb650e5b4b84078a2015c2c1ac658be72908164c77ca"
     },
     {
       "path": "docs/security-r3-rc1/CHANGES.json",
@@ -2312,19 +2257,9 @@
       "sha256": "1048cd5aea7a722b59738947f9ae8f76884b37605c1673b40f27a0d04b4aeb92"
     },
     {
-      "path": "docs/security-r3-rc1/RED_BASELINE.log",
-      "bytes": 8127,
-      "sha256": "ea98feaff0101f1d4ac9b8a2e52765d7062921ce3c6519d71ccacc04b4be3c04"
-    },
-    {
       "path": "docs/security-r3-rc1/REPORT.txt",
       "bytes": 10565,
       "sha256": "cf610b6ce0b37cf327f54ece265e6eda0f79944807453dc6ddc83ddb7cf8d615"
-    },
-    {
-      "path": "docs/security-r3-rc1/ROLE_BYPASS_RED.log",
-      "bytes": 4652,
-      "sha256": "a686c7ed36718a972d073a7a915bbe38ab5a908f05abec87b8e6d4d529912b5f"
     },
     {
       "path": "docs/security-r3-rc1/ROLLBACK.txt",
@@ -2345,11 +2280,6 @@
       "path": "docs/security-r3-rc1/TEST_RESULTS.json",
       "bytes": 2960,
       "sha256": "c06ecd308613f979f0b413763fad069919091e169da4ebe8f8083fdd4980cf9d"
-    },
-    {
-      "path": "docs/security-r3-rc1/UI.log",
-      "bytes": 236,
-      "sha256": "ddb140c5eecf48400fae6af85a7f1fe2b95278b52b51ee59d7dbaf56f4deb8ce"
     },
     {
       "path": "docs/uiux/DESIGN.md",
