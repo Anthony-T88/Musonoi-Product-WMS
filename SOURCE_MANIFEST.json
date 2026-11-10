@@ -1941,7 +1941,7 @@
     },
     {
       "path": "server/inventory.cjs",
-      "sha256": "dec889b5556cc8c3a1920fb4a960972ec43ec8f008b3a335ec49fe154a7284ea"
+      "sha256": "81a51650171465cdf79475aa4d9e9fb892906a8a8fe9a53faac1a37f3065d109"
     },
     {
       "path": "server/labels.cjs",
