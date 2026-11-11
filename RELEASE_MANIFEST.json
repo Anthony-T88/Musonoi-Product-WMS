@@ -23,8 +23,8 @@
     },
     {
       "path": ".github/workflows/rc2-reliability.yml",
-      "bytes": 4831,
-      "sha256": "adfbc604e6c1b01ebf33468f4e80340a5bdf05eee6b4e0b91a6f6133db9b94cf"
+      "bytes": 3246,
+      "sha256": "ce4671853409a87b85bc4169d0831c70596f6f04d28f848088bd4a5ab3301833"
     },
     {
       "path": ".gitignore",

@@ -1,9 +1,9 @@
 name: Isolated WMS release and Docker acceptance
 on:
   pull_request:
-    branches: [main, fix/v4.6.9-r3-rc1-security]
+    branches: [release/v4.7.2]
   push:
-    branches: [local/uiux-governance-v471, local/v4.7.2, release/v4.7.2]
+    branches: [release/v4.7.2]
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,30 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Verify rc3 integration head and simulated merge
-        if: github.event_name == 'pull_request' && github.head_ref == 'release/v4.6.9-r3-rc3-integration'
-        run: |
-          node <<'NODE'
-          const assert = require('node:assert/strict');
-          const fs = require('node:fs');
-          const { execFileSync } = require('node:child_process');
-          const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
-          const { pull_request: pr } = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH));
-          const base = pr.base.sha;
-          const head = pr.head.sha;
-          const merge = git('rev-parse', 'HEAD');
-          assert.equal(pr.base.ref, 'main');
-          assert.equal(merge, process.env.GITHUB_SHA);
-          assert.deepEqual(git('show', '-s', '--format=%P', merge).split(' '), [base, head]);
-          git('merge-base', '--is-ancestor', base, head);
-          git('merge-base', '--is-ancestor', '7e25ec3d1b4e20ec75dd9671b16b7003354f6a47', head);
-          const tree = git('rev-parse', merge + '^{tree}');
-          assert.equal(tree, git('rev-parse', head + '^{tree}'));
-          const evidence = { status: 'PASS', base, head, merge, tree, version: require('./package.json').version };
-          fs.mkdirSync('.runtime/release-tests', { recursive: true });
-          fs.writeFileSync('.runtime/release-tests/rc3-integration-results.json', JSON.stringify(evidence, null, 2));
-          console.log(JSON.stringify(evidence));
-          NODE
       - name: Install locked dependencies
         run: |
           npm install --global pnpm@11.25.0
