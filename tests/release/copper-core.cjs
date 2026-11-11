@@ -246,8 +246,13 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const reprepare=await api('/v261/lots','logistics_field_operator',{...selection,plan_id:plan.id});
  assert(reprepare.id!==lot.id);
  assert.equal((await c.query('SELECT count(*)::int n FROM reservations WHERE bundle_id=$1 AND released_at IS NULL',[other.id])).rows[0].n,1);
- steps.push('P3 supervised release, repeat approval, scoped map, cross-customer refusal and same-customer reuse');
+ const cancelled=await api('/v261/lots/'+reprepare.id+'/cancel','admin',{version:reprepare.version,note:'Synthetic cancellation after P3 reuse',current_state_verified:true,observation:'Bundle remains in P3'});
+ assert.equal(cancelled.workflow_state,'CANCELLED');
+ assert.equal((await c.query('SELECT location_id FROM bundles WHERE id=$1',[other.id])).rows[0].location_id,p3.location_id);
+ assert.equal((await api(query(plan.id),'logistics_field_operator')).total,1);
+ steps.push('P3 supervised release, repeat approval, scoped map, cross-customer refusal, same-customer reuse and cancellation');
  steps.push('independent approvals, idempotent final inventory deduction, outbound report and Excel agreement');
+ await api('/receipts','production_operator',{project_id:f.project,lines:[{bundle_no:'MUS-'+today.slice(0,4)+'-022-'+seq,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}]});
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id});
  }finally{await app?.close();await c.end();}
 });

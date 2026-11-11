@@ -1,4 +1,10 @@
-# Musonoi Product WMS 4.7.2
+# Musonoi Product WMS 4.7.3
+
+V4.7.3 是基于本地 V4.7.2 的独立 TEST 候选，运行时要求迁移 184。
+
+[交付报告](docs/v4.7.3/04-release-report.md) · [部署评估](docs/v4.7.3/03-deployment.md) · [页面评审方案](docs/v4.7.3/02-design-review.md)
+
+## V4.7.2 开发基线
 
 V4.7.2 从 V4.7.1-ui1（迁移 181）增量开发，新增独立铜钴出口许可证、审批、额度预占与核销。使用许可证的新装车计划由后端分配发票号，现有单据编号和 UUID 保留。运行时要求迁移 182。
 

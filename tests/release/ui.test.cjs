@@ -71,7 +71,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.goto(origin+'/workbench/accounts');await ready(page);await page.locator('#account-filter').waitFor();assert.equal(await page.locator('#account-registration-requests').count(),1);
  await page.locator('#account-create').click();for(const name of ['username','contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
- await page.evaluate(()=>I18n.set('zh-CN'));
+ await page.evaluate(()=>I18n.change('zh-CN'));
  await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
  assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','已装车待出库','在库库存金属量','销售计划履约']);
  assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),3);
@@ -133,7 +133,17 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert.equal(await page.locator('.co469-heading nav').count(),0);
  const worker=await open('logistics_field_operator');
  await go(worker.page,'/receipts/'+f.estimatedPreparation);
- const seal=worker.page.locator('[data-co469-seal]').first();await seal.fill(f.sealConflict.seal.toLowerCase());
+ const seal=worker.page.locator('[data-co469-seal]').first();
+ const sealResponse=worker.page.waitForResponse(r=>r.url().endsWith('/work/seal-check')&&r.request().method()==='POST');
+ await seal.click();
+ await seal.press('ControlOrMeta+A');
+ await seal.pressSequentially(f.sealConflict.seal.toLowerCase());
+ const sealCheck=await sealResponse.catch(async err=>{
+  const state=await worker.page.evaluate(()=>({path:location.pathname,product:ProductContext.code,active:CobaltPreparation469.active(),dirty:CobaltPreparation469.dirty.size,sequence:CobaltPreparation469.sealSequence,hasValue:!!document.querySelector('[data-co469-seal]')?.value}));
+  throw Error(err.message+' '+JSON.stringify({state,errors}));
+ });
+ assert.equal(sealCheck.status(),200,await sealCheck.text());
+ assert((await sealCheck.json()).conflicts.some(r=>r.conflicting_bag_no===f.sealConflict.bag));
  await worker.page.waitForFunction(bag=>[...document.querySelectorAll('.co-seal-feedback')].some(n=>n.textContent.includes(bag)),f.sealConflict.bag);
  await seal.fill('');
  await worker.page.waitForFunction(()=>![...document.querySelectorAll('.co-seal-feedback')].some(n=>n.textContent));
@@ -171,6 +181,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('.stock-map-layout + #v271-map-labels .v47-map-temporary h3').isVisible());
  assert.equal(await page.locator('#stock-map-svg g[data-map-cell="P3"]').count(),1);
  assert.match(await page.locator('#stock-map-svg g[data-map-cell="P5"]').getAttribute('aria-label'),/新生产捆包堆存区|New Production Bundles Stock Area/);
+ await page.evaluate(()=>I18n.set('en'));
+ await page.locator('#stock-map-svg g[data-map-cell="P5"][aria-label^="New Production Bundles Stock Area"]').waitFor();
+ await page.evaluate(()=>I18n.set('zh-CN'));
  await page.locator('#stock-map-canvas [data-map-cell="P1-01"]').press('Enter');
  await page.locator('.stock-map-layout.v27-has-detail #stock-map-detail h2').first().waitFor();
  assert(await page.locator('#stock-map-detail').evaluate(el=>{const map=document.getElementById('stock-map-canvas').getBoundingClientRect(),detail=el.getBoundingClientRect();return detail.x>=map.right&&getComputedStyle(el).position==='static';}));
@@ -212,6 +225,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.locator('#export-license-application [name=note]').fill('Synthetic browser edit');
   await page.locator('#export-license-application button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
+  await page.getByText('Synthetic browser edit',{exact:true}).waitFor();
   assert.match(await page.locator('.export-license-page').innerText(),/Synthetic browser edit/);
   await page.screenshot({path:path.join(E.runtime,'export-license-'+product+'.png'),fullPage:true});
  }

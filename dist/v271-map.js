@@ -65,3 +65,13 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
 const v271Draw=StockMap.draw.bind(StockMap);StockMap.draw=function(){v271Draw();if(MapView.stage?.isConnected){MapView.apply();MapView.labels();MapView.readable();}};
 StockMap.region=code=>MapView.region(code);
 const v271Select=StockMap.select.bind(StockMap);StockMap.select=async function(id,page=1,batchGroup=null){MapView.selectedBatch=batchGroup;await v271Select(id,page);const detail=$('stock-map-detail');if(!detail)return;detail.hidden=false;MapView.selected=id;let close=detail.querySelector('.v271-detail-close');if(!close){close=document.createElement('button');close.className='v271-detail-close button secondary';close.textContent='关闭详情';close.onclick=()=>{detail.hidden=true;document.querySelector('.stock-map-layout')?.classList.remove('v27-has-detail');};detail.prepend(close);}MapView.apply();};
+
+const setStockMapLanguage=I18n.set.bind(I18n);
+I18n.set=function(language){
+ const result=setStockMapLanguage(language);
+ if(location.pathname==='/stock-map'&&ProductContext.isCopper()&&StockMap.data&&MapView.stage?.isConnected){
+  MapView.labels();
+  MapView.positionTemporary();
+ }
+ return result;
+};

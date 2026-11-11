@@ -1,0 +1,1533 @@
+{
+  "version": "4.7.3",
+  "applicationBasis": "63e777346f109dd393e0c119afa80bf99e26138f",
+  "scope": "isolated local synthetic TEST",
+  "suites": {
+    "unit": {
+      "tests": 29,
+      "pass": 29,
+      "fail": 0,
+      "exitCode": 0
+    },
+    "integration": {
+      "tests": 23,
+      "pass": 23,
+      "fail": 0,
+      "exitCode": 0
+    },
+    "security": {
+      "tests": 35,
+      "pass": 35,
+      "fail": 0,
+      "exitCode": 0
+    },
+    "reliability": {
+      "tests": 46,
+      "pass": 46,
+      "fail": 0,
+      "exitCode": 0
+    },
+    "ui": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "exitCode": 0
+    }
+  },
+  "uiux": {
+    "quickGate": "PASS",
+    "sourceCommit": "63e777346f109dd393e0c119afa80bf99e26138f",
+    "registeredRoutes": 136,
+    "unmappedRoutes": 0,
+    "mandatoryScenarios": 94,
+    "screenshots": 78,
+    "screenshotFolder": ".runtime/v473-uiux-quick-release",
+    "scenarios": [
+      {
+        "key": "login",
+        "product": null,
+        "role": "guest",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "login_public_zh-CN_guest_1366.png",
+        "sha256": "696ea17b492024e4a3ea6aaae494d48d501b048486e8bd2d48b5912e3697b25c"
+      },
+      {
+        "key": "register-dialog",
+        "product": null,
+        "role": "guest",
+        "language": "zh-CN",
+        "state": "registration dialog",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "register-dialog_public_zh-CN_guest_390.png",
+        "sha256": "b69f46e9b522ad408f830fc414f552b9dfd916042167562aa61738c555685237"
+      },
+      {
+        "key": "login",
+        "product": null,
+        "role": "guest",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "login_public_en_guest_1366.png",
+        "sha256": "88e5134e8d22f7d2b5d833bab20571d742cb5d44682f767edfc0a44912de4c2a"
+      },
+      {
+        "key": "register-dialog",
+        "product": null,
+        "role": "guest",
+        "language": "en",
+        "state": "registration dialog",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "register-dialog_public_en_guest_390.png",
+        "sha256": "9b6894d020c23d836f4ce8711bdf8afced4ce4b44e10e2534c074bdea5c09006"
+      },
+      {
+        "key": "overview",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "3ed7a45e77d50a3bf96a89cdf8b5f3ddc7a31862312a1d5850e138c8a78af285"
+      },
+      {
+        "key": "overview",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "1c63da62f4cf55ab30eae252281828de40d3c9b14f1a8e47a8d16dc92ca15ea3"
+      },
+      {
+        "key": "inventory",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "ac1855f8cc3473baae8518c8fd2a4d9ad5ae0e97f006304d9933c5457fa39473"
+      },
+      {
+        "key": "inventory",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "2daf47d4f1c34c101db9a0c73d37fd040f0acc5983ef97db26f035e8585dd96b"
+      },
+      {
+        "key": "map",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "f9a155c3a63f25f41c5d8c8fa9847c16861f9f088f664f48148c9674185578b2"
+      },
+      {
+        "key": "map",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "1c29e0b58c5db19a4eaf3c77b5e7fcb2aaa0cbacadd4624d8b34662a8cb44f87"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "5cd0e5595da33674696f85ccef47a30c00993b2b08161f1667dae25b9c69eb7e"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "aa01aa818fce883ba401f99ac043e8459a7ecf7e492def02f9de23b3fcbc1dd5"
+      },
+      {
+        "key": "receipts",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "905a8b77891379f221b8fc27cccc9ad466b0046ef870743539a88da6516ea878"
+      },
+      {
+        "key": "receipts",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "c34c3e92a6ec9a45ac3344d922713e97158a4b1cfc308633aa906952dc3bea93"
+      },
+      {
+        "key": "cu-receipt-edit",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "draft",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "arrivals",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "arrivals_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "d176256f4fd184b56c3f9304aea6d142cded1135d9d646712edc3580d47c10de"
+      },
+      {
+        "key": "loading-search",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "59b43370873885ede6da4694134127a88e45f2e094488656b5b0a47b7f835f7e"
+      },
+      {
+        "key": "loading-search",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "8492561ccb7f016c1527ec1140934f5303731421b71a10c93adca1e84772eeb3"
+      },
+      {
+        "key": "cu-plan-group-edit",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "cu-plan-order-new",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "outbounds",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "911561dd67b53984b2c144be7e4b99ed80ea53fbf3d56ae6f31c27df00ebc0b0"
+      },
+      {
+        "key": "outbounds",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "866d1ebddcb57b0877f47911edb62c43efb7b46c322446c745a8ae1c013f34b3"
+      },
+      {
+        "key": "permissions",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CU_CATHODE_zh-CN_admin_1366.png",
+        "sha256": "bb9616f88a9feab099b74237751844df034776ecc4566a25d08b81f1be9bbd07"
+      },
+      {
+        "key": "permissions",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CU_CATHODE_zh-CN_admin_390.png",
+        "sha256": "322b34fa840a653f22ce6b4441d60b01cf6e00e39bdd5bbea2f9ae982085f549"
+      },
+      {
+        "key": "overview",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CU_CATHODE_en_admin_1366.png",
+        "sha256": "9532403cbeb7dd77c862780b2f7d150aad0ca2351266f6fc15413d1ece97266d"
+      },
+      {
+        "key": "overview",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CU_CATHODE_en_admin_390.png",
+        "sha256": "75fa7123ca9029c3d2be613237d9577a4610e904c3f2f357758d9774b78a3aaf"
+      },
+      {
+        "key": "inventory",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CU_CATHODE_en_admin_1366.png",
+        "sha256": "dd3e9ac25fa8e504c44b76bf4c9e54345b776a3665d4d358b6b31cc13ce2cde3"
+      },
+      {
+        "key": "inventory",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CU_CATHODE_en_admin_390.png",
+        "sha256": "f3f2ef10644825ec5192a20316b63654d05031ac191eb4c4552bad808cd953da"
+      },
+      {
+        "key": "map",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CU_CATHODE_en_admin_1366.png",
+        "sha256": "ad5796e132218f98aa94966599848a5afc372573aeed82efb0f98301d1d13b2c"
+      },
+      {
+        "key": "map",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CU_CATHODE_en_admin_390.png",
+        "sha256": "b5abec4573253e4b4756ae82ad3c2f79b54e11ecabf27e7ee392b4aea04780b5"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CU_CATHODE_en_admin_1366.png",
+        "sha256": "5e369d3953a9d53ab922af247c43e491dc01c678e665f04fe75ad0f3992a3fc3"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CU_CATHODE_en_admin_390.png",
+        "sha256": "874eb365b054b6f8406a9bd89357c1e6c96e8090f50809ccec4050df24002236"
+      },
+      {
+        "key": "receipts",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CU_CATHODE_en_admin_1366.png",
+        "sha256": "f6b9187a18a92ab0cab6679648ce5a28948f88a776a3a71ee12a9ef72fa026eb"
+      },
+      {
+        "key": "receipts",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CU_CATHODE_en_admin_390.png",
+        "sha256": "eb6b26d3dcdad26e9a12c3ab3c60cbaab9458429695d4d2773adfdb0dcc20bd3"
+      },
+      {
+        "key": "cu-receipt-edit",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "draft",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "arrivals",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "arrivals_CU_CATHODE_en_admin_1366.png",
+        "sha256": "e805b864431ebc71f02ce079a5c4dc9c6be7fe4b2372a4fb27decd73b256287d"
+      },
+      {
+        "key": "loading-search",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CU_CATHODE_en_admin_1366.png",
+        "sha256": "0e3b1edf860e8f91e45f40347451c709cf60485c51725443d0925e945ce38873"
+      },
+      {
+        "key": "loading-search",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CU_CATHODE_en_admin_390.png",
+        "sha256": "eaacc4da50e8513628e36b63dbd32699e31ab7e833c8e940b1747ee6ad6e9fe3"
+      },
+      {
+        "key": "cu-plan-group-edit",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "cu-plan-order-new",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "outbounds",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CU_CATHODE_en_admin_1366.png",
+        "sha256": "7603a0f0558d73202c622705c7a13676c0398a5e9f0bef69c2a15e6ff970952a"
+      },
+      {
+        "key": "outbounds",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CU_CATHODE_en_admin_390.png",
+        "sha256": "c0b6914f647fef94f142983ca85659c88ed046caa38b3119e9c269dc182d72de"
+      },
+      {
+        "key": "permissions",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CU_CATHODE_en_admin_1366.png",
+        "sha256": "2d86e72754f7e22af644c1a492dba0655e56fbc757b2570bbebcea120cba39f7"
+      },
+      {
+        "key": "permissions",
+        "product": "CU_CATHODE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CU_CATHODE_en_admin_390.png",
+        "sha256": "31a8b592db1f27737d42bbfd2a4d6548436c482616844e26f945169339462b2f"
+      },
+      {
+        "key": "overview",
+        "product": "CU_CATHODE",
+        "role": "sales_operator",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "overview",
+        "product": "CU_CATHODE",
+        "role": "sales_operator",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "overview",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "bfb768689837bdc839afdd28c4f1ed72536f87c9b959a04a3df22fbeba379539"
+      },
+      {
+        "key": "overview",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "b86b36aa343fb6b84f7835f89ba5b8c65446313cbc9d59fd9590e68abf554774"
+      },
+      {
+        "key": "inventory",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "b477dfb41f669f229368dded8f5fde45a5e357963f9f2f0a759d2d5d7caf04aa"
+      },
+      {
+        "key": "inventory",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "b2f2a797d539eaa679458c171e02918fdb55141de96a85a8517a97b8f835f4f3"
+      },
+      {
+        "key": "map",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "3081e5410a64bb99197cd7fac2ea31d8aa570d09b79170a3c59d1fc64ae39612"
+      },
+      {
+        "key": "map",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "dd341ba34dee50c38cd6e93a28519365cc45915c34002b53a616d3a5a8009d94"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "e121de80407166f5b551566c08c18de40e8a7bd1c0fce37764659a3dbad68106"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "8fdc5c128c74d209c7119c5748b365ec4d7c480155763d3897e3b6058f57bd88"
+      },
+      {
+        "key": "receipts",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "1e4d284ee22fa48dcb28cd86355f6070cb0101479a26bedd114bbc743c86d4c3"
+      },
+      {
+        "key": "receipts",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "a4c5564eeb484608ad52613fe0608a4c2d4c2f968ca27dfa44863dcef3761b2f"
+      },
+      {
+        "key": "co-prep-work",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "editable",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "co-prep-work_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "e9528f85f90bbf0764e0f6f257faeea157b60223c17936c3f2442e99c5a45feb"
+      },
+      {
+        "key": "arrivals",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "arrivals_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "88383d05cddcbef6e5aeaa5596a22a6e15b8fe51648bf17f1ad88c16dae231b9"
+      },
+      {
+        "key": "loading-search",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "af7e87cfd7511505da3ffeede8843f2ec62b6fbae32cd58075f91ab7e14b95b5"
+      },
+      {
+        "key": "loading-search",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "7efb876e06b34cb02cfe4566b90da0f8835c7b840cd058ff7b645acea21ffb26"
+      },
+      {
+        "key": "outbounds",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "a86f46a29565d642b1aea64758510535b8916f3f9360f98175fe322b76ada4b2"
+      },
+      {
+        "key": "outbounds",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "ebace884b641de8b767d2f0ab83e303be4ab398c6f36275483541d2c60d38b19"
+      },
+      {
+        "key": "metal",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "metal_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "dbafeacc8564f08b0b80178bd85454e91683ad538a1003e8d974a6356990c480"
+      },
+      {
+        "key": "metal",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "metal_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "a43209f440c94020d62362d18c01afb0b33c0faee2e62d0bf9fdcada18fa3ba3"
+      },
+      {
+        "key": "permissions",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CO_HYDROXIDE_zh-CN_admin_1366.png",
+        "sha256": "483d3729f1bbd23edd4217d717f3f381b02f20c6a13ebee347701467a08c24d2"
+      },
+      {
+        "key": "permissions",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CO_HYDROXIDE_zh-CN_admin_390.png",
+        "sha256": "51d8c91faa295a8a3b9a411fe86b37fcc1ad6b762b1efcd65cc584e69df834b0"
+      },
+      {
+        "key": "overview",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "18a8e7a75b62263eead12583907fb97baf4d12c94df35305f890e1a0789bd1b9"
+      },
+      {
+        "key": "overview",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "overview_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "d6e84cf2aea9dcd2beff5502b712bc320ab91ca177bdb2472d28a3eb2a89fcdb"
+      },
+      {
+        "key": "inventory",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "dcf39d427e07fff2aee2a1831a84b9719a5e518b272d1a1889bb8fb55972ce11"
+      },
+      {
+        "key": "inventory",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "inventory_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "ed96b2c7b5166b68bf638aa6051a1e5d1a2f7934832d50266b389a530338e718"
+      },
+      {
+        "key": "map",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "8f84bc6c696c184e5ee702587f33c652d3947dfc432ef924c042e7a76c9a6864"
+      },
+      {
+        "key": "map",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "map_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "e65379e53baf479160142faae6163456d2d5e8b60cdceb602c9df45857219be2"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "82de215f46744b3565d9e3ba402dbd94440e0c8043da1019a77284b273848e60"
+      },
+      {
+        "key": "export-licenses",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "export-licenses_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "c75d47c6806174b857e95fda660ce7e153db9ecf16242a139eb3f0d36985ac75"
+      },
+      {
+        "key": "receipts",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "035418998171791445b6340436f0936a02d54ca07ba854e341cfcf40b3c9ac77"
+      },
+      {
+        "key": "receipts",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "receipts_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "409df5248a20cd203768cb61051949c19c8f088b717d8118a4dd4ebc703141bf"
+      },
+      {
+        "key": "co-prep-work",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "editable",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "co-prep-work_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "c9b64b0c24e209148fbec1df96737b6e8758dc018af1c3e2970ba5bc6d605477"
+      },
+      {
+        "key": "arrivals",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "arrivals_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "7afa587c58116c0a5fb6492764c24405b1b11b616b73e6c0b08fcc838404db70"
+      },
+      {
+        "key": "loading-search",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "4cd6332c6ce8a3aa190011fb5c9404a5a1ce6f771e912943c943837e30186a50"
+      },
+      {
+        "key": "loading-search",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "loading-search_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "72b598f39bca760bbfb3bae4ba33aa738a670e2cfc9de76be069227446610b38"
+      },
+      {
+        "key": "outbounds",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "75c38f893f6f5b8aff4ab338b8d7b7a1a8c59959caf1de4da0656df6d0107128"
+      },
+      {
+        "key": "outbounds",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "outbounds_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "a928371c5a654775ba63ff281bede8e2c8a3efdd3f04d6f91267a3e89fc51f40"
+      },
+      {
+        "key": "metal",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "metal_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "21d19b0349d35aa9893d60321f2ee987c1dc37b9efee079f17594ff6aa7ef347"
+      },
+      {
+        "key": "metal",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "metal_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "91d7a123f573f39ad100872a8c16721ac320a2632c1806f6b898bc9b0e885d21"
+      },
+      {
+        "key": "permissions",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CO_HYDROXIDE_en_admin_1366.png",
+        "sha256": "064985345a84d249feb39e2b2a9ac0c8dd6e99718405ceb573e84811dc185b5a"
+      },
+      {
+        "key": "permissions",
+        "product": "CO_HYDROXIDE",
+        "role": "admin",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "outcome": "rendered",
+        "screenshot": "permissions_CO_HYDROXIDE_en_admin_390.png",
+        "sha256": "ca1a29847843888c3d6c159e3e7e473904bbdf67b7d4289c88d44122e829a6d4"
+      },
+      {
+        "key": "overview",
+        "product": "CO_HYDROXIDE",
+        "role": "sales_operator",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "overview",
+        "product": "CO_HYDROXIDE",
+        "role": "sales_operator",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "co-prep-work",
+        "product": "CO_HYDROXIDE",
+        "role": "site_supervisor",
+        "language": "zh-CN",
+        "state": "editable",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "co-prep-work",
+        "product": "CO_HYDROXIDE",
+        "role": "site_supervisor",
+        "language": "en",
+        "state": "editable",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "rendered"
+      },
+      {
+        "key": "permissions",
+        "product": "CU_CATHODE",
+        "role": "production_operator",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "denied"
+      },
+      {
+        "key": "permissions",
+        "product": "CU_CATHODE",
+        "role": "production_operator",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "denied"
+      },
+      {
+        "key": "permissions",
+        "product": "CO_HYDROXIDE",
+        "role": "production_operator",
+        "language": "zh-CN",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "denied"
+      },
+      {
+        "key": "permissions",
+        "product": "CO_HYDROXIDE",
+        "role": "production_operator",
+        "language": "en",
+        "state": "standard",
+        "size": {
+          "width": 1366,
+          "height": 768
+        },
+        "outcome": "denied"
+      }
+    ],
+    "finalMapLanguageSwitch": "covered by real-browser suite after quick matrix run"
+  },
+  "restoredSyntheticBackup": {
+    "bytes": 2203829,
+    "sha256": "510574b482e2dff8c9a547b64b8a00631b81dd91c55410640bb2f14f6fe6f975",
+    "added": 2,
+    "idempotentRetryAdded": 0,
+    "accounts": 17,
+    "salesPlans": 5,
+    "copperBundles": 2,
+    "cobaltInventoryRows": 7,
+    "loadingOrders": 2
+  },
+  "performance": {
+    "syntheticLicenses": 600,
+    "before": {
+      "apiMedianMs": 34.64650000000029,
+      "apiBytes": 46889,
+      "queriesPerList": 5,
+      "explain": [
+        {
+          "executionMs": 3.212,
+          "planningMs": 15.887,
+          "node": "Limit",
+          "sharedHit": 1821,
+          "cost": 7335.34,
+          "jit": null
+        },
+        {
+          "executionMs": 2.368,
+          "planningMs": 3.853,
+          "node": "Aggregate",
+          "sharedHit": 1821,
+          "cost": 7335.07,
+          "jit": null
+        },
+        {
+          "executionMs": 3.058,
+          "planningMs": 3.914,
+          "node": "Aggregate",
+          "sharedHit": 1821,
+          "cost": 7335.25,
+          "jit": null
+        },
+        {
+          "executionMs": 0.012,
+          "planningMs": 0.629,
+          "node": "Index Scan",
+          "sharedHit": 2,
+          "cost": 8.17,
+          "jit": null
+        },
+        {
+          "executionMs": 2.544,
+          "planningMs": 3.988,
+          "node": "Aggregate",
+          "sharedHit": 1821,
+          "cost": 7335.12,
+          "jit": null
+        }
+      ],
+      "browserRuns": [
+        {
+          "name": "loopback",
+          "rtt": 0,
+          "loginMs": 819.2131999999997,
+          "visibleMs": 890.3372999999992,
+          "finishedMs": 892.4170999999997,
+          "requests": 193,
+          "documents": 1,
+          "encodedBytes": 5087989,
+          "stableShell": false,
+          "routeMs": {
+            "/overview": 120.32009999999991,
+            "/sales-plans": 53.364300000000185,
+            "/stock-map": 326.3056000000006
+          }
+        },
+        {
+          "name": "simulated-180ms",
+          "rtt": 180,
+          "loginMs": 20156.6163,
+          "visibleMs": 28995.1313,
+          "finishedMs": 28999.063799999996,
+          "requests": 191,
+          "documents": 1,
+          "encodedBytes": 5080881,
+          "stableShell": false,
+          "routeMs": {
+            "/overview": 330.65490000000864,
+            "/sales-plans": 263.93299999999,
+            "/stock-map": 478.2231999999931
+          }
+        }
+      ],
+      "counts": {
+        "total": 600,
+        "filtered": 90,
+        "indicators": {
+          "active": 360,
+          "expiring": 360,
+          "pending_close": 90
+        },
+        "units": [
+          {
+            "unit_basis": "PHYSICAL_MT",
+            "unit": "MT",
+            "licenses": 360,
+            "quantity": "54044.44200",
+            "used": "0",
+            "remaining": "54044.44200",
+            "available": "54044.44200"
+          }
+        ]
+      }
+    },
+    "after": {
+      "apiMedianMs": 14.525499999988824,
+      "apiBytes": 46889,
+      "queriesPerList": 2,
+      "explain": [
+        {
+          "executionMs": 2.976,
+          "planningMs": 11.442,
+          "node": "Limit",
+          "sharedHit": 1821,
+          "cost": 7335.25,
+          "jit": null
+        },
+        {
+          "executionMs": 2.373,
+          "planningMs": 3.753,
+          "node": "Aggregate",
+          "sharedHit": 1825,
+          "cost": 7365.13,
+          "jit": null
+        }
+      ],
+      "browserRuns": [
+        {
+          "name": "loopback",
+          "rtt": 0,
+          "loginMs": 908.5941000000021,
+          "visibleMs": 322.16969999999856,
+          "finishedMs": 396.44869999999355,
+          "requests": 1,
+          "documents": 0,
+          "encodedBytes": 47451,
+          "stableShell": true,
+          "routeMs": {
+            "/overview": 101.68899999999849,
+            "/sales-plans": 50.55330000001413,
+            "/stock-map": 333.6996999999974
+          }
+        },
+        {
+          "name": "simulated-180ms",
+          "rtt": 180,
+          "loginMs": 6404.578800000003,
+          "visibleMs": 31.586100000000442,
+          "finishedMs": 849.7432000000117,
+          "requests": 3,
+          "documents": 0,
+          "encodedBytes": 54559,
+          "stableShell": true,
+          "routeMs": {
+            "/overview": 338.57570000000123,
+            "/sales-plans": 257.57369999999355,
+            "/stock-map": 497.0987000000023
+          }
+        }
+      ],
+      "counts": {
+        "total": 600,
+        "filtered": 90,
+        "indicators": {
+          "active": 360,
+          "expiring": 360,
+          "pending_close": 90
+        },
+        "units": [
+          {
+            "unit_basis": "PHYSICAL_MT",
+            "unit": "MT",
+            "licenses": 360,
+            "quantity": "54044.44200",
+            "used": "0",
+            "remaining": "54044.44200",
+            "available": "54044.44200"
+          }
+        ]
+      }
+    }
+  },
+  "publicBaselineProbe": {
+    "version": "4.7.2-ui1",
+    "environment": "test",
+    "httpStatus": 200,
+    "ttfbMs": 756.736
+  },
+  "remotePreproduction": "pending",
+  "productionApproval": "pending"
+}

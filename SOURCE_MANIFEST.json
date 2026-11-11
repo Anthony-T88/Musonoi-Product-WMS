@@ -25,7 +25,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "6338edc933b7007ee097b837963a0bc53d95036688d7c8cf3799ba6e8832b3fc"
+      "sha256": "8be43245eb559e48cda81bf4afc47eb7c76b03d955ee8ecc0779d2b46cc70a4f"
     },
     {
       "path": "db/MIGRATIONS.md",
@@ -1557,7 +1557,7 @@
     },
     {
       "path": "dist/v271-map.js",
-      "sha256": "6f71078d0384d1c5036cb4f6818772f14d422c6f58638b7970f4745f63e20619"
+      "sha256": "2a70e6d4378e7f1207af80923e60135dd7aca956aa605dc67bcd3b4b866f59de"
     },
     {
       "path": "dist/v272-ui.js",
@@ -1690,38 +1690,6 @@
     {
       "path": "dist/yard-workflow.css",
       "sha256": "3286db6b68f1bfcf9f15152c122497904f2982d0c9992e828288721ebddd123a"
-    },
-    {
-      "path": "docs/v4.7.3/01-baseline.md",
-      "sha256": "0e81945a0dde207e3612b545efd3b58fbc108df7caa56eac7d3b074b444f6581"
-    },
-    {
-      "path": "docs/v4.7.3/02-design-review.md",
-      "sha256": "8a0c7009cd2586b693a807debce3900ca7d48708171d6dcef0d2786904cb563c"
-    },
-    {
-      "path": "docs/v4.7.3/03-deployment.md",
-      "sha256": "60b8cd09bc91ca4221bfc4dd6dec916cb7b7d950f6173b930236cd4f8240b83f"
-    },
-    {
-      "path": "docs/v4.7.3/04-release-report.md",
-      "sha256": "85eafe2e0eafea8a89f15c9f2fee99135c6f2e5886fe11b8d71252f07759cae5"
-    },
-    {
-      "path": "docs/v4.7.3/previews/licenses.html",
-      "sha256": "ffa62e89d93f9cd4af1ff530104636bb90618e66db9b6d363e8d90afc904ad06"
-    },
-    {
-      "path": "docs/v4.7.3/previews/preview.css",
-      "sha256": "67aa50d03ac6af1bd4f9728c5c705d4f76838b25d5d48fb99c1e633b0e10b0a1"
-    },
-    {
-      "path": "docs/v4.7.3/previews/sales-detail.html",
-      "sha256": "ca71da552333f15ebae4c9fc2ce79bc36ae6d1bef6dfc531fe25fca80255d151"
-    },
-    {
-      "path": "docs/v4.7.3/previews/sales.html",
-      "sha256": "b2ec1d2a32bd8e4acedc4625e0aa331a60ee81e3a9da6a903d236c9800e39eef"
     },
     {
       "path": "package.json",
@@ -2361,7 +2329,7 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "sha256": "6beb58506c5609776f44f2c5f9d8e0dd6e4b38de38763b3701011ba6ee5b471f"
+      "sha256": "95b8d32e2dde3474ca56774d93cb2ebfe3b251b353923a02fa0a8fe3f596a2ce"
     },
     {
       "path": "tests/release/core-flows.cjs",
@@ -2437,7 +2405,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "070df0e885392f77a66e6e8b3e2466544adb49064af52f2bab8448a765a3a5c5"
+      "sha256": "32a32c3929843e59044c49ada6a775ca3062a13707ee7c17b7181b83aea8255c"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
@@ -2513,7 +2481,7 @@
     },
     {
       "path": "tests/release/v473-performance.cjs",
-      "sha256": "0cf26f6e9712da9fd1944fb3953d1a0d5dfbaa42005ceb3c289201e290a37879"
+      "sha256": "5b9cfd86be6d1e37591dcf719dc354fbd760e4e833e04a12719e21f6cb0b8b8a"
     },
     {
       "path": "tests/release/v473-security.cjs",

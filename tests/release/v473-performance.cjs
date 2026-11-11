@@ -77,7 +77,15 @@ async function measure(root,port,browser){
     const finishedMs=performance.now()-started;
     const stableShell=await page.evaluate(()=>window.__baselineWorkspace===document.querySelector('.workspace'));
     if(root===runRoot){assert.equal(documents,0);assert(stableShell);}
-    browserRuns.push({...scenario,loginMs,visibleMs,finishedMs,requests,documents,encodedBytes,stableShell});
+    const navigation={...scenario,loginMs,visibleMs,finishedMs,requests,documents,encodedBytes,stableShell,routeMs:{}};
+    for(const [route,content] of [['/overview','.oa-kpis'],['/sales-plans','#business-title'],['/stock-map','#stock-map-canvas']]){
+     const routeStart=performance.now();
+     await page.evaluate(next=>Router.go(next),route);
+     await page.locator(content).first().waitFor({state:'visible',timeout:30000});
+     if(route==='/sales-plans')assert.match(await page.locator('#business-title').innerText(),/销售计划|Sales Plans/);
+     navigation.routeMs[route]=performance.now()-routeStart;
+    }
+    browserRuns.push(navigation);
    }finally{await context.close();}
   }
   return {apiMedianMs:sample.sort((a,b)=>a-b)[3],apiBytes:first.rawPayload.length,queriesPerList:perRequest,explain,browserRuns,counts:{total:before.total,filtered:filtered.json().total,indicators:before.indicators,units:before.units}};
@@ -88,7 +96,7 @@ async function measure(root,port,browser){
  const baseline=path.resolve(process.argv.slice(2).find(arg=>!arg.startsWith('--'))||'../musonoi-v472-perf-final');
  const browser=process.argv.includes('--api-only')?null:await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined});
  try{
-  const before=await measure(baseline,4394,browser),after=await measure(runRoot,4395,browser);
+  const before=await measure(baseline,4396,browser),after=await measure(runRoot,4397,browser);
   assert.deepEqual(after.counts,before.counts);
   E.save(browser?'v473-performance.json':'v473-sql-performance.json',{syntheticLicenses:600,before,after});
   console.log(JSON.stringify({before,after}));
