@@ -4,7 +4,7 @@ const isAdmin=a=>a.role_code==='admin';
 const builtIn=r=>r.built_in||require('./role-catalog.cjs').builtins.includes(r.code);
 async function actor(c,req,permission){
  const sid=req.cookies?.musonoi_session;
- const a=sid&&(await c.query('SELECT u.id,u.role_code,s.csrf_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active AND u.deleted_at IS NULL',[digest(sid)])).rows[0];
+ const a=sid&&(await c.query('SELECT u.id,u.role_code,s.csrf_hash FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND s.replaced_at IS NULL AND u.active AND u.deleted_at IS NULL',[digest(sid)])).rows[0];
  if(!a||a.id!==req.user?.id)throw B.error(401,'登录已失效，请重新登录');
  a.permissions=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[a.role_code])).rows.map(r=>r.permission_code);
  if(permission&&!a.permissions.includes(permission))throw B.error(403,'管理授权已失效');

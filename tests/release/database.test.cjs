@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -48,8 +48,8 @@ test('isolated migration, initialization, business permission and concurrency ac
     const result={};
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
-     const projected=table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":"to_jsonb(t)";
-     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%'":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%'":table==='permissions'?"WHERE code NOT LIKE 'export-license:%'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
+     const projected=table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":"to_jsonb(t)";
+     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%'":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%'":table==='permissions'?"WHERE code NOT LIKE 'export-license:%'":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
     return result;
@@ -57,7 +57,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const catalog=async()=>{
     const {rows}=await c.query(`
      SELECT 'constraint' AS kind, conrelid::regclass::text AS relation, conname AS name, pg_get_constraintdef(oid) AS definition
-     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND conname<>'co_sales_plans_destination_check'
+     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check')
      UNION ALL
      SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
      FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
@@ -75,6 +75,8 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
+   const p3=(await c.query("SELECT r.slot_count,count(c.*)::int cells FROM stock_map_regions r JOIN stock_map_cells c ON c.region_code=r.code WHERE r.code='P3' GROUP BY r.slot_count")).rows[0];
+   assert.deepEqual(p3,{slot_count:1,cells:35});
    if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-02');
    assert.equal((await c.query("SELECT count(*)::int n FROM role_permission_caps WHERE role_code='sales_manager' AND permission_code='plan:write'")).rows[0].n,1);
    for(const table of ['users','registration_requests'])assert.equal((await c.query('SELECT count(*)::int n FROM '+table+' WHERE contact_phone IS NOT NULL OR contact_email IS NOT NULL')).rows[0].n,0);

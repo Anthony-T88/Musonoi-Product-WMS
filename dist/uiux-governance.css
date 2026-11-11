@@ -219,3 +219,8 @@ html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-br
   .export-license-page #export-license-filter label{grid-column:1/-1}
   .export-license-page #export-license-filter :is(button,a){justify-content:center;text-align:center}
 }
+
+.reg-public input[aria-invalid="true"]{border-color:var(--uix-danger)}.reg-public .reg-field-error{color:var(--uix-danger);font-weight:600}.reg-public .reg-field-error[hidden]{display:none}
+
+.boot-pending .workspace,.boot-pending .sidebar,.boot-pending .mobile-nav-shell{visibility:hidden}
+.export-license-loading{min-height:12rem;padding:var(--uix-gap);display:grid;align-content:start;gap:12px}.export-license-loading span{height:1.3rem;border-radius:4px;background:var(--uix-canvas)}.export-license-loading span:nth-of-type(2){width:75%}

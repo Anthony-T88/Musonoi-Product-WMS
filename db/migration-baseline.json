@@ -729,6 +729,14 @@
     {
       "version": "182_v472_export_licenses.sql",
       "checksum": "00cf27e5fb87e180b3cfec690120e356236fbc134b847ca80dd8772d308a3862"
+    },
+    {
+      "version": "183_v473_single_session.sql",
+      "checksum": "b0f7a409a621a0f8513a5564759ab4562b69b333ca84fafcc9656eb4298fb9f7"
+    },
+    {
+      "version": "184_v473_copper_storage_areas.sql",
+      "checksum": "58a34aaeec0917e6db4db41f39bde0bfce17298c5c8af0e7e3073d99f6ade621"
     }
   ]
 }

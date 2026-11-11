@@ -1,7 +1,7 @@
 'use strict';
 
 const {createHash}=require('node:crypto'),B=require('./business-common.cjs'),C=require('./cobalt.cjs');
-const CU='CU_CATHODE',CO='CO_HYDROXIDE',today="(clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date";
+const CU='CU_CATHODE',CO='CO_HYDROXIDE',today="(statement_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date";
 const read='export-license:read',write='export-license:write',approve='export-license:approve';
 const actions=['ISSUE','AMEND','EXTEND','CANCEL','CLOSE','CLOSE_EXCEPTION','SETTLE','CORRECT'];
 const categories=['LICENSE','PROFORMA','EXTENSION','CLOSURE','USAGE','OTHER'];
@@ -74,13 +74,27 @@ async function list(c,req,eligible){
   add('l.contract_id=?',p.contract_id);add('l.project_id=?',p.project_id);add('l.customer_id=?',p.customer_id);
   if(q.planned_load_date){add('l.valid_from<=?::date',B.date(q.planned_load_date));add(effective+'>=?::date',q.planned_load_date);}
  }
- const where=' WHERE '+conditions.join(' AND '),result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT 50 OFFSET '+((page-1)*50),v);
+ const where=' WHERE '+conditions.join(' AND ');
+ const result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT 50 OFFSET '+((page-1)*50),v);
  if(eligible)return {items:result.rows};
- const count=(await c.query('SELECT count(*)::int n FROM ('+projection+where+') q',v)).rows[0].n;
- const units=(await c.query("SELECT unit_basis,unit,count(*)::int licenses,sum(quantity::numeric)::text quantity,sum(used::numeric)::text used,sum(remaining::numeric)::text remaining,sum(available::numeric)::text available FROM ("+projection+" WHERE l.product_code=$2 AND "+scope()+") q WHERE status='ACTIVE' GROUP BY unit_basis,unit ORDER BY unit_basis,unit",v.slice(0,2))).rows;
- const pref=(await c.query('SELECT expiry_days FROM export_license_preferences WHERE product_code=$1',[req.productCode])).rows[0];
- const indicators=(await c.query("SELECT count(*) FILTER(WHERE status='ACTIVE')::int active,count(*) FILTER(WHERE status='ACTIVE' AND effective_until<="+today+"+$3::int)::int expiring,count(*) FILTER(WHERE status='EXPIRED' AND open_allocations=0)::int pending_close FROM ("+projection+" WHERE l.product_code=$2 AND "+scope()+") q",[...v.slice(0,2),pref.expiry_days])).rows[0];
- return {items:result.rows,total:count,page,page_size:50,units,indicators,expiry_days:pref.expiry_days};
+ // One aggregate pass produces the filtered count and the unfiltered indicators
+ // and per-unit totals. The page and summary share the same read transaction.
+ const pref='(SELECT expiry_days FROM export_license_preferences WHERE product_code=$2)';
+ const summarySql="SELECT GROUPING(unit_basis)=1 AS all_units,unit_basis,unit,"+
+  "count(*) FILTER(WHERE ($3::text='' OR strpos(search_text,lower($3))>0) AND ($4::text='' OR status=$4 OR ($4='EXPIRING' AND status='ACTIVE' AND effective_until<="+today+"+expiry_days)))::int total,"+
+  "count(*) FILTER(WHERE status='ACTIVE')::int active,"+
+  "count(*) FILTER(WHERE status='ACTIVE' AND effective_until<="+today+"+expiry_days)::int expiring,"+
+  "count(*) FILTER(WHERE status='EXPIRED' AND open_allocations=0)::int pending_close,"+
+  "sum(quantity) FILTER(WHERE status='ACTIVE')::text quantity,sum(used) FILTER(WHERE status='ACTIVE')::text used,"+
+  "sum(quantity-used) FILTER(WHERE status='ACTIVE')::text remaining,sum(quantity-used-reserved) FILTER(WHERE status='ACTIVE')::text available,"+
+  pref+" expiry_days FROM (SELECT l.unit_basis,l.unit,l.quantity,"+effective+" effective_until,"+status+" status,"+
+  "lower(concat_ws(' ',l.proforma_no,l.license_no,k.contract_no,k.buyer)) search_text,"+pref+" expiry_days,t.used,t.reserved,t.open_allocations FROM export_licenses l JOIN "+contracts+
+  " k ON k.id=l.contract_id AND k.product_code=l.product_code CROSS JOIN LATERAL("+totalsSQL+") t WHERE l.product_code=$2 AND "+scope()+") q "+
+  "GROUP BY GROUPING SETS((),(unit_basis,unit)) ORDER BY unit_basis,unit";
+ const summary=(await c.query(summarySql,[...v.slice(0,2),filter,q.status||''])).rows;
+ const {total,expiry_days,active,expiring,pending_close}=summary.find(r=>r.all_units);
+ const units=summary.filter(r=>!r.all_units&&r.active).map(({unit_basis,unit,active:licenses,quantity,used,remaining,available})=>({unit_basis,unit,licenses,quantity,used,remaining,available}));
+ return {items:result.rows,total,page,page_size:50,units,indicators:{active,expiring,pending_close},expiry_days};
 }
 async function save(c,req,id=null){
  const b=req.body,p=await contract(c,req,b?.contract_id),f=form(b,req.productCode);

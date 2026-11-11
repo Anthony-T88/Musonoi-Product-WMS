@@ -92,6 +92,7 @@ function selectors(key,product,landing){
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],
   'metal-confirmations':['#co-metal-filter','#page-content table'],
   'export-licenses':['#export-license-filter','#export-license-table'],
+  'export-licenses-filtered':['#export-license-filter','#export-license-table'],
   'legacy-export-licenses':['#export-license-filter'],
   'export-license-new':['#export-license-application'],
   'cu-export-license-edit':['#export-license-application'],

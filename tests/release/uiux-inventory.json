@@ -403,6 +403,15 @@
       "template": "/export-licenses"
     },
     {
+      "key": "export-licenses-filtered",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "status filter",
+      "template": "/export-licenses"
+    },
+    {
       "key": "legacy-export-licenses",
       "products": [
         "CU_CATHODE",

@@ -95,6 +95,7 @@ function pages(ids){
  add('cu-contract-edit','/customers/contracts/:id/edit',[CU],{example:'cuContract'});
  add('sales','/sales-plans',BOTH,{screenshot:true,roles:['sales_operator','sales_manager','commerce_manager','customer_admin']});
  add('export-licenses','/export-licenses',BOTH,{screenshot:true,roles:['sales_operator','commerce_manager','logistics_field_operator','production_operator']});
+ add('export-licenses-filtered','/export-licenses',BOTH,{query:'?status=ACTIVE',state:'status filter',screenshot:true});
  add('legacy-export-licenses','/export-licenses',BOTH,{query:'?view=legacy',state:'historical'});
  add('export-license-new','/export-licenses/new',BOTH,{screenshot:true});
  add('cu-export-license','/export-licenses/:id',[CU],{example:'cuPermit',screenshot:true});

@@ -27,6 +27,7 @@ window.ExportLicenses={
  facts(keys,data){return '<dl class="export-license-facts">'+keys.map(k=>'<div><dt>'+this.label(k)+'</dt><dd>'+this.value(k==='status'?this.state(data[k]):k==='utilization'?data[k]+'%':data[k])+'</dd></div>').join('')+'</dl>';},
  input(key,data={},type='text',required=false){return '<label>'+this.label(key)+'<input name="'+key+'" type="'+type+'" '+(required?'required ':'')+'maxlength="'+(key==='note'?1000:320)+'" value="'+esc(data[key]??'')+'"></label>';},
  async routePage(path){
+  this.page(this.title(),'<section class="panel export-license-loading" aria-busy="true"><p role="status">'+this.t('正在加载许可证…','Loading licenses…')+'</p><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></section>');
   if(path===this.route){
    if(new URLSearchParams(location.search).get('view')==='legacy')return SalesReviewUI.licenses();
    return this.list();

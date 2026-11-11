@@ -23,7 +23,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  receipt=await api('/receipts/'+receipt.id+'/submit','production_operator',{version:receipt.version});await api('/receipts/'+receipt.id+'/confirm','production_manager',{version:receipt.version});const {rows:received}=await c.query('SELECT id,bundle_no FROM bundles WHERE receipt_id=$1',[receipt.id]);
  const bundle=received.find(b=>b.bundle_no===number),other=received.find(b=>b.bundle_no===otherNumber);assert(bundle&&other);assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'IN_STOCK');steps.push('new contract, scoped stock lookup, unique bundle and independent receipt review');
  await c.query("UPDATE stock_map_source SET status='VERIFIED',source_sha256=$1,source_name='Synthetic CI geometry',notes='Synthetic test geometry only'",[crypto.createHash('sha256').update('RC2-SYNTHETIC-MAP').digest('hex')]);await c.query("UPDATE stock_map_cells SET x=0,y=0,width=100,height=100 WHERE code IN('P1-01','P5')");const location=(await c.query("SELECT * FROM locations WHERE project_id=$1 AND code='P1-01'",[f.project])).rows[0]||await api('/masters/locations','admin',{project_id:f.project,warehouse_id:f.warehouse,code:'P1-01',active:true});
- await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-01' WHERE id=$1",[location.id]);const suggestion=await api('/v261/lots/suggestion','logistics_field_operator');assert.match(suggestion.lot_no,/^RMM-CU-\d{4}-\d{2}$/);let lot=await api('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:suggestion.lot_no,planned_location_id:location.id,items:[{bundle_id:bundle.id,sample_required:true}]});
+ await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-01' WHERE id=$1",[location.id]);const suggestion=await api('/v261/lots/suggestion','logistics_field_operator');assert.match(suggestion.lot_no,/^RMM-CU-\d{4}-\d{2}$/);let lot=await api('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:suggestion.lot_no,planned_location_id:location.id,items:[{bundle_id:bundle.id,sample_required:true},{bundle_id:other.id,sample_required:false}]});
  const occupied=await request('/v261/lots','logistics_field_operator',{plan_id:plan.id,lot_no:'RMM-CU-'+today.slice(0,4)+'-02',planned_location_id:location.id,items:[{bundle_id:other.id,sample_required:false}]});
  assert.equal(occupied.statusCode,409,occupied.body);
  assert.equal((await c.query('SELECT count(*)::int n FROM lot_location_claims WHERE location_id=$1 AND released_at IS NULL',[location.id])).rows[0].n,1);
@@ -35,7 +35,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   lot=await api('/v261/lots/'+lot.id,'logistics_field_operator');
   assert.equal(lot.items[0].sample_stage,stage);
  }
- lot=(await api('/v262/lots/'+lot.id+'/weigh','logistics_field_operator',{version:lot.version,items:lot.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'RC2-CU-'+seq}))})).lot;
+ lot=(await api('/v262/lots/'+lot.id+'/weigh','logistics_field_operator',{version:lot.version,items:lot.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'RC2-CU-'+seq+'-'+b.id.slice(0,8)}))})).lot;
  assert.equal((await c.query('SELECT (net_weight=2.0325::numeric) v FROM bundles WHERE id=$1',[bundle.id])).rows[0].v,true);
  const inventory=await api('/inventory?'+new URLSearchParams({business_status:'备货作业中',search:number}));
  assert.equal(inventory.items.length,1);assert.equal(inventory.items[0].business_status,'备货作业中');
@@ -45,14 +45,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(prior.window.history_unavailable,true);assert.equal(prior.chart_trend.rows[0].period,earlier);
  assert.equal(prior.chart_trend.rows[0].stock_units,null);
  const workingOverview=await api(overviewUrl);
- assert.equal(workingOverview.metrics.preparing.bundles,1);
+ assert.equal(workingOverview.metrics.preparing.bundles,2);
  assert.equal(workingOverview.metrics.preparing.batches,1);
  assert.equal(workingOverview.chart_trend.rows[0].stock_units,workingOverview.metrics.physical.bundles);
  assert.equal(workingOverview.chart_trend.rows[0].inbound_units,2);
- assert.equal(workingOverview.analysis.states.find(s=>s.key==='preparing').quantity,1);
+ assert.equal(workingOverview.analysis.states.find(s=>s.key==='preparing').quantity,2);
  assert.equal(workingOverview.chart_trend.rows[0].inbound_bundles,2);
- const mapQuery=new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,preparation_batch:suggestion.lot_no.slice(-5),bundle_no:number.slice(-6)});
+ const mapQuery=new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,preparation_batch:suggestion.lot_no.slice(-5),bundle_no:number});
  const map=await api('/stock-map?'+mapQuery);assert.equal(map.summary.bundle_count,1);
+ const productionArea=map.locations.find(x=>x.map_usage==='TEMPORARY');assert(productionArea);
+ const productionInventory=await api('/inventory?'+new URLSearchParams({location:'新生产捆包堆存区',search:otherNumber}));
+ assert.equal(productionInventory.items[0].id,otherNumber);
  assert.equal(map.summary.net_weight,null);
  assert.equal((await c.query('SELECT weight,gross_weight FROM inventory_view WHERE uuid=$1',[bundle.id])).rows[0].weight,null);
  lot=await api('/v261/lots/'+lot.id+'/submit','logistics_field_operator',{version:lot.version});
@@ -61,9 +64,9 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(Number((await api('/stock-map?'+mapQuery)).summary.net_weight),2.0325);
  const approvedOverview=await api(overviewUrl);
  assert.equal(approvedOverview.metrics.prepared_pending_outbound.batches,1);
- assert.equal(approvedOverview.metrics.prepared_pending_outbound.bundles,1);
+ assert.equal(approvedOverview.metrics.prepared_pending_outbound.bundles,2);
  assert.equal(approvedOverview.metrics.preparing.bundles,0);
- assert.equal(Number(approvedOverview.chart_trend.rows[0].inbound_net_weight),2.0325);
+ assert.equal(Number(approvedOverview.chart_trend.rows[0].inbound_net_weight),4.065);
  const detail=await api('/stock-map/locations/'+location.id+'?'+mapQuery);assert.equal(detail.items[0].id,number);steps.push('native sampling, repacking, location assignment and gross minus 2.5kg');
  const workbook=new(require('exceljs').Workbook)();
  const dispatchSheet=workbook.addWorksheet('Dispatch'),plate='RC3-CU-'+seq;
@@ -113,7 +116,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api('/loading-plans/unified','admin',{...planBody,license_id:expired.id},409);
  const firstDocument=await api('/loading-plans/unified','admin',planBody);
  assert.equal(firstDocument.invoice_no,permit.proforma_no+'-01');
- let quota=await api(permitPath);assert.equal(Number(quota.reserved),2.0325);assert.equal(Number(quota.used),0);assert.equal(Number(quota.remaining),7500);
+ let quota=await api(permitPath);assert.equal(Number(quota.reserved),4.065);assert.equal(Number(quota.used),0);assert.equal(Number(quota.remaining),7500);
  await api(permitPath+'/actions','sales_operator',{action:'CLOSE',payload:{closed_on:today,reference:'Synthetic closure with active reservation'},version:quota.version,reason:'Synthetic guard check'},409);
  await api('/loading-plan-documents/'+firstDocument.id+'/cancel','admin',{version:firstDocument.version,reason:'Synthetic release'});
  quota=await api(permitPath);assert.equal(Number(quota.reserved),0);assert.equal(Number(quota.available),7500);
@@ -140,15 +143,30 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const loadingOverview=await api(overviewUrl);
  assert.equal(loadingOverview.metrics.loading.batches,1);
  assert.equal(loadingOverview.metrics.loading.bundles,1);
- assert.equal(loadingOverview.metrics.prepared_pending_outbound.bundles,0);
+ assert.equal(loadingOverview.metrics.prepared_pending_outbound.bundles,1);
  steps.push('Excel dispatch capacity, arrival registration, native loading plan and duplicate batch lock');
- for(const [action,role,extra]of [['approve','site_supervisor',{}],['depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()}],['logistics-approve','logistics_manager',{}]])load=await api('/v26/loads/'+load.id+'/'+action,role,{version:load.version,...extra});
+ const approvedUrl='/v26/loads/'+load.id+'/approve',approvedBody={version:load.version},approvalKey=crypto.randomUUID();
+ const approvals=await Promise.all([request(approvedUrl,'site_supervisor',approvedBody,approvalKey),request(approvedUrl,'site_supervisor',approvedBody,approvalKey)]);
+ for(const response of approvals)assert.equal(response.statusCode,200,response.body);
+ assert.deepEqual(approvals[0].json(),approvals[1].json());load=approvals[0].json();
+ const p3=(await c.query("SELECT b.location_id,b.bundle_no,b.net_weight,b.seal_no,p3.customer_id AS p3_customer_id,l.map_usage FROM bundles b JOIN locations l ON l.id=b.location_id LEFT JOIN copper_leftover_custody p3 ON p3.bundle_id=b.id WHERE b.id=$1",[other.id])).rows[0];
+ assert.equal(p3.map_usage,'LEFTOVER');assert.equal(p3.p3_customer_id,customer.id);assert.equal(p3.bundle_no,otherNumber);assert.equal(Number(p3.net_weight),2.0325);assert(p3.seal_no);
+ assert.equal((await c.query('SELECT count(*)::int n FROM lot_bundle_releases WHERE loading_id=$1 AND bundle_id=$2',[load.id,other.id])).rows[0].n,1);
+ assert.equal((await c.query('SELECT count(*)::int n FROM lot_bundle_releases WHERE loading_id=$1 AND bundle_id=$2',[load.id,bundle.id])).rows[0].n,0);
+ const p3map=await api('/stock-map?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,region:'P3'}));
+ assert.equal(p3map.cells.filter(x=>x.region_code==='P3').length,1);
+ assert.equal(p3map.region_summary.find(x=>x.region_code==='P3').bundle_count,1);
+ const p3detail=await api('/stock-map/locations/'+p3.location_id+'?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,customer_id:customer.id,preparation_batch:suggestion.lot_no}));
+ assert.equal(p3detail.items[0].id,otherNumber);assert.equal(p3detail.items[0].preparation_batch,suggestion.lot_no);
+ const stockP3=await api('/inventory?'+new URLSearchParams({location:'P3-LEFTOVER',search:otherNumber}));assert.equal(stockP3.items[0].id,otherNumber);
+ const p5=p3map.locations.find(x=>x.map_usage==='TEMPORARY');assert(p5);assert.equal(p5.current.bundle_count,0);
+ for(const [action,role,extra]of [['depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()}],['logistics-approve','logistics_manager',{}]])load=await api('/v26/loads/'+load.id+'/'+action,role,{version:load.version,...extra});
  assert.notEqual((await c.query('SELECT physical_status FROM bundles WHERE id=$1',[bundle.id])).rows[0].physical_status,'OUTBOUND');const final='/v26/loads/'+load.id+'/manager-approve',finalBody={version:load.version},key=crypto.randomUUID();
  const results=await Promise.all([request(final,'production_manager',finalBody,key),request(final,'production_manager',finalBody,key)]);
  assert.equal(results[0].statusCode,200,results[0].body);assert.equal(results[1].statusCode,200,results[1].body);
  assert.deepEqual(results[0].json(),results[1].json());
  assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'OUTBOUND');
- quota=await api(permitPath);assert.equal(Number(quota.pending),2.0325);assert.equal(Number(quota.used),0);
+ quota=await api(permitPath);assert.equal(Number(quota.pending),4.065);assert.equal(Number(quota.used),0);
  await licenseAction('SETTLE',{allocation_id:quota.allocations.find(a=>a.plan_id===document.id).id,quantity:'2.0325',reference:'Synthetic customs declaration'});
  quota=await api(permitPath);assert.equal(Number(quota.reserved),0);assert.equal(Number(quota.used),2.0325);
  assert.equal(Number(quota.remaining),7497.9675);
@@ -202,6 +220,33 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const exportedBook=new(require('exceljs').Workbook)();await exportedBook.xlsx.load(exported.rawPayload);
  const cells=JSON.stringify(exportedBook.worksheets.map(sheet=>sheet.getSheetValues()));
  assert(cells.includes('2.0325'));
+ const customerB=(await c.query("INSERT INTO customers(project_id,code,name,product_code) VALUES($1,$2,$3,'CU_CATHODE') RETURNING id",[f.project,'P3-B-'+seq,'Synthetic customer B'])).rows[0];
+ const contractB=await api('/contracts','admin',{project_id:f.project,customer_id:customerB.id,contract_no:'P3-B-'+seq,effective_date:today,end_date:'2099-12-31',active:true});
+ const planB=await api('/plans','sales_operator',{project_id:f.project,customer_id:customerB.id,contract_id:contractB.id,target_weight:'20',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic P3 isolation'});
+ for(const role of ['sales_manager','commerce_manager']){const p=await api('/sales-workflow/plans/'+planB.id);await api('/sales-workflow/plans/'+planB.id+'/review',role,{version:p.approval_version,decision:'APPROVED'});}
+ const query=plan_id=>'/v261/candidates?'+new URLSearchParams({plan_id,search:otherNumber});
+ assert.equal((await api(query(planB.id),'logistics_field_operator')).total,0);
+ assert.equal((await api(query(plan.id),'logistics_field_operator')).total,1);
+ // A legacy record for customer B shares the physical P3 area with the
+ // native remainder from customer A. The application must keep both scopes separate.
+ const otherCustomerBundle='P3-LEGACY-B-'+seq;
+ await c.query("INSERT INTO bundles(bundle_no,project_id,batch_id,location_id,customer_id,net_weight,physical_status,sample_status,inbound_date,inbound_at,data_kind) SELECT $2,project_id,batch_id,$3,$4,1,'IN_STOCK','NOT_SAMPLED',current_date,now(),'REAL' FROM bundles WHERE id=$1",[other.id,otherCustomerBundle,p3.location_id,customerB.id]);
+ const shared=await api('/stock-map/locations/'+p3.location_id+'?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse}));
+ assert.equal(shared.summary.bundle_count,2);
+ assert.deepEqual(shared.items.map(r=>r.id).sort(),[otherNumber,otherCustomerBundle].sort());
+ const scoped=await api('/stock-map/locations/'+p3.location_id+'?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse}),'customer_admin');
+ assert.deepEqual(scoped.items.map(r=>r.id),[otherNumber]);
+ const bOnly=await api('/stock-map/locations/'+p3.location_id+'?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,customer_id:customerB.id}));
+ assert.deepEqual(bOnly.items.map(r=>r.id),[otherCustomerBundle]);
+ const secondLotNo=(await api('/v261/lots/suggestion','logistics_field_operator')).lot_no;
+ const selection={lot_no:secondLotNo,planned_location_id:location.id,items:[{bundle_id:other.id,sample_required:false}]};
+ const rejected=await request('/v261/lots','logistics_field_operator',{...selection,plan_id:planB.id});
+ assert.equal(rejected.statusCode,409,rejected.body);
+ assert.equal((await c.query('SELECT count(*)::int n FROM reservations WHERE bundle_id=$1 AND released_at IS NULL',[other.id])).rows[0].n,0);
+ const reprepare=await api('/v261/lots','logistics_field_operator',{...selection,plan_id:plan.id});
+ assert(reprepare.id!==lot.id);
+ assert.equal((await c.query('SELECT count(*)::int n FROM reservations WHERE bundle_id=$1 AND released_at IS NULL',[other.id])).rows[0].n,1);
+ steps.push('P3 supervised release, repeat approval, scoped map, cross-customer refusal and same-customer reuse');
  steps.push('independent approvals, idempotent final inventory deduction, outbound report and Excel agreement');
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id});
  }finally{await app?.close();await c.end();}
