@@ -53,13 +53,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 2089,
-      "sha256": "c668383243704480725a3092e632f52071e16a705f5d1101a28989d192e6dd80"
+      "bytes": 2474,
+      "sha256": "864e0918c21cc2ae741b23fea11b7a6bbe9c7203d4a5641c95d50ee9efb27773"
     },
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 88574,
-      "sha256": "263cf7a0ef72625181cea2794574ff8cf4af873282f01c5585552ae6c5280056"
+      "sha256": "e28a09749c0abcd62aefb39a3fcf628a20646950314b726a545a422d432a73d2"
     },
     {
       "path": "VALIDATION.json",
@@ -2130,156 +2130,6 @@
       "path": "dist/yard-workflow.css",
       "bytes": 2572,
       "sha256": "3286db6b68f1bfcf9f15152c122497904f2982d0c9992e828288721ebddd123a"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/CHANGED_FILES.txt",
-      "bytes": 2362,
-      "sha256": "fc868fb085ca1bc0229b9506d03957d6df085cd670c88a119026edd4c6d10fa8"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/CI_NOTES.txt",
-      "bytes": 2548,
-      "sha256": "75016bf3db1d7a216bdc59cd3166c1c99aa7b8d0b3ded2f30d945acd8f6e841a"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/REPORT.txt",
-      "bytes": 8346,
-      "sha256": "fed08c22f39af888e3108e6b6e22f21e949d8a2286749c1bfb69c27ff47941c9"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/ROLLBACK.txt",
-      "bytes": 1140,
-      "sha256": "f2fc4f1a7d35ca741a2f3a5edb4046e86651c71ba288f9a875d471086cd15012"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/SHIPMENT_REVIEW.txt",
-      "bytes": 1892,
-      "sha256": "576b48808747654772543b930f59a4f125403b62b2d43aaf3ee3c45778ec9841"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/SOURCE_CHANGES.patch",
-      "bytes": 198197,
-      "sha256": "0a0988efb8308e218a9818c2a69d83cccff443bf27997bf07b8518a7e4a4262b"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/TEST_RESULTS.json",
-      "bytes": 17070,
-      "sha256": "e5fd37251480c1082dba681f780ac8b8b8c3297c469c158ecd2561da06dac06d"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/audit-entity-matrix.csv",
-      "bytes": 7343,
-      "sha256": "e0e440f8b56a158215fd8526fc2841097eb64b7e4624d8dfa12c4972d75ac366"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/audit-entity-matrix.json",
-      "bytes": 11341,
-      "sha256": "c3200b30492e1862977098ec4c92bae98b44f420b388d4d0a10655b454493b24"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/database-results.json",
-      "bytes": 176,
-      "sha256": "dcde6800fe865682acba694f5867afb577179ddabbda85b5cb293a3eb8366492"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/rc2-copper-results.json",
-      "bytes": 310,
-      "sha256": "8c4f8849a403cf77b12656498f7d3c560c7532062ea257be5424f8db202473c4"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/rc2-core-results.json",
-      "bytes": 763,
-      "sha256": "248f20cd25d96830aee467440c2761da4f5da5074486afa73d9c12736fe85dfe"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/rc2-lock-order-results.json",
-      "bytes": 301,
-      "sha256": "d323320e8f61c6f6409f12ee98a862d267589ebee0afb87b84bc4835ba9f3593"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/rc2-pool-results.json",
-      "bytes": 5432,
-      "sha256": "c0965ddf473a2945fd43eb0f3a2f76ee4716f3d798b76d4c8a3e0bad145402f3"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/rc2-reliability-results.json",
-      "bytes": 853,
-      "sha256": "11f490d2c6d9ca8239d9b575e9ccf5bb35d5af7ea42e3a2ec21b33f73f029741"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/rc2-stocktake-results.json",
-      "bytes": 175,
-      "sha256": "20b34387fd7eed8f623320c22ab1197c18cefdeaa306b59864d79d4d6445018d"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/runner-integration.json",
-      "bytes": 108,
-      "sha256": "27e33c852cafa2c01fc30f3891041f120a21082ab1410096dc90a83e7b34a99d"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/runner-reliability.json",
-      "bytes": 108,
-      "sha256": "447504974b35b8ee95d247a55cae1fc38d06fa5019cde96c15f09a4593f44163"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/runner-security.json",
-      "bytes": 105,
-      "sha256": "4ec4f9aa868f9ee1738ca96d3229f8e22954adf4f772707fc1df7d87a12e8011"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/runner-ui.json",
-      "bytes": 99,
-      "sha256": "9b052359f8bff1995ab49af44234626acd970feb6f3d67d976ab36c04183e0a7"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/runner-unit.json",
-      "bytes": 101,
-      "sha256": "b1ad799c62a839c7311efd8d9f560222b19bd2b6d067316065e73a1f01a9acf6"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/security-results.json",
-      "bytes": 4319,
-      "sha256": "765ad3fce589acaaa3be4c203a8286618e7c1b0b01dad2a1aa762d86a9bd4c19"
-    },
-    {
-      "path": "docs/reliability-r3-rc2/ui-results.json",
-      "bytes": 1428,
-      "sha256": "7e0cad934c28103cf63147d83ade1bf6e8ecf580fa8168553dc1516e8d34ff13"
-    },
-    {
-      "path": "docs/security-r3-rc1/CHANGES.json",
-      "bytes": 3693,
-      "sha256": "a8669dd84b11abf1c088ea54601b8be413c55074abb5bdd2ba75aa8a5a932739"
-    },
-    {
-      "path": "docs/security-r3-rc1/RED_BASELINE.json",
-      "bytes": 1164,
-      "sha256": "1048cd5aea7a722b59738947f9ae8f76884b37605c1673b40f27a0d04b4aeb92"
-    },
-    {
-      "path": "docs/security-r3-rc1/REPORT.txt",
-      "bytes": 10565,
-      "sha256": "cf610b6ce0b37cf327f54ece265e6eda0f79944807453dc6ddc83ddb7cf8d615"
-    },
-    {
-      "path": "docs/security-r3-rc1/ROLLBACK.txt",
-      "bytes": 1353,
-      "sha256": "e614fa8b02be73fd5905c5e5bc7cc21a65068b8c9bd30efa298ef0e1ccb2a119"
-    },
-    {
-      "path": "docs/security-r3-rc1/SECURITY_CASES.json",
-      "bytes": 4319,
-      "sha256": "eedf29472b185cc49cfe23638531e99986b2c07fb6fd781edb817293c9a55171"
-    },
-    {
-      "path": "docs/security-r3-rc1/SOURCE.patch",
-      "bytes": 150583,
-      "sha256": "6860910cc52fd7debcc491493fabc06bdc1bdceca07225c72982a651bd0d347d"
-    },
-    {
-      "path": "docs/security-r3-rc1/TEST_RESULTS.json",
-      "bytes": 2960,
-      "sha256": "c06ecd308613f979f0b413763fad069919091e169da4ebe8f8083fdd4980cf9d"
     },
     {
       "path": "docs/uiux/DESIGN.md",

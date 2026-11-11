@@ -1,8 +1,0 @@
-{
-  "status": "PASS",
-  "database": "musonoi_audit_0e90f65d44_test",
-  "migrations": 174,
-  "productionDatabaseWrites": 0,
-  "workingDatabaseWrites": 0,
-  "fastify": "5.12.8"
-}
