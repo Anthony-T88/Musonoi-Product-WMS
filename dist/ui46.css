@@ -2,7 +2,7 @@
 /* V4.6: approved all-page design. Every rule is screen-only and excludes the
    copper stock-map page, which retains the exact V4.5.2 presentation. */
 @media screen{
-html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]){--u46-green:#267344;--u46-ink:#1d2228;--u46-muted:#748078;--u46-line:#e5e8eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei UI','Microsoft YaHei',sans-serif;color:var(--u46-ink);background:#f6f7f9;font-size:14px;-webkit-font-smoothing:antialiased}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]){--u46-green:var(--uix-brand);--u46-ink:var(--uix-text);--u46-muted:var(--uix-muted);--u46-line:var(--uix-border);font-family:var(--uix-font);color:var(--u46-ink);background:var(--uix-canvas);font-size:var(--uix-body);-webkit-font-smoothing:antialiased}
 html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) .workspace{background:#f6f7f9}
 html[data-release-ui="46"] body .sidebar{background:#f0f2f4;border-right:1px solid #e0e4e8;padding:22px 16px 14px;box-shadow:none}
 html[data-release-ui="46"] body .sidebar .brand{gap:7px;padding-bottom:20px;border:0}

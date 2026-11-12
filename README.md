@@ -1,6 +1,8 @@
 # Musonoi Product WMS 4.7.4
 
-V4.7.4 基于已交付的 V4.7.3-ui2 开发。本地 TEST 候选运行时要求迁移 186。
+V4.7.4 基于已交付的 V4.7.3-ui2 开发。本地 TEST 使用迁移 186，前端设计规范修订为 V4.7.4-ui2。
+
+[全站设计规范](docs/uiux/DESIGN.md) · [页面覆盖与验收](docs/uiux/COVERAGE.md) · [质量门禁](docs/uiux/QUALITY.md)
 
 [V4.7.4 变更和验收报告](docs/v4.7.4/acceptance.md) · [阴极铜库存地图方案](docs/v4.7.4/copper-map-proposal.html) · [氢氧化钴库存地图方案](docs/v4.7.4/cobalt-map-proposal.html)
 

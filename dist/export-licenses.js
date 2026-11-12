@@ -21,25 +21,14 @@ window.ExportLicenses={
  state(key){return this.t(...(this.statuses[key]||[key,key]));},
  options(choices,value){return Object.entries(choices).map(([k,v])=>'<option value="'+esc(k)+'" '+(value===k?'selected':'')+'>'+esc(this.t(...v))+'</option>').join('');},
  value(value){return value==null||value===''?'—':esc(String(value).replace(/T00:00:00\.000Z$/,''));},
- table(headers,rows,id,responsive=false){
+ table(headers,rows,id,responsive=false,columns={}){
   const html=CobaltSalesUI.table(headers,rows,id).replace('<table id=','<table data-v34-enhanced="true" id=');
-  if(!responsive)return html;
-  const template=document.createElement('template');
-  template.innerHTML=html;
-  const table=template.content.querySelector('table'),columns=table.tHead.rows[0].cells;
-  table.classList.add('permit-sales-table');
-  for(const row of table.tBodies[0].rows)if(row.cells.length===columns.length){
-   for(const [index,cell] of [...row.cells].entries()){
-    cell.dataset.label=columns[index].textContent;
-    const value=document.createElement('div');
-    value.append(...cell.childNodes);cell.append(value);
-   }
-  }
-  return template.innerHTML;
+  return UI46Pages.table(html,{responsive,...columns});
  },
- section(title,body){return '<section class="panel export-license-section"><h2>'+title+'</h2>'+body+'</section>';},
- page(title,html){Router.page(title,'<div class="export-license-page" data-page-composed data-no-i18n>'+html+'</div>');},
- facts(keys,data){return '<dl class="export-license-facts">'+keys.map(k=>'<div><dt>'+this.label(k)+'</dt><dd>'+this.value(k==='status'?this.state(data[k]):k==='utilization'?data[k]+'%':['quantity','used','reserved','remaining','pending','available'].includes(k)&&data[k]!=null?data[k]+' '+data.unit:data[k])+'</dd></div>').join('')+'</dl>';},
+ section(title,body){return '<section class="panel export-license-section wms-section"><h2>'+title+'</h2>'+body+'</section>';},
+ page(title,html){Router.page(title,'<div class="export-license-page wms-page" data-page-composed data-no-i18n>'+html+'</div>');},
+ facts(keys,data){return UI46Pages.factList(keys.map(k=>[this.label(k),k==='status'?UI.status(data[k],'permit',this.state(data[k])):
+  this.value(k==='utilization'?data[k]+'%':['quantity','used','reserved','remaining','pending','available'].includes(k)&&data[k]!=null?data[k]+' '+data.unit:data[k])]));},
  input(key,data={},type='text',required=false){return '<label>'+this.label(key)+'<input name="'+key+'" type="'+type+'" '+(required?'required ':'')+'maxlength="'+(key==='note'?1000:320)+'" value="'+esc(data[key]??'')+'"></label>';},
  bookFields:{
   clearing_agent:160,issuing_bank:160,issuing_bank_account:160,
@@ -122,7 +111,7 @@ window.ExportLicenses={
   }};
  },
  async routePage(path){
-  this.page(this.title(),'<section class="panel export-license-loading" aria-busy="true"><p role="status">'+this.t('正在加载许可证…','Loading licenses…')+'</p><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></section>');
+  this.page(this.title(),'<section class="panel export-license-loading" aria-busy="true" aria-busy="true"><p role="status">'+this.t('正在加载许可证…','Loading licenses…')+'</p><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></section>');
   if(path===this.route){
    if(new URLSearchParams(location.search).get('view')==='legacy')return SalesReviewUI.licenses();
    return this.list();
@@ -142,22 +131,22 @@ window.ExportLicenses={
   const advanced='<details class="permit-advanced-filters" '+(advancedKeys.some(key=>q.get(key))?'open':'')+'><summary>'+t('更多筛选','More Filters')+'</summary><div class="form-grid">'+
    searchField('clearing_agent','开证清关公司','Clearance Agent')+searchField('issuing_bank','开证银行','Issuing Bank')+
    searchField('valid_from','有效期起始','Validity Range Start','date')+searchField('valid_until','有效期截止','Validity Range End','date')+'</div></details>';
-  const filter='<form id="export-license-filter" class="filters permit-register-filter">'+searchField('search','许可证 / 形式发票','License / Proforma')+
+  const filter='<form id="export-license-filter" class="filters permit-register-filter wms-filter-row">'+searchField('search','许可证 / 形式发票','License / Proforma')+
    searchField('buyer_contract','客户 / 合同','Customer / Contract')+this.productFilter()+
    '<label>'+t('许可证状态','License Status')+'<select name="status"><option value="">'+t('全部','All')+'</option>'+
    this.options(Object.fromEntries(['APPLYING','ACTIVE','SCHEDULED','EXPIRING','EXPIRED','CLOSED','CANCELLED'].map(k=>[k,this.statuses[k]])),q.get('status'))+'</select></label>'+
-   '<div class="business-toolbar"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" href="'+base+'">'+t('重置','Reset')+'</a></div>'+advanced+'</form>';
+   '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+base+'">'+t('重置','Reset')+'</a></div>'+advanced+'</form>';
   const headings=[['形式发票号','Proforma Invoice No.'],['许可证号','License No.'],['买家','Buyer'],['合同号','Contract No.'],
    ['许可证数量','Licensed Quantity'],['已用量 / 使用率','Used / Usage Rate'],['剩余量','Remaining'],['生效日期','Valid From'],['失效日期','Expiry Date'],['状态','Status'],['操作','Actions']];
   const rows=d.items.map(r=>{
    const url=base+'/'+r.id,amount=key=>this.value(r[key])+' '+esc(r.unit);
    const cells=['<a href="'+url+'">'+this.value(r.proforma_no)+'</a>',this.value(r.license_no),this.value(r.buyer),this.value(r.contract_no),
     amount('quantity'),amount('used')+' / '+this.value(r.utilization)+'%',amount('remaining'),this.value(r.valid_from),this.value(r.effective_until),
-    esc(this.state(r.status)),'<a class="button secondary compact" href="'+url+'">'+t('查看','View')+'</a>'];
+    UI.status(r.status,'permit',this.state(r.status)),'<a class="button secondary compact" href="'+url+'">'+t('查看','View')+'</a>'];
    return '<tr>'+cells.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>';
   });
   const settings=CurrentUser.permissions.includes('system:manage')?'<details><summary>'+t('到期提醒设置','Expiry Reminder Settings')+'</summary><form id="export-license-settings" class="user-form"><div class="form-grid"><label>'+t('提前提醒天数','Reminder Days')+'<input type="number" name="expiry_days" min="1" max="365" required value="'+d.expiry_days+'"></label></div><div class="business-toolbar"><button class="button secondary">'+t('保存提醒设置','Save Reminder')+'</button></div></form></details>':'';
-  this.page(this.title(),buttons+cards+this.section(t('许可证台账','License Register'),filter+this.table(headings,rows,'export-license-table',true)+CobaltStockUI.pager(d.page,d.total,d.page_size))+units+settings);
+  this.page(this.title(),buttons+cards+this.section(t('许可证台账','License Register'),filter+this.table(headings,rows,'export-license-table',true,{numeric:[4,5,6],actions:[10]})+CobaltStockUI.pager(d.page,d.total,d.page_size))+units+settings);
   this.bindProductFilter();
   $('export-license-filter').onsubmit=e=>{e.preventDefault();const values=new URLSearchParams([...new FormData(e.target)].filter(([,v])=>v));Router.go(base+(values.size?'?'+values:''));};
   if($('export-license-settings'))$('export-license-settings').onsubmit=e=>this.submit(e,async()=>{await API.request(this.api()+'/preferences',{method:'POST',body:{expiry_days:Number(e.target.elements.expiry_days.value)}});await this.list();});
@@ -293,12 +282,7 @@ window.ExportLicenses={
    await this.detail(d.id);
   });
  },
- async submit(e,run){
-  e.preventDefault();const b=e.submitter,error=e.target.querySelector('[role=alert]');b.disabled=true;
-  if(error)error.textContent='';
-  try{await run();}catch(err){if(error)error.textContent=err.message;else notify(err.message);}
-  finally{if(b.isConnected)b.disabled=false;}
- },
+ submit(e,run){return UI46Pages.submit(e,run);},
  async mountOverview(root){
   if(!this.can('read'))return;
   const t=this.t;

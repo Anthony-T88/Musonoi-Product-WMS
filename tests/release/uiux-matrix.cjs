@@ -4,7 +4,9 @@ const R=require('./uiux-routes.cjs');
 const inventory=require('./uiux-inventory.json');
 const languages=['zh-CN','en'];
 const desktop={width:1366,height:768},large={width:1440,height:900},wide={width:1920,height:1080},phone={width:390,height:844};
-const fullSizes=[desktop,large,wide],allSizes=[...fullSizes,phone];
+const compact={width:1280,height:800};
+const fullSizes=[desktop,compact,large,wide],allSizes=[...fullSizes,phone];
+const standardSizes=[compact,large,phone];
 const narrowKeys=new Set(['overview','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
 const quickKeys=new Set(['overview','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
 const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator']};
@@ -34,9 +36,9 @@ function matrix(mode,specs=R.pages({})){
     const apiDenial=retiredRoutes.has(spec.key);
     const denied=apiDenial||deniedCases.has([role,product,spec.key].join('/'));
     const screenshot=apiDenial||!denied&&(guest||role==='admin'&&spec.screenshot);
-    const viewports=spec.key==='register-dialog'?[phone]:mode==='quick'
-     ?(screenshot&&narrowKeys.has(spec.key)?[desktop,phone]:[desktop])
-     :screenshot?(guest||narrowKeys.has(spec.key)?allSizes:fullSizes):[desktop];
+    const viewports=mode==='quick'
+     ?(spec.key==='register-dialog'?[phone]:screenshot&&narrowKeys.has(spec.key)?[desktop,phone]:[desktop])
+     :spec.key==='register-dialog'?standardSizes:denied?[desktop]:screenshot?allSizes:role==='admin'?standardSizes:[desktop];
     for(const size of viewports)rows.push({key:spec.key,product,role,language,state:spec.state,size,screenshot,denied,apiDenial});
    }
   }
@@ -94,12 +96,12 @@ function selectors(key,product,landing){
   'metal-confirmations':['#co-metal-filter','#page-content table'],
   'sales':['#s468-filter','#ux10-sales-table','.sales-execution-metrics'],
   'preparation-plans':['#preparation-plan-filter','#preparation-plans-table'],
-  'cu-work-plan-detail':['.export-license-facts'],
-  'co-work-plan-detail':['.export-license-facts'],
+  'cu-work-plan-detail':['.wms-identity .status-pill','.wms-facts'],
+  'co-work-plan-detail':['.wms-identity .status-pill','.wms-facts'],
   'cu-preparation-from-plan':['#v261-create','#v261-lot-no','#v261-planned'],
   'co-preparation-from-plan':['#co-create','#co-create [name=planned_location_id]'],
-  'cu-sales-detail':['.sales-identity','.sales-related'],
-  'co-sales-detail':['.sales-identity','.sales-related'],
+  'cu-sales-detail':['.sales-identity .status-pill:is([data-state-code="APPROVED"],[data-state-code="OPEN"])','.sales-related'],
+  'co-sales-detail':['.sales-identity .status-pill:is([data-state-code="APPROVED"],[data-state-code="OPEN"])','.sales-related'],
   'export-licenses':['#export-license-filter','#export-license-table'],
   'export-licenses-filtered':['#export-license-filter','#export-license-table'],
   'legacy-export-licenses':['#export-license-filter'],

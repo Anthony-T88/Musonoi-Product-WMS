@@ -43,8 +43,13 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
   await sales.selectOption({index:1});
   assert(await form.locator('[name=customer]').inputValue());
-  const batch=P.batch(product,87);
-  await form.locator('[name=batch_no]').fill(batch);
+  const batch=P.batch(product,87),batchField=form.locator('[name=batch_no]');
+  await form.locator('button.primary').click();
+  assert.equal(await batchField.getAttribute('aria-invalid'),'true');
+  assert(await form.locator('.wms-field-error:not([hidden])').first().isVisible());
+  await planner.page.locator('#dialog').screenshot({path:path.join(E.runtime,'wms-preparation-validation-'+product+'.png')});
+  await batchField.fill(batch);
+  assert.equal(await batchField.getAttribute('aria-invalid'),null);
   await form.locator('[name=shipment_month]').fill(new Date().toISOString().slice(0,7));
   const saved=planner.page.waitForResponse(response=>response.request().method()==='POST'&&response.url().endsWith('/preparation-plans'),{timeout:6000});
   await form.locator('button.primary').click();
@@ -75,6 +80,19 @@ test('real browser: current cobalt stock, independent permissions and both langu
   const reviewerDoc=await reviewer.page.reload();
   assert.equal(reviewerDoc.status(),200);
   await ready(reviewer.page);
+  await reviewer.page.locator('[data-plan-action=reject]').click();
+  const comment=reviewer.page.locator('#operation-confirm-comment');
+  assert(await comment.evaluate(field=>field.required));
+  await reviewer.page.locator('#operation-confirm-accept').click();
+  assert(await comment.isVisible());
+  await comment.fill('Synthetic browser return reason');
+  await reviewer.page.locator('#operation-confirm-accept').click();
+  await reviewer.page.getByText(/Synthetic browser return reason/).waitFor();
+  await planner.page.reload();await ready(planner.page);
+  await planner.page.locator('[data-plan-action=submit]').click();
+  await planner.page.locator('#operation-confirm-accept').click();
+  await planner.page.locator('[data-plan-action=submit]').waitFor({state:'detached'});
+  await reviewer.page.reload();await ready(reviewer.page);
   await reviewer.page.locator('[data-plan-action=approve]').click();
   await reviewer.page.locator('#operation-confirm-accept').click();
   await reviewer.page.locator('[data-plan-action=approve]').waitFor({state:'detached'});
@@ -126,7 +144,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  if(await planGroup.count())await planGroup.locator('summary').click();
  const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
- assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.4-ui1');
+ assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.4-ui2');
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
  await page.waitForFunction(()=>window.Reports463?.current?.view==='shipping'&&document.querySelector('.r463-stats'));
@@ -276,7 +294,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
   await go(page,'/export-licenses',product);
   await page.locator('#export-license-table a').first().waitFor();
-  for(const width of [1366,1440,1920]){
+  for(const width of [1280,1440,1920]){
    await page.setViewportSize({width,height:900});
    const clipped=await page.locator('#export-license-table').evaluate(table=>[...table.querySelectorAll('th,td')].filter(cell=>{
     const bounds=cell.getBoundingClientRect(),range=document.createRange();
@@ -284,9 +302,27 @@ test('real browser: current cobalt stock, independent permissions and both langu
     return [...range.getClientRects()].some(rect=>rect.width>0&&(rect.left<bounds.left-1||rect.right>bounds.right+1));
    }).map(cell=>cell.cellIndex));
    assert.deepEqual(clipped,[],product+' license table at '+width);
+   const geometry=await page.locator('#export-license-filter').evaluate(form=>{
+    const children=[...form.querySelectorAll(':scope > label > input,:scope > label > select,:scope > .wms-filter-actions > .button')];
+    const rects=children.map(el=>el.getBoundingClientRect()),range=values=>Math.max(...values)-Math.min(...values);
+    return {controls:rects.length,bottoms:range(rects.map(r=>r.bottom)),heights:range(rects.map(r=>r.height)),
+     reset:form.querySelectorAll('[data-wms-reset]').length,number:getComputedStyle(document.querySelector('#export-license-table [data-wms-column=number]')).textAlign};
+   });
+   assert.equal(geometry.controls,6);
+   assert.equal(geometry.reset,1);
+   assert.equal(geometry.number,'end');
+   assert(geometry.bottoms<=2&&geometry.heights<=2,product+' filter alignment at '+width+' '+JSON.stringify(geometry));
   }
   await page.setViewportSize({width:1440,height:1000});
   assert(await page.locator('.sidebar [data-primary-route=sales-plans] + [data-primary-route=export-licenses]').isVisible());
+  const filter=page.locator('#export-license-filter');
+  await filter.locator('[name=search]').fill('SYNTHETIC-UNMATCHED-DESIGN');
+  await filter.locator('.wms-filter-actions button').click();
+  await page.waitForURL(url=>url.searchParams.get('search')==='SYNTHETIC-UNMATCHED-DESIGN');
+  await page.locator('.s46-state[data-sys-code="SYS-13"]').waitFor();
+  await filter.locator('[data-wms-reset]').click();
+  await page.waitForURL(origin+'/export-licenses');
+  await page.locator('#export-license-table a').first().waitFor();
   const expiring=product==='CU_CATHODE'?'SYNTH-EXPIRED':'RC2-LICENSE';
   await page.locator('#export-license-table tbody tr').filter({hasText:expiring}).first().locator('a').first().click();
   await page.locator('a[href="#permit-extension"]').click();
@@ -325,7 +361,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await form.locator('[name=quantity]').fill('12.345678');
   await form.locator('button[type=submit],button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
-  assert.match(await page.locator('.export-license-facts').first().innerText(),new RegExp(reference));
+  assert.match(await page.locator('.wms-facts').first().innerText(),new RegExp(reference));
   await page.locator('a[href$="/edit"]').click();
   await form.locator('[data-book-field=issuing_bank_account] option:checked').filter({hasText:'SYNTH-A-001'}).waitFor({state:'attached'});
   await (await addRecord('note','Synthetic browser edit')).selectOption({label:'Synthetic browser edit'});

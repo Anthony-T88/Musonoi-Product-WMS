@@ -1,11 +1,11 @@
 {
   "version": "4.7.4",
-  "baseCommit": "74ebaa7",
+  "baseCommit": "cdbd9e6",
   "runtimeMigrationCount": 186,
   "status": "LOCAL_TEST_CANDIDATE",
   "historicalMigrationFilesUnchanged": 185,
-  "baseline": "4.7.3-ui2",
-  "revision": "4.7.4-ui1",
-  "report": "docs/v4.7.4/acceptance.md",
+  "baseline": "4.7.4-ui1",
+  "revision": "4.7.4-ui2",
+  "report": "docs/uiux/COVERAGE.md",
   "preproduction": "pending"
 }

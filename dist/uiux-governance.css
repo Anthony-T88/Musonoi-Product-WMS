@@ -9,6 +9,15 @@
   --uix-warning: #73531d;
   --uix-success: #246142;
   --uix-focus: #235e87;
+  --uix-info: #235774;
+  --uix-on-brand: #fff;
+  --uix-brand-hover: #1c4c36;
+  --uix-soft: #eef2ef;
+  --uix-info-soft: #e7f0f6;
+  --uix-success-soft: #e5f1e8;
+  --uix-warning-soft: #fff1d5;
+  --uix-danger-soft: #f9e6e5;
+  --uix-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
   --uix-title: clamp(1.375rem, 2vw, 1.625rem);
   --uix-section: 1.125rem;
   --uix-body: .875rem;
@@ -19,6 +28,18 @@
   --uix-radius: .5rem;
   --uix-control: 2.375rem;
   --uix-touch: 2.75rem;
+  --uix-compact: 2rem;
+  --uix-pill: 999px;
+  --uix-weight-emphasis: 600;
+  --uix-line: 1.45;
+  --uix-title-line: 1.25;
+  --uix-label-line: 1.35;
+  --uix-field-min: 13rem;
+  --uix-filter-min: 9rem;
+  --uix-panel-gap: 1.125rem;
+  --uix-border-width: 1px;
+  --uix-shadow-dialog: 0 1rem 3rem #12241c33;
+  --uix-focus-ring: .1875rem;
 }
 
 html[data-release-ui="46"] .workspace { background: var(--uix-canvas); }
@@ -28,7 +49,7 @@ html[data-release-ui="46"]:lang(en) body .product-switch button {
 }
 html[data-release-ui="46"] :where(.workspace, #login-panel, dialog)
   :is(button, a[href], input, select, textarea, summary):focus-visible {
-  outline: .1875rem solid var(--uix-focus);
+  outline: var(--uix-focus-ring) solid var(--uix-focus);
   outline-offset: .125rem;
 }
 #login-panel.login46[data-login-layout="reference"] .login46-language-choices > button:not([aria-pressed="true"]) {
@@ -41,7 +62,7 @@ html[data-release-ui="46"] #page-content:has(.co-count-page) a[data-ui46-generat
 html[data-release-ui="46"] #business-page .page-heading h1 {
   color: var(--uix-text);
   font-size: var(--uix-title);
-  line-height: 1.25;
+  line-height: var(--uix-title-line);
   text-align: start;
   overflow-wrap: anywhere;
 }
@@ -190,14 +211,11 @@ html[data-release-ui="46"] #inventory #filter-form .filter-grid .input-icon{min-
 }
 
 /* Export licenses use the same page shell and input tokens as sales plans. */
-.export-license-page{display:grid;gap:var(--uix-gap);min-width:0}
 .export-license-page .business-toolbar,.export-license-page .filters{flex-wrap:wrap}
 .export-license-page .export-license-section{padding:var(--uix-gap)}
 .export-license-section h2{font-size:var(--uix-section);margin:0 0 var(--uix-gap)}
 .export-license-page :is(.business-table td,.business-table th){white-space:normal;overflow-wrap:anywhere}
-.export-license-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:var(--uix-gap);margin:0}
-.export-license-facts :is(dt,dd){margin:0;overflow-wrap:anywhere}
-.export-license-facts dt,.export-license-page small{display:block;color:var(--uix-muted)}
+.export-license-page small{display:block;color:var(--uix-muted)}
 .export-license-history article{border-top:1px solid var(--uix-border);padding:var(--uix-gap) 0}
 .export-license-history form{display:flex;flex-wrap:wrap;align-items:end;gap:var(--uix-gap)}
 .export-license-picker{display:grid;grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--uix-gap)}
@@ -207,32 +225,17 @@ html[data-release-ui="46"] #inventory #filter-form .filter-grid .input-icon{min-
 
 html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-brand);text-decoration:underline;text-underline-offset:.15em}
 
-.export-license-page #export-license-filter{
-  display:grid;
-  grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto auto;
-  align-items:end;
-  gap:var(--uix-gap-sm);
-}
-.export-license-page #export-license-filter label{min-width:0}
-@media(max-width:700px){
-  .export-license-page #export-license-filter{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .export-license-page #export-license-filter label{grid-column:1/-1}
-  .export-license-page #export-license-filter :is(button,a){justify-content:center;text-align:center}
-}
-
 .reg-public input[aria-invalid="true"]{border-color:var(--uix-danger)}.reg-public .reg-field-error{color:var(--uix-danger);font-weight:600}.reg-public .reg-field-error[hidden]{display:none}
 
 .boot-pending .workspace,.boot-pending .sidebar,.boot-pending .mobile-nav-shell{visibility:hidden}
 .export-license-loading{min-height:12rem;padding:var(--uix-gap);display:grid;align-content:start;gap:12px}.export-license-loading span{height:1.3rem;border-radius:4px;background:var(--uix-canvas)}.export-license-loading span:nth-of-type(2){width:75%}
 
-#export-license-filter.permit-register-filter,.sales-list-filter,.permit-books{
+.permit-books{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--uix-field-min)),1fr));
   align-items:end;
   gap:var(--uix-gap);
 }
-#export-license-filter.permit-register-filter label{grid-column:auto}
-.permit-register-filter>.business-toolbar,.sales-list-filter>.s468-filter-actions{grid-column:1/-1;margin:0}
 .permit-books{grid-column:1/-1}
 .permit-book-field{min-width:0}
 .permit-book-field>div{display:flex;align-items:stretch;gap:var(--uix-gap-sm)}
@@ -256,7 +259,7 @@ html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-br
 #sales-invoice-table input{min-width:0;width:100%}
 
 #export-license-application{max-width:none;width:100%;display:grid;gap:var(--uix-gap)}
-#export-license-application .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:var(--uix-gap)}
+#export-license-application .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--uix-field-min)),1fr));gap:var(--uix-gap)}
 #export-license-application .form-grid label{margin:0}
 #export-license-application .business-toolbar{margin:0}
 .export-license-page .business-table .button{white-space:nowrap}
@@ -279,9 +282,8 @@ html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-br
 }
 
 html[data-release-ui="46"] #page-content :is(.sales-identity,.sales-related,.sales-plan-fields,.export-license-section,#sales-invoice-batches){margin-block:0}
-html[data-release-ui="46"] #page-content .sales-identity .export-license-facts{grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))}
-html[data-release-ui="46"] #page-content .sales-identity .export-license-facts :is(dt,dd){text-align:start;border:0;padding:0}
-.sales-identity .export-license-facts dd{margin-block-start:var(--uix-gap-sm)}
+html[data-release-ui="46"] #page-content .sales-identity .wms-facts :is(dt,dd){text-align:start;border:0;padding:0}
+html[data-release-ui="46"] #business-page:has([data-wms-back]) #page-back {display:none}
 #export-license-application > .error:empty{display:none}
 
 @media(min-width:901px) {
@@ -296,18 +298,18 @@ html[data-release-ui="46"] #page-content .sales-identity .export-license-facts :
 html[data-release-ui="46"] #page-content form.wms-filter-row {
   display:flex;
   flex-wrap:wrap;
-  align-items:start;
+  align-items:end;
   gap:var(--uix-gap);
   min-width:0;
 }
 #page-content .wms-filter-row > label {
-  flex:0 1 clamp(9rem,13vw,12rem);
+  flex:0 1 clamp(var(--uix-filter-min),13vw,12rem);
   min-width:0;
 }
 #page-content .wms-filter-row > .form-grid {
   flex:4 1 32rem;
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--uix-filter-min)),1fr));
   gap:var(--uix-gap);
 }
 #page-content .wms-filter-row > .wms-filter-actions {
@@ -317,21 +319,18 @@ html[data-release-ui="46"] #page-content form.wms-filter-row {
   align-items:center;
   gap:var(--uix-gap-sm);
   margin:0 0 0 auto;
-  padding-block-start:calc(var(--uix-body) + var(--uix-gap-sm));
 }
 #page-content .wms-filter-actions > :is(button,a) {
   min-height:var(--uix-control);
   white-space:nowrap;
 }
-html[data-release-ui="46"] #page-content #export-license-filter.wms-filter-row {align-items:end}
-#export-license-filter > .wms-filter-actions {padding-block-start:0}
-html[data-release-ui="46"] #page-content #export-license-filter :is(label > input,label > select,.wms-filter-actions > .button) {
+html[data-release-ui="46"] #page-content .wms-filter-row :is(label > input:not([type=checkbox],[type=radio],[type=hidden]),label > select,.wms-filter-actions > .button) {
   box-sizing:border-box;
   height:var(--uix-control);
 }
 html[data-release-ui="46"] :is(#page-content,dialog) .user-form .form-grid.wms-field-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--uix-field-min)),1fr));
   align-items:start;
   gap:var(--uix-gap);
 }
@@ -366,7 +365,7 @@ html[data-release-ui="46"] :is(#page-content,dialog) .user-form .form-grid.wms-f
 .permit-advanced-filters > .form-grid {margin-top:var(--uix-gap-sm)}
 html[data-release-ui="46"] body:not([data-ui46-page="stock-map"],[data-ui46-page="copper-map"]) dialog .user-form .form-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--uix-field-min)),1fr));
   align-items:start;
   gap:var(--uix-gap);
 }
@@ -384,3 +383,207 @@ html[data-release-ui="46"] body:not([data-ui46-page="stock-map"],[data-ui46-page
 @media(max-width:700px) {
   #page-content .wms-filter-row > label {flex:1 1 9rem}
 }
+
+/* Shared application components. Business documents retain their own field order. */
+#login-panel.login46,
+.reg-public,
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) dialog {
+  font-family: var(--uix-font);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#inventory,#dashboard) :is(.p46-card,.s46-card,.oa-panel,.export-license-section,.sales-identity,.sales-related,.sales-table-panel,.wms-section,.wms-preview) {
+  background: var(--uix-surface);
+  border-color: var(--uix-border);
+  border-radius: var(--uix-radius);
+}
+.wms-page {
+  display: grid;
+  gap: var(--uix-gap);
+  min-inline-size: 0;
+}
+.wms-page > :is(.business-toolbar,.business-table,.co-pager) { margin-block: 0; }
+.wms-page > .business-toolbar:empty { display: none; }
+.wms-identity {
+  display: grid;
+  gap: var(--uix-gap);
+  padding: var(--uix-panel-gap);
+}
+.wms-identity > header,
+.wms-identity > header > div,
+.wms-identity .business-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--uix-gap-sm);
+}
+.wms-identity > header { justify-content: space-between; }
+.wms-identity > header :is(h2,.business-toolbar) { margin: 0; }
+.wms-identity h2 {
+  font-size: var(--uix-section);
+  font-weight: var(--uix-weight-emphasis);
+  line-height: var(--uix-label-line);
+  overflow-wrap: anywhere;
+}
+html[data-release-ui="46"] :is(#page-content,dialog) dl.wms-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,var(--uix-field-min)),1fr));
+  gap: var(--uix-gap);
+  margin: 0;
+  padding: 0;
+}
+.wms-facts > div {display: grid; align-content: start; min-inline-size: 0;}
+html[data-release-ui="46"] :is(#page-content,dialog) .wms-facts :is(dt,dd) {
+  margin: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+.wms-facts dt {
+  color: var(--uix-muted);
+  font-size: var(--uix-caption);
+}
+html[data-release-ui="46"] :is(#page-content,dialog) .wms-facts dd {margin-block-start: var(--uix-gap-xs);}
+
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#dashboard,#inventory,dialog) :is(.business-toolbar,.wms-filter-actions,.operation-confirm-actions,.task-notice-actions,.s46-filter-footer,.op-filter-actions,.r463-filter-actions,.c461-filter-actions) {
+  gap: var(--uix-gap-sm);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#inventory,#dashboard,dialog) .button.primary {
+  background: var(--uix-brand);
+  border-color: var(--uix-brand);
+  color: var(--uix-on-brand);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#inventory,#dashboard,dialog) .button.primary:not(:disabled):hover {
+  background: var(--uix-brand-hover);
+  border-color: var(--uix-brand-hover);
+}
+html[data-release-ui="46"] :is(#page-content,dialog) .wms-identity .button.danger-outline,
+html[data-release-ui="46"] dialog.operation-confirm .button.danger-outline {
+  border-color: var(--uix-danger);
+  color: var(--uix-danger);
+  background: var(--uix-surface);
+}
+html[data-release-ui="46"] .wms-table .button.compact {
+  min-block-size: var(--uix-compact);
+  max-inline-size: 100%;
+}
+html[data-release-ui="46"] :is(#page-content,#dashboard-content,#inventory) :where(table:not(.packing-sheet table,.print-page table,.shipping-preview table) :is(th,td)) {
+  text-align: start;
+}
+html[data-release-ui="46"] #page-content .wms-table :is(th,td) {
+  text-align: start;
+  line-height: var(--uix-line);
+  overflow-wrap: anywhere;
+}
+html[data-release-ui="46"] :is(#page-content,#inventory) :is(.wms-table,.business-table,.table-scroll,.s46-table-wrap,.v34-table-wrap) :is([data-wms-column="number"],.numeric,.sales-weight,.oa-numeric) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+html[data-release-ui="46"] .wms-table :is(th,td)[data-wms-column="actions"] {
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  html[data-release-ui="46"] #page-content .wms-table.permit-sales-table td[data-wms-column="number"] > div {
+    text-align: end;
+  }
+}
+
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#inventory,#dashboard,dialog) :is(.wms-field-grid,.wms-filter-row,.s46-filter,.r463-filter,#filter-form,.c461-filter) label {
+  line-height: var(--uix-label-line);
+  min-inline-size: 0;
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#inventory,#dashboard,dialog) :is(.wms-field-grid,.wms-filter-row,.s46-filter,.r463-filter,#filter-form,.c461-filter) :is(input,select):not([type=hidden],[type=checkbox],[type=radio],[type=file]) {
+  box-sizing: border-box;
+  min-block-size: var(--uix-control);
+  max-inline-size: 100%;
+  border-radius: var(--uix-radius);
+}
+html[data-release-ui="46"] :is(#page-content,dialog) .wms-field-grid :is(input[readonly],textarea[readonly]) {
+  background: var(--uix-soft);
+  color: var(--uix-text);
+}
+html[data-release-ui="46"] :is(#page-content,dialog) :is(.wms-field-grid,[data-wms-validation]) :is(input,select,textarea)[aria-invalid="true"] {
+  border-color: var(--uix-danger);
+}
+.wms-field-error {
+  color: var(--uix-danger);
+  font-size: var(--uix-caption);
+  line-height: var(--uix-label-line);
+  overflow-wrap: anywhere;
+}
+.wms-field-error[hidden] { display: none; }
+@supports (grid-template-rows: subgrid) {
+  .wms-field-grid > .wms-field {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: var(--uix-gap-xs);
+  }
+}
+.wms-field-grid > [data-field-span="full"] { grid-column: 1/-1; }
+
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) :is(.status-pill,.v34-state,.co-state,.op-badge) {
+  display: inline-flex;
+  align-items: center;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  border-radius: var(--uix-pill);
+  padding: var(--uix-gap-xs) var(--uix-gap-sm);
+  font-size: var(--uix-caption);
+  font-weight: var(--uix-weight-emphasis);
+  line-height: var(--uix-label-line);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) .status-pill.tone-info {
+  color: var(--uix-info);
+  background: var(--uix-info-soft);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) .status-pill.tone-neutral {
+  color: var(--uix-muted);
+  background: var(--uix-soft);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) .status-pill.tone-success {
+  color: var(--uix-success);
+  background: var(--uix-success-soft);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) .status-pill.tone-pending {
+  color: var(--uix-warning);
+  background: var(--uix-warning-soft);
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) .status-pill.tone-danger {
+  color: var(--uix-danger);
+  background: var(--uix-danger-soft);
+}
+html[data-release-ui="46"] :is(.sidebar nav,.mobile-primary) .ux-nav-count {
+  min-inline-size: 1.5em;
+  border-radius: var(--uix-pill);
+  background: var(--uix-danger);
+  color: var(--uix-on-brand);
+  font-variant-numeric: tabular-nums;
+}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) dialog:is([data-ui46-dialog],.operation-confirm,.task-notice) {
+  box-sizing: border-box;
+  max-block-size: calc(100dvh - 2 * var(--uix-gap));
+  max-inline-size: calc(100vw - 2 * var(--uix-gap));
+  border: var(--uix-border-width) solid var(--uix-border);
+  border-radius: var(--uix-radius);
+  background: var(--uix-surface);
+  color: var(--uix-text);
+  box-shadow: var(--uix-shadow-dialog);
+}
+html[data-release-ui="46"] :is(dialog,.s46-state) :is(.dialog-header h2,.operation-confirm h2,#operation-confirm-title) {
+  font-size: var(--uix-section);
+  line-height: var(--uix-label-line);
+}
+html[data-release-ui="46"] :is(#page-content,#dashboard,#inventory) .s46-state {
+  color: var(--uix-text);
+  border-color: var(--uix-border);
+  border-radius: var(--uix-radius);
+  padding: var(--uix-panel-gap);
+}
+.wms-feedback {
+  color: var(--uix-muted);
+  font-size: var(--uix-body);
+  line-height: var(--uix-line);
+  overflow-wrap: anywhere;
+}
+.wms-feedback.error { color: var(--uix-danger); }
+.wms-feedback:empty { display: none; }

@@ -157,6 +157,29 @@ async function run(out){
     await page.waitForURL(url=>url.searchParams.get('search')==='UIUX');await ready(page);
     return {screenshot,keyboard:['type UIUX','Tab → '+next,'Enter'],url:M.comparable(page.url()),controls:trail};
    },M.phone);
+   await check('document-preview',product,'admin',language,async page=>{
+    await go(page,'/receipts');
+    const row=page.locator('#op-table [data-op-select]').first(),preview=page.locator('#op-preview');
+    await row.waitFor();
+    const id=await row.getAttribute('data-op-select'),href=await row.getAttribute('href');
+    const endpoint='**/api/v1'+(product===R.CO?'/cobalt/preparations/':'/receipts/')+id;
+    await page.route(endpoint,route=>route.abort('failed'));
+    await row.press('Enter');
+    await visible(page,'#op-preview [data-op-retry]');
+    assert.equal(await preview.getAttribute('aria-busy'),'false');
+    assert.equal(pathname(page),'/receipts');
+    await page.unroute(endpoint);
+    await row.press('Enter');
+    const open=preview.locator('[data-op-open-detail]');
+    await open.waitFor();
+    assert.equal(await preview.getAttribute('data-preview-id'),id);
+    assert.equal(await preview.getAttribute('aria-busy'),'false');
+    assert.equal(await open.getAttribute('href'),href);
+    const screenshot='preview-'+product+'-'+language+'.png';
+    await preview.screenshot({path:path.join(out,screenshot),animations:'disabled'});
+    await open.press('Enter');await page.waitForURL(url=>url.pathname===href);
+    return {screenshot,documentId:id,landing:pathname(page),keyboard:'Enter',failedReadRecovered:true};
+   },language==='en'?M.phone:{width:1440,height:900});
    await check('stock-map-control',product,'logistics_manager',language,async page=>{
     await go(page,product===R.CO?'/stock-map?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse}):'/stock-map');
     assert.equal(pathname(page),'/stock-map');

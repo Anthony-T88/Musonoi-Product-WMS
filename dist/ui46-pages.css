@@ -2,7 +2,7 @@
 /* Screen composition shared with the approved 140-view design catalogue.
    The protected copper map never receives p46-root and is excluded below. */
 @media screen{
-html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]){--p46-line:#e5e8eb;--p46-green:#267344;--p46-bg:#f6f7f9;--p46-muted:#748078}
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]){--p46-line:var(--uix-border);--p46-green:var(--uix-brand);--p46-bg:var(--uix-canvas);--p46-muted:var(--uix-muted)}
 html[data-release-ui="46"] body .top-actions{gap:18px}
 html[data-release-ui="46"] body .top-actions .system-language>span{display:inline}
 html[data-release-ui="46"] body .top-actions .system-language select{border:0;background:transparent;padding:6px;color:#497a48;box-shadow:none;width:88px;font-size:12px}
