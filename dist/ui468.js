@@ -29,6 +29,11 @@ window.Sales468={generation:0,t:(z,e)=>UI468.t(z,e),
  },
  weight(value){return value==null?'—':Tonnes.format(value,true)+' MT';},
  fulfillment(value){return value==null?'—':this.num(value,2)+'%';},
+ fulfillmentProgress(value){
+  if(value==null||!Number.isFinite(Number(value)))return '—';
+  const pct=this.fulfillment(value),fill=Math.max(0,Math.min(100,Number(value)));
+  return '<div class="wms-fulfillment"><progress max="100" value="'+fill+'" aria-label="'+this.t('销售履约','Sales Fulfilment')+'" aria-valuetext="'+esc(pct)+'"></progress><span>'+pct+'</span></div>';
+ },
  metrics(execution){
   const t=this.t,e=execution||{};
   const values=[[t('计划量','Planned'),this.weight(e.planned)],[t('正式出库','Formal Outbound'),this.weight(e.posted)],
@@ -43,7 +48,7 @@ window.Sales468={generation:0,t:(z,e)=>UI468.t(z,e),
   const closeAction=this.canClose(p)?'<button class="button secondary compact" data-s468-close="'+p.id+'">'+t('申请提前关闭','Request Early Close')+'</button>':'';
   return '<tr><td><a href="'+route+'">'+esc(p.code)+'</a></td><td>'+esc(p.customer_name)+'<small>'+esc(p.contract_no||'—')+'</small></td>'+
    ['planned','posted','remaining'].map(k=>'<td class="sales-weight">'+this.weight(e[k])+'</td>').join('')+
-   '<td>'+this.fulfillment(e.fulfillment)+'</td><td>'+esc(p.shipment_month||'—')+'</td><td>'+esc(close||SalesReviewUI.state(p))+'</td>'+
+   '<td>'+this.fulfillmentProgress(e.fulfillment)+'</td><td>'+esc(p.shipment_month||'—')+'</td><td>'+esc(close||SalesReviewUI.state(p))+'</td>'+
    '<td><div class="sales-inline-actions">'+this.dispatchLink(p,true)+'<a class="button secondary compact" href="'+route+'">'+t('计划详情','Details')+'</a>'+edit+approval+closeAction+'</div></td></tr>';
  },
  async list(){
@@ -56,7 +61,11 @@ window.Sales468={generation:0,t:(z,e)=>UI468.t(z,e),
   const field=(key,z,e,type)=>'<label>'+t(z,e)+'<input type="'+type+'" name="'+key+'" value="'+esc(q.get(key)||'')+'" maxlength="160"></label>';
   const headings=[['计划编号','Plan No.'],['客户 / 合同','Customer / Contract'],['计划量','Planned'],['正式出库','Formal Outbound'],['待发运','Awaiting Shipment'],
    ['销售履约','Sales Fulfilment'],['发运月份','Shipment Month'],['状态','Status'],['操作','Actions']];
-  const table=ExportLicenses.table(headings,d.items.map(p=>this.planRow(p)),'ux10-sales-table',true);
+  const sorting=q.get('sort')==='fulfillment',ascending=sorting&&q.get('direction')==='asc';
+  const sortQuery=new URLSearchParams(q);sortQuery.delete('page');sortQuery.set('sort','fulfillment');sortQuery.set('direction',sorting&&!ascending?'asc':'desc');
+  const table=ExportLicenses.table(headings,d.items.map(p=>this.planRow(p)),'ux10-sales-table',true,{numeric:[2,3,4],center:[5,6,7,8]})
+   .replace('<th scope="col" data-wms-column="center">'+t(...headings[5])+'</th>',
+    '<th scope="col" data-wms-column="center" aria-sort="'+(sorting?(ascending?'ascending':'descending'):'none')+'"><a href="/sales-plans?'+esc(sortQuery)+'">'+t(...headings[5])+(sorting?(ascending?' ↑':' ↓'):'')+'</a></th>');
   const filter='<form id="s468-filter" class="filters sales-list-filter wms-filter-row" data-v34-reset="true">'+field('search','计划编号','Plan No.','search')+field('buyer_contract','客户 / 合同','Customer / Contract','search')+
    ExportLicenses.productFilter()+field('shipment_month','发运月份','Shipment Month','month')+'<label>'+t('执行状态','Execution Status')+'<select name="status"><option value="">'+t('全部','All')+'</option>'+
    statuses.map(([key,z,e])=>'<option value="'+key+'"'+(status===key?' selected':'')+'>'+t(z,e)+'</option>').join('')+'</select></label>'+

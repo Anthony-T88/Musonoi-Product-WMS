@@ -11,6 +11,7 @@ window.UnifiedNavigation={
    const [path,query]=task.href?.split('?')||[];
    let key=path?.split('/')[1];
    if(!key||key==='overview')continue;
+   if(path==='/workbench/accounts')key='account-registrations';
    if(key==='outbounds'&&new URLSearchParams(query).get('view')==='departures')key='vehicle-departures';
    if(path?.startsWith('/preparation/work-plans/'))key='preparation/work-plans';
    else if(key==='preparation'&&!ProductContext.isCopper())key='receipts';

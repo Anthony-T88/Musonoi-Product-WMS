@@ -481,10 +481,96 @@ html[data-release-ui="46"] :is(#page-content,#dashboard-content,#inventory) :is(
 html[data-release-ui="46"] .wms-table :is(th,td)[data-wms-column="actions"] {
   white-space: normal;
 }
+html[data-release-ui="46"] #page-content .wms-table :is(th,td)[data-wms-column="center"] {
+  text-align: center;
+}
+.wms-table .sales-inline-actions { justify-content: center; }
+.wms-fulfillment {
+  display: grid;
+  grid-template-columns: minmax(2.75rem,1fr) minmax(3.25rem,auto);
+  align-items: center;
+  gap: var(--uix-gap-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wms-fulfillment progress { inline-size: 100%; block-size: var(--uix-gap-sm); accent-color: var(--uix-brand); }
+@media (min-width: 1180px) {
+  #page-content :is(.sales-list-filter,#stocktake-list-filter) > label { flex: 1 1 var(--uix-filter-min); }
+}
+.wms-map-reviewed .wms-map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--uix-gap-sm);
+  padding: var(--uix-gap);
+  margin-block-end: var(--uix-gap-sm);
+}
+.wms-map-search { display: flex; flex: 1 1 23rem; gap: var(--uix-gap-sm); align-items: end; min-inline-size: 0; }
+.wms-map-search label { flex: 1; min-inline-size: 0; display: grid; gap: var(--uix-gap-xs); }
+.wms-map-search input { inline-size: 100%; min-inline-size: 0; min-block-size: var(--uix-control); }
+.wms-map-controls :is(.wms-map-zones,.wms-map-actions,.wms-map-matches) { display: flex; flex-wrap: wrap; gap: var(--uix-gap-xs); }
+.wms-map-controls .wms-map-actions { margin-inline-start: auto; }
+.wms-map-controls :is(.wms-map-zones,.wms-feedback,.wms-map-matches) { flex: 1 0 100%; margin: 0; }
+.wms-map-controls [hidden] { display: none; }
+.wms-map-advanced { margin-block-end: var(--uix-gap); }
+.wms-map-advanced summary { color: var(--uix-brand); cursor: pointer; }
+.wms-map-reviewed :is(.stock-map-layout,.map465-grid) { position: relative; min-inline-size: 0; }
+.map-app.wms-map-reviewed .stock-map-layout.v27-has-detail:has(>.map-detail:not([hidden])) { grid-template-columns: minmax(0,1fr); }
+.wms-map-reviewed .map465-grid { display: block; }
+.map-app.wms-map-reviewed .stock-map-layout #stock-map-detail:not([hidden]),
+.map465.wms-map-reviewed .map465-grid #co-map-detail:not([hidden]) {
+  position: absolute;
+  inset: var(--uix-gap) var(--uix-gap) auto auto;
+  inline-size: min(24rem, 42%);
+  min-inline-size: 0;
+  max-block-size: 32rem;
+  overflow: auto;
+  z-index: 3;
+  background: var(--uix-surface);
+  border: var(--uix-border-width) solid var(--uix-border);
+  border-radius: var(--uix-radius);
+  box-shadow: var(--uix-shadow-dialog);
+}
+.wms-map-reviewed [data-map-focused] rect { stroke: var(--uix-brand); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.map-app.wms-map-reviewed .map-cell[data-map-cell="P3"] rect {
+  fill: var(--uix-info-soft);
+  stroke: var(--uix-info);
+}
+.map465.wms-map-reviewed #co-map-detail .map465-detail-body>dl { grid-template-columns: minmax(0,1fr); }
+.map465.wms-map-reviewed #co-map-detail .map465-detail-body>dl>div {
+  display: grid;
+  grid-template-columns: minmax(0,1.5fr) minmax(0,1fr);
+  gap: var(--uix-gap-xs);
+  border: 0;
+  border-block-end: var(--uix-border-width) solid var(--uix-border);
+  padding: var(--uix-gap-xs) 0;
+}
+.map465.wms-map-reviewed #co-map-detail .map465-detail-body>dl dd { margin: 0; text-align: end; }
+.map465.wms-map-reviewed .co-map-cell[data-stock-state="READY"] rect { fill: var(--uix-success-soft); stroke: var(--uix-success); }
+.map465.wms-map-reviewed .co-map-cell[data-stock-state="PREPARING"] rect { fill: var(--uix-warning-soft); stroke: var(--uix-warning); }
+.map465.wms-map-reviewed .co-map-cell:is([data-stock-state="READY"],[data-stock-state="PREPARING"]) text { fill: var(--uix-text); }
+.wms-map-reviewed :is(.v271-label-customer,.v31-card-customer,.v31-card-batch) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .map-app.wms-map-reviewed .stock-map-layout #stock-map-detail:not([hidden]),
+  .map465.wms-map-reviewed .map465-grid #co-map-detail:not([hidden]) {
+    position: static;
+    inline-size: auto;
+    max-block-size: none;
+    box-shadow: none;
+  }
+  .wms-map-reviewed .wms-map-controls :is(button,input) { min-block-size: var(--uix-touch); }
+  .wms-map-reviewed .v271-location-label.v31-temporary-summary { display: grid; grid-template-columns: minmax(0,1fr); }
+}
 @media (max-width: 640px) {
   html[data-release-ui="46"] #page-content .wms-table.permit-sales-table td[data-wms-column="number"] > div {
     text-align: end;
   }
+  html[data-release-ui="46"] #page-content .wms-table.permit-sales-table td[data-wms-column="center"] > div { text-align: end; }
 }
 
 html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(#page-content,#inventory,#dashboard,dialog) :is(.wms-field-grid,.wms-filter-row,.s46-filter,.r463-filter,#filter-form,.c461-filter) label {

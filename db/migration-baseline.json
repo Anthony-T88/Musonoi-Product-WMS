@@ -745,6 +745,10 @@
     {
       "version": "186_v474_preparation_plans.sql",
       "checksum": "1e65083e748984e419122f399cbd11f8206e6e641e3668d65259dc78ebe83261"
+    },
+    {
+      "version": "187_v475_stocktake_periods.sql",
+      "checksum": "fbff7abf7f7681203c721dffd537b6b728f5b5ea551550373ffffdfcc6f082f5"
     }
   ]
 }

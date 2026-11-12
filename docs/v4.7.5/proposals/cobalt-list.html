@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN" data-release-ui="46">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>氢氧化钴库存批次列表 · 待确认</title>
+<link rel="stylesheet" href="../../../dist/uiux-governance.css">
+<link rel="stylesheet" href="preview.css">
+<main id="page-content" data-preview="cobalt-list">
+ <nav aria-label="页面位置">氢氧化钴 / 库存查询</nav>
+ <header><h1>批次库存明细</h1><span class="preview-state">方案待确认 · TEST 记录</span></header>
+ <form class="wms-filter-row" id="batch-filter">
+  <label>备货批次号<input type="search" name="batch"></label>
+  <label>库存状态<select name="state"><option value="">全部</option><option value="stock">在库</option><option value="outbound">已正式出库</option></select></label>
+  <label>排序<select name="sort"><option value="batch">备货批次号</option><option value="bags">袋数从多到少</option></select></label>
+  <div class="wms-filter-actions"><button class="button primary">查询</button><a class="button secondary" href="cobalt-list.html">重置</a></div>
+ </form>
+ <div id="preview" aria-live="polite"></div>
+</main>
+<script src="records.js"></script>
+<script src="preview.js"></script>
+</html>

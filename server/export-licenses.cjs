@@ -79,11 +79,20 @@ async function list(c,req,eligible){
   const p=req.productCode===CO?await require('./cobalt-sales.cjs').access(c,req,'plan',B.uuid(q.sales_plan_id)):await require('./allocations.cjs').planAccess(c,req,B.uuid(q.sales_plan_id));
   conditions.push(status+"='ACTIVE' AND (l.quantity-t.used-t.reserved)>0");
   add('l.contract_id=?',p.contract_id);add('l.project_id=?',p.project_id);add('l.customer_id=?',p.customer_id);
+  if(q.invoice_preview_id)add('l.id=?',B.uuid(q.invoice_preview_id));
   if(q.planned_load_date){add('l.valid_from<=?::date',B.date(q.planned_load_date));add(effective+'>=?::date',q.planned_load_date);}
  }
  const where=' WHERE '+conditions.join(' AND ');
  const result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT 50 OFFSET '+((page-1)*50),v);
- if(eligible)return {items:result.rows};
+ if(eligible){
+  const license=result.rows[0];
+  if(q.invoice_preview_id&&license){
+   const {rows:[serial]}=await c.query('SELECT next_serial FROM export_licenses WHERE id=$1',[license.id]);
+   const {invoice}=await require('./export-license-plans.cjs').invoiceCandidate(c,{...license,...serial});
+   return {items:result.rows,invoice_preview:invoice};
+  }
+  return {items:result.rows};
+ }
  // One aggregate pass produces the filtered count and the unfiltered indicators
  // and per-unit totals. The page and summary share the same read transaction.
  const pref='(SELECT expiry_days FROM export_license_preferences WHERE product_code=$2)';

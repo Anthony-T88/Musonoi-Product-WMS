@@ -80,7 +80,7 @@ window.UI46Pages={
   return '<section class="panel wms-identity wms-section '+classes+'" data-no-i18n><header><div><h2>'+esc(title)+'</h2>'+status+'</div>'+
    (actions?'<div class="business-toolbar wms-document-actions">'+actions+'</div>':'')+'</header>'+summary+'</section>';
  },
- table(html,{responsive=false,numeric=[],actions=[]}={}){
+ table(html,{responsive=false,numeric=[],center=[],actions=[]}={}){
   const template=document.createElement('template');
   template.innerHTML=html;
   const table=template.content.querySelector('table'),head=table.tHead.rows[0];
@@ -88,7 +88,7 @@ window.UI46Pages={
   if(responsive)table.classList.add('permit-sales-table');
   for(const [index,column] of [...head.cells].entries()){
    column.scope='col';
-   const kind=numeric.includes(index)?'number':actions.includes(index)?'actions':null;
+   const kind=numeric.includes(index)?'number':center.includes(index)?'center':actions.includes(index)?'actions':null;
    if(kind)column.dataset.wmsColumn=kind;
   }
   for(const row of table.tBodies[0].rows){

@@ -34,3 +34,10 @@ module.exports=async({app,pool,permitted,csrf,secure,origin})=>{
   const updated=(await c.query('UPDATE registration_requests SET status=$1,reviewed_at=now(),reviewed_by=$2,review_reason=$3,approved_user_id=$4 WHERE id=$5 RETURNING '+publicFields,[b.decision,req.user.id,b.reason?.trim()||null,userId,r.id])).rows[0];await B.audit(c,req,'registration_'+b.decision.toLowerCase(),'registration_requests',r.id,{status:r.status},{status:updated.status,approved_user_id:userId,reason:updated.review_reason});return updated;
  }));
 };
+module.exports.pending=async(c,req)=>{
+ if(req.user.role_code!=='admin'||!req.user.permissions.includes('users:manage'))return [];
+ const {rows}=await c.query(`SELECT id,username document_no,status,created_at,'REGISTRATION_REQUEST_REVIEW' kind,
+  'REGISTRATION_REQUEST' doc_type,'/workbench/accounts?registrations=pending' href
+  FROM registration_requests WHERE status='PENDING' ORDER BY created_at DESC,id`);
+ return rows;
+};

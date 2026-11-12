@@ -23,10 +23,24 @@ window.PreparationPlans={
  startRoute(p){return (ProductContext.isCopper()?'/preparation/new':'/receipts/new')+'?preparation_plan='+p.id;},
  async selected(){
   const id=new URLSearchParams(location.search).get('preparation_plan');
-  if(!id){Router.go(this.route+'?state=APPROVED',true);return null;}
+  if(!id){await this.selectPlan();return null;}
   const p=await API.request(this.api()+'/'+encodeURIComponent(id));
   if(!p.actions.start)throw Error(this.t('该计划尚未获批或已生成作业。','This plan is not approved or already has a work order.'));
   return p;
+ },
+ async selectPlan(){
+  const t=this.t,path=location.pathname,q=new URLSearchParams(location.search);
+  q.set('executable','1');
+  const d=await API.request(this.api()+'?'+q);
+  if(location.pathname!==path||new URLSearchParams(location.search).has('preparation_plan'))return;
+  const rows=d.items.map(p=>'<tr><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.customer_name)+'</td><td>'+esc(p.shipment_month)+'</td><td><a class="button primary compact" href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a></td></tr>');
+  const table=rows.length?ExportLicenses.table([['备货批次号','Preparation Batch'],['销售计划','Sales Plan'],['客户','Customer'],['发运月','Shipment Month'],['操作','Actions']],rows,'executable-preparation-plans',true,{actions:[4]}):
+   '<p class="wms-feedback" role="status">'+t('暂无可执行的已审批备货计划。','No approved preparation plan is available for execution.')+'</p>';
+  Router.page(t('选择备货计划','Select Preparation Plan'),'<section class="wms-page" data-page-composed data-no-i18n><div class="business-toolbar">'+this.backLink()+'</div>'+
+   '<form id="executable-preparation-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Batch / Sales Plan / Customer')+'<input type="search" name="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a data-wms-reset class="button secondary" href="'+path+'">'+t('重置','Reset')+'</a></div></form>'+
+   table+CobaltStockUI.pager(d.page,d.total,d.page_size)+'</section>');
+  $('executable-preparation-filter').onsubmit=e=>{e.preventDefault();Router.go(path+'?'+new URLSearchParams(new FormData(e.target)));};
+  CobaltStockUI.bindPager(d);ProductContext.dirty=false;
  },
  fields(p,includeBatch=true){
   const t=this.t,rows=[['销售计划','Sales Plan',p.sales_plan_no],['发运月','Shipment Month',p.shipment_month],['客户','Customer',p.customer_name]];
@@ -38,7 +52,7 @@ window.PreparationPlans={
   const status=['DRAFT','PENDING','APPROVED','REJECTED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
   const headings=[['备货批次号','Preparation Batch'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
   const rows=d.items.map(p=>'<tr><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
-   (p.allocation_id||p.co_preparation_id?'<a href="'+this.orderRoute(p)+'">'+t('查看作业','View Work')+'</a>':p.actions.start?'<a href="'+this.startRoute(p)+'">'+t('开始备货','Start Preparation')+'</a>':'—')+'</td></tr>');
+   (p.allocation_id||p.co_preparation_id?'<a href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':p.actions.start?'<a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'—')+'</td></tr>');
   Router.page(t('备货计划','Preparation Plans'),'<section class="wms-page" data-page-composed data-no-i18n>'+
    '<div class="business-toolbar">'+(d.can_create?'<button type="button" id="preparation-plan-create" class="button primary">'+t('新建备货计划','New Preparation Plan')+'</button>':'')+
    this.backLink()+'</div>'+
@@ -55,8 +69,8 @@ window.PreparationPlans={
   const t=this.t,p=await API.request(this.api()+'/'+id);
   const labels={CREATE:['创建','Created'],EDIT:['修改','Edited'],SUBMIT:['提交审批','Submitted'],APPROVE:['审批通过','Approved'],REJECT:['退回','Returned'],START:['生成备货作业','Work Order Created']};
   const button=(id,z,e,style='secondary')=>'<button type="button" class="button '+style+'" data-plan-action="'+id+'">'+t(z,e)+'</button>';
-  const work=p.allocation_id||p.co_preparation_id?'<a class="button secondary" href="'+this.orderRoute(p)+'">'+t('查看作业','View Work')+'</a>':
-   p.actions.start?'<a class="button primary" href="'+this.startRoute(p)+'">'+t('开始备货','Start Preparation')+'</a>':'';
+  const work=p.allocation_id||p.co_preparation_id?'<a class="button secondary" href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':
+   p.actions.start?'<a class="button primary" href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'';
   const actions=work+(p.actions.edit?button('edit','修改','Edit')+button('submit','提交审批','Submit for Approval','primary'):'')+
    (p.actions.review?button('approve','审批通过','Approve','primary')+button('reject','退回','Return','danger-outline'):'');
   const back='<a class="button secondary" data-wms-back href="'+this.route+'">'+t('返回备货计划','Back to Plans')+'</a>';

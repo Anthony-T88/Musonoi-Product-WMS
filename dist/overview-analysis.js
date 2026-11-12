@@ -12,7 +12,7 @@ window.OverviewAnalysis={
   const t=this.t,parts=[];
   if(row.batches||showZero)parts.push((row.batches||0)+' '+t('批次','batches'));
   const quantity=row.quantity??row.bundles??0;
-  parts.push(quantity+' '+unit);
+  parts.push(CountValues.display(quantity)+' '+unit);
   const net=row.known_net_mt??row.net_weight??(showZero&&!quantity?0:null);
   if(weight&&(net!=null||showZero))parts.push(this.number(net)+' '+t('吨','MT'));
   return parts.join(' / ');
@@ -54,7 +54,7 @@ window.OverviewAnalysis={
  this.batchCard(t('备货作业中捆包','Bundles in Preparation'),data.metrics.preparing)+
  this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),prepared,true)+
  this.batchCard(t('装车中库存','Stock in Loading'),data.metrics.loading,true))+
- this.card(t('本期正式出库','Formal Outbound'),this.number(model.outbound),t('吨','MT'),model.vehicles+' '+t('辆','vehicles')))+
+ this.card(t('本期正式出库','Formal Outbound'),this.number(model.outbound),t('吨','MT'),CountValues.display(model.vehicles)+' '+t('辆','vehicles')))+
  this.card(t('销售计划履约','Sales Fulfilment'),model.rate==null?'—':this.number(model.rate,1),'%','')+'</div>')+
  '<div class="oa-grid oa-charts">'+['net','vehicles','receipts','stock'].map(key=>co&&data.metal&&key==='receipts'?this.panel('月度发运金属量统计','Monthly Shipment Metal','',CobaltMetal.chart(data.metal.months),'oa-chart oa-metal-chart'):this.chart(model,key)).join('')+'</div><div class="oa-grid oa-three">'+(unavailable?'':this.stock(model)+this.customers(model))+this.attention(model)+'</div>'+this.execution(model)+this.flow(model)+(this.can('report:read')?this.panel('收发存与月度预检','Stock Balance & Monthly Precheck',t('产品＋仓库＋自然月 · 只读，不锁账','Product + warehouse + calendar month · Read-only'),'<div data-oa-balance>'+t('正在读取整仓月度预检…','Loading warehouse monthly precheck…')+'</div>','oa-balance-panel'):'');
  parent.replaceChildren(...(filter?[filter]:[]),root);this.bindCharts(root,model);window.ExportLicenses?.mountOverview(root);if(this.can('report:read'))this.loadBalance(this.current,model);

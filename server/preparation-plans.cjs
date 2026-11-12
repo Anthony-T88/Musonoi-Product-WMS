@@ -49,7 +49,10 @@ async function detail(c,req,id){
 async function list(c,req){
  const query=req.query||{},state=query.state||'',search=query.search?B.text(query.search,'查找计划',160):'',page=Number(query.page||1);
  if((state&&!stateLabels.includes(state))||!Number.isInteger(page)||page<1||page>100000)throw B.error(400,'备货计划筛选条件无效');
- const where=' WHERE '+visibility+" AND ($3::text='' OR p.state=$3) AND ($4::text='' OR strpos(lower(concat_ws(' ',p.batch_no,cu.code,co.code,customer.name)),lower($4))>0)";
+ const executable=query.executable==='1';
+ if(executable&&!canStart(req))throw B.error(403,'当前岗位无权创建备货单');
+ const ready=executable?" AND p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL AND coalesce(cu.status,co.status)='OPEN' AND NOT EXISTS(SELECT 1 FROM sales_plan_approvals a WHERE a.plan_id=coalesce(cu.id,co.id) AND a.product_code=p.product_code AND a.state<>'APPROVED')":'';
+ const where=' WHERE '+visibility+" AND ($3::text='' OR p.state=$3) AND ($4::text='' OR strpos(lower(concat_ws(' ',p.batch_no,cu.code,co.code,customer.name)),lower($4))>0)"+ready;
  const values=[...params(req),state,search];
  const {rows}=await c.query(projection+where+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET $5',[...values,(page-1)*50]);
  const {rows:[total]}=await c.query('SELECT count(*)::int n FROM ('+projection+where+') results',values);

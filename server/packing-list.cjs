@@ -87,7 +87,10 @@ async function preview(buffer,sheetName='PL'){
   if(typeof v==='number'){const wholeKg=row.number>=30&&i>=6&&c.numFmt==='#,##0';text=v.toLocaleString('en-US',{minimumFractionDigits:wholeKg?0:row.number>=30&&i>=6?1:0,maximumFractionDigits:wholeKg?0:4});}
   cells.push({address:c.address,text,font:{name:c.font.name||'Times New Roman',size:c.font.size||11,bold:c.font.bold,italic:c.font.italic,color:color(c.font.color)},fill:c.fill.type==='pattern'&&c.fill.pattern==='solid'?color(c.fill.fgColor):null,alignment:c.alignment,border:Object.fromEntries(['top','bottom','left','right'].map(k=>[k,{style:borders[k]?.style,color:color(borders[k]?.color)}]))});
  }rows.push({number:row.number,height:row.height||sheet.properties.defaultRowHeight||15,cells});});
- return {columns:Array.from({length:7},(_,i)=>sheet.getColumn(i+1).width||8.43),rows,merges:sheet.model.merges,
+ const setup=sheet.pageSetup||{},paper={1:'Letter',8:'A3',9:'A4',11:'A5'}[setup.paperSize]||'A4';
+ const print={paper,orientation:setup.orientation==='landscape'?'landscape':'portrait',margins:setup.margins||null,
+  fitHeight:setup.fitToPage&&setup.fitToHeight===1};
+ return {columns:Array.from({length:7},(_,i)=>sheet.getColumn(i+1).width||8.43),rows,merges:sheet.model.merges,print,
  images:sheet.getImages().map(x=>{const i=book.getImage(x.imageId);return {extension:i.extension,base64:i.buffer.toString('base64'),tl:{row:x.range.tl.row,col:x.range.tl.col},br:x.range.br?{row:x.range.br.row,col:x.range.br.col}:null};})};
 }
 module.exports={render,preview,digest,template,cell};

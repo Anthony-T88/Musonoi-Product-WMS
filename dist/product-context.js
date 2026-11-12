@@ -26,7 +26,9 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
   const narrow=matchMedia('(max-width: 900px)'),sidebar=document.querySelector('.sidebar');
   const place=()=>{const menu=narrow.matches&&document.querySelector('.mobile-nav-shell');(menu||sidebar).append(box);};
   place();narrow.addEventListener('change',place);
-  const sharedDocument=()=>/^\/(?:export-licenses|preparation\/work-plans)(?:\/|$)/.test(location.pathname);
+  const sharedDocument=()=>/^\/(?:export-licenses|preparation\/work-plans)(?:\/|$)/.test(location.pathname)||
+   ['/stocktaking','/stock-map'].includes(location.pathname)||
+   /^\/(?:preparation|receipts)\/new$/.test(location.pathname)&&!!document.getElementById('executable-preparation-filter');
   const editing=()=>this.dirty||document.querySelector('#dialog[open] form');
   const changeLanguage=I18n.change.bind(I18n);
   I18n.change=async language=>{

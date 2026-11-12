@@ -323,8 +323,9 @@ window.ExportLicenses={
   if(!container||!sales)return;
   container.before(slot);
   if(old)select.options[0].disabled=true;
-  let request=0,timer;
+  let request=0,previewRequest=0,timer;
   const show=()=>{
+   const token=++previewRequest,licenseId=select.value;
    const chosen=known.get(select.value),reserved=!!select.value,isCustom=chosen?.unit_basis==='CUSTOM';
    if(invoice){invoice.required=!reserved&&ProductContext.isCopper();invoice.readOnly=reserved;}
    if(manual)manual.readOnly=reserved;
@@ -333,7 +334,16 @@ window.ExportLicenses={
     if(manual)manual.value=chosen?.license_no||old?.license_no||'';
     if(invoice)invoice.value=old?.license_id===select.value?old.invoice_no:'';
    }
-   note.textContent=reserved?t('发票号在保存时由所选许可证自动生成。','The license assigns an invoice number on save.')+(chosen?.available!=null?' '+t('可分配 ','Allocatable ')+chosen.available+' '+chosen.unit:''):'';
+   const available=chosen?.available!=null?' '+t('可分配 ','Allocatable ')+chosen.available+' '+chosen.unit:'';
+   note.textContent=reserved?t('最终发票号在保存时确定。','The final invoice number is assigned on save.')+available:'';
+   if(!reserved||old?.license_id===licenseId)return;
+   const filters=new URLSearchParams({sales_plan_id:sales.value,invoice_preview_id:licenseId});
+   if(date?.value)filters.set('planned_load_date',date.value);
+   API.request(this.api()+'/options?'+filters).then(d=>{
+    if(token!==previewRequest||select.value!==licenseId||!form.isConnected)return;
+    if(invoice)invoice.value=d.invoice_preview||'';
+    if(d.invoice_preview)note.textContent=t('预计发票号 ','Proposed invoice ')+d.invoice_preview+' · '+note.textContent;
+   }).catch(error=>{if(token===previewRequest&&select.value===licenseId&&form.isConnected)note.textContent=error.message;});
   };
   const refresh=async()=>{
    const token=++request,previous=select.value||old?.license_id||'';

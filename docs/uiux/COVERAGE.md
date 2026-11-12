@@ -164,3 +164,14 @@
 - [运行说明](VISUAL.md) · [提交门禁](QUALITY.md) · [设计规范](DESIGN.md)
 
 图表、地图画布及单证输出保留业务专用布局。验证使用登记的业务状态及代表角色，涵盖该版本必测矩阵。
+
+## V4.7.5 验收补充
+
+| 页面 | 场景 |
+| --- | --- |
+| `/stock-map` | 铜钴实际货位定位、空位、占用、暂存、画布缩放、窄屏堆叠详情与长值 |
+| `/sales-plans` | 两产品履约进度、数值排序及一致列对齐 |
+| `/preparation/new`、`/receipts/new` | 选取可执行备货计划、直接带入计划和权限拒绝 |
+| `/outbounds?view=departures` | 出门证内打印配置与独立打印，历史打印入口转到出厂列表 |
+| `/workbench/accounts?registrations=pending` | 注册申请审批待办、单角标和审批后刷新 |
+| `/stocktaking` | 两产品编号、类型、时期、创建日期与状态组合筛选 |

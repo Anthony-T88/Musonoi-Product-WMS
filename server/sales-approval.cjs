@@ -40,13 +40,24 @@ async function register({app,pool,permitted,csrf}){
    if(q.customer_id)add('p.customer_id=?',B.uuid(q.customer_id));
    const summaryWhere=[...where],summaryValues=[...v];
    if(q.status){if(q.status==='APPROVAL_IN_PROGRESS')where.push("a.state IN ('PENDING','COMMERCE_PENDING')");else if(q.status==='CLOSING')where.push("cr.state IN ('PENDING','COMMERCE_PENDING')");else if(['CLOSE_PENDING','CLOSE_COMMERCE_PENDING','CLOSE_REJECTED'].includes(q.status))add('cr.state=?',q.status.slice(6));else if(['PENDING','COMMERCE_PENDING','REJECTED','APPROVED'].includes(q.status))add('a.state=?',q.status);else if(['OPEN','CLOSED'].includes(q.status)){add('p.status=?',q.status);where.push("coalesce(a.state,'APPROVED')='APPROVED'");}else throw B.error(400,'SALES_FILTER_INPUT');}
-   const from=select(co),filtered=from+' WHERE '+where.join(' AND '),items=(await c.query(filtered+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET '+(page-1)*50,v)).rows;
+   const from=select(co),filtered=from+' WHERE '+where.join(' AND ');
    const summary=(await c.query("SELECT count(*)::int all,count(*) FILTER(WHERE approval_state='PENDING')::int sales_pending,count(*) FILTER(WHERE approval_state='COMMERCE_PENDING')::int commerce_pending,count(*) FILTER(WHERE approval_state IN('APPROVED','LEGACY') AND status='OPEN')::int open FROM ("+select(co)+' WHERE '+summaryWhere.join(' AND ')+') scoped',summaryValues)).rows[0];
    const invoices=require('./sales-invoices.cjs');
    const selection='SELECT scoped.id,scoped.target_weight FROM ('+filtered+') scoped';
-   const {summary:execution}=await invoices.execution(c,req,selection,v);
-   const {byId}=await invoices.execution(c,req,'SELECT p.id,p.target_weight FROM '+t.plans+' p WHERE $1::uuid IS NOT NULL AND p.id=ANY($2::uuid[])',[req.user.id,items.map(row=>row.id)]);
-   return {items:(await Close.enrich(c,req,items)).map(row=>({...row,execution:byId.get(row.id)})),total:Number((await c.query('SELECT count(*) FROM ('+filtered+') scoped',v)).rows[0].count),page,page_size:50,summary,execution};
+   const {summary:execution,byId}=await invoices.execution(c,req,selection,v);
+   const offset=(page-1)*50;
+   let items;
+   if(q.sort==='fulfillment'){
+    const direction=q.direction==='asc'?1:-1;
+    const ranked=[...byId.values()].sort((a,b)=>{
+     if(a.fulfillment_sort==null||b.fulfillment_sort==null)return Number(a.fulfillment_sort==null)-Number(b.fulfillment_sort==null)||a.id.localeCompare(b.id);
+     return direction*(Number(a.fulfillment_sort)-Number(b.fulfillment_sort))||a.id.localeCompare(b.id);
+    });
+    const ids=ranked.slice(offset,offset+50).map(row=>row.id);
+    const param='$'+(v.length+1)+'::uuid[]';
+    items=(await c.query(filtered+' AND p.id=ANY('+param+') ORDER BY array_position('+param+',p.id)',[...v,ids])).rows;
+   }else items=(await c.query(filtered+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET '+offset,v)).rows;
+   return {items:(await Close.enrich(c,req,items)).map(row=>({...row,execution:byId.get(row.id)})),total:byId.size,page,page_size:50,summary,execution};
   }));
   app.get(prefix+'/plans/:id',{preHandler:permitted('plan:read')},req=>C.readTransaction(pool,async c=>{const plan=await access(c,req,req.params.id);const invoices=require('./sales-invoices.cjs');const {summary:execution}=await invoices.execution(c,req,'SELECT p.id,p.target_weight FROM '+t.plans+' p WHERE $1::uuid IS NOT NULL AND p.id=$2',[req.user.id,plan.id]);return {...await Close.detail(c,req,plan),execution,related:await invoices.related(c,req,plan),posted_batches:await invoices.shipments(c,req,plan.id),can_confirm_invoice:invoices.canConfirm(req),history:(await c.query("SELECT a.action,a.after_data,a.occurred_at,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.entity_id=$1 AND a.entity_type='sales_plan_review' AND a.after_data->>'product_code'=$2 ORDER BY a.id",[plan.id,req.productCode])).rows};}));
   app.post(prefix+'/plans/:id/review',{preHandler:[permitted('plan:read'),csrf,async req=>{const plan=await access(pool,req,req.params.id);const commerce=plan.approval_state==='COMMERCE_PENDING',role=commerce?'commerce_manager':'sales_manager',permission=commerce?'plan:commerce-approve':'plan:approve';if(!['admin',role].includes(req.user.role_code)||!req.user.permissions.includes(permission))throw B.error(403,commerce?'COMMERCE_MANAGER_REQUIRED':'SALES_MANAGER_REQUIRED');}]},req=>B.mutate(pool,req,async c=>{

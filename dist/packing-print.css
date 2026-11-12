@@ -1,0 +1,15 @@
+@import url('/uiux-governance.css');
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--uix-soft); color: var(--uix-text); }
+nav { display: flex; align-items: center; gap: var(--uix-gap-sm); padding: var(--uix-gap); font: var(--uix-body) var(--uix-font); }
+button { font: inherit; padding: 8px 12px; }
+.packing-sheet { position: relative; margin: 0 auto; background: white; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+td { border: 0; padding: 2px; overflow-wrap: anywhere; white-space: pre-wrap !important; }
+tr { break-inside: avoid; }
+@media print {
+  nav { display: none; }
+  body { background: white; }
+  td { print-color-adjust: exact; }
+}

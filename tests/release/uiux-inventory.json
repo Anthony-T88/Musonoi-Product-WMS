@@ -893,15 +893,6 @@
       "template": "/outbounds"
     },
     {
-      "key": "printers",
-      "products": [
-        "CU_CATHODE",
-        "CO_HYDROXIDE"
-      ],
-      "state": "standard",
-      "template": "/outbounds"
-    },
-    {
       "key": "templates",
       "products": [
         "CU_CATHODE",

@@ -304,6 +304,44 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  steps.push('independent approvals, idempotent final inventory deduction, outbound report and Excel agreement');
  await api('/receipts','production_operator',{project_id:f.project,lines:[{bundle_no:'MUS-'+today.slice(0,4)+'-022-'+seq,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}]});
  const uiWorkPlan=await P.approved(planApi,cu,plan.id,P.batch(cu,99));
+ const previewInvoice='/export-permits/options?'+new URLSearchParams({sales_plan_id:plan.id,invoice_preview_id:sameDay.id,planned_load_date:today});
+ assert.equal((await api(previewInvoice)).invoice_preview,sameDay.proforma_no+'-01');
+ // Keep the legacy padded number verbatim and continue from its numeric suffix.
+ const historical=sameDay.proforma_no+'-000099';
+ await c.query('INSERT INTO loading_plan_groups(sales_plan_id,name,invoice_no,created_by) VALUES($1,$2,$3,$4)',[plan.id,'Synthetic historical numbering',historical,f.accounts.find(a=>a.role==='admin').id]);
+ assert.equal((await api(previewInvoice)).invoice_preview,sameDay.proforma_no+'-100');
+ const ready=[];
+ for(const [i,code] of ['P1-02','P1-03'].entries()){
+  const {rows:[slot]}=await c.query(`INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage)
+   VALUES($1,$2,$3,$3,'FORMAL') ON CONFLICT(project_id,code) DO UPDATE SET map_cell_code=EXCLUDED.map_cell_code,map_usage='FORMAL' RETURNING id`,[f.project,f.warehouse,code]);
+  const freshNo='MUS-'+today.slice(0,4)+'-0'+(23+i)+'-'+seq;
+  const inbound=await api('/receipts','production_operator',{project_id:f.project,lines:[{...lines[0],bundle_no:freshNo}]});
+  const sent=await api('/receipts/'+inbound.id+'/submit','production_operator',{version:inbound.version});
+  await api('/receipts/'+inbound.id+'/confirm','production_manager',{version:sent.version});
+  const {rows:[unit]}=await c.query('SELECT id FROM bundles WHERE bundle_no=$1',[freshNo]);
+  const work=await P.approved(planApi,cu,plan.id,P.batch(cu,90+i));
+  let batch=await api('/v261/lots','logistics_field_operator',{preparation_plan_id:work.id,planned_location_id:slot.id,items:[{bundle_id:unit.id,sample_required:false}]});
+  batch=await api('/v261/lots/'+batch.id,'logistics_field_operator');
+  batch=(await api('/v262/lots/'+batch.id+'/weigh','logistics_field_operator',{version:batch.version,items:batch.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'V475-CONCURRENT-'+seq+'-'+i}))})).lot;
+  batch=await api('/v261/lots/'+batch.id+'/submit','logistics_field_operator',{version:batch.version});
+  await api('/v261/lots/'+batch.id+'/approve','site_supervisor',{version:batch.version,all_weighed_and_stored:true});
+  ready.push(batch.id);
+ }
+ const trucks=new(require('exceljs').Workbook)(),sheet=trucks.addWorksheet('Dispatch');
+ const plates=['V475-A-'+seq,'V475-B-'+seq];sheet.addRows([['Horse','Trailer','Capacity'],...plates.map((plate,i)=>[plate,'V475-T-'+i+'-'+seq,30])]);
+ const upload={file_name:'synthetic-v475.xlsx',file_base64:Buffer.from(await trucks.xlsx.writeBuffer()).toString('base64')};
+ const validated=await api(dispatchPath+'/import-preview','admin',upload);
+ await api(dispatchPath,'admin',{...upload,preview_sha256:validated.file_sha256});
+ const candidates=(await api(dispatchPath+'?shipment_month='+shipment_month)).vehicles,readyArrivals=[];
+ for(const [i,truck] of plates.entries()){
+  const vehicle=candidates.find(item=>item.truck_no===truck);
+  readyArrivals.push(await api('/loading-plans/arrivals/'+vehicle.id,'admin',{...arrivalBody,trailer_one:'V475-T-'+i+'-'+seq,driver_name:'Synthetic V475 Driver '+i,passport_no:'Synthetic V475 Passport '+i}));
+ }
+ const concurrent=await Promise.all(ready.map((id,i)=>request('/loading-plans/unified','admin',{...planBody,license_id:sameDay.id,arrival_id:readyArrivals[i].id,allocation_ids:[id]})));
+ assert.deepEqual(concurrent.map(response=>response.statusCode),[200,200],concurrent.map(response=>response.body).join(' '));
+ assert.deepEqual(concurrent.map(response=>response.json().invoice_no).sort(),[sameDay.proforma_no+'-100',sameDay.proforma_no+'-101']);
+ assert.equal((await c.query('SELECT count(*)::int n FROM loading_plan_groups WHERE invoice_no=$1',[historical])).rows[0].n,1);
+ steps.push('same-prefix invoice preview, legacy padded suffix, concurrent distinct loading plans, sequences above 99');
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
  }finally{await app?.close();await c.end();}
 });

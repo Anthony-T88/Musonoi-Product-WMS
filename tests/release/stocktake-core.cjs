@@ -7,6 +7,18 @@ test('native copper and cobalt stocktake submissions, independent review and ret
  for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.97.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
  const api=async(url,role,body,co=false)=>{const r=await app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':co?'CO_HYDROXIDE':'CU_CATHODE','idempotency-key':crypto.randomUUID()},...(body?{payload:body}:{})});assert.equal(r.statusCode,200,url+' '+r.body.slice(0,300));return r.json();};
  const wh=(await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,$2,'Synthetic empty count warehouse') RETURNING id",[f.project,'CNT-'+crypto.randomBytes(4).toString('hex').toUpperCase()])).rows[0].id;
+ const created=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ for(const [co,kind,period] of [[false,'SEMIANNUAL','2026-07'],[true,'ANNUAL','2026-01']]){
+  const role=co?'logistics_field_operator':'admin',list=co?'/cobalt/stocktaking':'/v27/stocktakes';
+  const body={project_id:f.project,warehouse_id:wh,task_type:kind,period_month:period,...(co?{title:'Synthetic period verification'}:{cutoff_at:new Date().toISOString(),remark:'Synthetic period verification'})};
+  const task=await api(co?list:'/v33/stocktakes',role,body,co);
+  const matched=await api(list+'?'+new URLSearchParams({task_type:kind,period,created_date:created}),role,null,co);
+  const row=matched.items.find(item=>item.id===task.id);
+  assert.equal(row?.period_month,period);assert(row.baseline_at);
+  assert(matched.periods.some(value=>value.task_type===kind&&value.period_month===period));
+  const miss=await api(list+'?'+new URLSearchParams({task_type:kind,period,created_date:'2000-01-01'}),role,null,co);
+  assert(!miss.items.some(item=>item.id===task.id));
+ }
  const count=await api('/v27/stocktakes','admin',{project_id:f.project,warehouse_id:wh,assigned_to:f.accounts.find(a=>a.role==='admin').id,task_type:'SPECIAL',cutoff_at:new Date(Date.now()+60000).toISOString(),remark:'Synthetic isolated empty count'});
  for(const[action,role]of [['start','admin'],['submit-review','admin'],['review','logistics_manager'],['approve','logistics_manager'],['complete','logistics_manager']]){const d=await api('/v27/stocktakes/'+count.id,'admin'),task=d.task||d.document||d;if(action==='complete'&&task.phase==='COMPLETED')continue;await api('/v27/stocktakes/'+count.id+'/'+action,role,{version:task.version,note:'Synthetic '+action});states.push('Cu '+action);}
  for(const decision of ['reject','approve']){

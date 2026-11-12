@@ -27,7 +27,8 @@ async function execution(c,req,selection,params){
   SELECT id,planned::text,CASE WHEN unknown_posted=0 THEN posted::text END posted,
    CASE WHEN unknown_posted=0 THEN greatest(planned-posted,0)::text END remaining,
    CASE WHEN unknown_invoiced=0 THEN invoiced::text END invoiced,
-   CASE WHEN unknown_invoiced=0 AND planned>0 THEN round(invoiced/planned*100,2)::text END fulfillment
+   CASE WHEN unknown_invoiced=0 AND planned>0 THEN round(invoiced/planned*100,2)::text END fulfillment,
+   CASE WHEN unknown_invoiced=0 AND planned>0 THEN invoiced/planned END fulfillment_sort
   FROM sums`,[...params,req.productCode]);
  return {summary:rows.find(row=>row.id===null),byId:new Map(rows.filter(row=>row.id).map(row=>[row.id,row]))};
 }
