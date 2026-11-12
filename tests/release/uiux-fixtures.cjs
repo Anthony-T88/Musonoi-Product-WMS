@@ -26,7 +26,10 @@ async function seed(){
   const check=async(name,fn)=>{try{await fn();prepared.push(name);}catch(e){blocked.push({name,reason:e.message});}};
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const unique=Date.now(),coPlan=(await c.query("SELECT * FROM co_sales_plans WHERE remark='Synthetic rc2 flow' ORDER BY created_at DESC LIMIT 1")).rows[0];
-  await check('co-draft-receipt',()=>request('logistics_field_operator',CO,'/cobalt/preparations',{project_id:f.project,warehouse_id:f.warehouse,total_bags:2}));
+  await check('co-draft-receipt',async()=>{
+   const P=require('./preparation-fixture.cjs'),work=await P.approved(request,CO,coPlan.id,P.batch(CO,220));
+   return request('logistics_field_operator',CO,'/cobalt/preparations',{preparation_plan_id:work.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:2});
+  });
   await check('cu-draft-receipt',async()=>{
    const project=(await c.query("INSERT INTO projects(code,name) VALUES('UIUX-RECEIPT','Synthetic receipt project') ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name RETURNING id")).rows[0].id;
    await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'UIUX-WH','Synthetic receipt warehouse') ON CONFLICT(project_id,code) DO NOTHING",[project]);

@@ -3,6 +3,7 @@
   "historicalBackfill": false,
   "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
   "entries": [
+    {"entity":"preparation_plans","policy":"ADMIN_ONLY","basis":"Scoped workflow events are listed through the preparation-plan route."},
     {
       "entity": "export_licenses",
       "policy": "ADMIN_ONLY",

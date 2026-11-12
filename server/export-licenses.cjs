@@ -59,7 +59,8 @@ async function detail(c,req,id){
  const allocations=(await c.query("SELECT a.id,a.plan_id,a.batch_id,a.invoice_no,a.reserved_quantity::text,a.used_quantity::text,a.state,a.closed_at,p.loading_id,p.posted_at,p.net_mt::text,p.estimated_metal_mt::text,p.confirmed_metal_mt::text,coalesce(d.code,cp.code) plan_no FROM export_license_allocations a LEFT JOIN export_license_postings p ON p.allocation_id=a.id LEFT JOIN loading_plan_documents d ON d.id=a.cu_plan_id LEFT JOIN co_loading_plans cp ON cp.id=a.co_plan_id WHERE a.license_id=$1 ORDER BY a.created_at,a.id",[id])).rows;
  const attachments=(await c.query('SELECT a.id,a.category,a.filename,a.mime,a.sha256,a.created_at,u.display_name uploader FROM export_license_attachments a JOIN users u ON u.id=a.created_by WHERE a.license_id=$1 ORDER BY a.created_at DESC,a.id',[id])).rows;
  const {issuing_bank_account,offshore_bank,offshore_bank_account,processing_records}=license;
- return {...data,issuing_bank_account,offshore_bank,offshore_bank_account,processing_records,history,allocations,attachments};
+ const {local_day}=(await c.query('SELECT '+today+'::text local_day')).rows[0];
+ return {...data,issuing_bank_account,offshore_bank,offshore_bank_account,processing_records,history,allocations,attachments,local_day};
 }
 async function list(c,req,eligible){
  const q=req.query||{},page=Number(q.page||1),filter=String(q.search||'').trim().slice(0,160);
@@ -184,6 +185,7 @@ async function requestAction(c,req,id){
  const l=await record(c,req,id,true),b=req.body;
  fields(b,['action','payload','reason','version']);
  if(!actions.includes(b.action)||!b.payload||Array.isArray(b.payload)||typeof b.payload!=='object'||l.version!==B.version(b.version))throw fail(409,'审核申请状态或版本无效');
+ if((await c.query("SELECT 1 FROM export_license_actions WHERE license_id=$1 AND decision='PENDING'",[id])).rowCount)throw fail(409,'已有申请待审批，请先完成审核');
  if(!['SETTLE','CORRECT'].includes(b.action))await approvedChange(c,req,l,{action:b.action,payload:b.payload});
  const a=(await c.query('INSERT INTO export_license_actions(license_id,action,payload,reason,requested_by) VALUES($1,$2,$3,$4,$5) RETURNING *',[id,b.action,b.payload,B.text(b.reason,'申请原因',1000),req.user.id])).rows[0];
  await B.audit(c,req,'export_license_action_requested','export_licenses',id,null,a);
@@ -198,6 +200,7 @@ async function review(c,req,id,actionId){
  if(b.decision==='APPROVED'){
   result=['SETTLE','CORRECT'].includes(a.action)?await usage(c,l,a):await approvedChange(c,req,l,a);
   await patch(c,'export_licenses',id,{...(['SETTLE','CORRECT'].includes(a.action)?{}:result),version:l.version+1});
+  if(a.action==='EXTEND')result={...result,previous_effective_until:l.effective_until};
  }
  await patch(c,'export_license_actions',a.id,{decision:b.decision,reviewed_by:req.user.id,reviewed_at:new Date(),review_note:B.text(b.note,'审核意见',1000),result});
  await B.audit(c,req,'export_license_action_reviewed','export_licenses',id,{id:a.id,state:l.state},{action:a.action,decision:b.decision,result:Books.auditSnapshot(result)});

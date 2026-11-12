@@ -53,7 +53,14 @@ async function related(c,req,plan){
   JOIN export_licenses l ON l.id=a.license_id AND l.product_code=a.product_code
   WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=l.project_id AND s.warehouse_id IS NULL
   AND(s.customer_id IS NULL OR s.customer_id=l.customer_id)) ORDER BY l.license_no,l.proforma_no`,[...args,req.productCode])).rows:[];
- return {loading,packing,licenses};
+ const preparations=co?(has('co:read')?(await c.query(
+  "SELECT DISTINCT p.id,p.preparation_batch_no batch_no,p.status FROM co_preparations p WHERE (EXISTS(SELECT 1 FROM preparation_plans q WHERE q.co_sales_plan_id=$2 AND q.co_preparation_id=p.id)"+
+  " OR EXISTS(SELECT 1 FROM co_loading_plans d WHERE d.sales_plan_id=$2 AND d.preparation_id=p.id))"+
+  " AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND s.customer_id IS NULL AND(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id)) ORDER BY batch_no",args)).rows:[]):
+  (has('allocation:read')?(await c.query("SELECT a.id,coalesce(a.lot_no,a.code) batch_no,coalesce(a.workflow_state,a.status) status FROM allocations a JOIN sales_plans p ON p.id=a.plan_id WHERE p.id=$2"+
+  " AND NOT EXISTS(SELECT 1 FROM allocation_items i JOIN bundles b ON b.id=i.bundle_id JOIN locations l ON l.id=b.location_id WHERE i.allocation_id=a.id"+
+  " AND NOT EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.customer_id IS NULL OR s.customer_id=p.customer_id) AND(s.warehouse_id IS NULL OR s.warehouse_id=l.warehouse_id))) ORDER BY batch_no",args)).rows:[]);
+ return {preparations,loading,packing,licenses};
 }
 
 async function shipments(c,req,planId,loadingId=null,batchId=null){

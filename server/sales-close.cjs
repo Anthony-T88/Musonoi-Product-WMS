@@ -3,12 +3,20 @@ const B=require('./business-common.cjs'),C=require('./cobalt.cjs');
 const available=async c=>(await c.query("SELECT to_regclass('public.sales_plan_close_requests') IS NOT NULL ok")).rows[0].ok;
 const latestJoin=co=>` LEFT JOIN LATERAL(SELECT r.* FROM sales_plan_close_requests r WHERE r.plan_id=p.id AND r.product_code='${co?'CO_HYDROXIDE':'CU_CATHODE'}' ORDER BY r.requested_at DESC,r.id DESC LIMIT 1) cr ON true`;
 const columns=`cr.id close_request_id,cr.state close_state,cr.version close_version,cr.requested_by close_requested_by,cr.requested_at close_requested_at,cr.sales_reviewed_by close_sales_reviewed_by,cr.sales_reviewed_at close_sales_reviewed_at`;
+function eligibility(req,plan){
+ if(plan.status==='CLOSED')return 'CLOSED';
+ if(['PENDING','COMMERCE_PENDING'].includes(plan.close_state))return 'IN_REVIEW';
+ if(!req.user.permissions.includes('plan:write')||!['sales_operator','admin'].includes(req.user.role_code))return 'NO_PERMISSION';
+ if(!['APPROVED','LEGACY'].includes(plan.approval_state))return 'NOT_APPROVED';
+ if(plan.approval_state!=='LEGACY'&&plan.submitted_by!==req.user.id)return 'OTHER_SUBMITTER';
+ return 'AVAILABLE';
+}
 async function enrich(c,req,rows){
  if(!rows.length)return rows;
  const ids=rows.map(p=>p.id),co=req.productCode==='CO_HYDROXIDE';
  const values=co?(await c.query(`SELECT p.id,jsonb_build_object('planned_net_weight',p.target_weight::text,'outbound_net_weight',coalesce(sum((o.snapshot->'order'->>'actual_net_kg')::numeric)/1000,0)::text,'remaining_weight',greatest(0,p.target_weight-coalesce(sum((o.snapshot->'order'->>'actual_net_kg')::numeric)/1000,0))::text) control FROM co_sales_plans p LEFT JOIN co_loading_orders l ON l.sales_plan_id=p.id AND l.status IN('WAITING','OUTBOUND') LEFT JOIN co_outbounds o ON o.order_id=l.id WHERE p.id=ANY($1::uuid[]) GROUP BY p.id`,[ids])).rows:(await c.query('SELECT id,v265_plan_progress(id) control FROM sales_plans WHERE id=ANY($1::uuid[])',[ids])).rows;
  const invoiced=await require('./sales-invoices.cjs').totals(c,req.productCode,ids);
- const controls=new Map(values.map(r=>{const total=invoiced.get(r.id);return [r.id,{...r.control,invoiced_net_weight:total?.unknown_packages?null:total?.net_mt||'0',invoiced_unknown_packages:total?.unknown_packages||0}];})),dispatch=await require('./sales-dispatch-summary.cjs').counts(c,req.productCode,ids);return rows.map(p=>({...p,control:controls.get(p.id)||null,dispatch_counts:dispatch.get(p.id)}));
+ const controls=new Map(values.map(r=>{const total=invoiced.get(r.id);return [r.id,{...r.control,invoiced_net_weight:total?.unknown_packages?null:total?.net_mt||'0',invoiced_unknown_packages:total?.unknown_packages||0}];})),dispatch=await require('./sales-dispatch-summary.cjs').counts(c,req.productCode,ids);return rows.map(p=>({...p,close_eligibility:eligibility(req,p),control:controls.get(p.id)||null,dispatch_counts:dispatch.get(p.id)}));
 }
 async function detail(c,req,plan){
  const [history,readiness]=await Promise.all([

@@ -741,6 +741,10 @@
     {
       "version": "185_v473_license_record_books.sql",
       "checksum": "426eb23a28ed5076b50ed9c3727ac019d39b9765c5d49d0882e566c68e27c135"
+    },
+    {
+      "version": "186_v474_preparation_plans.sql",
+      "checksum": "1e65083e748984e419122f399cbd11f8206e6e641e3668d65259dc78ebe83261"
     }
   ]
 }

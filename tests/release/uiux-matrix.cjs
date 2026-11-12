@@ -5,8 +5,8 @@ const inventory=require('./uiux-inventory.json');
 const languages=['zh-CN','en'];
 const desktop={width:1366,height:768},large={width:1440,height:900},wide={width:1920,height:1080},phone={width:390,height:844};
 const fullSizes=[desktop,large,wide],allSizes=[...fullSizes,phone];
-const narrowKeys=new Set(['overview','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail']);
-const quickKeys=new Set(['overview','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail']);
+const narrowKeys=new Set(['overview','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
+const quickKeys=new Set(['overview','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
 const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator']};
 const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
@@ -71,7 +71,8 @@ function expectedLanding(spec,product,ids){
   'cu-invoice':'/outbounds/packing-list/'+ids.cuLoad,
   'former-design-entry':'/workbench'
  };
- if(co)Object.assign(replacements,{'overview-detail':'/inventory',preparation:'/receipts','preparation-new':'/receipts/new'});
+ replacements['preparation-new']='/preparation/work-plans?state=APPROVED';
+ if(co)Object.assign(replacements,{'overview-detail':'/inventory',preparation:'/receipts','receipt-new':'/preparation/work-plans?state=APPROVED'});
  if(copper&&spec.key==='inventory')replacements.inventory='/inventory?status=CURRENT';
  if(co&&spec.key==='map'&&ids.coMapDefault)replacements.map='/stock-map?'+new URLSearchParams({project_id:ids.coMapDefault.project_id,warehouse_id:ids.coMapDefault.id});
  if(copper&&['cu-plan-group-edit','cu-plan-order-new'].includes(spec.key)&&ids.cuGroupChild){
@@ -92,6 +93,11 @@ function selectors(key,product,landing){
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],
   'metal-confirmations':['#co-metal-filter','#page-content table'],
   'sales':['#s468-filter','#ux10-sales-table','.sales-execution-metrics'],
+  'preparation-plans':['#preparation-plan-filter','#preparation-plans-table'],
+  'cu-work-plan-detail':['.export-license-facts'],
+  'co-work-plan-detail':['.export-license-facts'],
+  'cu-preparation-from-plan':['#v261-create','#v261-lot-no','#v261-planned'],
+  'co-preparation-from-plan':['#co-create','#co-create [name=planned_location_id]'],
   'cu-sales-detail':['.sales-identity','.sales-related'],
   'co-sales-detail':['.sales-identity','.sales-related'],
   'export-licenses':['#export-license-filter','#export-license-table'],

@@ -50,7 +50,7 @@ window.OverviewAnalysis={
  this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),cards.prepared,true)+
  this.batchCard(t('装车中库存','Stock in Loading'),cards.loading,true)+
  this.batchCard(t('已出库库存','Outbound Stock'),cards.outbound,true):''):
- (unavailable?'':this.card(t('可用捆包库存','Available Bundle Stock'),data.metrics.available.bundles,t('捆','bundles'),'',true)+
+ (unavailable?'':this.card(t('可用捆包库存','Available Bundle Stock'),data.metrics.available.bundles,t('捆','bundles'),'')+
  this.batchCard(t('备货作业中捆包','Bundles in Preparation'),data.metrics.preparing)+
  this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),prepared,true)+
  this.batchCard(t('装车中库存','Stock in Loading'),data.metrics.loading,true))+

@@ -51,6 +51,8 @@
       "^\\/preparation\\/history-sampling\\/([0-9a-f-]{36})$",
       "^\\/preparation\\/new$",
       "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/preparation\\/work-plans$",
+      "^\\/preparation\\/work-plans\\/([0-9a-f-]{36})$",
       "^\\/receipts$",
       "^\\/receipts\\/([0-9a-f-]{36})$",
       "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
@@ -121,6 +123,8 @@
       "^\\/preparation\\/history-sampling\\/([0-9a-f-]{36})$",
       "^\\/preparation\\/new$",
       "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/preparation\\/work-plans$",
+      "^\\/preparation\\/work-plans\\/([0-9a-f-]{36})$",
       "^\\/receipts$",
       "^\\/receipts\\/([0-9a-f-]{36})$",
       "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
@@ -639,8 +643,49 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "select approved preparation plan",
       "template": "/preparation/new"
+    },
+    {
+      "key": "preparation-plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/preparation/work-plans"
+    },
+    {
+      "key": "cu-work-plan-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "approved",
+      "template": "/preparation/work-plans/:id"
+    },
+    {
+      "key": "co-work-plan-detail",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "approved",
+      "template": "/preparation/work-plans/:id"
+    },
+    {
+      "key": "cu-preparation-from-plan",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "approved plan",
+      "template": "/preparation/new"
+    },
+    {
+      "key": "co-preparation-from-plan",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "approved plan",
+      "template": "/receipts/new"
     },
     {
       "key": "cu-lot",

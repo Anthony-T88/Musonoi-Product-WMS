@@ -9,9 +9,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  const go=async(p,url,product='CO_HYDROXIDE')=>{await p.goto(origin+'/overview');await ready(p);await p.evaluate(code=>localStorage.setItem(ProductContext.key,code),product);await p.goto(origin+url);await ready(p);};
  const guest=await browser.newPage({viewport:{width:390,height:860}});guest.on('pageerror',e=>errors.push(e.message));await guest.goto(origin);
  await guest.locator('.login46-brand .login46-title-version').waitFor();
- assert.equal(await guest.locator('.login46-title-version').innerText(),'V4.7.3');
+ assert.equal(await guest.locator('.login46-title-version').innerText(),'V4.7.4');
  assert(await guest.locator('.login46-brand h1').evaluate(el=>parseFloat(getComputedStyle(el.querySelector('.login46-title-version')).fontSize)<parseFloat(getComputedStyle(el).fontSize)));
- await guest.locator('[data-login-language="en"]').click();assert.match(await guest.locator('.login46-brand h1').innerText(),/Product Warehouse Management System\s*V4\.7\.3/);
+ await guest.locator('[data-login-language="en"]').click();assert.match(await guest.locator('.login46-brand h1').innerText(),/Product Warehouse Management System\s*V4\.7\.4/);
  await guest.locator('.login46-registration').click();await guest.locator('#registration-modal input[name=username]').waitFor();
  for(const name of ['contact_phone','contact_email'])assert(await guest.locator('#registration-modal input[name='+name+']').isVisible());
  const registration=guest.locator('#registration-modal');
@@ -30,6 +30,71 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await guest.screenshot({path:path.join(E.runtime,'registration-network-en-390.png'),fullPage:true});
  await guest.close();
  const admin=await open('admin'),viewer=await open('production_operator'),page=admin.page;
+ const planner=await open('export_supervisor'),reviewer=await open('logistics_manager');
+ const workPlanNav='.sidebar [data-primary-route="preparation/work-plans"]';
+ const workPlanPath='/preparation/work-plans';
+ const P=require('./preparation-fixture.cjs');
+ for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+  await go(planner.page,'/overview',product);
+  await planner.page.locator(workPlanNav).click();
+  await planner.page.waitForURL(origin+workPlanPath);
+  await planner.page.locator('#preparation-plan-create').click();
+  const form=planner.page.locator('#preparation-plan-form'),sales=form.locator('[name=sales_plan_id]');
+  await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
+  await sales.selectOption({index:1});
+  assert(await form.locator('[name=customer]').inputValue());
+  const batch=P.batch(product,87);
+  await form.locator('[name=batch_no]').fill(batch);
+  await form.locator('[name=shipment_month]').fill(new Date().toISOString().slice(0,7));
+  const saved=planner.page.waitForResponse(response=>response.request().method()==='POST'&&response.url().endsWith('/preparation-plans'),{timeout:6000});
+  await form.locator('button.primary').click();
+  const saveResponse=await saved.catch(async error=>{
+   const invalid=await form.locator(':invalid').evaluateAll(fields=>fields.map(field=>field.name));
+   throw Error(product+' plan form did not submit '+JSON.stringify({invalid,errors}),{cause:error});
+  });
+  assert.equal(saveResponse.status(),200,product+' '+await saveResponse.text());
+  const operationKey=saveResponse.request().headers()['idempotency-key'];
+  assert(operationKey);
+  assert.deepEqual(await planner.page.evaluate(key=>API.check(key),operationKey),{committed:true});
+  const detailPattern=/\/preparation\/work-plans\/[0-9a-f-]{36}$/;
+  await planner.page.waitForURL(detailPattern);
+  const detail=new URL(planner.page.url()).pathname;
+  await planner.page.locator('[data-plan-action=submit]').click();
+  await planner.page.locator('#operation-confirm-accept').click();
+  await planner.page.locator('[data-plan-action=submit]').waitFor({state:'detached'});
+  await go(reviewer.page,'/overview',product);
+  const task=await reviewer.page.evaluate(async href=>{
+   const co=!ProductContext.isCopper(),result=await API.request(co?'/cobalt/ui461/tasks':'/v34/todos');
+   return (co?result.pending:result.items).find(item=>item.href===href);
+  },detail);
+  assert.equal(task.kind,'PREPARATION_PLAN_REVIEW');
+  await reviewer.page.locator(workPlanNav+' .ux-nav-count').waitFor();
+  await reviewer.page.goto(origin+task.href);
+  await ready(reviewer.page);
+  await reviewer.page.locator('[data-plan-action=approve]').waitFor();
+  const reviewerDoc=await reviewer.page.reload();
+  assert.equal(reviewerDoc.status(),200);
+  await ready(reviewer.page);
+  await reviewer.page.locator('[data-plan-action=approve]').click();
+  await reviewer.page.locator('#operation-confirm-accept').click();
+  await reviewer.page.locator('[data-plan-action=approve]').waitFor({state:'detached'});
+  const createPath=product==='CU_CATHODE'?'/preparation/new':'/receipts/new';
+  await go(page,createPath,product);
+  await page.waitForURL(origin+workPlanPath+'?state=APPROVED');
+  const approved=page.locator('#preparation-plans-table tr').filter({hasText:batch});
+  await approved.locator('a[href="'+detail+'"]').waitFor();
+  assert.match(await approved.locator('a[href*="preparation_plan="]').getAttribute('href'),new RegExp(detail.split('/').at(-1)+'$'));
+  await page.evaluate(()=>I18n.set('en'));
+  await page.getByRole('heading',{name:'Preparation Plans',exact:true}).waitFor();
+  await page.evaluate(()=>I18n.set('zh-CN'));
+  await page.getByRole('heading',{name:'备货计划',exact:true}).waitFor();
+  await go(viewer.page,'/overview',product);
+  const denied=await viewer.page.goto(origin+detail);
+  assert.equal(denied.status(),403);
+  await ready(viewer.page);
+  assert.equal(await viewer.page.locator('[data-plan-action]').count(),0);
+ }
+ await planner.context.close();await reviewer.context.close();
  await go(page,'/inventory/'+f.preparation);await page.locator('.co469r2-stock .co2-bags').waitFor();assert.equal(await page.locator('.co2-bags tbody tr').count(),3);assert((await page.locator('.co2-bags').innerText()).includes('AUDIT-'));
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForFunction(()=>!!document.querySelector('.co469r2-stock .co2-bags'));for(const width of [1440,768,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'stock overflow '+language+' '+width);shapes.push({page:'stock',language,width});}await page.screenshot({path:path.join(E.runtime,'stock-'+language+'.png'),fullPage:true});}
  await page.setViewportSize({width:390,height:860});
@@ -61,7 +126,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  if(await planGroup.count())await planGroup.locator('summary').click();
  const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
- assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.3-ui2');
+ assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.4-ui1');
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
  await page.waitForFunction(()=>window.Reports463?.current?.view==='shipping'&&document.querySelector('.r463-stats'));
@@ -150,7 +215,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await worker.context.close();
  assert.match(await page.locator('[data-co469-net]').first().innerText(),/0\.6470/);
  assert.doesNotMatch(await page.locator('.co469-page').innerText(),/生产批次|Production Batch/);
- await go(page,'/receipts/new');await page.locator('input[name=total_bags]').waitFor();
+ await go(page,'/receipts/new?preparation_plan='+f.coUiWorkPlan);await page.locator('input[name=total_bags]').waitFor();
  assert.equal(await page.locator('input[name=production_batch],input[name=production_batch_code],select[name=production_batch_id]').count(),0);
  await go(page,'/overview');
  for(const chart of ['net','vehicles','stock']){
@@ -211,7 +276,28 @@ test('real browser: current cobalt stock, independent permissions and both langu
  for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
   await go(page,'/export-licenses',product);
   await page.locator('#export-license-table a').first().waitFor();
+  for(const width of [1366,1440,1920]){
+   await page.setViewportSize({width,height:900});
+   const clipped=await page.locator('#export-license-table').evaluate(table=>[...table.querySelectorAll('th,td')].filter(cell=>{
+    const bounds=cell.getBoundingClientRect(),range=document.createRange();
+    range.selectNodeContents(cell);
+    return [...range.getClientRects()].some(rect=>rect.width>0&&(rect.left<bounds.left-1||rect.right>bounds.right+1));
+   }).map(cell=>cell.cellIndex));
+   assert.deepEqual(clipped,[],product+' license table at '+width);
+  }
+  await page.setViewportSize({width:1440,height:1000});
   assert(await page.locator('.sidebar [data-primary-route=sales-plans] + [data-primary-route=export-licenses]').isVisible());
+  const expiring=product==='CU_CATHODE'?'SYNTH-EXPIRED':'RC2-LICENSE';
+  await page.locator('#export-license-table tbody tr').filter({hasText:expiring}).first().locator('a').first().click();
+  await page.locator('a[href="#permit-extension"]').click();
+  const extension=page.locator('#permit-extension-form'),expiry=extension.locator('input[name=until]');
+  await expiry.fill('2020-01-01');
+  await extension.locator('input[name=reason]').fill('Synthetic browser extension check');
+  await extension.locator('button.primary').click();
+  assert.equal(await expiry.getAttribute('aria-invalid'),'true');
+  assert(await page.locator('#permit-extension-date-error').isVisible());
+  await page.locator('#permit-extension').screenshot({path:path.join(E.runtime,'license-extension-'+product+'.png')});
+  await go(page,'/export-licenses',product);
   await page.locator('a[href="/export-licenses/new"]').click();
   const form=page.locator('#export-license-application');
   await form.locator('[name=contract_id]').selectOption({index:1});
@@ -293,15 +379,16 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('.r10-draft-flow').waitFor();
  assert.equal(await page.locator('.ui46-entry-summary').count(),0);
  assert(await page.locator('.r10-draft-flow').evaluate(el=>el.getBoundingClientRect().bottom<=document.querySelector('#v26-receipt').getBoundingClientRect().top));
- await go(page,'/preparation/new','CU_CATHODE');
+ const copperRun=JSON.parse(require('node:fs').readFileSync(path.join(E.runtime,'rc2-copper-results.json'),'utf8'));
+ assert.equal(copperRun.database,f.database);
+ await go(page,'/preparation/new?preparation_plan='+copperRun.uiWorkPlan,'CU_CATHODE');
  const batch=page.locator('#v261-lot-no');await batch.waitFor();
  assert.equal(await page.locator('.ui46-entry-summary').count(),0);
  assert.equal(await page.locator('#v261-create > .v470-lot-section').count(),2);
  await page.waitForFunction(()=>/^RMM-CU-\d{4}-\d{2}$/.test(document.getElementById('v261-lot-no')?.value||''));
- await batch.fill('RMM-CU-2099-01');assert.equal(await batch.inputValue(),'RMM-CU-2099-01');
- const copperRun=JSON.parse(require('node:fs').readFileSync(path.join(E.runtime,'rc2-copper-results.json'),'utf8'));
- assert.equal(copperRun.database,f.database);
- await page.locator('#v261-plan').selectOption(copperRun.plan);
+ assert.equal(await batch.inputValue(),copperRun.uiBatch);
+ assert(await batch.evaluate(el=>el.readOnly));
+ assert.equal(await page.locator('#v261-plan').inputValue(),copperRun.plan);
  assert(await page.locator('#v261-plan-context').isVisible());
  assert.equal(await page.locator('#v261-plan-context dd').first().evaluate(el=>getComputedStyle(el).textAlign),'center');
  assert(await page.locator('#v261-plan-context').evaluate(el=>el.getBoundingClientRect().top>=document.querySelector('.r10-draft-flow').getBoundingClientRect().bottom&&el.getBoundingClientRect().bottom<=document.querySelector('.v470-lot-section').getBoundingClientRect().top));
@@ -355,7 +442,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await cobaltFilter.locator('button.primary').click();await cobaltRefresh;
  await go(page,'/sales-plans/new','CO_HYDROXIDE');
  assert.equal(await page.locator('#ux10-plan-form [name=warehouse_id],#ux10-plan-form [name=destination]').count(),0);
- await go(page,'/receipts/new','CO_HYDROXIDE');
+ await go(page,'/receipts/new?preparation_plan='+f.coUiWorkPlan,'CO_HYDROXIDE');
  await page.locator('#co-create [name=planned_location_id]').waitFor();
  await go(page,'/receipts/'+f.preparation,'CO_HYDROXIDE');
  await page.locator('.co469-location-panel').waitFor();

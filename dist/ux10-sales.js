@@ -25,6 +25,12 @@ window.SalesReviewUI={
    LOADING:['装车中','Loading'],WAITING:['待匹配','Awaiting Match'],MATCHED:['已匹配','Matched']
   }[state]||[state,state]));
   const sections=[];
+  if(has(this.co()?'co:read':'allocation:read')){
+   const route=this.co()?'/receipts/':'/preparation/';
+   const rows=(r.preparations||[]).map(row=>'<tr><td><a href="'+route+row.id+'">'+esc(row.batch_no)+'</a></td><td>'+
+    esc(this.co()?CobaltUI.status(row.status):I18n.translate(V261.states[row.status]||row.status))+'</td></tr>');
+   sections.push(['preparations','备货批次','Preparation Batches',rows.length?ExportLicenses.table([['备货批次号','Preparation Batch'],['状态','Status']],rows,'sales-related-preparations',true):'<p>'+t('暂无备货批次','No preparation batches')+'</p>']);
+  }
   if(has('loading-plan:read')){
    const rows=(r.loading||[]).map(row=>'<tr><td><a href="/loading-plans/orders/'+row.id+'">'+esc(row.invoice_no||row.code)+'</a></td><td>'+esc(row.batch_no||'—')+'</td><td>'+esc(loadingState(row.status))+'</td></tr>');
    sections.push(['plans','装车计划','Loading Plans',rows.length?ExportLicenses.table([['计划号 / 发票号','Plan / Invoice No.'],['备货批次','Preparation Batch'],['状态','Status']],rows,'sales-related-loads',true):'<p>'+t('暂无关联单据','No linked documents')+'</p>']);
@@ -39,7 +45,7 @@ window.SalesReviewUI={
  },
  invoicePanel(plan){
   if(!Array.isArray(plan.posted_batches))return '';
-  const t=this.t,rows=plan.posted_batches,title=t('销售确认开票','Sales Invoice Confirmation');
+  const t=this.t,rows=plan.posted_batches,title=t('正式出库与开票确认','Formal Outbound and Invoice Confirmation');
   if(!rows.length)return '<section class="panel user-form" id="sales-invoice-batches" data-no-i18n><h2>'+title+'</h2><p>'+t('暂无正式出库批次。','No formally posted batches.')+'</p></section>';
   const headings=[['装车单','Loading Order'],['备货批次','Preparation Batch'],['车辆','Truck'],['出库净重','Outbound Net Weight'],['装车发票号','Shipment Invoice No.'],['开票状态','Invoice Status'],['操作','Actions']];
   const cells=rows.map((row,index)=>{

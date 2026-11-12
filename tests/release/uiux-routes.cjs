@@ -7,6 +7,8 @@ const CU='CU_CATHODE',CO='CO_HYDROXIDE',BOTH=[CU,CO],missingId='00000000-0000-00
 async function examples(client,fixture){
  const find=async sql=>(await client.query(sql)).rows[0]?.value??null;
  const specs={
+  cuApprovedWork:"SELECT id value FROM preparation_plans WHERE product_code='CU_CATHODE' AND state='APPROVED' AND allocation_id IS NULL ORDER BY created_at DESC LIMIT 1",
+  coApprovedWork:"SELECT id value FROM preparation_plans WHERE product_code='CO_HYDROXIDE' AND state='APPROVED' AND co_preparation_id IS NULL ORDER BY created_at DESC LIMIT 1",
   cuCustomer:'SELECT id value FROM copper_customers ORDER BY code LIMIT 1',
   cuContract:'SELECT id value FROM customer_contracts ORDER BY contract_no LIMIT 1',
   cuPlan:"SELECT id value FROM sales_plans ORDER BY (status='OPEN') DESC,code DESC LIMIT 1",
@@ -66,7 +68,7 @@ function pages(ids){
  const add=(key,template,products=BOTH,{example,screenshot=false,roles=[],query='',state='standard'}={})=>{
   const value=example?ids[example]:null;
   cases.push({key,template,products,roles,state,screenshot,fixture:example||null,available:!example||!!value,
-   url:template.replace(':id',encodeURIComponent(value||missingId))+query});
+   url:(template+query).replace(':id',encodeURIComponent(value||missingId))});
  };
  const keyRoles=['sales_operator','logistics_manager','logistics_field_operator','site_supervisor','production_manager','production_operator','customer_admin'];
  add('login','/',[],{screenshot:true});
@@ -122,7 +124,12 @@ function pages(ids){
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
  add('co-prep-alias','/receipts/:id/work',[CO],{example:'coPrepEditable'});
  add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor']});
- add('preparation-new','/preparation/new',BOTH);
+ add('preparation-new','/preparation/new',BOTH,{state:'select approved preparation plan'});
+ add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator']});
+ add('cu-work-plan-detail','/preparation/work-plans/:id',[CU],{example:'cuApprovedWork',screenshot:true,state:'approved'});
+ add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved'});
+ add('cu-preparation-from-plan','/preparation/new',[CU],{query:'?preparation_plan=:id',example:'cuApprovedWork',screenshot:true,state:'approved plan'});
+ add('co-preparation-from-plan','/receipts/new',[CO],{query:'?preparation_plan=:id',example:'coApprovedWork',screenshot:true,state:'approved plan'});
  add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true});
  add('co-preparation-alias','/preparation/:id',[CO],{example:'coPrep'});
  add('co-work-alias','/preparation/:id/work',[CO],{example:'coPrepEditable'});

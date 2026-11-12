@@ -72,7 +72,36 @@ window.UI46Pages={
   for(const n of [...root.children])if(n!==host&&!n.contains(host)&&n!==shell&&!n.matches('[data-ui46-generated]')&&!shell.contains(n)&&!n.matches('.ux10-workflow')){if(n.matches('#ux11-load-corrections,#ux11-co-corrections'))this.move(n,s.composition.left||shell,s);}
   this.decorate(shell,s);this.finish(root,s);
  },
- finish(root,s){if(!s.composition.anchor)s.composition.anchor=s.generated.find(n=>n.isConnected)||root.firstElementChild;s.anchor=s.composition.anchor;for(const form of root.querySelectorAll('form'))if(!form.closest('[hidden]')&&!form.matches('.filters,form[id$="-filter"]'))s.composition.watch.push(form);this.normalize(s);},
+ alignControls(root,s){
+  if(location.pathname.startsWith('/stock-map'))return;
+  const forms=root.querySelectorAll('form.filters,form[id$="-filter"],.user-form .form-grid');
+  for(const node of forms){
+   if(!node.querySelector('label input,label select,label textarea'))continue;
+   if(!node.matches('form')){
+    if(node.querySelector(':scope > label'))this.cls(node,'wms-field-grid',s);
+    continue;
+   }
+   const direct=node.querySelector(':scope > label'),fields=node.querySelector(':scope > .form-grid');
+   if(!direct&&!fields)continue;
+   this.cls(node,'wms-filter-row',s);
+   let actions=node.querySelector(':scope > .business-toolbar,:scope > .s468-filter-actions');
+   if(!actions){
+    const children=[...node.children];
+    const index=children.findIndex(el=>el.matches('button[type=submit],button:not([type])'));
+    if(index!==-1){
+     const controls=[];
+     for(const el of children.slice(index)){
+      if(!el.matches('button,a.button'))break;
+      controls.push(el);
+     }
+     actions=this.el('div','wms-filter-actions',node,s);
+     for(const control of controls)this.move(control,actions,s);
+    }
+   }
+   if(actions)this.cls(actions,'wms-filter-actions',s);
+  }
+ },
+ finish(root,s){this.alignControls(root,s);if(!s.composition.anchor)s.composition.anchor=s.generated.find(n=>n.isConnected)||root.firstElementChild;s.anchor=s.composition.anchor;for(const form of root.querySelectorAll('form'))if(!form.closest('[hidden]')&&!form.matches('.filters,form[id$="-filter"]'))s.composition.watch.push(form);this.normalize(s);},
  grid(shell,s,right=true){const grid=this.el('div','p46-grid'+(right?'':' p46-full'),shell,s),left=this.el('div','p46-main',grid,s),aside=right?this.el('aside','p46-aside',grid,s):null;s.composition.left=left;s.composition.aside=aside;return {grid,left,aside};},
  isFilter(n){return n.nodeType===1&&n.matches('form.filters,form[id$="-filter"],form.account-toolbar,.filters,.co-stock-filter');},
  isStats(n){return n.nodeType===1&&n.matches('.shipping-kpis,.yard-counts,.co-stock-metrics,.co-report-metrics,.v34-kpi-grid,.v34-summary,.v261-summary,.receipt-bundle-total');},

@@ -1,8 +1,10 @@
-# Musonoi Product WMS 4.7.3
+# Musonoi Product WMS 4.7.4
 
-V4.7.3 是基于本地 V4.7.2 的独立 TEST 候选，运行时要求迁移 185。
+V4.7.4 基于已交付的 V4.7.3-ui2 开发。本地 TEST 候选运行时要求迁移 186。
 
-[交付报告](docs/v4.7.3/04-release-report.md) · [部署评估](docs/v4.7.3/03-deployment.md) · [页面评审方案](docs/v4.7.3/02-design-review.md)
+[V4.7.4 变更和验收报告](docs/v4.7.4/acceptance.md) · [阴极铜库存地图方案](docs/v4.7.4/copper-map-proposal.html) · [氢氧化钴库存地图方案](docs/v4.7.4/cobalt-map-proposal.html)
+
+[V4.7.3 交付报告](docs/v4.7.3/04-release-report.md) · [部署评估](docs/v4.7.3/03-deployment.md) · [页面评审方案](docs/v4.7.3/02-design-review.md)
 
 ## V4.7.2 开发基线
 
