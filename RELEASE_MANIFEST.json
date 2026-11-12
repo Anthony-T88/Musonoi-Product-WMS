@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 90503,
-      "sha256": "d18222d255d68586902f078d19fd634e2731f85d6773b6c243d25b72ed0c333e"
+      "sha256": "6cf54666c7ad04f42bba1b6b754000877817f7b64c89713585c0237527c238c7"
     },
     {
       "path": "VALIDATION.json",
@@ -1618,8 +1618,8 @@
     },
     {
       "path": "dist/overview-analysis.js",
-      "bytes": 28290,
-      "sha256": "dbf6fcc9445aae8870f565afcdcf68d0a5478bc0d80e9d10ee60dfd813527247"
+      "bytes": 28357,
+      "sha256": "8c43a253f261a9d33de397373e20f69a2a86a09830b8362a4266610e6be06b92"
     },
     {
       "path": "dist/overview-design-model.js",
@@ -1708,8 +1708,8 @@
     },
     {
       "path": "dist/product-context.js",
-      "bytes": 6823,
-      "sha256": "055c9eee371744dd927828272d9273fd0541a2ce0e31a2c68149b83a8f0c1b4f"
+      "bytes": 7809,
+      "sha256": "09ff7e47edcd743b693e80b9ceb07d04e37eed3b84abd4e5fa2f45e86948e911"
     },
     {
       "path": "dist/product-polish-ui.js",
@@ -1863,8 +1863,8 @@
     },
     {
       "path": "dist/ui46-pages.js",
-      "bytes": 33705,
-      "sha256": "ae164fda09dfdbba849eae8f86e9a036213768637c813fb6ca42bb81e05e71f9"
+      "bytes": 33732,
+      "sha256": "4a5248a8c955bbddf97b151e4e174dd343ff27384b2b899ed7195f9c0312aed8"
     },
     {
       "path": "dist/ui46.css",
@@ -1908,8 +1908,8 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "bytes": 25129,
-      "sha256": "62f7b28b161f59ef9104850782ee941125e76d40b152d179c574ca9b4086259e"
+      "bytes": 25165,
+      "sha256": "32145c4f812ed2ebbcd2760c9e942ea332cec97308fa0af7b035dc24bfd16a43"
     },
     {
       "path": "dist/ux-r4.css",
@@ -2388,8 +2388,8 @@
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "bytes": 8509,
-      "sha256": "a4e87ed9315e424b3bc636f1d70c719ba92da028161892232cfbe24ef962c9f3"
+      "bytes": 8623,
+      "sha256": "34961c541a7a413afda291806acfc72bbee550e56cbaecdebb18779ef066ce33"
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3378,8 +3378,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "bytes": 42581,
-      "sha256": "0129770ad61ed918c0d826d1478bf02604c8f2fd59eaedaada4cc14ff21597fe"
+      "bytes": 43378,
+      "sha256": "c52f404872d9e6d1bd52f2be50504b87e726139ccc841e2729afdf0363724e77"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

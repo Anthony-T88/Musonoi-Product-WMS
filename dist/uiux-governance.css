@@ -472,7 +472,7 @@ html[data-release-ui="46"] #page-content .wms-table :is(th,td) {
   line-height: var(--uix-line);
   overflow-wrap: anywhere;
 }
-html[data-release-ui="46"] :is(#page-content,#inventory) :is(.wms-table,.business-table,.table-scroll,.s46-table-wrap,.v34-table-wrap) :is([data-wms-column="number"],.numeric,.sales-weight,.oa-numeric) {
+html[data-release-ui="46"] :is(#page-content,#dashboard-content,#inventory) :is(.wms-table,.business-table,.table-scroll,.s46-table-wrap,.v34-table-wrap,.oa-table-scroll) :is([data-wms-column="number"],.numeric,.sales-weight,.oa-numeric) {
   text-align: end;
   font-variant-numeric: tabular-nums;
 }

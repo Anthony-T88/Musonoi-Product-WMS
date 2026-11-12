@@ -294,6 +294,13 @@ test('real browser: current cobalt stock, independent permissions and both langu
  for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
   await go(page,'/export-licenses',product);
   await page.locator('#export-license-table a').first().waitFor();
+  const language=page.locator('.top-actions [data-language]');
+  await language.selectOption('en');
+  await page.getByRole('heading',{name:'Export License Management',exact:true}).waitFor();
+  await page.locator('#export-license-table a').first().waitFor();
+  await language.selectOption('zh-CN');
+  await page.getByRole('heading',{name:'出口许可证管理',exact:true}).waitFor();
+  await page.locator('#export-license-table a').first().waitFor();
   for(const width of [1280,1440,1920]){
    await page.setViewportSize({width,height:900});
    const clipped=await page.locator('#export-license-table').evaluate(table=>[...table.querySelectorAll('th,td')].filter(cell=>{
@@ -337,6 +344,11 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.locator('a[href="/export-licenses/new"]').click();
   const form=page.locator('#export-license-application');
   await form.locator('[name=contract_id]').selectOption({index:1});
+  const contractValue=await form.locator('[name=contract_id]').inputValue();
+  await language.selectOption('en');
+  await page.locator('#operation-confirm-cancel').click();
+  assert.equal(await language.inputValue(),'zh-CN');
+  assert.equal(await form.locator('[name=contract_id]').inputValue(),contractValue);
   assert.equal(await form.locator('[data-book-field]').count(),7);
   const book=page.locator('#permit-book-dialog');
   const addRecord=async(key,value)=>{
@@ -447,7 +459,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await host.locator('svg').waitFor();
   assert.deepEqual(await host.locator('.oa-date-tick').allTextContents(),JSON.parse(await host.getAttribute('data-rows')).map(row=>row.period));
  }
- assert(await page.locator('.oa-execution :is(th,td)').evaluateAll(cells=>cells.length>0&&cells.every(cell=>getComputedStyle(cell).textAlign==='center')));
+ assert(await page.locator('.oa-execution :is(th,td)').evaluateAll(cells=>
+  cells.length>0&&cells.every(cell=>getComputedStyle(cell).textAlign===(cell.cellIndex===0?'start':'end'))));
  await page.setViewportSize({width:390,height:860});
  assert(await page.locator('.oa-plot-scroll').first().evaluate(el=>el.scrollWidth>=el.clientWidth));
  await page.setViewportSize({width:1440,height:1000});

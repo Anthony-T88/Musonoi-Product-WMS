@@ -131,6 +131,7 @@ window.UI46Pages={
    const control=event.target,message=feedback.get(control);
    if(!message)return;
    message.hidden=true;
+   message.textContent='';
    control.removeAttribute('aria-invalid');
   };
   document.addEventListener('input',clear);

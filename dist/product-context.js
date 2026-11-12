@@ -26,7 +26,40 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
   const narrow=matchMedia('(max-width: 900px)'),sidebar=document.querySelector('.sidebar');
   const place=()=>{const menu=narrow.matches&&document.querySelector('.mobile-nav-shell');(menu||sidebar).append(box);};
   place();narrow.addEventListener('change',place);
-  const originalSet=I18n.set.bind(I18n);I18n.set=language=>{originalSet(language);box.setAttribute('aria-label',this.text('产品切换','Switch Product'));const names=this.text(['阴极铜','氢氧化钴'],['Copper Cathodes','Cobalt Hydroxide']);[...box.children].forEach((b,i)=>b.textContent=names[i]);if(/^\/preparation\/work-plans(?:\/|$)/.test(location.pathname))Router.show();else if(!this.isCopper()&&!this.globalPage(location.pathname)){if(location.pathname==='/cobalt-metal'&&this.cobaltPage(location.pathname))Router.show();else if(this.cobaltPage(location.pathname))CobaltUI.languageChanged().catch(e=>notify(CobaltUI.error(e)));else this.placeholder();}};
+  const sharedDocument=()=>/^\/(?:export-licenses|preparation\/work-plans)(?:\/|$)/.test(location.pathname);
+  const editing=()=>this.dirty||document.querySelector('#dialog[open] form');
+  const changeLanguage=I18n.change.bind(I18n);
+  I18n.change=async language=>{
+   if(language===I18n.language)return;
+   if(sharedDocument()&&editing()){
+    const discard=await OperationConfirm.ask({
+     title:this.text('切换语言','Switch Language'),
+     note:this.text('切换语言会放弃未保存的填写内容。','Switching languages will discard your unsaved entries.')
+    });
+    if(!discard){
+     document.querySelectorAll('[data-language]').forEach(select=>{select.value=I18n.language;});
+     return;
+    }
+    if(document.querySelector('#dialog[open] form'))document.getElementById('dialog').close();
+    this.dirty=false;
+   }
+   return changeLanguage(language);
+  };
+  const originalSet=I18n.set.bind(I18n);
+  I18n.set=language=>{
+   const changed=language!==I18n.language;
+   originalSet(language);
+   box.setAttribute('aria-label',this.text('产品切换','Switch Product'));
+   const names=this.text(['阴极铜','氢氧化钴'],['Copper Cathodes','Cobalt Hydroxide']);
+   [...box.children].forEach((button,index)=>{button.textContent=names[index];});
+   if(sharedDocument()){
+    if(changed&&!editing())Router.show();
+   }else if(!this.isCopper()&&!this.globalPage(location.pathname)){
+    if(location.pathname==='/cobalt-metal'&&this.cobaltPage(location.pathname))Router.show();
+    else if(this.cobaltPage(location.pathname))CobaltUI.languageChanged().catch(error=>notify(CobaltUI.error(error)));
+    else this.placeholder();
+   }
+  };
  },
  placeholder(){
   Router.page(this.text('氢氧化钴','Cobalt Hydroxide'),'<div class="product-construction" data-no-i18n role="status"><h2>'+this.text('当前产品无此页面','Page unavailable for this product')+'</h2></div>');

@@ -1265,7 +1265,7 @@
     },
     {
       "path": "dist/overview-analysis.js",
-      "sha256": "dbf6fcc9445aae8870f565afcdcf68d0a5478bc0d80e9d10ee60dfd813527247"
+      "sha256": "8c43a253f261a9d33de397373e20f69a2a86a09830b8362a4266610e6be06b92"
     },
     {
       "path": "dist/overview-design-model.js",
@@ -1337,7 +1337,7 @@
     },
     {
       "path": "dist/product-context.js",
-      "sha256": "055c9eee371744dd927828272d9273fd0541a2ce0e31a2c68149b83a8f0c1b4f"
+      "sha256": "09ff7e47edcd743b693e80b9ceb07d04e37eed3b84abd4e5fa2f45e86948e911"
     },
     {
       "path": "dist/product-polish-ui.js",
@@ -1461,7 +1461,7 @@
     },
     {
       "path": "dist/ui46-pages.js",
-      "sha256": "ae164fda09dfdbba849eae8f86e9a036213768637c813fb6ca42bb81e05e71f9"
+      "sha256": "4a5248a8c955bbddf97b151e4e174dd343ff27384b2b899ed7195f9c0312aed8"
     },
     {
       "path": "dist/ui46.css",
@@ -1497,7 +1497,7 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "sha256": "62f7b28b161f59ef9104850782ee941125e76d40b152d179c574ca9b4086259e"
+      "sha256": "32145c4f812ed2ebbcd2760c9e942ea332cec97308fa0af7b035dc24bfd16a43"
     },
     {
       "path": "dist/ux-r4.css",
@@ -2429,7 +2429,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "0129770ad61ed918c0d826d1478bf02604c8f2fd59eaedaada4cc14ff21597fe"
+      "sha256": "c52f404872d9e6d1bd52f2be50504b87e726139ccc841e2729afdf0363724e77"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
