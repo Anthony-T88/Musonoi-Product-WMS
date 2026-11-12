@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181,182]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182,184]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -42,13 +42,16 @@ test('isolated migration, initialization, business permission and concurrency ac
    const insertPlan=()=>c.query("INSERT INTO sales_plans(project_id,customer_id,target_weight,created_by,contract_id,quantity_tolerance,preparation_month,planned_lot_count) VALUES($1,$2,1,$3,$4,0,to_char(current_date,'YYYY-MM'),1) RETURNING id,code",
     [fixture.project,fixture.customers.CU_CATHODE.id,fixture.accounts[0].id,fixture.customers.CU_CATHODE.contract]);
    if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-00000001');
+   if(from>=182)await c.query(`INSERT INTO export_licenses(product_code,project_id,customer_id,cu_contract_id,applied_on,proforma_no,quantity,unit_basis,unit,currency,issuing_bank,created_by)
+    VALUES('CU_CATHODE',$1,$2,$3,current_date,'SYNTHETIC-LEGACY-BOOK',1,'PHYSICAL_MT','MT','USD','Synthetic legacy bank',$4)`,
+    [fixture.project,fixture.customers.CU_CATHODE.id,fixture.customers.CU_CATHODE.contract,fixture.accounts[0].id]);
    await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,outcome) VALUES($1,'synthetic_upgrade','customers',$2,'COMMITTED')",[fixture.accounts[0].id,fixture.customers.CU_CATHODE.id]);
    const tables=(await c.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'schema_migrations' ORDER BY tablename")).rows.map(r=>r.tablename);
    const snapshot=async()=>{
     const result={};
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
-     const projected=table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":"to_jsonb(t)";
+     const projected=table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":table==='export_licenses'?"(to_jsonb(t)-'issuing_bank_account'-'offshore_bank'-'offshore_bank_account'-'processing_records')":"to_jsonb(t)";
      const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%'":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%'":table==='permissions'?"WHERE code NOT LIKE 'export-license:%'":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
@@ -75,6 +78,10 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
+   if(from>=182){
+    const result=await c.query("SELECT kind,value FROM export_license_record_books WHERE product_code='CU_CATHODE' AND customer_id=$1",[fixture.customers.CU_CATHODE.id]);
+    assert.deepEqual(result.rows,[{kind:'issuing_bank',value:'Synthetic legacy bank'}]);
+   }
    const p3=(await c.query("SELECT r.slot_count,count(c.*)::int cells FROM stock_map_regions r JOIN stock_map_cells c ON c.region_code=r.code WHERE r.code='P3' GROUP BY r.slot_count")).rows[0];
    assert.deepEqual(p3,{slot_count:1,cells:35});
    if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-02');

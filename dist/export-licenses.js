@@ -7,7 +7,7 @@ window.ExportLicenses={
  can:key=>CurrentUser.permissions.includes('export-license:'+key),
  labels:{
   contract_id:['买家 / 合同','Buyer / Contract'],applied_on:['申请日期','Application Date'],proforma_no:['形式发票号','Proforma Invoice No.'],license_no:['许可证号','License No.'],buyer:['买家','Buyer'],contract_no:['合同号','Contract No.'],
-  quantity:['批准数量','Approved Quantity'],unit_basis:['计量口径','Quantity Basis'],unit:['计量单位','Unit'],clearing_agent:['开证清关公司','Clearance Agent'],issuing_bank:['开证银行','Issuing Bank'],unit_price:['单价','Unit Price'],price_unit:['计价单位','Price Unit'],amount:['正式登记金额','Registered Amount'],currency:['币种','Currency'],reference_amount:['计算参考金额','Calculated Reference Amount'],destination:['目的地','Destination'],
+  quantity:['批准数量','Approved Quantity'],unit_basis:['计量口径','Quantity Basis'],unit:['计量单位','Unit'],clearing_agent:['开证清关公司','Clearance Agent'],issuing_bank:['开证银行','Issuing Bank'],issuing_bank_account:['开证银行账户号','Issuing Bank Account No.'],offshore_bank:['离岸银行','Offshore Bank'],offshore_bank_account:['离岸银行账户号','Offshore Bank Account No.'],unit_price:['单价','Unit Price'],price_unit:['计价单位','Price Unit'],amount:['正式登记金额','Registered Amount'],currency:['币种','Currency'],reference_amount:['计算参考金额','Calculated Reference Amount'],destination:['目的地','Destination'],
   valid_from:['生效日期','Valid From'],valid_until:['原失效日期','Original Expiry'],extension_on:['最近批准延期日期','Latest Extension Date'],extended_until:['延期后失效日期','Extended Expiry'],effective_until:['当前有效截止','Current Expiry'],closed_on:['关证日期','Closure Date'],status:['许可证状态','License Status'],note:['备注','Remarks'],
   used:['已使用','Used'],reserved:['有效预占','Reserved'],pending:['待核销（含于预占）','Pending Reconciliation (Reserved)'],remaining:['剩余额度','Remaining'],available:['可分配额度','Allocatable'],utilization:['使用率','Usage Rate'],
   reference:['业务依据 / 凭证号','Evidence / Reference'],allocation_id:['装车计划 / 发票号','Loading Plan / Invoice']
@@ -21,11 +21,106 @@ window.ExportLicenses={
  state(key){return this.t(...(this.statuses[key]||[key,key]));},
  options(choices,value){return Object.entries(choices).map(([k,v])=>'<option value="'+esc(k)+'" '+(value===k?'selected':'')+'>'+esc(this.t(...v))+'</option>').join('');},
  value(value){return value==null||value===''?'—':esc(String(value).replace(/T00:00:00\.000Z$/,''));},
- table(headers,rows,id){return CobaltSalesUI.table(headers,rows,id).replace('<table id=','<table data-v34-enhanced="true" id=');},
+ table(headers,rows,id,responsive=false){
+  const html=CobaltSalesUI.table(headers,rows,id).replace('<table id=','<table data-v34-enhanced="true" id=');
+  if(!responsive)return html;
+  const template=document.createElement('template');
+  template.innerHTML=html;
+  const table=template.content.querySelector('table'),columns=table.tHead.rows[0].cells;
+  table.classList.add('permit-sales-table');
+  for(const row of table.tBodies[0].rows)if(row.cells.length===columns.length){
+   for(const [index,cell] of [...row.cells].entries()){
+    cell.dataset.label=columns[index].textContent;
+    const value=document.createElement('div');
+    value.append(...cell.childNodes);cell.append(value);
+   }
+  }
+  return template.innerHTML;
+ },
  section(title,body){return '<section class="panel export-license-section"><h2>'+title+'</h2>'+body+'</section>';},
- page(title,html){Router.page(title,'<div class="export-license-page" data-no-i18n>'+html+'</div>');},
+ page(title,html){Router.page(title,'<div class="export-license-page" data-page-composed data-no-i18n>'+html+'</div>');},
  facts(keys,data){return '<dl class="export-license-facts">'+keys.map(k=>'<div><dt>'+this.label(k)+'</dt><dd>'+this.value(k==='status'?this.state(data[k]):k==='utilization'?data[k]+'%':data[k])+'</dd></div>').join('')+'</dl>';},
  input(key,data={},type='text',required=false){return '<label>'+this.label(key)+'<input name="'+key+'" type="'+type+'" '+(required?'required ':'')+'maxlength="'+(key==='note'?1000:320)+'" value="'+esc(data[key]??'')+'"></label>';},
+ bookFields:{
+  clearing_agent:160,issuing_bank:160,issuing_bank_account:160,
+  offshore_bank:160,offshore_bank_account:160,destination:320,note:1000
+ },
+ bookParents:{issuing_bank_account:'issuing_bank',offshore_bank_account:'offshore_bank'},
+ bookControls(){
+  const t=this.t;
+  return '<div class="form-grid permit-books" data-permit-books>'+Object.keys(this.bookFields).map(key=>
+   '<div class="permit-book-field"><label for="permit-book-'+key+'">'+this.label(key)+'</label><div>'+
+   '<select id="permit-book-'+key+'" data-book-field="'+key+'" disabled><option value="">'+t('请选择','Select')+'</option></select>'+
+   '<button type="button" class="button secondary compact" data-book-open="'+key+'" aria-label="'+esc(this.label(key)+' · '+t('记录簿','Record Book'))+'" disabled>'+t('记录簿','Record Book')+'</button></div></div>'
+  ).join('')+'<p class="permit-book-status" data-book-status role="status"></p></div>';
+ },
+ bookDialog(){
+  const t=this.t;
+  return '<dialog id="permit-book-dialog" class="permit-book-dialog" aria-labelledby="permit-book-title"><form class="user-form"><h2 id="permit-book-title"></h2><p data-book-bank></p><ul data-book-entries></ul><label><span data-book-label></span><input name="value" required autocomplete="off"></label><p class="error" role="alert"></p><div class="business-toolbar"><button class="button primary">'+t('保存到记录簿','Save to Record Book')+'</button><button type="button" class="button secondary" data-book-close>'+t('关闭','Close')+'</button></div></form></dialog>';
+ },
+ bindBooks(root,getContract,d){
+  const t=this.t,fields=Object.keys(this.bookFields),dialog=$('permit-book-dialog'),form=dialog.querySelector('form'),api=this.api()+'/record-books';
+  const controls=Object.fromEntries([...root.querySelectorAll('[data-book-field]')].map(select=>[select.dataset.bookField,select]));
+  const initial=Object.fromEntries(fields.map(key=>[key,d.processing_records?.[key]||(d[key]?'legacy':'')]));
+  let values={...initial},records=[],revision=0,ready=false,scope='',editing='';
+  const status=root.querySelector('[data-book-status]');
+  const options=key=>records.filter(row=>row.kind===key&&(!this.bookParents[key]||row.bank_id===values[this.bookParents[key]]));
+  const paint=()=>{
+   for(const [key,select] of Object.entries(controls)){
+    const rows=options(key);
+    select.replaceChildren(new Option(t('请选择','Select'),''));
+    if(values[key]==='legacy')select.add(new Option(d[key],'legacy'));
+    for(const row of rows)select.add(new Option(row.value,row.id));
+    select.value=values[key]||'';
+    const enabled=ready&&(!this.bookParents[key]||rows.length>0||records.some(row=>row.id===values[this.bookParents[key]]));
+    select.disabled=!enabled;
+    root.querySelector('[data-book-open='+key+']').disabled=!enabled;
+   }
+  };
+  const load=async(reset=false)=>{
+   const contract=getContract(),request=++revision;
+   if(reset&&contract!==scope)values={};
+   scope=contract;ready=false;records=[];paint();
+   status.textContent=contract?t('正在加载记录簿…','Loading record books…'):t('请先选择买家 / 合同。','Select a buyer and contract first.');
+   if(!contract)return;
+   try{
+    const data=await API.request(api+'?'+new URLSearchParams({contract_id:contract}));
+    if(revision!==request||!root.isConnected)return;
+    records=data.items;ready=true;status.textContent='';paint();
+   }catch(error){if(revision===request)status.textContent=error.message;}
+  };
+  for(const [key,select] of Object.entries(controls))select.onchange=()=>{
+   values[key]=select.value;
+   for(const [account,bank] of Object.entries(this.bookParents))if(bank===key)values[account]='';
+   paint();
+  };
+  const showEntries=()=>{
+   const entries=options(editing).map(row=>{const li=document.createElement('li');li.textContent=row.value;return li;});
+   dialog.querySelector('[data-book-entries]').replaceChildren(...entries);
+  };
+  for(const button of root.querySelectorAll('[data-book-open]'))button.onclick=()=>{
+   editing=button.dataset.bookOpen;form.reset();form.querySelector('[role=alert]').textContent='';
+   const label=this.label(editing),bank=records.find(row=>row.id===values[this.bookParents[editing]]);
+   $('permit-book-title').textContent=label+' · '+t('记录簿','Record Book');
+   dialog.querySelector('[data-book-bank]').textContent=bank?.value||'';
+   dialog.querySelector('[data-book-label]').textContent=t('新增记录','New Record');
+   form.elements.value.maxLength=this.bookFields[editing];
+   showEntries();dialog.showModal();form.elements.value.focus();
+  };
+  dialog.querySelector('[data-book-close]').onclick=()=>dialog.close();
+  form.onsubmit=e=>this.submit(e,async()=>{
+   const contract=scope,key=editing,bank=values[this.bookParents[key]];
+   const row=await API.request(api,{method:'POST',body:{contract_id:contract,kind:key,value:form.elements.value.value,...(bank?{bank_id:bank}:{})}});
+   if(!root.isConnected||scope!==contract)return;
+   if(!records.some(item=>item.id===row.id))records.push(row);
+   paint();dialog.close();controls[key].focus();
+  });
+  load();
+  return {load,selection:()=>{
+   if(!ready)throw Error(t('请等待办证资料加载完成。','Wait for the processing records to load.'));
+   return Object.fromEntries(fields.filter(key=>values[key]!=='legacy'&&(values[key]||'')!==initial[key]).map(key=>[key,values[key]||null]));
+  }};
+ },
  async routePage(path){
   this.page(this.title(),'<section class="panel export-license-loading" aria-busy="true"><p role="status">'+this.t('正在加载许可证…','Loading licenses…')+'</p><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></section>');
   if(path===this.route){
@@ -38,28 +133,44 @@ window.ExportLicenses={
  },
  async list(){
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q),base=this.route;
-  const indicators=[['ACTIVE','有效许可证','Active Licenses',d.indicators.active],['EXPIRING','即将到期','Expiring Soon',d.indicators.expiring],['EXPIRED','待关证','Awaiting Closure',d.indicators.pending_close]];
-  const cards='<div class="v34-kpi-grid">'+indicators.map(([k,zh,en,n])=>'<a class="v34-kpi" href="'+base+'?status='+k+'"><span>'+t(zh,en)+'</span><strong>'+n+'</strong></a>').join('')+'</div>';
+  const indicators=[['','许可证总数','Total Licenses',d.indicators.total],['ACTIVE','有效许可证','Active Licenses',d.indicators.active],['EXPIRING','即将到期','Expiring Soon',d.indicators.expiring],['CLOSED','已关证','Closed Licenses',d.indicators.closed]];
+  const cards='<div class="v34-kpi-grid">'+indicators.map(([k,zh,en,n])=>'<a class="v34-kpi" href="'+base+(k?'?status='+k:'')+'"><span>'+t(zh,en)+'</span><strong>'+n+'</strong></a>').join('')+'</div>';
   const units=d.units.length?this.table([['计量口径 / 单位','Basis / Unit'],['批准总量','Approved'],['已使用','Used'],['剩余','Remaining'],['可分配','Allocatable']],d.units.map(row=>'<tr><th scope="row">'+esc(this.t(...this.bases[row.unit_basis]))+' / '+esc(row.unit)+'</th>'+['quantity','used','remaining','available'].map(k=>'<td>'+this.value(row[k])+'</td>').join('')+'</tr>'),'export-license-units'):'';
   const buttons='<div class="business-toolbar">'+(this.can('write')?'<a class="button primary" href="'+base+'/new">'+t('登记许可证申请','Register Application')+'</a>':'')+(CurrentUser.permissions.includes('loading-plan:read')?'<a class="button secondary" href="'+base+'?view=legacy">'+t('历史装车许可证号','Legacy Loading License Numbers')+'</a>':'')+'</div>';
-  const filter='<form id="export-license-filter" class="filters"><label>'+t('形式发票、许可证、买家或合同','Proforma, License, Buyer or Contract')+'<input name="search" type="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><label>'+t('许可证状态','License Status')+'<select name="status"><option value="">'+t('全部','All')+'</option>'+this.options(Object.fromEntries(['APPLYING','ACTIVE','SCHEDULED','EXPIRING','EXPIRED','CLOSED','CANCELLED'].map(k=>[k,this.statuses[k]])),q.get('status'))+'</select></label><button class="button secondary">'+t('查询','Search')+'</button><a class="button secondary" href="'+base+'">'+t('重置','Reset')+'</a></form>';
-  const rows=d.items.map(r=>'<tr><td><a href="'+base+'/'+r.id+'">'+esc(r.proforma_no)+'</a><small>'+this.value(r.license_no)+'</small></td><td>'+esc(r.buyer)+'<small>'+esc(r.contract_no)+'</small></td><td>'+this.value(r.quantity)+' '+esc(r.unit)+'</td><td>'+this.value(r.used)+' / '+this.value(r.utilization)+'%</td><td>'+this.value(r.remaining)+' / '+this.value(r.available)+'</td><td>'+this.value(r.effective_until)+'</td><td>'+esc(this.state(r.status))+'</td></tr>');
+  const searchField=(key,zh,en,type='search')=>'<label>'+t(zh,en)+'<input type="'+type+'" name="'+key+'" maxlength="160" value="'+esc(q.get(key)||'')+'"></label>';
+  const filter='<form id="export-license-filter" class="filters permit-register-filter">'+searchField('search','许可证 / 形式发票','License / Proforma')+searchField('buyer_contract','客户 / 合同','Customer / Contract')+this.productFilter()+searchField('clearing_agent','开证清关公司','Clearance Agent')+searchField('issuing_bank','开证银行','Issuing Bank')+searchField('valid_from','有效期起始','Validity Range Start','date')+searchField('valid_until','有效期截止','Validity Range End','date')+'<label>'+t('许可证状态','License Status')+'<select name="status"><option value="">'+t('全部','All')+'</option>'+this.options(Object.fromEntries(['APPLYING','ACTIVE','SCHEDULED','EXPIRING','EXPIRED','CLOSED','CANCELLED'].map(k=>[k,this.statuses[k]])),q.get('status'))+'</select></label><div class="business-toolbar"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" href="'+base+'">'+t('重置','Reset')+'</a></div></form>';
+  const rows=d.items.map(r=>'<tr><td><a href="'+base+'/'+r.id+'">'+esc(r.license_no||r.proforma_no)+'</a><small>'+this.value(r.license_no?r.proforma_no:null)+'</small></td><td>'+esc(r.buyer)+'<small>'+esc(r.contract_no)+'</small></td><td>'+this.value(r.quantity)+' '+esc(r.unit)+'</td><td>'+this.value(r.used)+' / '+this.value(r.utilization)+'%</td><td>'+this.value(r.remaining)+' / '+this.value(r.available)+'</td><td>'+this.value(r.effective_until)+'</td><td>'+esc(this.state(r.status))+'</td><td><a class="button secondary compact" href="'+base+'/'+r.id+'">'+t('查看','View')+'</a></td></tr>');
   const settings=CurrentUser.permissions.includes('system:manage')?'<details><summary>'+t('到期提醒设置','Expiry Reminder Settings')+'</summary><form id="export-license-settings" class="filters"><label>'+t('提前提醒天数','Reminder Days')+'<input type="number" name="expiry_days" min="1" max="365" required value="'+d.expiry_days+'"></label><button class="button secondary">'+t('保存提醒设置','Save Reminder')+'</button></form></details>':'';
-  this.page(this.title(),buttons+cards+units+filter+this.table([['形式发票 / 许可证号','Proforma / License'],['买家 / 合同','Buyer / Contract'],['批准数量','Approved'],['已用 / 使用率','Used / Rate'],['剩余 / 可分配','Remaining / Allocatable'],['有效截止','Expiry'],['状态','Status']],rows,'export-license-table')+CobaltStockUI.pager(d.page,d.total,d.page_size)+settings);
+  this.page(this.title(),buttons+cards+this.section(t('许可证台账','License Register'),filter+this.table([['许可证 / 形式发票','License / Proforma'],['买家 / 合同','Buyer / Contract'],['批准数量','Approved'],['已用 / 使用率','Used / Rate'],['剩余 / 可分配','Remaining / Allocatable'],['有效截止','Expiry'],['状态','Status'],['操作','Actions']],rows,'export-license-table',true)+CobaltStockUI.pager(d.page,d.total,d.page_size))+units+settings);
+  this.bindProductFilter();
   $('export-license-filter').onsubmit=e=>{e.preventDefault();const values=new URLSearchParams([...new FormData(e.target)].filter(([,v])=>v));Router.go(base+(values.size?'?'+values:''));};
   if($('export-license-settings'))$('export-license-settings').onsubmit=e=>this.submit(e,async()=>{await API.request(this.api()+'/preferences',{method:'POST',body:{expiry_days:Number(e.target.elements.expiry_days.value)}});await this.list();});
   CobaltStockUI.bindPager(d);
  },
+ productFilter(){
+  return '<label>'+this.t('产品','Product')+'<select data-permit-product data-product-switch>'+this.options({CU_CATHODE:['阴极铜','Copper Cathodes'],CO_HYDROXIDE:['氢氧化钴','Cobalt Hydroxide']},ProductContext.code)+'</select></label>';
+ },
+ bindProductFilter(){
+  const select=document.querySelector('[data-permit-product]');
+  if(select)select.onchange=async()=>{await ProductContext.switchTo(select.value);select.value=ProductContext.code;};
+ },
  async form(id){
   const t=this.t,api=this.api(),[options,d]=await Promise.all([API.request(api+'/contracts'),id?API.request(api+'/'+id):Promise.resolve({currency:'USD',unit:'MT',unit_basis:'PHYSICAL_MT',applied_on:BusinessTime.today()})]);
-  const selected='<label>'+this.label('contract_id')+'<select name="contract_id" required '+(id?'disabled':'')+'><option value="">'+t('请选择','Select')+'</option>'+options.items.map(r=>'<option value="'+r.id+'" '+(d.contract_id===r.id?'selected':'')+'>'+esc(r.buyer+' / '+r.contract_no)+'</option>').join('')+'</select></label>';
+  const selected='<label>'+this.label('contract_id')+'<select name="contract_id" required '+(id?'disabled':'')+'><option value="">'+t('请选择','Select')+'</option>'+[...options.items,...(id&&!options.items.some(row=>row.id===d.contract_id)?[{id:d.contract_id,buyer:d.buyer,contract_no:d.contract_no}]:[])].map(r=>'<option value="'+r.id+'" '+(d.contract_id===r.id?'selected':'')+'>'+esc(r.buyer+' / '+r.contract_no)+'</option>').join('')+'</select></label>';
   const basis=Object.fromEntries(Object.entries(this.bases).filter(([k])=>k!=='COBALT_MT'||!ProductContext.isCopper()));
   const basisField='<label>'+this.label('unit_basis')+'<select name="unit_basis">'+this.options(basis,d.unit_basis)+'</select></label>';
   this.page(id?t('编辑许可证申请','Edit License Application'):t('登记出口许可证申请','Register Export License Application'),
-   '<form id="export-license-application" class="user-form"><div class="form-grid">'+selected+this.input('applied_on',d,'date',true)+this.input('proforma_no',d,'text',true)+this.input('quantity',d,'text',true)+basisField+this.input('unit',d,'text',true)+['clearing_agent','issuing_bank','unit_price','price_unit','amount','currency','destination','note'].map(k=>this.input(k,d)).join('')+'</div><p class="error" role="alert"></p><div class="business-toolbar"><button class="button primary">'+t('保存申请','Save Application')+'</button><a class="button secondary" href="'+this.route+(id?'/'+id:'')+'">'+t('返回','Back')+'</a></div></form>');
+   '<form id="export-license-application" class="user-form">'+
+   this.section(t('申请资料','Application Details'),'<div class="form-grid">'+selected+this.input('applied_on',d,'date',true)+this.input('proforma_no',d,'text',true)+'</div>')+
+   this.section(t('数量与金额','Quantity and Amount'),'<div class="form-grid">'+this.input('quantity',d,'text',true)+basisField+this.input('unit',d,'text',true)+['unit_price','price_unit','amount','currency'].map(k=>this.input(k,d)).join('')+'</div>')+
+   this.section(t('办证资料','Processing Details'),this.bookControls())+
+   '<p class="error" role="alert"></p><div class="business-toolbar"><button class="button primary">'+t('保存申请','Save Application')+'</button><a class="button secondary" href="'+this.route+(id?'/'+id:'')+'">'+t('返回','Back')+'</a></div></form>'+this.bookDialog());
+  ProductContext.dirty=false;
   const f=$('export-license-application');f.elements.unit_basis.onchange=()=>{if(f.elements.unit_basis.value!=='CUSTOM')f.elements.unit.value=f.elements.unit_basis.value==='COBALT_MT'?'Co MT':'MT';};
+  const books=this.bindBooks(f.querySelector('[data-permit-books]'),()=>f.elements.contract_id.value,d);
+  f.elements.contract_id.onchange=()=>books.load(true);
   f.onsubmit=e=>this.submit(e,async()=>{
-   const body=Object.fromEntries(new FormData(f));if(id){body.contract_id=d.contract_id;body.version=d.version;}
+   const body=Object.fromEntries(new FormData(f));body.processing_records=books.selection();if(id){body.contract_id=d.contract_id;body.version=d.version;}
    const saved=await API.request(api+(id?'/'+id:''),{method:id?'PATCH':'POST',body});
    await Router.go(this.route+'/'+saved.id);
   });
@@ -71,19 +182,20 @@ window.ExportLicenses={
   const bindings=this.table([['装车计划','Loading Plan'],['发票号','Invoice'],['预占数量','Reserved'],['正式核销量','Reconciled'],['状态','Status'],['正式出库','Formal Outbound']],d.allocations.map(a=>'<tr><td><a href="/loading-plans/orders/'+a.plan_id+'">'+esc(a.plan_no)+'</a></td><td>'+esc(a.invoice_no)+'</td><td>'+this.value(a.reserved_quantity)+'</td><td>'+this.value(a.used_quantity)+'</td><td>'+esc(a.state==='RESERVED'&&a.posted_at?t('待核销','Pending Reconciliation'):this.state(a.state))+'</td><td>'+esc(a.posted_at?BusinessTime.display(a.posted_at):'—')+'</td></tr>'),'permit-allocations');
   const history=d.history.map(a=>{
    const can=this.can('approve')&&a.decision==='PENDING'&&a.requested_by!==CurrentUser.id;
-   const evidence=Object.entries(a.payload).filter(([k])=>k!=='allocation_id').map(([k,v])=>this.label(k)+' '+String(v)).join(' · ');
+   const evidence=Object.entries({...a.payload,processing_records:undefined,...a.processing_changes}).filter(([k,v])=>k!=='allocation_id'&&v!==undefined).map(([k,v])=>this.label(k)+' '+(v??t('清空','Clear'))).join(' · ');
    const review=can?'<form data-permit-review="'+a.id+'"><label>'+t('审核意见','Review Note')+'<input name="note" required maxlength="1000"></label><button class="button primary" name="decision" value="APPROVED">'+t('通过','Approve')+'</button> <button class="button secondary" name="decision" value="REJECTED">'+t('驳回','Reject')+'</button><p class="error" role="alert"></p></form>':'';
    return '<article><strong>'+t(...this.actions[a.action])+' · '+this.state(a.decision)+'</strong><p>'+esc(a.requester+' · '+BusinessTime.display(a.requested_at)+' · '+a.reason)+'</p><p>'+esc(evidence)+'</p>'+(a.reviewer?'<p>'+esc(a.reviewer+' · '+BusinessTime.display(a.reviewed_at)+' · '+a.review_note)+'</p>':'')+review+'</article>';
   }).join('');
   const request=write&&!pending?this.actionForm(d):'';
   const product=ProductContext.isCopper()?t('阴极铜','Copper Cathodes'):t('氢氧化钴','Cobalt Hydroxide');
-  this.page(this.title(),'<div class="business-toolbar"><a class="button secondary" href="'+this.route+'">'+t('返回许可证列表','Back to Licenses')+'</a>'+(write&&!pending&&d.state==='APPLYING'?'<a class="button secondary" href="'+this.route+'/'+id+'/edit">'+t('编辑申请','Edit Application')+'</a>':'')+'</div>'+
-   this.section(t('基础与开证资料','License Information'),'<p>'+product+'</p>'+this.facts(['status','proforma_no','license_no','buyer','contract_no','applied_on','clearing_agent','issuing_bank','destination','note'],d))+
+  this.page(t('出口许可证详情','Export License Details'),'<div class="business-toolbar"><a class="button secondary" href="'+this.route+'">'+t('返回许可证列表','Back to Licenses')+'</a>'+(write&&!pending&&d.state==='APPLYING'?'<a class="button secondary" href="'+this.route+'/'+id+'/edit">'+t('编辑申请','Edit Application')+'</a>':'')+'</div>'+
+   this.section(t('许可证资料','License Information'),'<p>'+product+'</p>'+this.facts(['status','proforma_no','license_no','buyer','contract_no','applied_on'],d))+
+   this.section(t('办证资料','Processing Details'),this.facts(Object.keys(this.bookFields),d))+
    this.section(t('数量与金额','Quantity and Amount'),this.facts(['quantity','unit','used','reserved','pending','remaining','available','utilization','unit_price','price_unit','amount','reference_amount','currency'],d))+
    this.section(t('有效期与关证','Validity and Closure'),this.facts(['valid_from','valid_until','extension_on','extended_until','effective_until','closed_on'],d))+
    this.section(t('装车计划与核销','Loading Plans and Reconciliation'),bindings)+
    this.section(t('审核与历史','Review and History'),request+'<div class="export-license-history">'+(history||'<p>'+t('暂无审核记录','No review records')+'</p>')+'</div>')+
-   this.section(t('许可证附件','License Attachments'),attached+upload));
+   this.section(t('许可证附件','License Attachments'),attached+upload)+(request?this.bookDialog():''));
   if($('permit-action'))this.bindAction(d);
   for(const f of document.querySelectorAll('[data-permit-review]'))f.onsubmit=e=>this.submit(e,async()=>{await API.request(api+'/actions/'+f.dataset.permitReview,{method:'POST',body:{decision:e.submitter.value,note:f.elements.note.value}});await this.detail(id);});
   if($('permit-upload'))$('permit-upload').onsubmit=e=>this.submit(e,async()=>{
@@ -106,21 +218,26 @@ window.ExportLicenses={
   return options.length?'<form id="permit-action" class="user-form"><label>'+t('审核事项','Action for Review')+'<select name="action">'+this.options(Object.fromEntries(options.map(k=>[k,this.actions[k]])))+'</select></label><div id="permit-action-fields" class="form-grid"></div><label>'+t('申请原因','Reason')+'<input name="reason" required maxlength="1000"></label><button class="button secondary">'+t('提交审核','Submit for Review')+'</button><p class="error" role="alert"></p></form>':'';
  },
  bindAction(d){
-  const f=$('permit-action'),t=this.t,draw=()=>{
+  const f=$('permit-action'),t=this.t;
+  let books;
+  const draw=()=>{
+   books=null;
    const action=f.elements.action.value;
    let inputs;
    if(action==='ISSUE')inputs=this.input('license_no',{},'text',true)+this.input('valid_from',{},'date',true)+this.input('valid_until',{},'date',true);
    else if(action==='EXTEND')inputs=this.input('extension_on',{},'date',true)+this.input('extended_until',{},'date',true)+this.input('reference',{},'text',true);
-   else if(action==='AMEND')inputs=['quantity','clearing_agent','issuing_bank','unit_price','price_unit','amount','currency','destination','note'].map(k=>this.input(k,d)).join('');
+   else if(action==='AMEND')inputs=['quantity','unit_price','price_unit','amount','currency'].map(k=>this.input(k,d)).join('')+this.bookControls();
    else if(['SETTLE','CORRECT'].includes(action)){
     const candidates=d.allocations.filter(a=>a.state===(action==='SETTLE'?'RESERVED':'SETTLED')&&a.posted_at);
     inputs='<label>'+this.label('allocation_id')+'<select name="allocation_id" required>'+candidates.map(a=>'<option value="'+a.id+'">'+esc(a.plan_no+' / '+a.invoice_no)+'</option>').join('')+'</select></label>'+this.input('quantity',{},'text',true)+this.input('reference',{},'text',true)+'<p>'+t('核销单位','Reconciliation Unit')+' '+esc(d.unit)+'</p>';
    }else inputs=(action==='CANCEL'?'':this.input('closed_on',{},'date',true))+this.input('reference',{},'text',true);
    $('permit-action-fields').innerHTML=inputs;
+   if(action==='AMEND')books=this.bindBooks(f.querySelector('[data-permit-books]'),()=>d.contract_id,d);
   };
   f.elements.action.onchange=draw;draw();
   f.onsubmit=e=>this.submit(e,async()=>{
    const {action,reason,...payload}=Object.fromEntries(new FormData(f));
+   if(books)payload.processing_records=books.selection();
    await API.request(this.api()+'/'+d.id+'/actions',{method:'POST',body:{action,reason,payload,version:d.version}});
    await this.detail(d.id);
   });

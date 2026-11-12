@@ -61,7 +61,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  if(await planGroup.count())await planGroup.locator('summary').click();
  const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
- assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.3-ui1');
+ assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.3-ui2');
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
  await page.waitForFunction(()=>window.Reports463?.current?.view==='shipping'&&document.querySelector('.r463-stats'));
@@ -215,6 +215,25 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.locator('a[href="/export-licenses/new"]').click();
   const form=page.locator('#export-license-application');
   await form.locator('[name=contract_id]').selectOption({index:1});
+  assert.equal(await form.locator('[data-book-field]').count(),7);
+  const book=page.locator('#permit-book-dialog');
+  const addRecord=async(key,value)=>{
+   await form.locator('[data-book-open='+key+']').click();
+   await book.locator('input[name=value]').fill(value);
+   await book.locator('button.primary').click();
+   await book.waitFor({state:'hidden'});
+   return form.locator('[data-book-field='+key+']');
+  };
+  for(const [key,value] of [['clearing_agent','Synthetic customs'],['issuing_bank','Synthetic issuing bank A'],['issuing_bank_account','SYNTH-A-001'],['offshore_bank','Synthetic offshore bank'],['offshore_bank_account','SYNTH-OFF-001'],['destination','Synthetic destination'],['note','Synthetic initial note']]){
+   await (await addRecord(key,value)).selectOption({label:value});
+  }
+  const issuing=await addRecord('issuing_bank','Synthetic issuing bank B');
+  await issuing.selectOption({label:'Synthetic issuing bank B'});
+  const account=form.locator('[data-book-field=issuing_bank_account]');
+  assert.equal(await account.inputValue(),'');
+  assert.equal(await account.locator('option').filter({hasText:'SYNTH-A-001'}).count(),0);
+  await issuing.selectOption({label:'Synthetic issuing bank A'});
+  await account.selectOption({label:'SYNTH-A-001'});
   const reference='SYNTH-UI-'+product+'-'+Date.now();
   await form.locator('[name=proforma_no]').fill(reference);
   await form.locator('[name=quantity]').fill('12.345678');
@@ -222,19 +241,43 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
   assert.match(await page.locator('.export-license-facts').first().innerText(),new RegExp(reference));
   await page.locator('a[href$="/edit"]').click();
-  await page.locator('#export-license-application [name=note]').fill('Synthetic browser edit');
+  await form.locator('[data-book-field=issuing_bank_account] option:checked').filter({hasText:'SYNTH-A-001'}).waitFor({state:'attached'});
+  await (await addRecord('note','Synthetic browser edit')).selectOption({label:'Synthetic browser edit'});
   await page.locator('#export-license-application button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
   await page.getByText('Synthetic browser edit',{exact:true}).waitFor();
   assert.match(await page.locator('.export-license-page').innerText(),/Synthetic browser edit/);
   await page.screenshot({path:path.join(E.runtime,'export-license-'+product+'.png'),fullPage:true});
+  await go(page,'/export-licenses/new',product);
+  await form.locator('[name=contract_id]').selectOption({index:1});
+  await form.locator('[data-book-field=note] option').filter({hasText:'Synthetic browser edit'}).waitFor({state:'attached'});
+  await form.locator('[data-book-field=issuing_bank]').selectOption({label:'Synthetic issuing bank A'});
+  assert.equal(await form.locator('[data-book-field=issuing_bank_account] option').filter({hasText:'SYNTH-A-001'}).count(),1);
+  await page.screenshot({path:path.join(E.runtime,'license-record-books-'+product+'.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'record books overflow '+product);
+  await form.locator('[data-book-open=offshore_bank]').focus();
+  await page.keyboard.press('Enter');
+  await book.waitFor({state:'visible'});
+  assert(await book.locator('[name=value]').evaluate(el=>document.activeElement===el));
+  await page.keyboard.press('Escape');
+  assert(await form.locator('[data-book-open=offshore_bank]').evaluate(el=>document.activeElement===el));
+  await page.screenshot({path:path.join(E.runtime,'license-record-books-390-'+product+'.png'),fullPage:true});
+  await page.setViewportSize({width:1440,height:1000});
  }
  const invoicePlan=await page.evaluate(async()=>{
   const data=await API.request('/cobalt/sales-workflow/plans');
   return data.items.find(p=>p.remark==='Synthetic rc2 flow')?.id;
  });
  assert(invoicePlan);
+ await go(page,'/sales-plans');
+ await page.locator('#ux10-sales-table').waitFor();
+ assert.equal(await page.locator('.sales-execution-metrics .v34-kpi').count(),4);
+ await page.screenshot({path:path.join(E.runtime,'v473-sales-plan-list.png'),fullPage:true});
  await go(page,'/sales-plans/'+invoicePlan);
+ await page.locator('#sales-related-plans').waitFor();
+ assert(await page.locator('.business-toolbar a[href="/sales-plans/'+invoicePlan+'/dispatch"]').first().isVisible());
+ await page.screenshot({path:path.join(E.runtime,'v473-sales-plan-detail.png'),fullPage:true});
  const invoiceRow=page.locator('#sales-invoice-table tbody tr').filter({hasText:'NO-ASSAY-'});
  const fits=()=>page.locator('#sales-invoice-table').evaluate(table=>table.parentElement.scrollWidth<=table.parentElement.clientWidth+2);
  assert(await fits());

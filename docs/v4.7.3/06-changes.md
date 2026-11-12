@@ -65,3 +65,10 @@
 | 新增 | `tests/release/v473-security.cjs` |
 | 新增 | `docs/v4.7.3/05-test-evidence.json` |
 | 新增 | `docs/v4.7.3/06-changes.md` |
+| 新增 | `docs/v4.7.3/previews/license-application.html` |
+
+## V4.7.3-ui2 改版补充
+
+- 许可证台账、详情和申请表由 `dist/export-licenses.js` 更新。记录簿的存储及校验由迁移 185、`server/export-license-books.cjs` 和 `server/export-licenses.cjs` 实现。
+- 销售计划列表、详情及关联单据由 `dist/ui468.js`、`dist/ux10-sales.js`、`server/sales-approval.cjs` 和 `server/sales-invoices.cjs` 更新。
+- 浏览器回归增加铜钴七类记录簿、账户过滤、重进表单、键盘和窄屏验证。业务回归增加银行不匹配拒绝、独立审核修改、历史资料迁移及销售执行数据断言。

@@ -48,6 +48,8 @@ window.UI46Pages={
  },
  host(root){return root.querySelector('.ux10-sales,.co-sales-page,.co-reports-page,.co-execution-page,.co-count-page,.co-preparation-detail,.co-work-page,.co-stock-page,.gate-page')||root.querySelector(':scope>.co-page')||root;},
  compose(root,s){s.composition={classes:[],hidden:[],watch:[],family:this.family(root)};s.root.dataset.pageFamily=s.composition.family;this.cls(root,'p46-root',s);
+  const composed=root.querySelector(':scope > [data-page-composed]');
+  if(composed){s.composition.anchor=composed;this.finish(root,s);return;}
   if(window.Operations468R4?.compose(root,s))return;
   if(window.LoadingDetails465?.matches(root)&&LoadingDetails465.compose(root,s))return;
   if(window.DocumentLayouts?.matches(root)){DocumentLayouts.compose(root,s);return;}const f=s.composition.family;if(f==='workstation'){this.workstation(root,s);return;}

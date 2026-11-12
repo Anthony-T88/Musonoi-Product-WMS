@@ -1,11 +1,11 @@
 {
   "version": "4.7.3",
   "baseCommit": "3e8f0d6d1a667828c1ba9f4cd42441af0d74eaea",
-  "runtimeMigrationCount": 184,
+  "runtimeMigrationCount": 185,
   "status": "LOCAL_TEST_CANDIDATE",
   "historicalMigrationFilesUnchanged": 182,
   "baseline": "4.7.2-ui1",
-  "revision": "4.7.3-ui1",
+  "revision": "4.7.3-ui2",
   "report": "docs/v4.7.3/04-release-report.md",
   "preproduction": "pending"
 }

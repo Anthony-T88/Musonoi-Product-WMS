@@ -5,8 +5,8 @@ const inventory=require('./uiux-inventory.json');
 const languages=['zh-CN','en'];
 const desktop={width:1366,height:768},large={width:1440,height:900},wide={width:1920,height:1080},phone={width:390,height:844};
 const fullSizes=[desktop,large,wide],allSizes=[...fullSizes,phone];
-const narrowKeys=new Set(['overview','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses']);
-const quickKeys=new Set(['overview','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses']);
+const narrowKeys=new Set(['overview','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail']);
+const quickKeys=new Set(['overview','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail']);
 const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator']};
 const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
@@ -91,10 +91,13 @@ function selectors(key,product,landing){
   'loading-search':['.r9-document-filter input','.r9-document-filter select','.r9-document-filter button'],
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],
   'metal-confirmations':['#co-metal-filter','#page-content table'],
+  'sales':['#s468-filter','#ux10-sales-table','.sales-execution-metrics'],
+  'cu-sales-detail':['.sales-identity','.sales-related'],
+  'co-sales-detail':['.sales-identity','.sales-related'],
   'export-licenses':['#export-license-filter','#export-license-table'],
   'export-licenses-filtered':['#export-license-filter','#export-license-table'],
   'legacy-export-licenses':['#export-license-filter'],
-  'export-license-new':['#export-license-application'],
+  'export-license-new':['#export-license-application','#permit-book-note','[data-book-open=issuing_bank_account]'],
   'cu-export-license-edit':['#export-license-application'],
   'co-export-license-edit':['#export-license-application'],
   'cu-export-license':['#permit-allocations'],

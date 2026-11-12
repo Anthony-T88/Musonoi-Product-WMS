@@ -97,7 +97,7 @@ function pages(ids){
  add('export-licenses','/export-licenses',BOTH,{screenshot:true,roles:['sales_operator','commerce_manager','logistics_field_operator','production_operator']});
  add('export-licenses-filtered','/export-licenses',BOTH,{query:'?status=ACTIVE',state:'status filter',screenshot:true});
  add('legacy-export-licenses','/export-licenses',BOTH,{query:'?view=legacy',state:'historical'});
- add('export-license-new','/export-licenses/new',BOTH,{screenshot:true});
+ add('export-license-new','/export-licenses/new',BOTH,{state:'seven persistent record selectors',screenshot:true});
  add('cu-export-license','/export-licenses/:id',[CU],{example:'cuPermit',screenshot:true});
  add('co-export-license','/export-licenses/:id',[CO],{example:'coPermit',screenshot:true});
  add('cu-export-license-edit','/export-licenses/:id/edit',[CU],{example:'cuPermitDraft',state:'applying'});

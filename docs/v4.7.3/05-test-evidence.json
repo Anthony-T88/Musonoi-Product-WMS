@@ -1529,5 +1529,42 @@
     "ttfbMs": 756.736
   },
   "remotePreproduction": "pending",
-  "productionApproval": "pending"
+  "productionApproval": "pending",
+  "ui2": {
+    "revision": "4.7.3-ui2",
+    "migration": "185_v473_license_record_books.sql",
+    "scope": "isolated local synthetic TEST",
+    "result": "PASS",
+    "automation": {
+      "unit": 29,
+      "integration": 24,
+      "security": 35,
+      "reliability": 46,
+      "browser": 1,
+      "total": 135,
+      "exitCode": 0
+    },
+    "quickLayout": {
+      "required": 118,
+      "screenshots": 102,
+      "exitCode": 0
+    },
+    "focusedBrowser": {
+      "screenshots": 32,
+      "products": 2,
+      "languages": 2,
+      "widths": [
+        1440,
+        390
+      ],
+      "errors": 0
+    },
+    "upgrade": {
+      "from": 184,
+      "to": 185,
+      "added": 1,
+      "retryAdded": 0,
+      "existingRecordCountsUnchanged": true
+    }
+  }
 }

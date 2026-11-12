@@ -93,6 +93,14 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   const body=i?{...arrivalBody,trailer_one:'RC3-ALT-'+seq,driver_name:'Alternate Driver '+seq,passport_no:'Alternate Passport '+seq}:arrivalBody;
   arrivals.push(await api(url,'admin',body));
  }
+ const books='/export-permits/record-books',newBook=(kind,value,bank_id)=>api(books,'sales_operator',{contract_id:contract.id,kind,value,...(bank_id?{bank_id}:{})});
+ const bank=await newBook('issuing_bank','Synthetic issuing bank 1'),otherBank=await newBook('issuing_bank','Synthetic issuing bank 2');
+ const account=await newBook('issuing_bank_account','SYNTH-ACCT-001',bank.id);
+ assert.equal((await newBook('issuing_bank_account','SYNTH-ACCT-001',bank.id)).id,account.id);
+ await api(books,'sales_operator',{contract_id:contract.id,kind:'offshore_bank_account',value:'SYNTH-BAD',bank_id:bank.id},400);
+ assert((await api(books+'?contract_id='+customer.contract,'sales_operator')).items.some(row=>row.id===account.id&&row.bank_id===bank.id));
+ await api(books+'?contract_id='+f.customers.CO_HYDROXIDE.contract,'customer_admin',undefined,404);
+ await api(books+'?contract_id='+contract.id,'limited_viewer',undefined,403);
  const permit=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:'RMM-2609-CU-MECR-7500',quantity:'7500',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD',unit_price:'1234.567891',price_unit:'USD/MT'});
  const permitPath='/export-permits/'+permit.id,licenseAction=async(action,payload)=>{
   const current=await api(permitPath),pending=await api(permitPath+'/actions','sales_operator',{action,payload,version:current.version,reason:'Synthetic licence acceptance'});
@@ -100,6 +108,13 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   return api(permitPath+'/actions/'+pending.id,'sales_manager',{decision:'APPROVED',note:'Synthetic independent review'});
  };
  await licenseAction('ISSUE',{license_no:'RC3-LICENSE',valid_from:today,valid_until:'2099-12-30'});
+ const {version}=await api(permitPath);
+ await api(permitPath+'/actions','sales_operator',{action:'AMEND',version,reason:'Synthetic wrong bank',payload:{processing_records:{issuing_bank:otherBank.id,issuing_bank_account:account.id}}},400);
+ const amended=await licenseAction('AMEND',{processing_records:{issuing_bank:bank.id,issuing_bank_account:account.id}});
+ assert.equal(amended.issuing_bank_account,'SYNTH-ACCT-001');
+ assert.equal(amended.history[0].processing_changes.issuing_bank_account,'SYNTH-ACCT-001');
+ assert.equal((await c.query("SELECT count(*)::int n FROM audit_logs WHERE action LIKE 'export_license%' AND (after_data::text LIKE '%SYNTH-ACCT-001%' OR before_data::text LIKE '%SYNTH-ACCT-001%')")).rows[0].n,0);
+
  const expired=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:'2020-01-01',proforma_no:'SYNTH-EXPIRED-'+seq,quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});
  const expiredPath='/export-permits/'+expired.id;
  const expiredIssue=await api(expiredPath+'/actions','sales_manager',{action:'ISSUE',payload:{license_no:'SYNTH-EXPIRED-'+seq,valid_from:'2020-01-01',valid_until:'2020-12-31'},version:expired.version,reason:'Synthetic expired licence'});
@@ -177,6 +192,13 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.match((await api(permitPath)).valid_until,/2099-12-30/);
  const closed=await licenseAction('CLOSE',{closed_on:today,reference:'Synthetic closure'});
  assert.equal(closed.status,'CLOSED');
+ const redesigned=await api('/sales-workflow/plans/'+plan.id);
+ assert.equal(Number(redesigned.execution.posted),2.0325);
+ assert.equal(Number(redesigned.execution.fulfillment),0);
+ assert(redesigned.related.loading.some(row=>row.id===document.id&&row.status==='OUTBOUND'));
+ assert(redesigned.related.licenses.some(row=>row.id===permit.id));
+ const list=await api('/sales-workflow/plans?buyer_contract='+encodeURIComponent(contract.contract_no));
+ assert(list.items.some(row=>row.id===plan.id&&Number(row.execution.posted)===2.0325));
  const shipping=await api('/shipping/'+load.id),generate={expected_revision:0,transport_version:shipping.transport.version,source_signature:shipping.source_signature,unit_price_usd:'1234.56'};
  await api('/shipping/'+load.id+'/packing-list','admin',{...generate,unit_price_usd:'-1'},400);
  await api('/shipping/'+load.id+'/packing-list','admin',generate);

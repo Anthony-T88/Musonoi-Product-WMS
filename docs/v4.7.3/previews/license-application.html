@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登记许可证申请 · 方案预览</title>
+  <link rel="stylesheet" href="../../../dist/uiux-governance.css">
+  <link rel="stylesheet" href="preview.css">
+</head>
+<body>
+  <aside>
+    <strong>穆松尼产品仓储管理系统</strong>
+    <nav aria-label="设计预览">
+      <a href="licenses.html">出口许可证管理</a>
+      <a href="sales.html">销售计划管理</a>
+      <a href="sales-detail.html">销售计划详情</a>
+    </nav>
+  </aside>
+  <main class="application-preview">
+    <p class="note">方案预览 · 示例数据，可试填</p>
+    <header>
+      <h1>登记许可证申请</h1>
+      <a href="licenses.html">返回许可证台账</a>
+    </header>
+    <form id="application-example">
+      <section class="panel" aria-labelledby="application-identity">
+        <h2 id="application-identity">申请资料</h2>
+        <div class="application-grid">
+          <label>产品
+            <select id="example-product">
+              <option value="copper">阴极铜</option>
+              <option value="cobalt">氢氧化钴</option>
+            </select>
+          </label>
+          <label>买家 / 合同 *
+            <select id="example-contract" name="contract_id" required>
+              <option value="cu-01">示例买家甲 / CT-CU-001</option>
+              <option value="cu-02">示例买家乙 / CT-CU-002</option>
+            </select>
+          </label>
+          <label>申请日期 *
+            <input type="date" name="applied_on" value="2026-11-11" required>
+          </label>
+          <label>形式发票号 *
+            <input id="example-proforma" name="proforma_no" value="PI-CU-03" maxlength="64" required>
+          </label>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="application-quota">
+        <h2 id="application-quota">数量与金额</h2>
+        <div class="application-grid">
+          <label>申请数量 *
+            <input name="quantity" inputmode="decimal" value="1200.0000" required>
+          </label>
+          <label>计量口径 *
+            <select id="example-basis" name="unit_basis" required>
+              <option value="PHYSICAL_MT">实物净重吨</option>
+              <option value="CUSTOM">许可证指定单位</option>
+            </select>
+          </label>
+          <label>计量单位 *
+            <input id="example-unit" name="unit" maxlength="40" value="MT" required>
+          </label>
+          <label>币种 *
+            <input name="currency" maxlength="3" value="USD" required>
+          </label>
+          <label>单价
+            <input id="example-price" name="unit_price" inputmode="decimal" value="8000.00">
+          </label>
+          <label>计价单位
+            <input id="example-price-unit" name="price_unit" maxlength="64" value="USD/MT">
+          </label>
+          <label>正式登记金额
+            <input id="example-amount" name="amount" inputmode="decimal" value="9600000.00">
+          </label>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="application-processing">
+        <h2 id="application-processing">办证资料</h2>
+        <div class="application-grid">
+          <div class="record-field">
+            <label for="clearing-agent">开证清关公司</label>
+            <div class="record-control">
+              <select id="clearing-agent" name="clearing_agent"></select>
+              <button type="button" data-record-book="clearing_agent" aria-label="开证清关公司记录簿">记录簿</button>
+            </div>
+          </div>
+          <div class="record-field">
+            <label for="destination">目的地</label>
+            <div class="record-control">
+              <select id="destination" name="destination"></select>
+              <button type="button" data-record-book="destination" aria-label="目的地记录簿">记录簿</button>
+            </div>
+          </div>
+          <div class="record-field record-field-wide">
+            <label for="application-note">备注</label>
+            <div class="record-control">
+              <select id="application-note" name="note"></select>
+              <button type="button" data-record-book="note" aria-label="备注记录簿">记录簿</button>
+            </div>
+          </div>
+          <div class="record-field">
+            <label for="issuing-bank">开证银行</label>
+            <div class="record-control">
+              <select id="issuing-bank" name="issuing_bank"></select>
+              <button type="button" data-record-book="issuing_bank" aria-label="开证银行记录簿">记录簿</button>
+            </div>
+          </div>
+          <div class="record-field">
+            <label for="issuing-bank-account">开证银行账户号</label>
+            <div class="record-control">
+              <select id="issuing-bank-account" name="issuing_bank_account"></select>
+              <button type="button" data-record-book="issuing_bank_account" aria-label="开证银行账户号记录簿">记录簿</button>
+            </div>
+          </div>
+          <div class="record-field">
+            <label for="offshore-bank">离岸银行</label>
+            <div class="record-control">
+              <select id="offshore-bank" name="offshore_bank"></select>
+              <button type="button" data-record-book="offshore_bank" aria-label="离岸银行记录簿">记录簿</button>
+            </div>
+          </div>
+          <div class="record-field">
+            <label for="offshore-bank-account">离岸银行账户号</label>
+            <div class="record-control">
+              <select id="offshore-bank-account" name="offshore_bank_account"></select>
+              <button type="button" data-record-book="offshore_bank_account" aria-label="离岸银行账户号记录簿">记录簿</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <footer class="application-footer">
+        <p class="note">* 为必填。保存后为「申请中」。签发时补录许可证号和有效期。</p>
+        <button class="primary" type="submit" disabled>保存申请</button>
+      </footer>
+    </form>
+  </main>
+  <dialog id="application-record-book" class="record-book" aria-labelledby="record-book-title">
+    <header>
+      <h2 id="record-book-title"></h2>
+      <button type="button" id="record-book-return">返回选择</button>
+    </header>
+    <ul id="record-book-entries" class="record-book-entries" aria-label="已有记录"></ul>
+    <form id="record-book-form">
+      <label id="record-book-bank-field" hidden>
+        <span id="record-book-bank-label"></span>
+        <select id="record-book-bank" name="bank" disabled></select>
+      </label>
+      <label for="record-book-value" id="record-book-label"></label>
+      <div id="record-book-input"></div>
+      <div class="record-book-footer">
+        <p id="record-book-status" class="note" role="status"></p>
+        <button type="submit" class="primary">新增记录</button>
+      </div>
+    </form>
+  </dialog>
+  <script>
+    const form = document.getElementById('application-example');
+    const product = document.getElementById('example-product');
+    const contract = form.elements.contract_id;
+    const basis = form.elements.unit_basis;
+    const sampleContracts = {
+      copper: [['cu-01', '示例买家甲 / CT-CU-001'], ['cu-02', '示例买家乙 / CT-CU-002']],
+      cobalt: [['co-01', '示例买家丙 / CT-CO-001'], ['co-02', '示例买家丁 / CT-CO-002']]
+    };
+
+    product.addEventListener('change', () => {
+      const cobalt = product.value === 'cobalt';
+      contract.replaceChildren(...sampleContracts[product.value].map(([value, label]) => new Option(label, value)));
+      const choices = [new Option('实物净重吨', 'PHYSICAL_MT')];
+      if (cobalt) choices.push(new Option('钴金属吨', 'COBALT_MT'));
+      choices.push(new Option('许可证指定单位', 'CUSTOM'));
+      basis.replaceChildren(...choices);
+      form.elements.proforma_no.value = cobalt ? 'PI-CO-03' : 'PI-CU-03';
+      form.elements.quantity.value = cobalt ? '500.0000' : '1200.0000';
+      form.elements.unit.value = 'MT';
+      form.elements.unit_price.value = cobalt ? '' : '8000.00';
+      form.elements.price_unit.value = cobalt ? '' : 'USD/MT';
+      form.elements.amount.value = cobalt ? '' : '9600000.00';
+    });
+
+    basis.addEventListener('change', () => {
+      if (basis.value === 'CUSTOM') return;
+      form.elements.unit.value = basis.value === 'COBALT_MT' ? 'Co MT' : 'MT';
+    });
+
+    form.addEventListener('submit', event => event.preventDefault());
+
+    const recordBooks = {
+      clearing_agent: { label: '开证清关公司', maxLength: 160, entries: [
+        { id: 'agent-1', label: '示例清关公司甲' },
+        { id: 'agent-2', label: '示例清关公司乙' }
+      ] },
+      destination: { label: '目的地', maxLength: 320, entries: [
+        { id: 'destination-1', label: '示例目的地甲' },
+        { id: 'destination-2', label: '示例目的地乙' }
+      ] },
+      note: { label: '备注', maxLength: 1000, entries: [
+        { id: 'note-1', label: '按合同约定办理' },
+        { id: 'note-2', label: '随附形式发票' }
+      ] },
+      issuing_bank: { label: '开证银行', maxLength: 160, entries: [
+        { id: 'issuing-1', label: '示例开证银行甲' },
+        { id: 'issuing-2', label: '示例开证银行乙' }
+      ] },
+      issuing_bank_account: { label: '开证银行账户号', parent: 'issuing_bank', entries: [
+        { id: 'issuing-account-1', label: '0000010001', bank: 'issuing-1' },
+        { id: 'issuing-account-2', label: '0000010002', bank: 'issuing-2' }
+      ] },
+      offshore_bank: { label: '离岸银行', maxLength: 160, entries: [
+        { id: 'offshore-1', label: '示例离岸银行甲' },
+        { id: 'offshore-2', label: '示例离岸银行乙' }
+      ] },
+      offshore_bank_account: { label: '离岸银行账户号', parent: 'offshore_bank', entries: [
+        { id: 'offshore-account-1', label: '0000020001', bank: 'offshore-1' },
+        { id: 'offshore-account-2', label: '0000020002', bank: 'offshore-2' }
+      ] }
+    };
+    const bookDialog = document.getElementById('application-record-book');
+    const bookForm = document.getElementById('record-book-form');
+    const bookBank = document.getElementById('record-book-bank');
+    const bookInput = document.getElementById('record-book-input');
+    const bookStatus = document.getElementById('record-book-status');
+    let activeBook;
+    let recordNumber = 0;
+
+    function refreshRecordSelect(field) {
+      const book = recordBooks[field];
+      const select = form.elements[field];
+      const selected = select.value;
+      const bank = book.parent && form.elements[book.parent].value;
+      const entries = book.parent ? book.entries.filter(entry => entry.bank === bank) : book.entries;
+      const placeholder = book.parent && !bank ? '请先选择' + recordBooks[book.parent].label : '请选择' + book.label;
+      select.disabled = Boolean(book.parent && !bank);
+      select.replaceChildren(new Option(placeholder, ''), ...entries.map(entry => new Option(entry.label, entry.id)));
+      if (entries.some(entry => entry.id === selected)) select.value = selected;
+    }
+
+    function renderBookEntries() {
+      const book = recordBooks[activeBook];
+      const list = document.getElementById('record-book-entries');
+      list.replaceChildren(...book.entries.map(entry => {
+        const item = document.createElement('li');
+        item.textContent = entry.label;
+        if (book.parent) {
+          const bank = document.createElement('small');
+          bank.textContent = recordBooks[book.parent].entries.find(record => record.id === entry.bank)?.label ?? '';
+          item.append(bank);
+        }
+        return item;
+      }));
+    }
+
+    function openRecordBook(field) {
+      activeBook = field;
+      const book = recordBooks[field];
+      const parent = recordBooks[book.parent];
+      document.getElementById('record-book-title').textContent = book.label + '记录簿';
+      document.getElementById('record-book-label').textContent = book.label;
+      document.getElementById('record-book-bank-field').hidden = !parent;
+      bookBank.disabled = !parent;
+      bookBank.required = Boolean(parent);
+      if (parent) {
+        document.getElementById('record-book-bank-label').textContent = '所属' + parent.label;
+        bookBank.replaceChildren(new Option('请选择' + parent.label, ''), ...parent.entries.map(entry => new Option(entry.label, entry.id)));
+        bookBank.value = form.elements[book.parent].value;
+      }
+
+      const input = document.createElement(field === 'note' ? 'textarea' : 'input');
+      input.id = 'record-book-value';
+      input.name = 'value';
+      input.required = true;
+      if (book.maxLength) input.maxLength = book.maxLength;
+      if (field === 'note') input.rows = 2;
+      bookInput.replaceChildren(input);
+      bookStatus.textContent = '';
+      renderBookEntries();
+      bookDialog.showModal();
+      (parent && !bookBank.value ? bookBank : input).focus();
+    }
+
+    for (const [field, book] of Object.entries(recordBooks)) {
+      refreshRecordSelect(field);
+      if (book.parent) form.elements[book.parent].addEventListener('change', () => refreshRecordSelect(field));
+    }
+    document.querySelectorAll('[data-record-book]').forEach(button => {
+      button.addEventListener('click', () => openRecordBook(button.dataset.recordBook));
+    });
+    document.getElementById('record-book-return').addEventListener('click', () => {
+      const select = form.elements[activeBook];
+      const parent = recordBooks[activeBook].parent;
+      bookDialog.close();
+      (select.disabled && parent ? form.elements[parent] : select).focus();
+    });
+    bookForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const book = recordBooks[activeBook];
+      const input = bookForm.elements.value;
+      const label = input.value.trim();
+      const bank = book.parent ? bookBank.value : undefined;
+      if (!label) {
+        bookStatus.textContent = '请填写' + book.label + '。';
+        input.focus();
+        return;
+      }
+      if (book.entries.some(entry => entry.label === label && entry.bank === bank)) {
+        bookStatus.textContent = '已有这条记录，请返回选择。';
+        return;
+      }
+      book.entries.push({ id: 'new-record-' + ++recordNumber, label, bank });
+      refreshRecordSelect(activeBook);
+      renderBookEntries();
+      input.value = '';
+      bookStatus.textContent = '已新增，返回表单后可选择。';
+    });
+  </script>
+</body>
+</html>

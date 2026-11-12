@@ -1,6 +1,6 @@
 # Musonoi Product WMS 4.7.3
 
-V4.7.3 是基于本地 V4.7.2 的独立 TEST 候选，运行时要求迁移 184。
+V4.7.3 是基于本地 V4.7.2 的独立 TEST 候选，运行时要求迁移 185。
 
 [交付报告](docs/v4.7.3/04-release-report.md) · [部署评估](docs/v4.7.3/03-deployment.md) · [页面评审方案](docs/v4.7.3/02-design-review.md)
 

@@ -65,14 +65,14 @@ window.ApprovalDisplay={
  },
  render(root,record,{preview=false,dialog=false}={}){
   const a=record.approval,signature=I18n.language+'|'+JSON.stringify(a),key=a.kind+'|'+a.id,owned=[...root.querySelectorAll('.r10-owned')].filter(n=>n.dataset.approvalKey===key);
-  const expectedHistoryParent=a.kind==='gate'?root.querySelector('#g468-history')||root:root.querySelector('.co469-history-slot')||root;
+  const expectedHistoryParent=(a.kind==='gate'?root.querySelector('#g468-history'):a.kind==='sales'?root.querySelector('#sales-related-approvals'):root.querySelector('.co469-history-slot'))||root;
   if(owned.length===(a.kind==='sales'?1:2)&&owned.every(n=>n.dataset.signature===signature)&&owned.find(n=>n.classList.contains('r10-history-host'))?.parentElement===expectedHistoryParent){this.hideNative(root,a.kind);return;}
   for(const old of owned)old.remove();
   const flow=document.createElement('div');flow.className='r10-owned r10-workflows';flow.dataset.noI18n='';flow.dataset.approvalKey=key;flow.dataset.signature=signature;flow.innerHTML=a.workflows.map(w=>this.flow(w)).join('');
   // Keep operation identities and native business controls in their original layout.
   if(a.kind!=='sales')root.prepend(flow);
   const history=document.createElement('div');history.className='r10-owned r10-history-host';history.dataset.noI18n='';history.dataset.approvalKey=key;history.dataset.signature=signature;const loading=/^\/outbounds\/(?:loads\/)?[0-9a-f-]{36}$/.test(location.pathname);
-  history.innerHTML=(loading&&!a.history.total?'':this.history(a.history,{compact:preview,id:a.id}))+(preview?'':(a.related||[]).map(r=>'<section class="r10-related" data-related-id="'+esc(r.id)+'"><h2>'+this.t('更正审批','Correction Approval')+' · '+esc(r.code)+'</h2>'+r.workflows.map(w=>this.flow(w)).join('')+this.history(r.history,{id:r.id})+'</section>').join(''));(a.kind==='gate'?root.querySelector('#g468-history')||root:root.querySelector('.co469-history-slot')||root).append(history);
+  history.innerHTML=(loading&&!a.history.total?'':this.history(a.history,{compact:preview,id:a.id}))+(preview?'':(a.related||[]).map(r=>'<section class="r10-related" data-related-id="'+esc(r.id)+'"><h2>'+this.t('更正审批','Correction Approval')+' · '+esc(r.code)+'</h2>'+r.workflows.map(w=>this.flow(w)).join('')+this.history(r.history,{id:r.id})+'</section>').join(''));expectedHistoryParent.append(history);
   history.hidden=!history.hasChildNodes();
   history.onclick=async e=>{const button=e.target.closest('[data-approval-page]');if(!button||button.disabled)return;const relatedId=button.closest('[data-related-id]')?.dataset.relatedId,related=relatedId?(a.related||[]).find(r=>r.id===relatedId):null;button.disabled=true;try{const [path,query]=(related?.url||record.url).split('?'),q=new URLSearchParams(query);q.set('approval_page',button.dataset.approvalPage);const d=await API.request(path+'?'+q);if(!root.isConnected||!d._approval)return;if(related){related.history=d._approval.history;this.render(root,record,{preview,dialog});}else if(d._approval.id===a.id)this.render(root,{url:path+'?'+q,data:d,approval:d._approval},{preview,dialog});}catch(err){notify(err.message);}finally{if(button.isConnected)button.disabled=false;}};
   this.hideNative(root,a.kind);

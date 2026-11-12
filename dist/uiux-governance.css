@@ -224,3 +224,62 @@ html[data-release-ui="46"] #page-content .export-license-link{color:var(--uix-br
 
 .boot-pending .workspace,.boot-pending .sidebar,.boot-pending .mobile-nav-shell{visibility:hidden}
 .export-license-loading{min-height:12rem;padding:var(--uix-gap);display:grid;align-content:start;gap:12px}.export-license-loading span{height:1.3rem;border-radius:4px;background:var(--uix-canvas)}.export-license-loading span:nth-of-type(2){width:75%}
+
+#export-license-filter.permit-register-filter,.sales-list-filter,.permit-books{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));
+  align-items:end;
+  gap:var(--uix-gap);
+}
+#export-license-filter.permit-register-filter label{grid-column:auto}
+.permit-register-filter>.business-toolbar,.sales-list-filter>.s468-filter-actions{grid-column:1/-1;margin:0}
+.permit-books{grid-column:1/-1}
+.permit-book-field{min-width:0}
+.permit-book-field>div{display:flex;align-items:stretch;gap:var(--uix-gap-sm)}
+.permit-book-field select{flex:1;min-width:0}
+.permit-book-field button{flex:none}
+.permit-book-status{grid-column:1/-1;margin:0;color:var(--uix-muted)}
+.permit-book-status:empty{display:none}
+.permit-book-dialog{width:min(100% - 2rem,32rem);max-height:calc(100dvh - 2rem);padding:var(--uix-gap);color:var(--uix-text);background:var(--uix-surface);border:1px solid var(--uix-border);border-radius:var(--uix-radius)}
+.permit-book-dialog h2{font-size:var(--uix-section);margin:0}
+.permit-book-dialog ul{max-height:10rem;overflow:auto;overflow-wrap:anywhere}
+.permit-book-dialog :is(p,ul):empty{display:none}
+.permit-book-dialog [data-book-bank]{color:var(--uix-muted)}
+.sales-table-panel,.sales-identity,.sales-plan-fields,.sales-related{padding:var(--uix-gap);min-width:0}
+.sales-redesign small,.sales-identity dt{display:block;color:var(--uix-muted)}
+.sales-redesign .business-table td{white-space:normal;overflow-wrap:anywhere}
+.sales-redesign .business-table td.sales-weight{white-space:nowrap}
+.sales-inline-actions{display:flex;flex-wrap:wrap;gap:var(--uix-gap-sm);align-items:center}
+.sales-related-links{display:grid;gap:var(--uix-gap-sm);padding-inline-start:1.25rem}
+.sales-related h3[id]{scroll-margin-top:var(--uix-gap)}
+.sales-execution-metrics{margin-block:var(--uix-gap)}
+#sales-invoice-table input{min-width:0;width:100%}
+
+#export-license-application{max-width:none;width:100%;display:grid;gap:var(--uix-gap)}
+#export-license-application .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:var(--uix-gap)}
+#export-license-application .form-grid label{margin:0}
+#export-license-application .business-toolbar{margin:0}
+.export-license-page .business-table .button{white-space:nowrap}
+.ux10-sales[data-page-composed]{display:grid;gap:var(--uix-gap);min-width:0}
+.ux10-sales[data-page-composed]>.sales-execution-metrics{margin:0}
+.sales-identity h2,.sales-related h2,.sales-table-panel h2{margin-block:0 var(--uix-gap)}
+.sales-plan-fields>summary{cursor:pointer;font-weight:600}
+.sales-plan-fields[open] form{margin-top:var(--uix-gap)}
+.sales-related .r10-history{margin-block:var(--uix-gap) 0}
+@media(max-width:640px){
+  .sales-execution-metrics.v34-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .business-table:has(.permit-sales-table){overflow:visible}
+  html[data-release-ui="46"] #page-content table.permit-sales-table{display:block;min-width:0;width:100%}
+  .permit-sales-table thead{position:absolute;inline-size:1px;block-size:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+  .permit-sales-table :is(tbody,tr){display:block}
+  .permit-sales-table tr+tr{border-top:1px solid var(--uix-border)}
+  html[data-release-ui="46"] #page-content .permit-sales-table td[data-label]{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);align-items:start;gap:var(--uix-gap-sm);text-align:start;white-space:normal;overflow-wrap:anywhere}
+  .permit-sales-table td[data-label]::before{content:attr(data-label);color:var(--uix-muted)}
+  .permit-sales-table .sales-inline-actions>.button{white-space:normal}
+}
+
+html[data-release-ui="46"] #page-content :is(.sales-identity,.sales-related,.sales-plan-fields,.export-license-section,#sales-invoice-batches){margin-block:0}
+html[data-release-ui="46"] #page-content .sales-identity .export-license-facts{grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))}
+html[data-release-ui="46"] #page-content .sales-identity .export-license-facts :is(dt,dd){text-align:start;border:0;padding:0}
+.sales-identity .export-license-facts dd{margin-block-start:var(--uix-gap-sm)}
+#export-license-application > .error:empty{display:none}
