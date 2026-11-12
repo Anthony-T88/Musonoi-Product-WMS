@@ -749,6 +749,10 @@
     {
       "version": "187_v475_stocktake_periods.sql",
       "checksum": "fbff7abf7f7681203c721dffd537b6b728f5b5ea551550373ffffdfcc6f082f5"
+    },
+    {
+      "version": "188_v476_document_drafts.sql",
+      "checksum": "7707877d28c9fad02e22c9aa2b360a847b99b4cbe9be281f2e138982226331f7"
     }
   ]
 }

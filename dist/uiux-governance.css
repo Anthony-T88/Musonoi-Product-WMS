@@ -675,3 +675,12 @@ html[data-release-ui="46"] :is(#page-content,#dashboard,#inventory) .s46-state {
 }
 .wms-feedback.error { color: var(--uix-danger); }
 .wms-feedback:empty { display: none; }
+.inventory-archive{display:grid;gap:var(--uix-gap);min-width:0;}
+.inventory-archive .wms-facts,.inventory-archive .archive-identity header>div:first-child{text-align:center;}
+.inventory-archive .business-table{min-width:0;}
+.inventory-archive>.wms-section{padding:var(--uix-gap);margin:0;}
+.inventory-archive :is(dt,dd,th,td){overflow-wrap:anywhere;}
+.inventory-archive td small{display:block;color:var(--uix-muted);}
+.inventory-archive #c461-bundle-actions{display:inline-flex;gap:var(--uix-gap-sm);flex-wrap:wrap;}
+.inventory-archive #c461-bundle-actions:empty{display:none;}
+[data-document-draft-bound]>.wms-filter-actions:last-child{justify-content:flex-end;margin-block-start:var(--uix-gap);}

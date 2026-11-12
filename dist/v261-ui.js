@@ -21,6 +21,20 @@ const V261={
  const form=$('v261-create'),lot=$('v261-lot-no'),hint=$('v261-lot-hint'),submit=$('v261-create-submit'),error=$('v261-error');
  lot.value=approved.batch_no;lot.readOnly=true;
  const planField=$('v261-plan');planField.value=approved.sales_plan_id;planField.disabled=true;
+ form.documentDraftFields=()=>[...chosen.values()].map(row=>['bundle:'+row.uuid,0,'checkbox',!!row.sample_required]);
+ form.restoreDocumentDraft=async entries=>{
+  const selections=entries.filter(([key])=>key.startsWith('bundle:'));
+  if(!selections.length)return;
+  await load();
+  const candidates=new Map(scope.map(row=>[row.uuid,row]));
+  let missing=0;
+  for(const [key,,,sample] of selections){
+   const row=candidates.get(key.slice(7));
+   if(row)chosen.set(row.uuid,{...row,sample_required:sample});else missing++;
+  }
+  draw();summary();
+  if(missing)throw Error('部分已保存捆包已不可备货，请核对当前库存后继续。');
+ };
  form.onsubmit=async e=>{e.preventDefault();if(submit.disabled)return;if(!chosen.size){error.textContent='请选择捆包';return;}submit.disabled=true;submit.textContent='正在创建…';error.textContent='';
  try{const a=await API.request('/v261/lots',{method:'POST',body:{preparation_plan_id:approved.id,planned_location_id:$('v261-planned').value,items:[...chosen.values()].map(r=>({bundle_id:r.uuid,sample_required:!!r.sample_required}))}});await Router.go('/preparation/'+a.id);}
  catch(err){if(form.isConnected){error.textContent=err.message;if(err.status===409)hint.textContent='请核对计划状态和货位占用后重试。';}}

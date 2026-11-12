@@ -14,7 +14,30 @@ function serviceError(error){serviceReady=false;selected.clear();$('metrics').re
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 function notify(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
 function audit(action){logs.unshift({time:new Date().toLocaleString('zh-CN'),role:$('role').selectedOptions[0].textContent,action});if(logs.length>50)logs.pop();}
-function dialog(title,html){$('dialog').classList.remove('business-dialog');$('dialog-title').textContent=title;$('dialog-content').innerHTML=html;$('dialog').showModal();}
+const DialogDismiss={
+ guard:null,
+ configure(form){
+  this.guard=form?{form,initial:JSON.stringify([...new FormData(form)]),pending:false}:null;
+ },
+ async request(){
+  const box=$('dialog'),guard=this.guard;
+  if(!box.open)return;
+  if(guard?.pending)return;
+  if(guard&&JSON.stringify([...new FormData(guard.form)])!==guard.initial){
+   guard.pending=true;
+   try{
+    if(!await OperationConfirm.ask({title:I18n.language==='en'?'Discard unsaved changes?':'放弃未保存的输入？'}))return;
+   }finally{guard.pending=false;}
+   if(this.guard!==guard||!box.open)return;
+  }
+  box.close();
+ }
+};
+function dialog(title,html,{protectForm}={}){
+ $('dialog').classList.remove('business-dialog');$('dialog-title').textContent=title;$('dialog-content').innerHTML=html;
+ DialogDismiss.configure(protectForm?$('dialog-content').querySelector(protectForm):null);
+ $('dialog').showModal();
+}
 function format(n){return Tonnes.format(n,true);}
 async function populateOptions(){const options=remote?await API.request('/inventory/options'):Object.fromEntries(['location','batch','customer'].map(k=>[k,[...new Set(I.data.map(r=>r[k]))].sort()]));for(const k of (remote?['location','batch','customer','allocated_customer']:['location','batch','customer'])){const previous=$(k).value;const first=document.createElement('option');first.value='';first.textContent={location:'全部货位',batch:'全部批次',customer:'全部客户',allocated_customer:'全部分配客户'}[k];$(k).replaceChildren(first);for(const value of [...new Set([...options[k],...(previous?[previous]:[])])]){const o=document.createElement('option');o.value=value;o.textContent=value;$(k).append(o);}$(k).value=previous;}if(typeof I18n!=='undefined')I18n.apply();}
 function updateMetrics(t=I.totals(filtered)){
@@ -81,7 +104,10 @@ $('rows').onclick=async e=>{try{const id=e.target.closest('[data-detail]')?.data
 $('role').onchange=()=>{selected.clear();render();audit('切换演示角色');notify($('role').value==='viewer'?'已切换至只读访客：可查询、查看详情，不能导出。':'已切换至库存管理员：可查询和导出。');};
 async function download(kind){if(remote){if(!canExport()||!serviceReady)return;try{const result=await API.request('/inventory/exports',{method:'POST',binary:true,body:{format:kind,filters:filterValues(),sort:{sort,direction},selected_ids:[...selected]}});const url=URL.createObjectURL(result.blob),a=document.createElement('a');a.href=url;a.download='穆松尼_'+AppConfig.environment+'_'+result.count+'捆.'+kind;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);notify('已生成 '+result.count+' 捆的授权导出文件。');}catch(error){notify(error.message);}return;}if($('role').value!=='manager'){notify('当前角色无导出权限（演示）。');return;}if(!filtered.length){notify('没有可导出的记录。');return;}const rows=selected.size?filtered.filter(r=>selected.has(r.id)):filtered;try{const blob=new Blob([kind==='csv'?I.csv(rows):I.xlsx(rows)],{type:kind==='csv'?'text/csv;charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`穆松尼_库存演示_${selected.size?'已选':'筛选结果'}_${rows.length}捆_${BusinessTime.today()}.${kind}`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);audit(`导出 ${kind.toUpperCase()}：${rows.length} 捆（演示数据）`);notify(`已生成 ${rows.length} 捆的 ${kind.toUpperCase()} 演示文件，请查看浏览器下载。`);}catch(error){console.error(error);notify('导出失败，请稍后重试。');}}
 $('csv').onclick=()=>download('csv');$('excel').onclick=()=>download('xlsx');
-$('close-dialog').onclick=()=>$('dialog').close();$('dialog').onclick=e=>{if(e.target===$('dialog')){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('dialog').close();}};
+$('close-dialog').onclick=()=>DialogDismiss.request();
+$('dialog').addEventListener('cancel',event=>{if(DialogDismiss.guard){event.preventDefault();DialogDismiss.request();}});
+$('dialog').addEventListener('close',()=>{if(!$('dialog').open)DialogDismiss.configure(null);});
+$('dialog').onclick=e=>{if(e.target===$('dialog')&&!DialogDismiss.guard){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('dialog').close();}};
 document.querySelectorAll('[data-info]').forEach(b=>b.onclick=()=>dialog(b.dataset.info+' · 功能范围',`<p>本次原型实现库存查询与导出。${esc(b.dataset.info)}列为后续模块，尚未实现。</p><p>后续接入数据库时，可在此建立相应的业务单据与审批流程。</p>`));
 $('audit-nav').onclick=async()=>{if(remote){try{const r=await API.request('/audit');dialog('服务端操作日志','<p>最近 100 条授权日志，时间由服务端记录。</p><ol>'+r.items.map(l=>'<li>'+esc(l.occurred_at)+' · '+esc(l.username||'系统')+' · '+esc(typeof AuditLabels!=='undefined'?AuditLabels.label(l.action):l.action)+'<br>'+esc(JSON.stringify(l.after_data||{}))+'</li>').join('')+'</ol>');}catch(error){notify(error.message);}return;}dialog('演示操作记录',`<p class="dialog-notice">仅保存在当前页面内存，刷新后清空。正式审计日志需由服务端持久化。</p>${logs.length?'<ol>'+logs.map(l=>`<li>${esc(l.time)} · ${esc(l.role)}<br>${esc(typeof AuditLabels!=='undefined'?AuditLabels.label(l.action):l.action)}</li>`).join('')+'</ol>':'<p>暂无操作记录。</p>'}`);};
 

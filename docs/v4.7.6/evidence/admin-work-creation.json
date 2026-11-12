@@ -1,0 +1,14 @@
+[
+  {
+    "product": "CU_CATHODE",
+    "createBy": "admin",
+    "linked": true,
+    "duplicateStatus": 409
+  },
+  {
+    "product": "CO_HYDROXIDE",
+    "createBy": "admin",
+    "linked": true,
+    "duplicateStatus": 409
+  }
+]

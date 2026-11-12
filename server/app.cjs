@@ -36,6 +36,7 @@ async function build(options={}){
  require('./activity-people.cjs')({app,pool});
  const cobaltUX7=(await pool.query("SELECT to_regclass('public.co_customer_profiles') IS NOT NULL ok")).rows[0].ok;
  const cobaltMetalEnabled=await require('./cobalt-metal.cjs').enabled(pool),cobaltEnabled=await require('./cobalt.cjs').enabled(pool),cobaltWorkEnabled=await require('./cobalt-work.cjs').enabled(pool),cobaltStockEnabled=await require('./cobalt-stock.cjs').enabled(pool),cobaltSalesEnabled=await require('./cobalt-sales.cjs').enabled(pool),cobaltLoadingEnabled=await require('./cobalt-loading.cjs').enabled(pool),cobaltExecutionEnabled=await require('./cobalt-execution.cjs').enabled(pool),cobaltPackingEnabled=await require('./cobalt-packing.cjs').enabled(pool);require('./product-context.cjs').install({app,auth,csrf,secure:cfg.secure,cobaltEnabled,cobaltWorkEnabled,cobaltStockEnabled,cobaltSalesEnabled,cobaltLoadingEnabled,cobaltExecutionEnabled,cobaltPackingEnabled,cobaltMetalEnabled});
+ require('./document-drafts.cjs').register({app,pool,auth,csrf});
  if(cobaltEnabled)await require('./cobalt.cjs').register({app,pool,permitted,csrf,workEnabled:cobaltWorkEnabled,stockEnabled:cobaltStockEnabled,salesEnabled:cobaltSalesEnabled,loadingEnabled:cobaltLoadingEnabled,executionEnabled:cobaltExecutionEnabled,packingEnabled:cobaltPackingEnabled,metalEnabled:cobaltMetalEnabled});
  if(cobaltWorkEnabled)await require('./cobalt-work.cjs').register({app,pool,permitted,csrf});
  if(cobaltStockEnabled)await require('./cobalt-stock.cjs').register({app,pool,permitted,csrf});

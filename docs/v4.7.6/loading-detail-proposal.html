@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>装车单详情 · 确认稿</title>
+<link rel="stylesheet" href="../../dist/uiux-governance.css">
+<link rel="stylesheet" href="proposals.css">
+<main>
+  <nav aria-label="选择产品">
+    <button type="button" data-product="copper" aria-pressed="true">阴极铜</button>
+    <button type="button" data-product="cobalt" aria-pressed="false">氢氧化钴</button>
+  </nav>
+  <h1>装车单详情</h1>
+  <div id="document"></div>
+  <section>
+    <h2>状态与操作展示</h2>
+    <label>选择审核节点
+      <select id="review-state">
+        <option value="pending">待装车审核</option>
+        <option value="reviewed">已审核，待登记离场</option>
+        <option value="outbound">已正式出库</option>
+      </select>
+    </label>
+    <p id="role" role="status"></p>
+    <div id="action-preview"></div>
+  </section>
+</main>
+<script src="loading-detail-samples.js"></script>
+<script src="loading-detail-proposal.js"></script>
+</html>

@@ -1,0 +1,1212 @@
+{
+  "version": "4.7.6",
+  "environment": "test",
+  "catalog": {
+    "adjust:approve": {
+      "zh": "铜库存调整独立审批",
+      "en": "Independently Approve Copper Inventory Adjustments",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "adjustment",
+      "module_zh": "库存调整",
+      "module_en": "Stock Adjustments",
+      "protected_admin": false
+    },
+    "adjust:read": {
+      "zh": "铜盘点与库存调整单查看",
+      "en": "View Copper Inventory Adjustments",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "adjustment",
+      "module_zh": "库存调整",
+      "module_en": "Stock Adjustments",
+      "protected_admin": false
+    },
+    "adjust:write": {
+      "zh": "铜库存调整申请及明细维护",
+      "en": "Request Copper Inventory Adjustments",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "adjustment",
+      "module_zh": "库存调整",
+      "module_en": "Stock Adjustments",
+      "protected_admin": false
+    },
+    "allocation:read": {
+      "zh": "铜备货批次及作业记录查看",
+      "en": "View Copper Lots and Work Records",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-preparation",
+      "module_zh": "阴极铜备货",
+      "module_en": "Copper Preparation",
+      "protected_admin": false
+    },
+    "allocation:review": {
+      "zh": "铜备货审核及授权更正；物流经理及管理员独立审核铜钴备货计划",
+      "en": "Review Copper Preparation and Corrections; Logistics Managers and Administrators Independently Review Preparation Plans",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-preparation",
+      "module_zh": "阴极铜备货",
+      "module_en": "Copper Preparation",
+      "protected_admin": false
+    },
+    "allocation:write": {
+      "zh": "按已批计划创建铜备货单、检斤、取样、铅封及提交",
+      "en": "Create Copper Preparation from Approved Plans, Weigh, Sample, Seal and Submit",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-preparation",
+      "module_zh": "阴极铜备货",
+      "module_en": "Copper Preparation",
+      "protected_admin": false
+    },
+    "audit:read": {
+      "zh": "系统操作及授权变更日志查看",
+      "en": "View Operation and Authorization Audit Logs",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "audit",
+      "module_zh": "操作日志",
+      "module_en": "Audit Log",
+      "protected_admin": false
+    },
+    "co:amend-request": {
+      "zh": "钴已完工备货更正申请",
+      "en": "Request Cobalt Completed-Work Correction",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:amend-review": {
+      "zh": "钴备货更正现场主管复核",
+      "en": "Site Supervisor Review of Cobalt Corrections",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "site_supervisor",
+        "admin"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:completion-review": {
+      "zh": "钴备货完工现场主管审核",
+      "en": "Site Supervisor Review of Cobalt Completion",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "site_supervisor",
+        "admin"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:create": {
+      "zh": "按已批计划保存钴入库备货草稿及建单",
+      "en": "Draft and Create Cobalt Preparation from Approved Plans",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:loading-review": {
+      "zh": "钴整批匹配变更及取消审核",
+      "en": "Review Cobalt Match Changes and Cancellations",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "site_supervisor"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:locate": {
+      "zh": "钴袋级标记及调整实际货位",
+      "en": "Mark and Relocate Cobalt Bags",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-placement",
+      "module_zh": "氢氧化钴货位与地图",
+      "module_en": "Cobalt Locations and Map",
+      "protected_admin": false
+    },
+    "co:location-manage": {
+      "zh": "钴库区、货位及地图配置",
+      "en": "Configure Cobalt Zones, Locations and Map",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-placement",
+      "module_zh": "氢氧化钴货位与地图",
+      "module_en": "Cobalt Locations and Map",
+      "protected_admin": false
+    },
+    "co:production-review": {
+      "zh": "钴入库生产经理终审",
+      "en": "Production Manager Final Review of Cobalt Intake",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "production_manager",
+        "admin"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:read": {
+      "zh": "钴入库、备货、批次详情档案及袋级作业查看",
+      "en": "View Cobalt Intake, Preparation, Batch Archives and Bag Work",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:site-review": {
+      "zh": "钴历史入库流程现场审核",
+      "en": "Site Review of Legacy Cobalt Intake",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "site_supervisor",
+        "admin"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:submit": {
+      "zh": "钴入库备货提交审核",
+      "en": "Submit Cobalt Intake for Review",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:temp-locate": {
+      "zh": "钴临时存放点标记与移位",
+      "en": "Mark and Relocate Temporary Cobalt Stock",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-placement",
+      "module_zh": "氢氧化钴货位与地图",
+      "module_en": "Cobalt Locations and Map",
+      "protected_admin": false
+    },
+    "co:withdraw": {
+      "zh": "钴入库备货撤回",
+      "en": "Withdraw Cobalt Intake Submission",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:work-edit": {
+      "zh": "钴备货重量、铅封及取样录入",
+      "en": "Record Cobalt Weights, Seals and Samples",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "co:work-submit": {
+      "zh": "钴备货完工提交",
+      "en": "Submit Cobalt Preparation Completion",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "module": "cobalt-preparation",
+      "module_zh": "氢氧化钴入库与备货",
+      "module_en": "Cobalt Intake and Preparation",
+      "protected_admin": false
+    },
+    "customer:read": {
+      "zh": "客户及合同查看",
+      "en": "View Customers and Contracts",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "customers",
+      "module_zh": "客户与合同",
+      "module_en": "Customers and Contracts",
+      "protected_admin": false
+    },
+    "customer:write": {
+      "zh": "客户及销售合同维护",
+      "en": "Maintain Customers and Sales Contracts",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "customers",
+      "module_zh": "客户与合同",
+      "module_en": "Customers and Contracts",
+      "protected_admin": false
+    },
+    "dashboard:read": {
+      "zh": "铜钴信息总览查看",
+      "en": "View Copper and Cobalt Overview",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "overview",
+      "module_zh": "信息总览",
+      "module_en": "Overview",
+      "protected_admin": false
+    },
+    "dispatch:read": {
+      "zh": "客户派车单及车辆查看",
+      "en": "View Customer Dispatches and Vehicles",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "dispatch",
+      "module_zh": "客户派车管理",
+      "module_en": "Customer Dispatch",
+      "protected_admin": false
+    },
+    "dispatch:write": {
+      "zh": "客户派车单导入及车辆维护",
+      "en": "Import Dispatches and Maintain Vehicles",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "dispatch",
+      "module_zh": "客户派车管理",
+      "module_en": "Customer Dispatch",
+      "protected_admin": false
+    },
+    "document:generate": {
+      "zh": "商业发票与装箱单办理草稿、生成及版本归档",
+      "en": "Draft, Generate and Archive Commercial Invoices and Packing Lists",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "shipping",
+      "module_zh": "装箱单生成",
+      "module_en": "Packing List Generation",
+      "protected_admin": false
+    },
+    "export-license:approve": {
+      "zh": "出口许可证独立审核和核销确认",
+      "en": "Independently Review Export Licenses and Reconciliation",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "export-licenses",
+      "module_zh": "出口许可证管理",
+      "module_en": "Export License Management",
+      "protected_admin": false
+    },
+    "export-license:read": {
+      "zh": "铜钴出口许可证与关联历史查看",
+      "en": "View Copper and Cobalt Export Licenses and History",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "export-licenses",
+      "module_zh": "出口许可证管理",
+      "module_en": "Export License Management",
+      "protected_admin": false
+    },
+    "export-license:write": {
+      "zh": "出口许可证草稿、申请、附件和审核申请",
+      "en": "Draft and Register Export Licenses, Attach Evidence and Request Review",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "export-licenses",
+      "module_zh": "出口许可证管理",
+      "module_en": "Export License Management",
+      "protected_admin": false
+    },
+    "gate:exit": {
+      "zh": "销售确认车辆实际出厂",
+      "en": "Sales Confirmation of Physical Gate Exit",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "sales_operator",
+        "sales_manager",
+        "admin"
+      ],
+      "module": "gate",
+      "module_zh": "车辆出厂与出门证",
+      "module_en": "Gate Exit and Permits",
+      "protected_admin": false
+    },
+    "gate:issue": {
+      "zh": "最终出库审批后生成及修订出门证",
+      "en": "Generate or Revise Permits after Final Outbound Approval",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "gate",
+      "module_zh": "车辆出厂与出门证",
+      "module_en": "Gate Exit and Permits",
+      "protected_admin": false
+    },
+    "gate:print": {
+      "zh": "出门证预览、Excel 下载及 9.5 × 5.5 英寸打印",
+      "en": "Preview, Download and Print Gate Permits at 9.5 × 5.5 Inches",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "gate",
+      "module_zh": "车辆出厂与出门证",
+      "module_en": "Gate Exit and Permits",
+      "protected_admin": false
+    },
+    "gate:read": {
+      "zh": "车辆出厂列表、出门证及历史查看",
+      "en": "View Vehicle Gate Exit and Permit History",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "gate",
+      "module_zh": "车辆出厂与出门证",
+      "module_en": "Gate Exit and Permits",
+      "protected_admin": false
+    },
+    "inventory:export": {
+      "zh": "库存、到厂及装车计划数据导出",
+      "en": "Export Stock, Arrivals and Loading Plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "inventory",
+      "module_zh": "库存查询与导出",
+      "module_en": "Stock Queries and Export",
+      "protected_admin": false
+    },
+    "inventory:read": {
+      "zh": "铜钴库存与地图查看、铜捆包详情档案",
+      "en": "View Copper and Cobalt Stock and Maps, and Copper Bundle Archives",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "inventory",
+      "module_zh": "库存查询与导出",
+      "module_en": "Stock Queries and Export",
+      "protected_admin": false
+    },
+    "load:execute": {
+      "zh": "装车后出库流程申报（非销售实际出厂确认）",
+      "en": "Register the Outbound Workflow after Loading",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-orders",
+      "module_zh": "装车单及装车作业",
+      "module_en": "Loading Orders and Operations",
+      "protected_admin": false
+    },
+    "load:read": {
+      "zh": "铜钴装车单及审批记录查看",
+      "en": "View Loading Orders and Approval Records",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-orders",
+      "module_zh": "装车单及装车作业",
+      "module_en": "Loading Orders and Operations",
+      "protected_admin": false
+    },
+    "load:review": {
+      "zh": "铜装车审核／钴装车完工审核",
+      "en": "Review Copper Loads or Cobalt Loading",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-orders",
+      "module_zh": "装车单及装车作业",
+      "module_en": "Loading Orders and Operations",
+      "protected_admin": false,
+      "product_roles": {
+        "CO_HYDROXIDE": [
+          "site_supervisor",
+          "admin"
+        ]
+      }
+    },
+    "load:write": {
+      "zh": "铜装车单维护／钴装车完工提交",
+      "en": "Maintain Copper Loads or Submit Cobalt Loading",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-orders",
+      "module_zh": "装车单及装车作业",
+      "module_en": "Loading Orders and Operations",
+      "protected_admin": false
+    },
+    "loading-plan:match": {
+      "zh": "铜选货匹配／钴整批匹配及变更申请",
+      "en": "Match Copper Bundles or Whole Cobalt Batches",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-plans",
+      "module_zh": "装车计划与匹配",
+      "module_en": "Loading Plans and Matching",
+      "protected_admin": false
+    },
+    "loading-plan:read": {
+      "zh": "铜钴装车计划及单证查看",
+      "en": "View Copper and Cobalt Loading Plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-plans",
+      "module_zh": "装车计划与匹配",
+      "module_en": "Loading Plans and Matching",
+      "protected_admin": false
+    },
+    "loading-plan:write": {
+      "zh": "铜钴装车计划草稿及单证维护",
+      "en": "Draft and Maintain Loading Plans and Documents",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "loading-plans",
+      "module_zh": "装车计划与匹配",
+      "module_en": "Loading Plans and Matching",
+      "protected_admin": false
+    },
+    "lot:cancel-approve": {
+      "zh": "铜备货取消申请审核",
+      "en": "Review Copper Lot Cancellation",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-preparation",
+      "module_zh": "阴极铜备货",
+      "module_en": "Copper Preparation",
+      "protected_admin": false
+    },
+    "lot:revoke": {
+      "zh": "铜备货撤回及撤销审核",
+      "en": "Withdraw Copper Lots or Revoke Review",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-preparation",
+      "module_zh": "阴极铜备货",
+      "module_en": "Copper Preparation",
+      "protected_admin": false
+    },
+    "master:read": {
+      "zh": "授权项目、仓库及业务选项读取",
+      "en": "Read Authorized Business Options",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "master-data",
+      "module_zh": "项目仓库与基础资料",
+      "module_en": "Master Data",
+      "protected_admin": false
+    },
+    "master:write": {
+      "zh": "项目、仓库及基础资料维护",
+      "en": "Maintain Master Data",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "master-data",
+      "module_zh": "项目仓库与基础资料",
+      "module_en": "Master Data",
+      "protected_admin": false
+    },
+    "move:write": {
+      "zh": "铜捆包实际货位调整",
+      "en": "Relocate Copper Bundles",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "placement",
+      "module_zh": "实际货位调整",
+      "module_en": "Physical Stock Placement",
+      "protected_admin": false
+    },
+    "outbound:logistics-review": {
+      "zh": "装车离场申报的物流经理审核",
+      "en": "Logistics Review of the Outbound Declaration",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "outbound",
+      "module_zh": "出库审批与归档",
+      "module_en": "Outbound Approvals and Records",
+      "protected_admin": false
+    },
+    "outbound:production-approve": {
+      "zh": "正式出库终审",
+      "en": "Final Outbound Approval",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "outbound",
+      "module_zh": "出库审批与归档",
+      "module_en": "Outbound Approvals and Records",
+      "protected_admin": false,
+      "product_roles": {
+        "CO_HYDROXIDE": [
+          "production_manager",
+          "admin"
+        ]
+      }
+    },
+    "outbound:read": {
+      "zh": "铜钴出库进度及正式出库记录查看",
+      "en": "View Outbound Progress and Posted Records",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "outbound",
+      "module_zh": "出库审批与归档",
+      "module_en": "Outbound Approvals and Records",
+      "protected_admin": false
+    },
+    "packing-template:write": {
+      "zh": "装箱单模板维护",
+      "en": "Maintain Packing List Templates",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "shipping",
+      "module_zh": "装箱单模板",
+      "module_en": "Packing List Templates",
+      "protected_admin": false
+    },
+    "plan:approve": {
+      "zh": "销售计划创建、编辑及关闭初审",
+      "en": "Sales Review of Creation, Edit and Closure",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "sales_manager",
+        "admin"
+      ],
+      "module": "sales",
+      "module_zh": "销售计划及审批",
+      "module_en": "Sales Plans and Approvals",
+      "protected_admin": false
+    },
+    "plan:commerce-approve": {
+      "zh": "销售计划创建、编辑及关闭终审",
+      "en": "Commercial Final Review of Sales Plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "commerce_manager",
+        "admin"
+      ],
+      "module": "sales",
+      "module_zh": "销售计划及审批",
+      "module_en": "Sales Plans and Approvals",
+      "protected_admin": false
+    },
+    "plan:read": {
+      "zh": "铜钴销售计划查看；出口主管及管理员建备货计划、存草稿与提交",
+      "en": "View Sales Plans; Export Supervisors and Administrators Can Draft, Create and Submit Preparation Plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "sales",
+      "module_zh": "销售计划及审批",
+      "module_en": "Sales Plans and Approvals",
+      "protected_admin": false
+    },
+    "plan:write": {
+      "zh": "销售计划新建、草稿、编辑及关闭申请",
+      "en": "Draft, Create, Edit and Request Sales Plan Closure",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "roles": [
+        "sales_operator",
+        "sales_manager",
+        "admin"
+      ],
+      "module": "sales",
+      "module_zh": "销售计划及审批",
+      "module_en": "Sales Plans and Approvals",
+      "protected_admin": false
+    },
+    "printer:manage": {
+      "zh": "出门证历史打印配置及连接检测",
+      "en": "Legacy Gate Printer Configuration and Connectivity",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "printing",
+      "module_zh": "打印设备设置",
+      "module_en": "Printer Settings",
+      "protected_admin": false
+    },
+    "receipt:read": {
+      "zh": "铜入库单及捆包明细查看",
+      "en": "View Copper Receipts and Bundles",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-intake",
+      "module_zh": "阴极铜入库",
+      "module_en": "Copper Receipts",
+      "protected_admin": false
+    },
+    "receipt:review": {
+      "zh": "铜入库审核（禁止自审）",
+      "en": "Review Copper Receipts Independently",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-intake",
+      "module_zh": "阴极铜入库",
+      "module_en": "Copper Receipts",
+      "protected_admin": false
+    },
+    "receipt:write": {
+      "zh": "铜入库草稿、建单、编辑及提交",
+      "en": "Draft, Create, Edit and Submit Copper Receipts",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "module": "copper-intake",
+      "module_zh": "阴极铜入库",
+      "module_en": "Copper Receipts",
+      "protected_admin": false
+    },
+    "report:read": {
+      "zh": "铜钴统计报表查看",
+      "en": "View Copper and Cobalt Reports",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "reports",
+      "module_zh": "统计报表",
+      "module_en": "Reports",
+      "protected_admin": false
+    },
+    "roles:manage": {
+      "zh": "岗位角色与现行业务权限维护",
+      "en": "Manage Roles and Current Workflow Permissions",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "roles",
+      "module_zh": "岗位与权限",
+      "module_en": "Roles and Permissions",
+      "protected_admin": true
+    },
+    "stocktake:read": {
+      "zh": "铜钴盘点任务及差异查看",
+      "en": "View Stocktakes and Differences",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "stocktaking",
+      "module_zh": "库存盘点",
+      "module_en": "Stocktaking",
+      "protected_admin": false
+    },
+    "stocktake:review": {
+      "zh": "铜钴盘点独立审核",
+      "en": "Independently Review Stocktakes",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "stocktaking",
+      "module_zh": "库存盘点",
+      "module_en": "Stocktaking",
+      "protected_admin": false
+    },
+    "stocktake:write": {
+      "zh": "铜钴盘点草稿、建单、实盘及提交",
+      "en": "Draft, Create, Count and Submit Stocktakes",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "stocktaking",
+      "module_zh": "库存盘点",
+      "module_en": "Stocktaking",
+      "protected_admin": false
+    },
+    "system:manage": {
+      "zh": "系统设置及业务预警配置",
+      "en": "Manage System and Business Alert Settings",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "system",
+      "module_zh": "系统设置与预警",
+      "module_en": "System and Alerts",
+      "protected_admin": false
+    },
+    "users:manage": {
+      "zh": "账户、密码及注册申请审批",
+      "en": "Manage Accounts, Passwords and Registration Requests",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "accounts",
+      "module_zh": "账户与注册审批",
+      "module_en": "Accounts and Registration",
+      "protected_admin": true
+    },
+    "vehicle-arrival:read": {
+      "zh": "铜钴到厂车辆及运输资料查看",
+      "en": "View Copper and Cobalt Vehicle Arrivals",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "arrivals",
+      "module_zh": "车辆到厂登记",
+      "module_en": "Vehicle Arrival",
+      "protected_admin": false
+    },
+    "vehicle-arrival:write": {
+      "zh": "铜钴到厂登记及运输资料维护",
+      "en": "Register Arrivals and Maintain Transport Details",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "module": "arrivals",
+      "module_zh": "车辆到厂登记",
+      "module_en": "Vehicle Arrival",
+      "protected_admin": false
+    }
+  },
+  "roles": [
+    {
+      "code": "admin",
+      "name": "系统管理员",
+      "name_en": "System Administrator",
+      "permissions": [
+        "adjust:approve",
+        "adjust:read",
+        "adjust:write",
+        "allocation:read",
+        "allocation:review",
+        "allocation:write",
+        "audit:read",
+        "co:amend-request",
+        "co:amend-review",
+        "co:completion-review",
+        "co:create",
+        "co:locate",
+        "co:location-manage",
+        "co:production-review",
+        "co:read",
+        "co:site-review",
+        "co:submit",
+        "co:temp-locate",
+        "co:withdraw",
+        "co:work-edit",
+        "co:work-submit",
+        "customer:read",
+        "customer:write",
+        "dashboard:read",
+        "dispatch:read",
+        "dispatch:write",
+        "document:generate",
+        "export-license:approve",
+        "export-license:read",
+        "export-license:write",
+        "gate:exit",
+        "gate:issue",
+        "gate:print",
+        "gate:read",
+        "inventory:export",
+        "inventory:read",
+        "load:execute",
+        "load:read",
+        "load:review",
+        "load:write",
+        "loading-plan:match",
+        "loading-plan:read",
+        "loading-plan:write",
+        "lot:cancel-approve",
+        "lot:revoke",
+        "master:read",
+        "master:write",
+        "move:write",
+        "outbound:approve",
+        "outbound:logistics-review",
+        "outbound:production-approve",
+        "outbound:read",
+        "packing-template:write",
+        "plan:approve",
+        "plan:commerce-approve",
+        "plan:read",
+        "plan:write",
+        "printer:manage",
+        "receipt:read",
+        "receipt:review",
+        "receipt:write",
+        "report:read",
+        "roles:manage",
+        "stocktake:read",
+        "stocktake:review",
+        "stocktake:write",
+        "system:manage",
+        "users:manage",
+        "vehicle-arrival:read",
+        "vehicle-arrival:write"
+      ]
+    },
+    {
+      "code": "commerce_manager",
+      "name": "商务部经理",
+      "name_en": "Commercial Department Manager",
+      "permissions": [
+        "customer:read",
+        "export-license:approve",
+        "export-license:read",
+        "master:read",
+        "plan:commerce-approve",
+        "plan:read"
+      ]
+    },
+    {
+      "code": "export_supervisor",
+      "name": "出口主管",
+      "name_en": "Export Supervisor",
+      "permissions": [
+        "co:read",
+        "customer:read",
+        "dashboard:read",
+        "dispatch:read",
+        "dispatch:write",
+        "document:generate",
+        "inventory:export",
+        "inventory:read",
+        "load:read",
+        "loading-plan:read",
+        "loading-plan:write",
+        "master:read",
+        "packing-template:write",
+        "plan:read",
+        "report:read",
+        "vehicle-arrival:read"
+      ]
+    },
+    {
+      "code": "logistics_field_operator",
+      "name": "物流现场操作员",
+      "name_en": "Logistics Field Operator",
+      "permissions": [
+        "allocation:read",
+        "allocation:write",
+        "co:amend-request",
+        "co:create",
+        "co:read",
+        "co:submit",
+        "co:temp-locate",
+        "co:withdraw",
+        "co:work-edit",
+        "co:work-submit",
+        "customer:read",
+        "dashboard:read",
+        "export-license:read",
+        "inventory:export",
+        "inventory:read",
+        "label:print",
+        "load:execute",
+        "load:read",
+        "load:write",
+        "loading-plan:match",
+        "loading-plan:read",
+        "lot:revoke",
+        "master:read",
+        "move:write",
+        "plan:read",
+        "stocktake:read",
+        "stocktake:write",
+        "vehicle-arrival:read",
+        "vehicle-arrival:write"
+      ]
+    },
+    {
+      "code": "logistics_manager",
+      "name": "物流经理",
+      "name_en": "Logistics Manager",
+      "permissions": [
+        "adjust:approve",
+        "adjust:read",
+        "allocation:read",
+        "allocation:review",
+        "co:locate",
+        "co:location-manage",
+        "co:read",
+        "co:temp-locate",
+        "customer:read",
+        "customer:write",
+        "dashboard:read",
+        "dispatch:read",
+        "dispatch:write",
+        "document:generate",
+        "exception:read",
+        "exception:review",
+        "export-license:read",
+        "inventory:export",
+        "inventory:read",
+        "load:read",
+        "load:review",
+        "loading-plan:read",
+        "loading-plan:write",
+        "lot:cancel-approve",
+        "lot:revoke",
+        "master:read",
+        "outbound:logistics-review",
+        "packing-template:write",
+        "plan:read",
+        "plan:write",
+        "report:read",
+        "stocktake:read",
+        "stocktake:review",
+        "stocktake:write",
+        "vehicle-arrival:read"
+      ]
+    },
+    {
+      "code": "logistics_office_operator",
+      "name": "物流办公室操作员",
+      "name_en": "Logistics Office Operator",
+      "permissions": [
+        "allocation:read",
+        "co:amend-request",
+        "co:create",
+        "co:read",
+        "co:submit",
+        "co:temp-locate",
+        "co:withdraw",
+        "co:work-edit",
+        "co:work-submit",
+        "customer:read",
+        "dashboard:read",
+        "dispatch:read",
+        "document:generate",
+        "inventory:export",
+        "inventory:read",
+        "load:read",
+        "load:write",
+        "loading-plan:match",
+        "loading-plan:read",
+        "master:read",
+        "plan:read",
+        "report:read",
+        "stocktake:read",
+        "vehicle-arrival:read"
+      ]
+    },
+    {
+      "code": "production_manager",
+      "name": "生产管理部经理",
+      "name_en": "Production Manager",
+      "permissions": [
+        "co:production-review",
+        "co:read",
+        "dashboard:read",
+        "inventory:read",
+        "load:read",
+        "master:read",
+        "outbound:approve",
+        "outbound:production-approve",
+        "outbound:read",
+        "receipt:read",
+        "receipt:review",
+        "report:read"
+      ]
+    },
+    {
+      "code": "production_operator",
+      "name": "生产管理部操作员",
+      "name_en": "Production Operator",
+      "permissions": [
+        "co:read",
+        "dashboard:read",
+        "inventory:read",
+        "master:read",
+        "receipt:read",
+        "receipt:write"
+      ]
+    },
+    {
+      "code": "sales_manager",
+      "name": "销售经理",
+      "name_en": "Sales Manager",
+      "permissions": [
+        "co:read",
+        "customer:read",
+        "dashboard:read",
+        "export-license:approve",
+        "export-license:read",
+        "export-license:write",
+        "gate:exit",
+        "gate:issue",
+        "gate:print",
+        "gate:read",
+        "inventory:read",
+        "load:read",
+        "loading-plan:read",
+        "master:read",
+        "outbound:read",
+        "plan:approve",
+        "plan:read",
+        "plan:write",
+        "printer:manage",
+        "report:read",
+        "vehicle-arrival:read"
+      ]
+    },
+    {
+      "code": "sales_operator",
+      "name": "销售业务员",
+      "name_en": "Sales Operator",
+      "permissions": [
+        "co:read",
+        "customer:read",
+        "dashboard:read",
+        "export-license:read",
+        "export-license:write",
+        "gate:exit",
+        "gate:issue",
+        "gate:print",
+        "gate:read",
+        "inventory:read",
+        "load:read",
+        "loading-plan:read",
+        "master:read",
+        "outbound:read",
+        "plan:read",
+        "plan:write",
+        "report:read",
+        "vehicle-arrival:read"
+      ]
+    },
+    {
+      "code": "site_supervisor",
+      "name": "物流现场主管",
+      "name_en": "Logistics Site Supervisor",
+      "permissions": [
+        "adjust:read",
+        "adjust:write",
+        "allocation:read",
+        "allocation:review",
+        "co:amend-review",
+        "co:completion-review",
+        "co:loading-review",
+        "co:locate",
+        "co:read",
+        "co:site-review",
+        "co:temp-locate",
+        "customer:read",
+        "dashboard:read",
+        "exception:read",
+        "exception:write",
+        "inventory:export",
+        "inventory:read",
+        "load:read",
+        "load:review",
+        "loading-plan:read",
+        "lot:revoke",
+        "master:read",
+        "plan:read",
+        "report:read",
+        "stocktake:read",
+        "stocktake:review",
+        "stocktake:write",
+        "vehicle-arrival:read"
+      ]
+    }
+  ]
+}

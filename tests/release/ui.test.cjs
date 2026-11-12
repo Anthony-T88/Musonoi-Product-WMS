@@ -1,5 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{chromium}=require('playwright'),E=require('./environment.cjs');
+const release=require('../../server/release.cjs');
 test('real browser: current cobalt stock, independent permissions and both languages at desktop/mobile widths',async()=>{
  const f=E.fixture(),origin=f.appCfg.origin,app=await require('../../server/app.cjs').build({config:f.appCfg});let browser;const errors=[],shapes=[];
  try{
@@ -9,9 +10,10 @@ test('real browser: current cobalt stock, independent permissions and both langu
  const go=async(p,url,product='CO_HYDROXIDE')=>{await p.goto(origin+'/overview');await ready(p);await p.evaluate(code=>localStorage.setItem(ProductContext.key,code),product);await p.goto(origin+url);await ready(p);};
  const guest=await browser.newPage({viewport:{width:390,height:860}});guest.on('pageerror',e=>errors.push(e.message));await guest.goto(origin);
  await guest.locator('.login46-brand .login46-title-version').waitFor();
- assert.equal(await guest.locator('.login46-title-version').innerText(),'V4.7.5');
+ assert.equal(await guest.locator('.login46-title-version').innerText(),'V'+release.version);
  assert(await guest.locator('.login46-brand h1').evaluate(el=>parseFloat(getComputedStyle(el.querySelector('.login46-title-version')).fontSize)<parseFloat(getComputedStyle(el).fontSize)));
- await guest.locator('[data-login-language="en"]').click();assert.match(await guest.locator('.login46-brand h1').innerText(),/Product Warehouse Management System\s*V4\.7\.5/);
+ await guest.locator('[data-login-language="en"]').click();assert.match(await guest.locator('.login46-brand h1').innerText(),/Product Warehouse Management System/);
+ assert.equal(await guest.locator('.login46-title-version').innerText(),'V'+release.version);
  await guest.locator('.login46-registration').click();await guest.locator('#registration-modal input[name=username]').waitFor();
  for(const name of ['contact_phone','contact_email'])assert(await guest.locator('#registration-modal input[name='+name+']').isVisible());
  const registration=guest.locator('#registration-modal');
@@ -144,7 +146,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  if(await planGroup.count())await planGroup.locator('summary').click();
  const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
- assert.equal(await page.evaluate(()=>ClientRelease.revision),'4.7.5-ui1');
+ assert.equal(await page.evaluate(()=>ClientRelease.revision),release.frontendRevision);
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
  await page.waitForFunction(()=>window.Reports463?.current?.view==='shipping'&&document.querySelector('.r463-stats'));

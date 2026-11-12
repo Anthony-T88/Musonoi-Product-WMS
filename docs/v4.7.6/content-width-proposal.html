@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>正文与侧栏宽度 · 确认稿</title>
+<link rel="stylesheet" href="../../dist/uiux-governance.css">
+<link rel="stylesheet" href="proposals.css">
+<main>
+  <h1>正文与侧栏宽度</h1>
+  <nav aria-label="布局状态">
+    <button type="button" data-layout="empty" aria-pressed="true">无侧栏</button>
+    <button type="button" data-layout="open" aria-pressed="false">侧栏打开</button>
+    <button type="button" data-layout="closed" aria-pressed="false">侧栏关闭</button>
+    <button type="button" data-layout="narrow" aria-pressed="false">窄屏</button>
+  </nav>
+  <div class="proposal-stage">
+    <div class="proposal-grid">
+      <section>
+        <h2>装车计划</h2>
+        <div class="scroll"><table>
+          <thead><tr><th scope="col">装车计划</th><th scope="col">车辆</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead>
+          <tbody id="plans"></tbody>
+        </table></div>
+      </section>
+      <aside hidden>
+        <section>
+          <div class="identity"><h2>装车计划预览</h2><button id="close-preview" type="button">关闭</button></div>
+          <dl id="preview-record"></dl>
+        </section>
+      </aside>
+    </div>
+  </div>
+</main>
+<script src="loading-detail-samples.js"></script>
+<script src="content-width-proposal.js"></script>
+</html>

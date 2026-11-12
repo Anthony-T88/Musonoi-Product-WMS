@@ -7,7 +7,7 @@ window.PreparationPlans={
   const permissions=CurrentUser.permissions,start=ProductContext.isCopper()?'allocation:write':'co:create';
   if(permissions.includes('plan:read'))return 'plan:read';
   if(permissions.includes(start))return start;
-  if(CurrentUser.role_code==='logistics_manager'&&permissions.includes('allocation:review'))return 'allocation:review';
+  if(['admin','logistics_manager'].includes(CurrentUser.role_code)&&permissions.includes('allocation:review'))return 'allocation:review';
   return null;
  },
  backLink(){

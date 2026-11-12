@@ -1,0 +1,32 @@
+[
+  {
+    "suite": "unit",
+    "tests": 30,
+    "pass": 30,
+    "fail": 0
+  },
+  {
+    "suite": "integration",
+    "tests": 27,
+    "pass": 27,
+    "fail": 0
+  },
+  {
+    "suite": "security",
+    "tests": 35,
+    "pass": 35,
+    "fail": 0
+  },
+  {
+    "suite": "reliability",
+    "tests": 46,
+    "pass": 46,
+    "fail": 0
+  },
+  {
+    "suite": "ui",
+    "tests": 1,
+    "pass": 1,
+    "fail": 0
+  }
+]

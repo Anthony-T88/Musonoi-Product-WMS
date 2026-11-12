@@ -17,7 +17,7 @@ window.CobaltStock469R2={
   const d=this.data,t=this.t,heads=[t('批次号','Batch No.'),t('货位','Location'),t('吨包数','Bags'),t('净重（MT）','Net Weight (MT)'),
    t('库存状态','Stock Status'),t('业务状态','Workflow Status'),t('入库日期','Receipt Date'),t('取样状态','Sampling Status'),t('操作','Actions')];
   const rows=d.list.items.map(b=>{
-   const url=esc(this.link(b.preparation_id,{bag_page:1,batch_page:d.list.page,page:null,bag_size:null})),selected=b.preparation_id===d.id;
+   const url=esc(this.link(b.preparation_id,{bag_page:1,batch_page:d.list.page,page:null,bag_size:null})),archiveUrl=esc(this.link(b.preparation_id+'/archive',{batch_page:d.list.page,page:null,bag_page:null,bag_size:null})),selected=b.preparation_id===d.id;
    const receiptDate=b.received_at?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(b.received_at)):'—';
    const sample=b.batch_sampled_bags===b.batch_total_bags?t('已完成','Complete'):b.batch_sampled_bags?t('部分完成','Partially Complete'):t('待取样','Pending');
    const business=['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED'].includes(b.lifecycle_state)?CobaltWorkUI.status(b.lifecycle_state):CobaltExecutionUI.state(b.lifecycle_state);
@@ -26,7 +26,7 @@ window.CobaltStock469R2={
     CobaltMetal.format(b.effective_net_mt,4)+(b.unconfirmed_bags&&b.effective_net_mt!=null?' <small title="'+t('含预计重量','Includes estimated weight')+'">'+t('含预计','Incl. est.')+'</small>':''),
     b.status==='OUTBOUND'?t('已出库','Outbound'):t('在库','In Stock'),esc(business),esc(receiptDate),
     esc(sample)+' <small>'+b.batch_sampled_bags+' / '+b.batch_total_bags+'</small>',
-    '<a class="button secondary compact" href="'+url+'">'+t(selected?'当前明细':'展开明细',selected?'Selected':'Expand')+'</a>'
+    '<a class="button secondary compact" href="'+archiveUrl+'">'+t('详情','Details')+'</a>'
    ].map((v,i)=>'<td data-label="'+heads[i]+'">'+v+'</td>').join('')+'</tr>';
   });
   return '<section class="co2-panel"><header><h2>'+t('批次库存明细','Batch Stock Details')+'</h2><span>'+d.list.total+' '+t('个批次','batches')+'</span></header>'+

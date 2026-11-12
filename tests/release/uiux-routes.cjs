@@ -81,6 +81,7 @@ function pages(ids){
  add('cu-bag','/inventory/:id',[CU],{example:'cuBundle'});
  add('cu-bag-history','/inventory/:id/history',[CU],{example:'cuBundle'});
  add('co-stock-detail','/inventory/:id',[CO],{example:'coPrep',screenshot:true});
+ add('co-stock-archive','/inventory/:id/archive',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-history-alias','/inventory/:id/history',[CO],{example:'coPrep'});
  add('map','/stock-map',BOTH,{screenshot:true});
  add('map-move','/stock-map/relocate',[CU]);

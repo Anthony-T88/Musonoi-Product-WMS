@@ -90,6 +90,8 @@ function selectors(key,product,landing){
   'register-dialog':['#registration-modal[open] input[name="username"]'],
   overview:['#overview-range, .oa-panel, .co-metal-section'],
   inventory:[co?'.co2-panel':'#inventory input, #page-content input'],
+  'cu-bag':['.inventory-archive .archive-identity','.inventory-archive .wms-facts'],
+  'co-stock-archive':['.inventory-archive .archive-identity','#archive-bag-search'],
   map:[co?'#co-map-canvas':'#stock-map-canvas'],
   'loading-search':['.r9-document-filter input','.r9-document-filter select','.r9-document-filter button'],
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],

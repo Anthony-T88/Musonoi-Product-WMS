@@ -1,0 +1,50 @@
+[
+  {
+    "name": "administrator preparation lifecycle and segregation",
+    "status": "PASS"
+  },
+  {
+    "name": "isolated persistent draft, version and product authorization",
+    "status": "PASS"
+  },
+  {
+    "name": "preparation draft saved and reopened in browser",
+    "status": "PASS"
+  },
+  {
+    "name": "account dialog backdrop, Escape and failed validation",
+    "status": "PASS"
+  },
+  {
+    "name": "copper archive in-stock and outbound, real document links",
+    "status": "PASS"
+  },
+  {
+    "name": "cobalt archive list return, precision and real document links",
+    "status": "PASS"
+  },
+  {
+    "name": "browser gate paper, copper and cobalt",
+    "status": "PASS"
+  },
+  {
+    "name": "packing and invoice action panels at 1440, 1280 and 390",
+    "status": "PASS"
+  },
+  {
+    "name": "separate approval prototypes, desktop and mobile",
+    "status": "PASS"
+  },
+  {
+    "name": "draft buttons and persistence in business entry forms",
+    "status": "PASS"
+  },
+  {
+    "name": "stocktake drafts reopen the copper dialog and restore the cobalt bag row",
+    "status": "PASS"
+  },
+  {
+    "name": "vehicle arrival drafts return to the same dispatch record for both products",
+    "status": "PASS"
+  }
+]

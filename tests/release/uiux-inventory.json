@@ -227,6 +227,14 @@
       "template": "/inventory/:id"
     },
     {
+      "key": "co-stock-archive",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/inventory/:id/archive"
+    },
+    {
       "key": "co-stock-history-alias",
       "products": [
         "CO_HYDROXIDE"

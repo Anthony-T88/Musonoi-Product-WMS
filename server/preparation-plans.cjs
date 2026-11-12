@@ -3,8 +3,9 @@
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs');
 const cobalt=req=>req.productCode==='CO_HYDROXIDE';
 const stateLabels=['DRAFT','PENDING','APPROVED','REJECTED'];
-const canCreate=req=>req.user.role_code==='export_supervisor'&&req.user.permissions.includes('plan:read');
-const canReview=req=>req.user.role_code==='logistics_manager'&&req.user.permissions.includes('allocation:review');
+const holds=(user,role)=>user.role_code==='admin'||user.role_code===role;
+const canCreate=req=>holds(req.user,'export_supervisor')&&req.user.permissions.includes('plan:read');
+const canReview=req=>holds(req.user,'logistics_manager')&&req.user.permissions.includes('allocation:review');
 const canStart=req=>req.user.permissions.includes(cobalt(req)?'co:create':'allocation:write');
 function assertRead(user,product){
  const startPermission=product==='CO_HYDROXIDE'?'co:create':'allocation:write';
