@@ -378,6 +378,7 @@ html[data-release-ui="46"] body:not([data-ui46-page="stock-map"],[data-ui46-page
   }
   #export-license-table th:nth-child(1),#export-license-table th:nth-child(4) {width:13%}
   #export-license-table th:nth-child(11) {width:7%}
+  html[data-release-ui="46"] #page-content #export-license-table :is(th,td)[data-wms-column="number"] {padding-inline:var(--uix-gap-xs)}
   html[data-release-ui="46"] #page-content #export-license-table td .button {white-space:nowrap;padding-inline:var(--uix-gap-sm)}
 }
 @media(max-width:700px) {
@@ -402,6 +403,7 @@ html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-pag
 }
 .wms-page > :is(.business-toolbar,.business-table,.co-pager) { margin-block: 0; }
 .wms-page > .business-toolbar:empty { display: none; }
+.wms-page > .wms-section:not(.wms-identity) {padding:var(--uix-gap);}
 .wms-identity {
   display: grid;
   gap: var(--uix-gap);

@@ -197,10 +197,14 @@ async function run(out){
    assert.match(await page.locator('#role-risk').innerText(),/Select permissions for the role/);
    assert.equal(await page.locator('#account-create-role.secondary').count(),1);
    assert.equal(await page.locator('#role-save.primary').count(),1);
-   await page.locator('#account-create-role').click();
-   await visible(page,'dialog[open] #account-new-role');
-   await page.keyboard.press('Escape');await page.locator('dialog[open] #account-new-role').waitFor({state:'hidden'});
-   return {landing:pathname(page),modal:'open/Escape',controls:['Add Role secondary','Save Permissions primary']};
+   await page.waitForFunction(()=>UI46.state?.composition?.family==='permissions'&&!UI46.queued);
+   const add=page.getByRole('button',{name:'Add Role',exact:true});
+   await add.press('Enter');
+   await visible(page,'#dialog[open] #account-new-role');
+   assert.equal(await page.locator('#dialog').getAttribute('aria-labelledby'),'dialog-title');
+   await page.keyboard.press('Escape');await page.locator('#dialog[open]').waitFor({state:'hidden'});
+   assert(await add.evaluate(button=>document.activeElement===button));
+   return {landing:pathname(page),modal:'Enter/Escape',focusReturned:true,controls:['Add Role secondary','Save Permissions primary']};
   });
   await check('metal-precision-export',R.CO,'admin','en',async page=>{
    await go(page,'/cobalt-metal?view=outbound');await visible(page,'#co-metal-export');

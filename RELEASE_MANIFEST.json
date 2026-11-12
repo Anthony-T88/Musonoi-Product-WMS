@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 90503,
-      "sha256": "6cf54666c7ad04f42bba1b6b754000877817f7b64c89713585c0237527c238c7"
+      "sha256": "9ae71431fe273652f746433564125470f198c4d05f37f2a5e0e8189e63616ca2"
     },
     {
       "path": "VALIDATION.json",
@@ -1908,8 +1908,8 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "bytes": 25165,
-      "sha256": "32145c4f812ed2ebbcd2760c9e942ea332cec97308fa0af7b035dc24bfd16a43"
+      "bytes": 25372,
+      "sha256": "69202cd89c49eb797cc2496f21472bcf4be66d6363fd3d2e43af02e578be119e"
     },
     {
       "path": "dist/ux-r4.css",
@@ -2098,8 +2098,8 @@
     },
     {
       "path": "dist/v36.js",
-      "bytes": 13634,
-      "sha256": "5f055e063f3054ea9cc5c903f2bba056094400ebabde57a201c316b4df369a61"
+      "bytes": 13650,
+      "sha256": "995bcd4db6f92f046ed70aa7ae6c40e8f45a0bfee666471c81dcf1e368b64422"
     },
     {
       "path": "dist/v37.css",
@@ -2383,8 +2383,8 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "bytes": 19620,
-      "sha256": "a92b07f77ad57a54939b5431ed5cd95599f6fd1df7dac20930c8cc6b0221770a"
+      "bytes": 21123,
+      "sha256": "80bb6dc16b8f6af03f239ca41500e7de248daaf8590e697f67f427e44c86ac99"
     },
     {
       "path": "docs/uiux/DESIGN.md",
@@ -3468,8 +3468,8 @@
     },
     {
       "path": "tests/release/uiux-workflows.cjs",
-      "bytes": 17641,
-      "sha256": "d6df9e1edee0c018655e25b66163af1d1f0090d65aa22ddc3afe0b93fd634232"
+      "bytes": 17952,
+      "sha256": "a516eb6ff9006dd47fe5a5289917f83444b14f022e06f9f532386e045e638496"
     },
     {
       "path": "tests/release/v473-performance.cjs",

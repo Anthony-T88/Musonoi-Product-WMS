@@ -7,18 +7,20 @@
 - 先核对许可证列表、销售详情和备货计划办理，再推广到共享页面骨架、按钮、筛选、表格、状态、指标和反馈。共享选择器覆盖旧页面，页面专用字段及操作规则由业务组件保留。已修复备货计划退回意见未传入提交处理的问题。
 - 改造前扫描 860 次，截图 498 张。候选扫描 124 个路由场景，注册路由 140 条（按产品），完成 1412 次检查，截图 694 张。实际页面 1382 次，权限与退役入口 30 次。采用中英文、铜钴和代表性授权账号。
 - 1280×800、1440×900、390×844 检查管理员可访问的页面及注册弹窗，核心页还检查 1366×768、1920×1080。业务账号按矩阵验证各自权限和状态。各行列出的角色为实际检查样本。
+- 同一代码提交 `635c159` 通过源码校验、静态门禁、137 项发布回归、快速和完整布局门禁。快速检查 134 次。键盘、审批、预览和导出操作 31 项。
+- 许可证筛选在铜钴和中英文下实测。1280 和 1440 像素时字段与查询重置按钮等高、同排，筛选和表格两端对齐。390 像素时按组换行，操作保持可达。页内切换语言后页面正常重绘，有未保存资料时可取消切换并保留已填值。
 - 扫描源文件与权限矩阵见 [路由及角色登记](../../tests/release/uiux-routes.cjs)、[必测矩阵](../../tests/release/uiux-matrix.cjs) 和 [锁定路由](../../tests/release/uiux-inventory.json)。
 
 ## 改造前后截图
 
 | 页面 | 1440 像素改前 | 1440 像素改后 | 1280 像素 | 390 像素 |
 | --- | --- | --- | --- | --- |
-| 铜许可证列表 | [查看](../../.runtime/design-before/export-licenses_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-after-final/export-licenses_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-after-final/export-licenses_CU_CATHODE_zh-CN_admin_1280.png) | [查看](../../.runtime/design-after-final/export-licenses_CU_CATHODE_zh-CN_admin_390.png) |
-| 钴许可证列表（英文） | [查看](../../.runtime/design-before/export-licenses_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-after-final/export-licenses_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-after-final/export-licenses_CO_HYDROXIDE_en_admin_1280.png) | [查看](../../.runtime/design-after-final/export-licenses_CO_HYDROXIDE_en_admin_390.png) |
-| 铜销售计划详情 | [查看](../../.runtime/design-before/cu-sales-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-after-final/cu-sales-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-after-final/cu-sales-detail_CU_CATHODE_zh-CN_admin_1280.png) | [查看](../../.runtime/design-after-final/cu-sales-detail_CU_CATHODE_zh-CN_admin_390.png) |
-| 钴销售计划详情（英文） | [查看](../../.runtime/design-before/co-sales-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-after-final/co-sales-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-after-final/co-sales-detail_CO_HYDROXIDE_en_admin_1280.png) | [查看](../../.runtime/design-after-final/co-sales-detail_CO_HYDROXIDE_en_admin_390.png) |
-| 铜备货计划办理 | [查看](../../.runtime/design-before/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-after-final/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-after-final/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_1280.png) | [查看](../../.runtime/design-after-final/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_390.png) |
-| 钴备货计划办理（英文） | [查看](../../.runtime/design-before/co-work-plan-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-after-final/co-work-plan-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-after-final/co-work-plan-detail_CO_HYDROXIDE_en_admin_1280.png) | [查看](../../.runtime/design-after-final/co-work-plan-detail_CO_HYDROXIDE_en_admin_390.png) |
+| 铜许可证列表 | [查看](../../.runtime/design-before/export-licenses_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-polish/export-licenses_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-polish/export-licenses_CU_CATHODE_zh-CN_admin_1280.png) | [查看](../../.runtime/design-polish/export-licenses_CU_CATHODE_zh-CN_admin_390.png) |
+| 钴许可证列表（英文） | [查看](../../.runtime/design-before/export-licenses_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-polish/export-licenses_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-polish/export-licenses_CO_HYDROXIDE_en_admin_1280.png) | [查看](../../.runtime/design-polish/export-licenses_CO_HYDROXIDE_en_admin_390.png) |
+| 铜销售计划详情 | [查看](../../.runtime/design-before/cu-sales-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-verified/full/cu-sales-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-verified/full/cu-sales-detail_CU_CATHODE_zh-CN_admin_1280.png) | [查看](../../.runtime/design-verified/full/cu-sales-detail_CU_CATHODE_zh-CN_admin_390.png) |
+| 钴销售计划详情（英文） | [查看](../../.runtime/design-before/co-sales-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-verified/full/co-sales-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-verified/full/co-sales-detail_CO_HYDROXIDE_en_admin_1280.png) | [查看](../../.runtime/design-verified/full/co-sales-detail_CO_HYDROXIDE_en_admin_390.png) |
+| 铜备货计划办理 | [查看](../../.runtime/design-before/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-polish/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_1440.png) | [查看](../../.runtime/design-polish/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_1280.png) | [查看](../../.runtime/design-polish/cu-work-plan-detail_CU_CATHODE_zh-CN_admin_390.png) |
+| 钴备货计划办理（英文） | [查看](../../.runtime/design-before/co-work-plan-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-polish/co-work-plan-detail_CO_HYDROXIDE_en_admin_1440.png) | [查看](../../.runtime/design-polish/co-work-plan-detail_CO_HYDROXIDE_en_admin_1280.png) | [查看](../../.runtime/design-polish/co-work-plan-detail_CO_HYDROXIDE_en_admin_390.png) |
 
 截图使用合成业务数据，比较界面结构与交互。地图画布方案仍按铜钴分别确认。
 
@@ -71,7 +73,7 @@
 | cu-dispatch | `/sales-plans/:id/dispatch` | 铜 | 管理员、物流经理 | 骨架、表单、指标 | 12 / 0 / 0 | — |
 | co-sales-detail | `/sales-plans/:id` | 钴 | 管理员 | 骨架、表单、表格、状态、指标 | 10 / 0 / 0 | 共用单据页眉 |
 | co-sales-edit | `/sales-plans/:id/edit` | 钴 | 管理员 | 骨架、表单、表格、状态、指标 | 6 / 0 / 0 | — |
-| co-dispatch | `/sales-plans/:id/dispatch` | 钴 | 管理员、物流经理 | 骨架、表单、指标、反馈 | 12 / 0 / 0 | — |
+| co-dispatch | `/sales-plans/:id/dispatch` | 钴 | 管理员、物流经理 | 骨架、表单、表格、指标 | 12 / 0 / 0 | — |
 | cu-sales-shipping | `/sales-plans/:id/shipping` | 铜 | 管理员 | 骨架、表格、指标、反馈 | 6 / 0 / 0 | — |
 | legacy-sales-new | `/preparation/plans/new` | 铜 | 管理员 | 骨架、表单 | 6 / 0 / 0 | — |
 | legacy-sales-edit | `/preparation/plans/:id/edit` | 铜 | 管理员 | 骨架、表单、表格、状态、指标 | 6 / 0 / 0 | — |
@@ -153,7 +155,12 @@
 
 ## 可复验证据
 
-- [改造前覆盖](../../.runtime/design-before/coverage.json) · [候选覆盖](../../.runtime/design-after-final/coverage.json)
+- [改造前覆盖](../../.runtime/design-before/coverage.json) · [候选覆盖](../../.runtime/design-verified/full/coverage.json)
+- [验收退出码](../../.runtime/design-verified/exits.json) · [业务、浏览器及布局日志](../../.runtime/design-verified.log) · [最终快速扫描](../../.runtime/design-quick-final/coverage.json) · [快速门禁](../../.runtime/design-quick-layout-final.log)
+- 首轮操作验收出现英文权限页新增角色弹窗等待超时。明确新增按钮类型后在第二套隔离样本中通过键盘开启、关闭与焦点归还检查。长数字显示及备货记录间距调整后重跑快速视觉门禁。
+- [操作结果](../../.runtime/design-workflows-final/workflows.json) · [筛选对齐实测](../../.runtime/design-pilot-proof.log)
+- [铜备货计划字段校验](../../.runtime/release-tests/wms-preparation-validation-CU_CATHODE.png) · [钴备货计划字段校验](../../.runtime/release-tests/wms-preparation-validation-CO_HYDROXIDE.png)
+- [铜入库只读预览](../../.runtime/design-workflows-final/preview-CU_CATHODE-zh-CN.png) · [钴窄屏入库预览](../../.runtime/design-workflows-final/preview-CO_HYDROXIDE-en.png)
 - [运行说明](VISUAL.md) · [提交门禁](QUALITY.md) · [设计规范](DESIGN.md)
 
 图表、地图画布及单证输出保留业务专用布局。验证使用登记的业务状态及代表角色，涵盖该版本必测矩阵。
