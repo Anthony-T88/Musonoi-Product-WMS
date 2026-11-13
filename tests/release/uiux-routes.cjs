@@ -203,6 +203,8 @@ function pages(ids){
  for(const [key,query] of [['reports',''],['reports-outbound','?section=outbound&view=shipping'],['reports-inventory','?section=inventory'],['reports-monthly','?section=outbound&view=trend']]){
   add(key,'/reports',BOTH,{query,screenshot:key==='reports',roles:key==='reports'?['logistics_manager']:[]});
  }
+ for(const kind of ['shipping','movement','balance','stocktake','sales'])
+  add('report-center-'+kind,'/reports',BOTH,{query:'?kind='+kind,state:kind});
  add('workbench','/workbench',BOTH);
  add('accounts','/workbench/accounts',BOTH,{screenshot:true});
  add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});

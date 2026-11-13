@@ -59,6 +59,33 @@ html[data-release-ui="46"] .p46-root .r463-page form.r463-filter{padding:0!impor
 
 .r463-advanced{grid-column:1/-1;color:#6e7c73;font-size:12px;border-top:1px solid #edf0ee;padding-top:10px}.r463-advanced summary{cursor:pointer;margin-bottom:10px}.r463-advanced .r463-filter{background:transparent}
 
+/* Reports share the list page, filter and table tokens. */
+.r481-report .r463-categories{grid-template-columns:repeat(5,minmax(0,1fr))}
+.r481-report .r463-categories a{display:grid;place-items:center;text-align:center;min-height:var(--uix-control);padding:var(--uix-gap-xs) var(--uix-gap-sm)}
+.r481-report .r463-categories a strong{white-space:normal;text-wrap:balance}
+.r481-report .r463-filter{display:block}
+.r481-report .r463-filter .wms-filter-row{display:flex;align-items:end;flex-wrap:wrap;gap:var(--uix-gap-sm)}
+.r481-report .r463-filter .wms-filter-row>label{flex:1 1 var(--uix-filter-min)}
+.r481-report .r463-filter details{margin-top:var(--uix-gap-sm);color:var(--uix-brand)}
+.r481-report .r463-filter details[open] summary{margin-bottom:var(--uix-gap-sm)}
+.r481-report .r463-filter details .wms-filter-row{margin-bottom:0}
+.r481-report .r463-stats{grid-template-columns:repeat(auto-fit,minmax(min(12rem,100%),1fr));margin:0}
+.r481-report .r463-stat span{white-space:normal;color:var(--uix-muted);font-size:var(--uix-caption)}
+.r481-report .r463-stat strong{color:var(--uix-text);font-size:var(--uix-title);font-weight:var(--uix-weight-emphasis)}
+.r481-report .r481-toolbar,.r481-report .r481-toolbar>div{display:flex;flex-wrap:wrap;align-items:center;gap:var(--uix-gap-sm)}
+.r481-report .r481-toolbar{justify-content:space-between;margin-bottom:var(--uix-gap-sm)}
+.r481-report .r481-toolbar label{display:flex;align-items:center;gap:var(--uix-gap-xs)}
+.r481-report .r481-toolbar select{min-height:var(--uix-control)}
+.r481-report .r481-scope{background:var(--uix-info-soft);color:var(--uix-info);padding:var(--uix-gap-sm);margin:0 0 var(--uix-gap-sm)}
+.r481-report .r481-scope button{margin-inline-start:var(--uix-gap-sm)}
+#page-content .r481-report .r463-table .r481-number{text-align:end!important;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r481-report .r481-progress{display:inline-flex;align-items:center;gap:var(--uix-gap-xs)}
+.r481-report .r481-progress progress{width:4rem;accent-color:var(--uix-brand)}
+@media(max-width:700px){
+ .r481-report .r463-categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
+ .r481-report .r463-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 /* Shared header cues remain outside the protected inventory map content. */
 @media screen{
 body.database-mode .top-actions>.system-language{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}

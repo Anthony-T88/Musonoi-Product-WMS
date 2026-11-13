@@ -1,7 +1,7 @@
 {
-  "version": "4.8.0",
-  "revision": "4.8.0-ui1",
-  "auditRevision": "v480-local",
+  "version": "4.8.1",
+  "auditRevision": "v481-local",
+  "revision": "4.8.1-ui1",
   "files": [
     {
       "path": ".dockerignore",
@@ -16,28 +16,16 @@
       "sha256": "dd0ca60006d26f7a993ab39709c8cb758ed3d416216bed883eb40dba574c7bf8"
     },
     {
-      "path": "LICENSE",
-      "sha256": "cd2e97dfc5a00a97a52b4f0771c6b68c667e4faee2f4381584694e63f45f4f9b"
-    },
-    {
-      "path": "NOTICE",
-      "sha256": "f2098ffb320c6f37b9d07e4d6482343f1c12790bc95ee172ed3f0015b9ac064d"
-    },
-    {
-      "path": "README.md",
-      "sha256": "24eb2732f46a4b69f3cfbee216a917cdb612f22e8c20b417b886e80682fb5ece"
-    },
-    {
-      "path": "db/MIGRATIONS.md",
-      "sha256": "0a25e1a291b59e9e4054ea7fa74b2f32ec98a6aa114654d44602d5f20f09d181"
-    },
-    {
       "path": "db/migration-baseline.json",
       "sha256": "d288f4f5ed6a22c886781c1d1d83a3ce57cea692a0bcfa25216f18efd4d9c08b"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
       "sha256": "c60a3eb21a8000b81b94eb18179ef8c961b58a16ea7efe2d35ba988b1977ec03"
+    },
+    {
+      "path": "db/MIGRATIONS.md",
+      "sha256": "0a25e1a291b59e9e4054ea7fa74b2f32ec98a6aa114654d44602d5f20f09d181"
     },
     {
       "path": "db/migrations/001_foundation.sql",
@@ -856,10 +844,6 @@
       "sha256": "d55c5de869870da1347335b0d9839d8d7831a1c01a97be403bc80d774138170f"
     },
     {
-      "path": "deploy/Dockerfile",
-      "sha256": "db4eed56ae1d64eb9383139aaa47ffbffc1b88353e3abf4642f7a08c18d0fdd0"
-    },
-    {
       "path": "deploy/bootstrap.example.json",
       "sha256": "9ebcf58673489390b987960015eac0f8e271d2286c5b528f6506d7b466c973e8"
     },
@@ -878,6 +862,10 @@
     {
       "path": "deploy/compose.yaml",
       "sha256": "229346996d73f05d32f8b54762ac1248313b1c1b2be16613ebead1b4718734cc"
+    },
+    {
+      "path": "deploy/Dockerfile",
+      "sha256": "db4eed56ae1d64eb9383139aaa47ffbffc1b88353e3abf4642f7a08c18d0fdd0"
     },
     {
       "path": "deploy/environment.example",
@@ -1185,7 +1173,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "763404ac4a9d89043a040f38635f50b2e0bd7b67220ee7044a2e046eba9fd476"
+      "sha256": "0d819dffd70e7b582d8a83c8ee41a2b68701d4b521de789c04364b43659b6a24"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1297,7 +1285,7 @@
     },
     {
       "path": "dist/overview-analysis.js",
-      "sha256": "290d825a02c76d6da232f9c96d89a5fa687e978e56304ba6babed647c311d997"
+      "sha256": "e5392c2ec767c5398512a45c107a6859d4a7e800809b20b6480c52487e949691"
     },
     {
       "path": "dist/overview-design-model.js",
@@ -1401,11 +1389,11 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "5474c5212d4260629b6742e0a21839f9f715ef7621e1809b30dc1689e44cdef2"
+      "sha256": "162b9c443ce6f3533b7f53434797ad4a39fcb3c87a4ffbdb4153a23a24c22c1d"
     },
     {
       "path": "dist/reports463.js",
-      "sha256": "f02d7ce195593a53f8ac30c248508c0f5c00cf23f42dec298edaabb85cf4e250"
+      "sha256": "e6384db29584839165275a25ff85464724fe7b618fc9806d0728aae793b0d5c0"
     },
     {
       "path": "dist/route-permissions.js",
@@ -1417,7 +1405,7 @@
     },
     {
       "path": "dist/shipping-overview-ui.js",
-      "sha256": "518413092d4763727118d986d6fd08d666cc16ebdf3382a9fbbe16fe03584367"
+      "sha256": "c71afff2a79614f0344efe68fcf8174b6fc669f82286b6955f3b19653e8909af"
     },
     {
       "path": "dist/shipping-overview.css",
@@ -1497,7 +1485,7 @@
     },
     {
       "path": "dist/ui46-pages.js",
-      "sha256": "6ae08e29b0dd232b8e3de9382683dbd61e9b0e691fcf7a73663835791cab3e4a"
+      "sha256": "8108fa5549ecf1a273e10e44911e280134743c2501bcc036f5e57244dc82ea34"
     },
     {
       "path": "dist/ui46.css",
@@ -1509,7 +1497,7 @@
     },
     {
       "path": "dist/ui463.css",
-      "sha256": "a7c022351e67470c95fb06e6ef134502e1ef0a7dc6ebe7f7d6ac497b4ed3a969"
+      "sha256": "fb41d3b93ab329ba469589a073eb11f45bf425d11a15c7e63288c601101431bf"
     },
     {
       "path": "dist/ui463.js",
@@ -1740,8 +1728,16 @@
       "sha256": "3286db6b68f1bfcf9f15152c122497904f2982d0c9992e828288721ebddd123a"
     },
     {
+      "path": "LICENSE",
+      "sha256": "cd2e97dfc5a00a97a52b4f0771c6b68c667e4faee2f4381584694e63f45f4f9b"
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "f2098ffb320c6f37b9d07e4d6482343f1c12790bc95ee172ed3f0015b9ac064d"
+    },
+    {
       "path": "package.json",
-      "sha256": "742541ff3f67ad904e672f5daecfcacf3d55c68de781dc35497056b6aee6674c"
+      "sha256": "4c84d9d1783967c6c86f8dfe71f6841ebdab9de287257e43a3048e34302e67fa"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -1750,6 +1746,10 @@
     {
       "path": "pnpm-workspace.yaml",
       "sha256": "84f5fc0c3285d6a34bd098d98811c8f7e76e13ef488a6c41c546d3b32d52ec09"
+    },
+    {
+      "path": "README.md",
+      "sha256": "24eb2732f46a4b69f3cfbee216a917cdb612f22e8c20b417b886e80682fb5ece"
     },
     {
       "path": "scripts/db.cjs",
@@ -1813,7 +1813,7 @@
     },
     {
       "path": "server/app.cjs",
-      "sha256": "7eb8a828027d11abd87325d33df353a41044a123eab424308e176bb7e3f5df39"
+      "sha256": "63231253851495ab9818d269e1d5a75085ba32364983847a51e811cba0ec5903"
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -2137,7 +2137,7 @@
     },
     {
       "path": "server/product-context.cjs",
-      "sha256": "fea6daf64fd5fe559e022a1ea9214e2f06391fa40c1ab993ac4f0762954ba61b"
+      "sha256": "b5452b62e5d0a68493e4be8d20b22e48e016632ec94c549641cd97e920010f87"
     },
     {
       "path": "server/production-receipt-reader.cjs",
@@ -2176,12 +2176,20 @@
       "sha256": "e1b0d67363b10430c301b1f320386f72ea38e1c3f94f478c39cc94f659fbb2d6"
     },
     {
+      "path": "server/report-center-data.cjs",
+      "sha256": "8401032a305d7b742e95ebb04ba4ccb7db82fde50f8647722de16101cd897abc"
+    },
+    {
+      "path": "server/report-center.cjs",
+      "sha256": "31d28d8b4d819d22c8e8d97ddd4ac22d13ea827f7d1bd6bd3c3e8933a89a4464"
+    },
+    {
       "path": "server/report-periods.cjs",
       "sha256": "914af58acef39a3ccae1601c6cb60c96c7c6ff6f01d8e0798b889a2f4411c3f2"
     },
     {
       "path": "server/reports.cjs",
-      "sha256": "3be9e893b0e3e6015b18793973b633d937e0dc5bca04b38c4649f5a8da23782b"
+      "sha256": "2d3e6ca5f0dac0191d4226dcb422813f30a0859dfa48baeed783778f5161a6e6"
     },
     {
       "path": "server/reserved-lots.cjs",
@@ -2348,10 +2356,6 @@
       "sha256": "669728e8b9534f6182511a8f24c4c67439815e3d458ad64cde2a709e7dfafdfb"
     },
     {
-      "path": "templates/gate-permits/SOURCE.json",
-      "sha256": "7bfbc962a8e3de922c0e87d881d9f1132b6354ca0c0689d6e2b2f5483f5dc072"
-    },
-    {
       "path": "templates/gate-permits/cobalt.xlsx",
       "sha256": "c5e4bd58187e3710fce5db705cdf6e7660a31b8d05b6d05393f4e76972623847"
     },
@@ -2360,8 +2364,16 @@
       "sha256": "3796fb1c41268cc789be6f1a62f04f77e0b10ff1fb46f464ec892f70a2df1d26"
     },
     {
+      "path": "templates/gate-permits/SOURCE.json",
+      "sha256": "7bfbc962a8e3de922c0e87d881d9f1132b6354ca0c0689d6e2b2f5483f5dc072"
+    },
+    {
       "path": "templates/inventory/template.xlsx",
       "sha256": "b4cadc3e7ce03c9822da2346cfd80a74b3c0ebacb281842ec4f6f45a98a2f26f"
+    },
+    {
+      "path": "templates/packing-list/original.xls",
+      "sha256": "2bd8813c0ce57002cb720d4ae549557a9b6173a989b4bcd71dedad97ee37cd76"
     },
     {
       "path": "templates/packing-list/README.md",
@@ -2372,10 +2384,6 @@
       "sha256": "1e3d95d99a9ba0b76d7b17d0c604c132b0b7b9dbf7dcbaff0ac544df9cabb049"
     },
     {
-      "path": "templates/packing-list/original.xls",
-      "sha256": "2bd8813c0ce57002cb720d4ae549557a9b6173a989b4bcd71dedad97ee37cd76"
-    },
-    {
       "path": "templates/packing-list/template.xlsx",
       "sha256": "016aa4a1ae1b200591c9e5f5a0352c19dcf507abaf1e1c06226eb1475d27f3f5"
     },
@@ -2384,20 +2392,20 @@
       "sha256": "10d2b0229fc55c1d78a9807f2cce7d90a06babcbdb910d48fe0c94ce9e49ba75"
     },
     {
-      "path": "templates/reports/SOURCE.json",
-      "sha256": "1c30532ee747ef24eaa408a4b512f4a903d3391cb6600c455de497f36c4baafa"
-    },
-    {
       "path": "templates/reports/approved.xlsx",
       "sha256": "f8f651fd108f8bef7192565187581adfcfa89360aee922130c0be9c06ee95a6d"
     },
     {
-      "path": "templates/stocktake/SOURCE.json",
-      "sha256": "f86c1ac65e5057777c1633e6ca3251676080fbb93eee05b6003d2fbad1d3c528"
+      "path": "templates/reports/SOURCE.json",
+      "sha256": "1c30532ee747ef24eaa408a4b512f4a903d3391cb6600c455de497f36c4baafa"
     },
     {
       "path": "templates/stocktake/approved.xlsx",
       "sha256": "09088b3e1bb4c386d0da542c0e4e731a4b343a44998db282f33a2da127cfad3d"
+    },
+    {
+      "path": "templates/stocktake/SOURCE.json",
+      "sha256": "f86c1ac65e5057777c1633e6ca3251676080fbb93eee05b6003d2fbad1d3c528"
     },
     {
       "path": "tests/release/backup-rehearsal.cjs",
@@ -2516,12 +2524,12 @@
       "sha256": "1a4d9720c2fc3fc4372485f95a4cab84f2afe157d9f62283d833a8169d2fc2bc"
     },
     {
-      "path": "tests/release/uiux-baselines/metal-outbound_CO_HYDROXIDE_en_admin_1920.png",
-      "sha256": "2936e5ac340c612e4155c3fd20c5de949e42bbdf1877872e2ed79e25b31745d7"
-    },
-    {
       "path": "tests/release/uiux-baselines/metal_CO_HYDROXIDE_en_admin_1366.png",
       "sha256": "8109f35e4a22a28b0a9ec5939df03715ee0f18ac276b9c7143a17d9d9b458d59"
+    },
+    {
+      "path": "tests/release/uiux-baselines/metal-outbound_CO_HYDROXIDE_en_admin_1920.png",
+      "sha256": "2936e5ac340c612e4155c3fd20c5de949e42bbdf1877872e2ed79e25b31745d7"
     },
     {
       "path": "tests/release/uiux-baselines/overview_CO_HYDROXIDE_en_admin_1440.png",
@@ -2545,7 +2553,7 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "743ac32bdb00b3ae67d32ae63f7bde947b952832109c57fcbb84bd3d3f97d494"
+      "sha256": "bd2715728ca4dff4f243b0b67730c798c3c25902e2905bcf93c56b8b5ea72d92"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -2557,7 +2565,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "8d337d992235f063d88ef4863f677ff411533ac57ed90123f60f0799f1378d78"
+      "sha256": "467f7138b5cb484d4280c7684f7bd46f3b0e5674028f3245d18e63665dcf0a63"
     },
     {
       "path": "tests/release/uiux-verify.cjs",

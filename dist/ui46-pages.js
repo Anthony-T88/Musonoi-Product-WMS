@@ -57,7 +57,7 @@ window.UI46Pages={
   if(f==='inventory'){this.inventory(root,s);return;}
   if(f==='customers'){UI46.customerSections(root,s);this.decorate(root,s);this.finish(root,s);return;}
   if(location.pathname==='/loading-plans'&&!new URLSearchParams(location.search).has('vehicle_id'))this.cls(root,'p46-arrivals',s);
-  if(f==='reports'){this.cls(root,'p46-reports',s);Reports463.decorate(root,s);this.finish(root,s);return;}
+  if(f==='reports'){this.cls(root,'p46-reports',s);this.finish(root,s);return;}
   if(f==='map'){this.decorate(root,s);this.finish(root,s);return;}
   const host=this.host(root);s.composition.host=host;this.cls(host,'p46-host',s);const nodes=[...host.childNodes].filter(n=>n.nodeType===1||n.nodeType===3&&n.textContent.trim());s.composition.original=nodes;
   const shell=this.el('div','p46-composition p46-'+f,host,s);s.composition.anchor=shell;
