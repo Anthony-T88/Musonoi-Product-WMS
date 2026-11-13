@@ -6,7 +6,7 @@ window.UI465={
   q.delete('ui');if(q.get('view')==='hierarchy')q.delete('view');
   if(p==='/workbench/design')p='/workbench';
   if(/^\/preparation\/plans(?:\/|$)/.test(p))p=p.replace('/preparation/plans','/sales-plans');
-  if(co&&/^\/preparation(?:\/|$)/.test(p))p=p.replace('/preparation','/receipts');
+  if(co&&/^\/preparation(?:\/|$)/.test(p)&&!/^\/preparation\/work-plans(?:\/|$)/.test(p))p=p.replace('/preparation','/receipts');
   if(co&&/^\/outbounds\/loads\/[0-9a-f-]{36}$/.test(p))p=p.replace('/loads/','/');
   if(co&&/^\/loading-plans\/execution\/[0-9a-f-]{36}$/.test(p))p=p.replace('/loading-plans/execution/','/outbounds/');
   if(co&&/^\/inventory\/[0-9a-f-]{36}\/history$/.test(p)){p=p.replace(/\/history$/,'');u.hash='#co-position-history';}

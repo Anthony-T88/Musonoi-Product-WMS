@@ -7,9 +7,11 @@ const CU='CU_CATHODE',CO='CO_HYDROXIDE',BOTH=[CU,CO],missingId='00000000-0000-00
 async function examples(client,fixture){
  const find=async sql=>(await client.query(sql)).rows[0]?.value??null;
  const specs={
+  cuApprovedWork:"SELECT id value FROM preparation_plans WHERE product_code='CU_CATHODE' AND state='APPROVED' AND allocation_id IS NULL ORDER BY created_at DESC LIMIT 1",
+  coApprovedWork:"SELECT id value FROM preparation_plans WHERE product_code='CO_HYDROXIDE' AND state='APPROVED' AND co_preparation_id IS NULL ORDER BY created_at DESC LIMIT 1",
   cuCustomer:'SELECT id value FROM copper_customers ORDER BY code LIMIT 1',
   cuContract:'SELECT id value FROM customer_contracts ORDER BY contract_no LIMIT 1',
-  cuPlan:"SELECT id value FROM sales_plans ORDER BY (status='OPEN') DESC,code DESC LIMIT 1",
+  cuPlan:"SELECT p.id value FROM sales_plans p LEFT JOIN sales_plan_approvals a ON a.plan_id=p.id AND a.product_code='CU_CATHODE' WHERE coalesce(a.state,'APPROVED')='APPROVED' ORDER BY (p.status='OPEN') DESC,p.created_at DESC LIMIT 1",
   cuArrival:'SELECT dispatch_vehicle_id value FROM vehicle_arrivals ORDER BY registered_at DESC LIMIT 1',
   cuArrivalPending:'SELECT v.id value FROM sales_dispatch_vehicles v LEFT JOIN vehicle_arrivals a ON a.dispatch_vehicle_id=v.id WHERE a.id IS NULL AND v.cancelled_at IS NULL LIMIT 1',
   cuPlanDoc:'SELECT id value FROM loading_plan_documents ORDER BY created_at DESC LIMIT 1',
@@ -29,7 +31,7 @@ async function examples(client,fixture){
   cuMasterBatch:'SELECT id value FROM batches LIMIT 1',
   cuMasterYard:'SELECT id value FROM yards LIMIT 1',
   cuMasterLocation:'SELECT id value FROM locations LIMIT 1',
-  coPlan:"SELECT id value FROM co_sales_plans ORDER BY (status='OPEN') DESC,created_at DESC LIMIT 1",
+  coPlan:"SELECT p.id value FROM co_sales_plans p LEFT JOIN sales_plan_approvals a ON a.plan_id=p.id AND a.product_code='CO_HYDROXIDE' WHERE coalesce(a.state,'APPROVED')='APPROVED' ORDER BY (p.status='OPEN') DESC,p.created_at DESC LIMIT 1",
   coArrival:'SELECT v.id value FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id WHERE a.id IS NULL AND v.cancelled_at IS NULL LIMIT 1',
   coArrivalDoc:'SELECT id value FROM co_vehicle_arrivals ORDER BY registered_at DESC LIMIT 1',
   cuPermit:"SELECT l.id value FROM export_licenses l WHERE l.product_code='CU_CATHODE' AND EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.license_id=l.id) ORDER BY l.created_at DESC LIMIT 1",
@@ -41,7 +43,13 @@ async function examples(client,fixture){
   coLoad:'SELECT id value FROM co_loading_orders ORDER BY created_at DESC LIMIT 1',
   coDraft:'SELECT id value FROM co_preparations WHERE status=\'DRAFT\' ORDER BY created_at DESC LIMIT 1',
   coCount:'SELECT id value FROM co_stocktakes ORDER BY created_at DESC LIMIT 1',
-  permit:'SELECT id value FROM gate_permits ORDER BY created_at DESC LIMIT 1'
+  permit:'SELECT id value FROM gate_permits ORDER BY created_at DESC LIMIT 1',
+  cuHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CU_CATHODE' AND voided_at IS NULL LIMIT 1",
+  coHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CO_HYDROXIDE' AND voided_at IS NULL LIMIT 1",
+  cuHistoryUnit:"SELECT id value FROM historical_outbound_units WHERE product_code='CU_CATHODE' LIMIT 1",
+  coHistoryBatch:"SELECT source_id value FROM historical_outbound_units WHERE product_code='CO_HYDROXIDE' LIMIT 1",
+  cuHistoryReceipt:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CU_CATHODE' AND d.kind='RECEIPT' AND m.voided_at IS NULL LIMIT 1",
+  coHistoryPlan:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CO_HYDROXIDE' AND d.kind='LOADING_PLAN' AND m.voided_at IS NULL LIMIT 1"
  };
  const ids={coPrep:fixture.preparation,coPrepEditable:fixture.estimatedPreparation,warehouse:fixture.warehouse,project:fixture.project};
  for(const [key,sql] of Object.entries(specs)){
@@ -57,7 +65,9 @@ async function examples(client,fixture){
  const admin=fixture.accounts.find(a=>a.role==='admin').id;
  ids.coMapDefault=(await client.query(`SELECT w.id,w.project_id FROM warehouses w WHERE EXISTS(SELECT 1 FROM user_scopes s
   WHERE s.user_id=$1 AND s.project_id=w.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id) AND s.customer_id IS NULL)
-  ORDER BY w.name LIMIT 1`,[admin])).rows[0];
+  AND EXISTS(SELECT 1 FROM co_locations l JOIN co_zones z ON z.id=l.zone_id WHERE l.warehouse_id=w.id AND l.active AND z.active)
+  ORDER BY EXISTS(SELECT 1 FROM co_stock_map_configs c WHERE c.warehouse_id=w.id) DESC,
+   (SELECT min(l.code) FROM co_locations l JOIN co_zones z ON z.id=l.zone_id WHERE l.warehouse_id=w.id AND l.active AND z.active),w.id LIMIT 1`,[admin])).rows[0];
  return ids;
 }
 
@@ -66,7 +76,7 @@ function pages(ids){
  const add=(key,template,products=BOTH,{example,screenshot=false,roles=[],query='',state='standard'}={})=>{
   const value=example?ids[example]:null;
   cases.push({key,template,products,roles,state,screenshot,fixture:example||null,available:!example||!!value,
-   url:template.replace(':id',encodeURIComponent(value||missingId))+query});
+   url:(template+query).replace(':id',encodeURIComponent(value||missingId))});
  };
  const keyRoles=['sales_operator','logistics_manager','logistics_field_operator','site_supervisor','production_manager','production_operator','customer_admin'];
  add('login','/',[],{screenshot:true});
@@ -79,6 +89,7 @@ function pages(ids){
  add('cu-bag','/inventory/:id',[CU],{example:'cuBundle'});
  add('cu-bag-history','/inventory/:id/history',[CU],{example:'cuBundle'});
  add('co-stock-detail','/inventory/:id',[CO],{example:'coPrep',screenshot:true});
+ add('co-stock-archive','/inventory/:id/archive',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-history-alias','/inventory/:id/history',[CO],{example:'coPrep'});
  add('map','/stock-map',BOTH,{screenshot:true});
  add('map-move','/stock-map/relocate',[CU]);
@@ -95,8 +106,9 @@ function pages(ids){
  add('cu-contract-edit','/customers/contracts/:id/edit',[CU],{example:'cuContract'});
  add('sales','/sales-plans',BOTH,{screenshot:true,roles:['sales_operator','sales_manager','commerce_manager','customer_admin']});
  add('export-licenses','/export-licenses',BOTH,{screenshot:true,roles:['sales_operator','commerce_manager','logistics_field_operator','production_operator']});
+ add('export-licenses-filtered','/export-licenses',BOTH,{query:'?status=ACTIVE',state:'status filter',screenshot:true});
  add('legacy-export-licenses','/export-licenses',BOTH,{query:'?view=legacy',state:'historical'});
- add('export-license-new','/export-licenses/new',BOTH,{screenshot:true});
+ add('export-license-new','/export-licenses/new',BOTH,{state:'seven persistent record selectors',screenshot:true});
  add('cu-export-license','/export-licenses/:id',[CU],{example:'cuPermit',screenshot:true});
  add('co-export-license','/export-licenses/:id',[CO],{example:'coPermit',screenshot:true});
  add('cu-export-license-edit','/export-licenses/:id/edit',[CU],{example:'cuPermitDraft',state:'applying'});
@@ -121,7 +133,12 @@ function pages(ids){
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
  add('co-prep-alias','/receipts/:id/work',[CO],{example:'coPrepEditable'});
  add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor']});
- add('preparation-new','/preparation/new',BOTH);
+ add('preparation-new','/preparation/new',BOTH,{state:'select approved preparation plan'});
+ add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator']});
+ add('cu-work-plan-detail','/preparation/work-plans/:id',[CU],{example:'cuApprovedWork',screenshot:true,state:'approved'});
+ add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved'});
+ add('cu-preparation-from-plan','/preparation/new',[CU],{query:'?preparation_plan=:id',example:'cuApprovedWork',screenshot:true,state:'approved plan'});
+ add('co-preparation-from-plan','/receipts/new',[CO],{query:'?preparation_plan=:id',example:'coApprovedWork',screenshot:true,state:'approved plan'});
  add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true});
  add('co-preparation-alias','/preparation/:id',[CO],{example:'coPrep'});
  add('co-work-alias','/preparation/:id/work',[CO],{example:'coPrepEditable'});
@@ -150,7 +167,6 @@ function pages(ids){
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager']});
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager']});
- add('printers','/outbounds',BOTH,{query:'?view=printers'});
  add('templates','/outbounds/templates',BOTH);
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);
@@ -168,6 +184,17 @@ function pages(ids){
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
+ add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger and upload'});
+ add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});
+ add('historical-former-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'redirected'});
+ add('cu-historical-record','/workbench/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported',query:'?product=CU_CATHODE'});
+ add('co-historical-record','/workbench/historical-movements/:id',[CO],{example:'coHistorical',state:'imported',query:'?product=CO_HYDROXIDE'});
+ for(const area of ['receipts','loading-plans','outbounds','stock-outbound'])
+  add('historical-'+area,'/'+area+'/historical',BOTH,{state:'imported list'});
+ add('cu-historical-stock','/inventory/historical/:id',[CU],{example:'cuHistoryUnit',state:'historical outbound'});
+ add('co-historical-stock','/inventory/historical/:id',[CO],{example:'coHistoryBatch',state:'historical outbound'});
+ add('cu-historical-receipt','/receipts/historical/:id',[CU],{example:'cuHistoryReceipt',state:'historical posted receipt'});
+ add('co-historical-plan','/loading-plans/historical/:id',[CO],{example:'coHistoryPlan',state:'historical plan'});
  add('stocktakes','/stocktaking',BOTH,{screenshot:true,roles:['site_supervisor','production_manager']});
  add('stocktake-new','/stocktaking/new',BOTH);
  add('cu-stocktake','/stocktaking/:id',[CU],{example:'cuCount'});

@@ -9,24 +9,50 @@ async function seed(){
  await c.connect();
  try{
   app=await require('../../server/app.cjs').build({config:E.appConfig(f.database)});
-  const request=async(role,product,url,body)=>{
+  let loginSequence=0;
+  const request=async(role,product,url,body,retry=false)=>{
    if(!sessions.has(role)){
     const a=f.accounts.find(x=>x.role===role);
     assert(a,'Missing synthetic role '+role);
-    const login=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.61.0.'+(sessions.size+1),
+    const login=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.61.0.'+(++loginSequence),
      headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});
     assert.equal(login.statusCode,200,'Synthetic login '+role);
     sessions.set(role,{origin:f.appCfg.origin,cookie:login.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':login.json().csrfToken});
    }
    const response=await app.inject({url:'/api/v1'+url,method:body?'POST':'GET',
     remoteAddress:'127.62.0.1',headers:{...sessions.get(role),'x-product-code':product,'idempotency-key':randomUUID()},...(body?{payload:body}:{})});
+   if(response.statusCode===401&&!retry){sessions.delete(role);return request(role,product,url,body,true);}
    assert.equal(response.statusCode,200,url+' '+response.body.slice(0,210));
    return response.json();
   };
   const check=async(name,fn)=>{try{await fn();prepared.push(name);}catch(e){blocked.push({name,reason:e.message});}};
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const unique=Date.now(),coPlan=(await c.query("SELECT * FROM co_sales_plans WHERE remark='Synthetic rc2 flow' ORDER BY created_at DESC LIMIT 1")).rows[0];
-  await check('co-draft-receipt',()=>request('logistics_field_operator',CO,'/cobalt/preparations',{project_id:f.project,warehouse_id:f.warehouse,total_bags:2}));
+  for(const product of [CU,CO])await check('historical-ledger-'+product,async()=>{
+   const XLSX=require('xlsx'),co=product===CO,rows=Array.from({length:29},()=>[]),id='UIUX-HISTORY-'+unique;
+   rows[0]=['PACKING LIST'];rows[2][3]='Packing List No:';rows[2][4]=id;rows[3][3]='Lot No:';rows[3][4]='UIUX-LOT';
+   rows[6][3]='Shipping Date:';rows[6][4]='2020-01-02';
+   rows[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
+   rows.push([1,'Synthetic',id,co?null:48,'UIUX-SEAL',647,650],['Total',null,null,null,null,647,650]);
+   const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'PL');
+   const body={file_name:'synthetic-uiux-history.xlsx',file_base64:XLSX.write(book,{bookType:'xlsx',type:'buffer'}).toString('base64'),warehouse_id:f.warehouse};
+   const url='/historical-movements/batch',preview=(await request('admin',product,url+'/preview',{files:[body]})).results[0];
+   assert(preview.importable,JSON.stringify(preview.issues));const imported=(await request('admin',product,url+'/confirm',{files:[{...body,preview_token:preview.preview_token}]})).results[0];
+   assert.equal(imported.status,'IMPORTED');
+  });
+  for(const product of [CU,CO])await check('editable-export-license-'+product,async()=>{
+   const co=product===CO,found=await c.query("SELECT 1 FROM export_licenses WHERE product_code=$1 AND state='APPLYING' LIMIT 1",[product]);
+   if(found.rowCount)return;
+   return request('sales_operator',product,(co?'/cobalt':'')+'/export-permits',{
+    contract_id:f.customers[product].contract,applied_on:day,proforma_no:'UIUX-EDIT-'+unique+'-'+product,
+    quantity:'30',unit_basis:co?'COBALT_MT':'PHYSICAL_MT',unit:co?'Co MT':'MT',currency:'USD'
+   });
+  });
+  await check('co-draft-receipt',async()=>{
+   if((await c.query("SELECT 1 FROM co_preparations WHERE status='DRAFT' AND project_id=$1 LIMIT 1",[f.project])).rowCount)return;
+   const P=require('./preparation-fixture.cjs'),work=await P.approved(request,CO,coPlan.id,P.batch(CO,220));
+   return request('logistics_field_operator',CO,'/cobalt/preparations',{preparation_plan_id:work.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:2});
+  });
   await check('cu-draft-receipt',async()=>{
    const project=(await c.query("INSERT INTO projects(code,name) VALUES('UIUX-RECEIPT','Synthetic receipt project') ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name RETURNING id")).rows[0].id;
    await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'UIUX-WH','Synthetic receipt warehouse') ON CONFLICT(project_id,code) DO NOTHING",[project]);

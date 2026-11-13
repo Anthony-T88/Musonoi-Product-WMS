@@ -4,7 +4,7 @@ Object.assign(TRANSLATIONS.en,{
   "异常与一致性": "Exceptions and Consistency",
   "操作审计": "Operation Audit",
   "当前在库按未正式出库账面范围查询；已离场待审批单独标识，现场实物口径见信息总览。": "Current inventory uses the ledger scope before final outbound; departed goods awaiting approval are marked separately. See Overview for on-site physical inventory.",
-  "备货批号": "Lot No.",
+  "备货批号": "Lot Number",
   "盘点任务": "Stocktaking Task",
   "任务状态": "Task Status",
   "盘点任务编号": "Stocktaking Task No.",
@@ -243,7 +243,7 @@ Object.assign(TRANSLATIONS.en,{'备货库存批次数':'Reserved Inventory Lots'
 
 Object.assign(TRANSLATIONS.en,{'inventory.state.IN_STOCK':'In Stock','inventory.state.OUTBOUND':'Dispatched','inventory.state.ADJUSTED_OUT':'Removed by Authorized Adjustment'});
 
-Object.assign(TRANSLATIONS.en,{'批次编号':'Batch No.','系统日志':'System Logs','未分配':'Unassigned','月份待确认':'Month Unconfirmed','备货批次':'Reserved Lots','备货月份':'Preparation Month','业务工作台':'Business Workbench'});
+Object.assign(TRANSLATIONS.en,{'批次编号':'Lot Number','系统日志':'System Logs','未分配':'Unassigned','月份待确认':'Month Unconfirmed','备货批次':'Reserved Lots','备货月份':'Preparation Month','业务工作台':'Business Workbench'});
 
 Object.assign(TRANSLATIONS.en,{'年度盘点':'Annual Stocktake','客户 / 月份 / 批次':'Customer / Month / Lot','批次数':'Lot Count','客户数量':'Customers'});
 
@@ -261,8 +261,8 @@ Object.assign(TRANSLATIONS.en,{'已从现场地图移除，正式出库仍须完
 
 Object.assign(TRANSLATIONS.en,{'拖动缩放':'Drag to Zoom','缩放比例':'Zoom Level','缩放百分比':'Zoom Percentage','应用缩放':'Apply Zoom','点击查看捆包':'Click to View Bundles','查看捆包 →':'View Bundles →','请输入100至800之间的缩放百分比':'Enter a zoom percentage between 100 and 800'});
 
-Object.assign(TRANSLATIONS.en,{'备货单批次号':'Preparation Order Batch Number','在库捆包':'In-stock Bundles','当前筛选范围 · 不含已出库':'Current filters · excludes outbound stock','合同号可修正，关联客户与历史单据保持可追溯。':'Contract numbers may be corrected; customer links and business history remain traceable.','删除合同档案':'Delete Contract Record','删除说明（选填）':'Deletion Note (Optional)','合同已删除，历史关联保留。':'Contract deleted; historical links are retained.','合同已删除，业务历史已保留':'Contract deleted; business history retained','删除后从合同档案列表移除，不再用于新销售计划。关联单据和历史记录保留。':'Removed from the contract list and unavailable to new sales plans. Linked documents and history are retained.'});
+Object.assign(TRANSLATIONS.en,{'备货单批次号':'Preparation Order Lot Number','在库捆包':'In-stock Bundles','当前筛选范围 · 不含已出库':'Current filters · excludes outbound stock','合同号可修正，关联客户与历史单据保持可追溯。':'Contract numbers may be corrected; customer links and business history remain traceable.','删除合同档案':'Delete Contract Record','删除说明（选填）':'Deletion Note (Optional)','合同已删除，历史关联保留。':'Contract deleted; historical links are retained.','合同已删除，业务历史已保留':'Contract deleted; business history retained','删除后从合同档案列表移除，不再用于新销售计划。关联单据和历史记录保留。':'Removed from the contract list and unavailable to new sales plans. Linked documents and history are retained.'});
 
-Object.assign(TRANSLATIONS.en,{'库存明细':'Inventory Details','当前筛选结果 · 库存明细 · 净重单位：吨':'Current filters · Inventory details · Net weight in MT','分配客户':'Assigned Customer','批次号':'Batch Number','数据库库存明细，点击列标题排序':'Database inventory details; click column headings to sort'});
+Object.assign(TRANSLATIONS.en,{'库存明细':'Inventory Details','当前筛选结果 · 库存明细 · 净重单位：吨':'Current filters · Inventory details · Net weight in MT','分配客户':'Assigned Customer','批次号':'Lot Number','数据库库存明细，点击列标题排序':'Database inventory details; click column headings to sort'});
 
 Object.assign(TRANSLATIONS.en,{'统计仅计在库；明细与导出按当前筛选条件显示，可包含已出库记录。':'Statistics include in-stock inventory only; details and exports follow the current filters and may include outbound records.'});

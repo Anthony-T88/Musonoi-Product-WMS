@@ -16,7 +16,29 @@ const stockCategorySql=`CASE
  WHEN v.inventory_state_code='PREPARATION_LOCKED' AND v.effective_reservation_id IS NOT NULL THEN 'prepared'
  ELSE 'other'
  END`;
-const sorts={production_date:'v.production_date',business_status:"CASE WHEN "+preparingSql+" THEN '"+preparingLabel+"' ELSE v.business_status END",id:'v.id',batch:'v.batch',location:'v.location',customer:"coalesce(v.current_customer,v.customer)",weight:'v.weight',gross_weight:'v.gross_weight',packaging_weight:'v.packaging_weight',contract_no:'v.contract_no',status:'v.status',sample:samplingSql,date:'v.date',allocated_customer:"coalesce(v.current_customer,v.customer)",receipt_code:'v.receipt_code',confirmed_at:'v.confirmed_at'};
+const sorts={production_date:'v.production_date',business_status:"CASE WHEN "+preparingSql+" THEN '"+preparingLabel+"' ELSE v.business_status END",id:'v.id',batch:'v.batch',location:'v.location',customer:"coalesce(v.current_customer,v.customer)",weight:'v.weight',gross_weight:'v.gross_weight',packaging_weight:'v.packaging_weight',contract_no:'v.contract_no',status:'v.status',sample:samplingSql,date:'v.date',allocated_customer:"coalesce(v.current_customer,v.customer)",lot_no:'v.lot_no',receipt_code:'v.receipt_code',confirmed_at:'v.confirmed_at'};
+const legacySelection=`SELECT v.*,false AS historical_import,NULL::date AS shipping_date,NULL::text AS historical_packing_no,NULL::date AS original_receipt_date,
+ (SELECT physical_status FROM bundles b WHERE b.id=v.uuid) AS physical_status FROM inventory_view v`;
+const outboundSelection=legacySelection+`
+ UNION ALL
+ SELECT v.*,true,h.shipping_date,h.packing_list_no,h.original_receipt_date,'OUTBOUND'
+ FROM historical_outbound_units h
+ CROSS JOIN LATERAL jsonb_populate_record(NULL::inventory_view,jsonb_build_object(
+  'uuid',h.id,'id',h.unit_id,'project_id',h.project_id,'warehouse_id',h.warehouse_id,'customer_id',h.customer_id,
+  'customer',h.source_facts->>'customer','location','','weight',h.net_kg/1000,
+  'original_weight',h.net_kg/1000,'gross_weight',h.gross_kg/1000,'status','已出库','sample','',
+  'date',h.original_receipt_date::text,'contract_no',h.source_facts->>'contract_no','lot_no',coalesce(nullif(h.source_facts->>'batch_no',''),nullif(h.source_facts->>'lot_no','')),
+  'business_status','已出库','workflow_detail','已出库','inventory_state_code','OUTBOUND',
+  'current_customer',h.source_facts->>'customer','sheets_per_bundle',h.sheets_count,'seal_no',h.seal_no,'data_kind','HISTORICAL',
+  'vehicle_no',h.source_facts->>'truck',
+  'outbound_code',(SELECT d.document_no FROM historical_business_documents d WHERE d.source_id=h.source_id AND d.kind='LOADING_ORDER'),
+  'receipt_code',(SELECT d.document_no FROM historical_business_documents d WHERE d.source_id=h.source_id AND d.kind='RECEIPT'),
+  'on_site',false,'final_weighed',true,'p3_area',false,'p5_area',false
+ )) v WHERE h.product_code='CU_CATHODE'`;
+function inventorySource(input){
+ const lifecycle=['CURRENT','OUTBOUND','ALL'].includes(input.status)?input.status:input.lifecycle;
+ return '('+(lifecycle==='OUTBOUND'||lifecycle==='ALL'||input.status==='已出库'?outboundSelection:legacySelection)+')';
+}
 function invalid(message){const e=Error(message);e.statusCode=400;throw e;}
 function filters(input={}){
  if(!input||typeof input!=='object'||Array.isArray(input))invalid('筛选结构无效');
@@ -29,16 +51,17 @@ function filters(input={}){
  return f;
 }
 function order(input={}){const key=input.sort||'date',dir=input.direction||'desc';if(!Object.hasOwn(sorts,key)||!['asc','desc'].includes(dir))invalid('排序参数无效');return `${sorts[key]} ${dir}, v.id ${dir}`;}
-function where(userId,input={},selectedIds){const f=filters(input),values=[userId],parts=[`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=v.project_id AND (s.customer_id IS NULL OR s.customer_id=v.customer_id OR s.customer_id=v.allocated_customer_id OR s.customer_id=v.dispatched_customer_id) AND (s.warehouse_id IS NULL OR s.warehouse_id=v.warehouse_id))`];
+function where(userId,input={},selectedIds,{history=false}={}){const f=filters(input),values=[userId],parts=[`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=v.project_id AND (s.customer_id IS NULL OR CASE WHEN v.p3_area THEN s.customer_id=coalesce(v.p3_customer_id,v.customer_id) ELSE s.customer_id IN(v.customer_id,v.allocated_customer_id,v.dispatched_customer_id) END) AND (s.warehouse_id IS NULL OR s.warehouse_id=v.warehouse_id))`];
  const bind=v=>{values.push(v);return '$'+values.length;};
  const lifecycle=['CURRENT','OUTBOUND','ALL'].includes(f.status)?f.status:f.lifecycle;
  // A scalar lookup by the bundle primary key avoids flattening this filter into a repeated table scan.
- if(lifecycle==='CURRENT')parts.push(physicalStatusSql+"='IN_STOCK'");
- if(lifecycle==='OUTBOUND')parts.push(physicalStatusSql+"='OUTBOUND'");
+ const physical=history?'v.physical_status':physicalStatusSql;
+ if(lifecycle==='CURRENT')parts.push(physical+"='IN_STOCK'");
+ if(lifecycle==='OUTBOUND')parts.push(physical+"='OUTBOUND'");
  if(f.lot_no){const p=bind(f.lot_no);parts.push(`(strpos(lower(coalesce(v.lot_no,'')),lower(${p}))>0${lifecycle==='ALL'?` OR EXISTS(SELECT 1 FROM reservations hr JOIN allocations ha ON ha.id=hr.allocation_id WHERE hr.bundle_id=v.uuid AND strpos(lower(coalesce(ha.lot_no,'')),lower(${p}))>0)`:''})`);}
- if(f.packing_list_no){const n=bind(f.packing_list_no);parts.push(`EXISTS(SELECT 1 FROM loading_items pi LEFT JOIN loading_plan_matches pm ON pm.loading_id=pi.loading_id LEFT JOIN loading_plan_documents pd ON pd.id=pm.document_id LEFT JOIN packing_list_documents pl ON pl.loading_id=pi.loading_id WHERE pi.bundle_id=v.uuid AND NOT pi.plan_removed AND(upper(pd.packing_list_no)=upper(${n}) OR upper(pl.document_no)=upper(${n}) OR EXISTS(SELECT 1 FROM packing_list_revisions pr WHERE pr.loading_id=pi.loading_id AND upper(pr.snapshot->>'document_no')=upper(${n}))))`);}
- if(f.search){const p=bind(f.search);parts.push(`(strpos(lower(v.id),lower(${p}))>0 OR strpos(lower(v.batch),lower(${p}))>0 OR strpos(lower(v.customer),lower(${p}))>0 OR strpos(lower(v.location),lower(${p}))>0 OR strpos(lower(coalesce(v.seal_no,'')),lower(${p}))>0 OR v.sheets_per_bundle::text=${p})`);}
- for(const k of ['location','batch','customer','status','allocated_customer','contract_no','weight_basis','business_status'])if(k==='contract_no'&&f[k]&&lifecycle==='ALL'){const p=bind(f[k]);parts.push(`(v.contract_no=${p} OR EXISTS(SELECT 1 FROM reservations hr JOIN allocations ha ON ha.id=hr.allocation_id JOIN sales_plans hp ON hp.id=ha.plan_id JOIN customer_contracts hc ON hc.id=hp.contract_id WHERE hr.bundle_id=v.uuid AND upper(hc.contract_no)=upper(${p})))`);}else if(k==='business_status'&&f[k]){if(f[k]===preparingLabel)parts.push(preparingSql);else{const value=bind(f[k]);parts.push(`(v.business_status=${value} OR v.workflow_detail=${value})`);if(f[k]==='备货锁定')parts.push('NOT '+preparingSql);}}else if(f[k]&&!(k==='status'&&['CURRENT','OUTBOUND','ALL'].includes(f[k])))parts.push(`${k==='customer'?"coalesce(v.current_customer,v.customer)":'v.'+k}=${bind(f[k])}`);
+ if(f.packing_list_no){const n=bind(f.packing_list_no);parts.push(`(${history?`upper(v.historical_packing_no)=upper(${n}) OR `:''}EXISTS(SELECT 1 FROM loading_items pi LEFT JOIN loading_plan_matches pm ON pm.loading_id=pi.loading_id LEFT JOIN loading_plan_documents pd ON pd.id=pm.document_id LEFT JOIN packing_list_documents pl ON pl.loading_id=pi.loading_id WHERE pi.bundle_id=v.uuid AND NOT pi.plan_removed AND(upper(pd.packing_list_no)=upper(${n}) OR upper(pl.document_no)=upper(${n}) OR EXISTS(SELECT 1 FROM packing_list_revisions pr WHERE pr.loading_id=pi.loading_id AND upper(pr.snapshot->>'document_no')=upper(${n})))))`);}
+ if(f.search){const p=bind(f.search);parts.push(`(strpos(lower(v.id),lower(${p}))>0 OR strpos(lower(v.batch),lower(${p}))>0 OR strpos(lower(v.customer),lower(${p}))>0 OR strpos(lower(v.location),lower(${p}))>0 OR strpos(lower(coalesce(v.lot_no,'')),lower(${p}))>0 ${history?`OR strpos(lower(v.historical_packing_no),lower(${p}))>0`:''} OR strpos(lower(coalesce(v.seal_no,'')),lower(${p}))>0 OR v.sheets_per_bundle::text=${p})`);}
+ for(const k of ['location','batch','customer','status','allocated_customer','contract_no','weight_basis','business_status'])if(k==='location'&&['P3-LEFTOVER','剩余捆包堆存区','Left Over Bundles Stock Area'].includes(f[k]))parts.push('v.p3_area');else if(k==='location'&&['临时堆存区','新生产捆包堆存区','New Production Bundles Stock Area'].includes(f[k]))parts.push('v.p5_area');else if(k==='contract_no'&&f[k]&&lifecycle==='ALL'){const p=bind(f[k]);parts.push(`(v.contract_no=${p} OR EXISTS(SELECT 1 FROM reservations hr JOIN allocations ha ON ha.id=hr.allocation_id JOIN sales_plans hp ON hp.id=ha.plan_id JOIN customer_contracts hc ON hc.id=hp.contract_id WHERE hr.bundle_id=v.uuid AND upper(hc.contract_no)=upper(${p})))`);}else if(k==='business_status'&&f[k]){if(f[k]===preparingLabel)parts.push(preparingSql);else{const value=bind(f[k]);parts.push(`(v.business_status=${value} OR v.workflow_detail=${value})`);if(f[k]==='备货锁定')parts.push('NOT '+preparingSql);}}else if(f[k]&&!(k==='status'&&['CURRENT','OUTBOUND','ALL'].includes(f[k])))parts.push(`${k==='customer'?"coalesce(v.current_customer,v.customer)":'v.'+k}=${bind(f[k])}`);
  if(f.start)parts.push(`v.date>=${bind(f.start)}`);if(f.end)parts.push(`v.date<=${bind(f.end)}`);
  if(selectedIds!==undefined){if(!Array.isArray(selectedIds)||selectedIds.length>10000||selectedIds.some(id=>typeof id!=='string'||id.length>512))invalid('选中捆包参数无效');parts.push(`v.id=ANY(${bind(selectedIds)}::text[])`);}
  if(f.sample){const state={'已取样':'完成取样','取样中':'取样/待取样'}[f.sample]||f.sample;parts.push('('+samplingSql+')='+bind(state));}
@@ -46,8 +69,8 @@ function where(userId,input={},selectedIds){const f=filters(input),values=[userI
 }
 async function transaction(pool,fn){const c=await pool.connect();try{await c.query('BEGIN ISOLATION LEVEL REPEATABLE READ');const result=await fn(c);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
 function inventoryInput(input={}){if(!input||typeof input!=='object'||Array.isArray(input))invalid('筛选结构无效');return {...input,lifecycle:input.lifecycle||(Object.hasOwn(input,'status')?'ALL':'CURRENT')};}
-async function listing(c,uid,input){const w=where(uid,inventoryInput(input)),metricsWhere=where(uid,{...input,status:'CURRENT',lifecycle:'CURRENT'}),sort=order(input),page=Number(input.page||1),size=Number(input.page_size||10);if(!Number.isInteger(page)||page<1||page>1000000||![10,20,50].includes(size))invalid('分页参数无效');
- const count=(await c.query(`SELECT count(*)::int n FROM inventory_view v WHERE ${w.text}`,w.values)).rows[0].n;
+async function listing(c,uid,input){const filters=inventoryInput(input),w=where(uid,filters,undefined,{history:true}),source=inventorySource(filters),metricsWhere=where(uid,{...input,status:'CURRENT',lifecycle:'CURRENT'}),sort=order(input),page=Number(input.page||1),size=Number(input.page_size||10);if(!Number.isInteger(page)||page<1||page>1000000||![10,20,50].includes(size))invalid('分页参数无效');
+ const count=(await c.query(`SELECT count(*)::int n FROM ${source} v WHERE ${w.text}`,w.values)).rows[0].n;
  const summary=(await c.query(`SELECT count(*)::int AS stock_count,sum(sheets_per_bundle) FILTER(WHERE status IN('在库','已预留'))::text AS total_sheets,count(*) FILTER(WHERE status IN('在库','已预留') AND sheets_per_bundle IS NULL)::int AS missing_sheets_count,coalesce(sum(weight) FILTER(WHERE status IN('在库','已预留')),0)::text AS weight,coalesce(sum(weight) FILTER(WHERE status IN('在库','已预留') AND coalesce(v.on_site,true)),0)::text AS physical_weight,coalesce(sum(weight) FILTER(WHERE status='已预留'),0)::text AS locked_weight,coalesce(sum(weight) FILTER(WHERE status='在库'),0)::text AS available_weight,count(*) FILTER(WHERE status='在库')::int AS available,count(*) FILTER(WHERE status='已预留')::int AS reserved,count(*) FILTER(WHERE status='已出库')::int AS outbound,count(*) FILTER(WHERE status IN('在库','已预留') AND (${samplingSql}) IN('未取样','取样/待取样'))::int AS pending,count(*) FILTER(WHERE status IN('在库','已预留') AND weight IS NULL)::int AS unweighed_count FROM inventory_view v WHERE ${metricsWhere.text}`,metricsWhere.values)).rows[0];summary.count=count;
  const stock=(await c.query(`SELECT ${stockCategorySql} AS state,count(*)::int AS bundles,
   sum(v.weight) FILTER(WHERE v.final_weighed IS DISTINCT FROM false)::text AS known_net_weight,
@@ -55,7 +78,7 @@ async function listing(c,uid,input){const w=where(uid,inventoryInput(input)),met
   FROM inventory_view v WHERE ${metricsWhere.text} GROUP BY 1`,metricsWhere.values)).rows;
  summary.stock_categories=Object.fromEntries(stock.map(({state,...values})=>[state,values]));
  const effectivePage=Math.min(page,Math.max(1,Math.ceil(summary.count/size)));
- const items=(await c.query(`SELECT v.*,${physicalStatusSql} physical_status FROM inventory_view v WHERE ${w.text} ORDER BY ${sort} LIMIT $${w.values.length+1} OFFSET $${w.values.length+2}`,[...w.values,size,(effectivePage-1)*size])).rows;
+ const items=(await c.query(`SELECT v.*,CASE WHEN v.p3_area THEN 'P3-LEFTOVER' WHEN v.p5_area THEN '临时堆存区' ELSE v.location END AS location,coalesce(CASE WHEN v.p3_area THEN v.p3_customer_name END,v.current_customer,v.customer) current_customer FROM ${source} v WHERE ${w.text} ORDER BY ${sort} LIMIT $${w.values.length+1} OFFSET $${w.values.length+2}`,[...w.values,size,(effectivePage-1)*size])).rows;
  return {items:items.map(row=>({...row,business_status:businessStatus(row)})),total:summary.count,page:effectivePage,page_size:size,summary,snapshot_at:(await c.query('SELECT transaction_timestamp() AS at')).rows[0].at};
 }
-module.exports={businessStatus,isPreparing,samplingSql,inventoryInput,where,order,filters,listing,transaction,invalid};
+module.exports={businessStatus,isPreparing,samplingSql,inventoryInput,inventorySource,where,order,filters,listing,transaction,invalid};

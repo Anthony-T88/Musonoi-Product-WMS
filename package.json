@@ -1,6 +1,6 @@
 {
   "name": "musonoi-product-wms",
-  "version": "4.7.2",
+  "version": "4.8.0",
   "private": true,
   "scripts": {
     "start": "node scripts/start-current.cjs",
@@ -16,7 +16,8 @@
     "test:uiux:compare": "node tests/release/uiux-quality.cjs compare",
     "test:acceptance": "node scripts/run-release-tests.cjs acceptance",
     "test:security": "node scripts/run-release-tests.cjs security",
-    "test:security:baseline": "node --test tests/release/security-baseline.cjs"
+    "test:security:baseline": "node --test tests/release/security-baseline.cjs",
+    "test:performance:v473": "node tests/release/v473-performance.cjs"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.5",

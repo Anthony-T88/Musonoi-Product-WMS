@@ -76,7 +76,15 @@ test('first batch management security regressions',async t=>{
   assert.equal((await submit(fields)).statusCode,409);
   const id=submitted.json().id,requests=(await api(root,'GET','/users/registration-requests')).json().items;
   const item=requests.find(r=>r.id===id);assert.equal(item.username,payload.username);assert.equal(item.contact_phone,fields.contact_phone);assert.equal(item.contact_email,fields.contact_email);
+  const pending=async session=>{
+   const response=await api(session,'GET','/v34/todos');assert.equal(response.statusCode,200);
+   return response.json().items.filter(task=>task.id===id);
+  };
+  const tasks=await pending(root);assert.equal(tasks.length,1);assert.equal(tasks[0].kind,'REGISTRATION_REQUEST_REVIEW');
+  assert.equal(tasks[0].href,'/workbench/accounts?registrations=pending');
+  assert.equal((await pending(manager)).length,0);
   assert.equal((await api(root,'POST','/users/registration-requests/'+id+'/review',{decision:'APPROVED',role_code:viewerRole,scopes:scope})).statusCode,200);
+  assert.equal((await pending(root)).length,0);
   assert.deepEqual((await c.query('SELECT contact_phone,contact_email FROM users WHERE username=$1',[payload.username])).rows[0],fields);
   const login=await app.inject({method:'POST',url:base+'login',remoteAddress,headers:{origin},payload:{username:payload.username,password:payload.password}});
   assert.equal(login.statusCode,200);
@@ -126,7 +134,8 @@ test('first batch management security regressions',async t=>{
  await check('172-to-173 upgrade preserves every historical account, grant, scope, session and audit row',async()=>{
   const old=await E.database();try{const Chain=require('../../scripts/migration-chain.cjs'),prior=Chain.load().filter(e=>e.version<'173_');await old.client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of prior)await Chain.execute(old.client,e);await old.client.query("INSERT INTO system_info VALUES(true,'test')");const fixture=await E.seed(old.client,old.name),who=fixture.accounts.find(a=>a.role==='admin');await old.client.query("INSERT INTO sessions(token_hash,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[crypto.randomBytes(32).toString('hex'),who.id,crypto.randomBytes(32).toString('hex')]);const event=(await old.client.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_legacy','projects',$2,$3) RETURNING id",[who.id,fixture.project,{project_id:fixture.project}])).rows[0].id;
    const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email')::text,'' ORDER BY (to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();await old.client.query('BEGIN');try{await Chain.execute(old.client,Chain.load().find(e=>e.version.startsWith('173_')));await old.client.query('COMMIT');}catch(e){await old.client.query('ROLLBACK');throw e;}assert.deepEqual(await snapshot(),before);await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});for(const migration of Chain.load().slice(173,181))await Chain.execute(old.client,migration);assert.deepEqual(await snapshot(),before);
-   assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,1);
+   const appliedCount=(await old.client.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n;
+   assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,Chain.load().length-appliedCount);
    const after=await snapshot();
    for(const table of ['users','roles','user_scopes','audit_logs'])assert.deepEqual(after[table],before[table],table);
    const priorGrants=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg(to_jsonb(t)::text,'' ORDER BY to_jsonb(t)::text),'')) digest FROM role_permissions t WHERE permission_code NOT LIKE 'export-license:%'`)).rows[0];

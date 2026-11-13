@@ -1,16 +1,30 @@
 'use strict';
 const B=require('./business-common.cjs'),A=require('./accounts.cjs'),transaction=require('./account-transaction.cjs'),{token,digest}=require('./security.cjs');
-const S=require('./management-security.cjs');
+const S=require('./management-security.cjs'),Policy=require('../dist/registration-policy.js');
 module.exports=async({app,pool,permitted,csrf,secure,origin})=>{
  const admin=permitted('users:manage'),publicFields='id,username,display_name,contact,contact_phone,contact_email,status,created_at,reviewed_at,review_reason,approved_user_id';
  app.get('/api/v1/auth/registration-token',{config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async(req,reply)=>{const value=token();reply.setCookie('musonoi_registration_csrf',value,{path:'/api/v1/auth/registration-requests',httpOnly:true,sameSite:'strict',secure,maxAge:1800});return{csrfToken:value};});
- app.post('/api/v1/auth/registration-requests',{preValidation:async req=>A.body(req.body,['username','display_name','password','contact','contact_phone','contact_email']),config:{rateLimit:{max:5,timeWindow:'1 hour'}},schema:{body:{type:'object',additionalProperties:false,required:['username','display_name','password'],properties:{username:{type:'string',pattern:A.usernamePattern},display_name:{type:'string',minLength:1,maxLength:80},password:{type:'string',minLength:12,maxLength:128},contact:{type:'string',minLength:1,maxLength:160},contact_phone:{type:'string',maxLength:40},contact_email:{type:'string',maxLength:160}}}}},async(req,reply)=>{
-  const cookie=req.cookies.musonoi_registration_csrf;if(req.headers.origin!==origin||!cookie||digest(cookie)!==digest(String(req.headers['x-csrf-token']||'')))throw B.error(403,'注册申请安全令牌无效，请重新打开申请窗口');
-  const b=req.body,display=A.name(b.display_name),{contact_phone=null,contact_email=null}=A.contacts(b);
-  const contact=contact_phone||contact_email||(b.contact?.trim()||null);
-  if(!contact||(!contact_phone&&!contact_email&&(Object.hasOwn(b,'contact_phone')||Object.hasOwn(b,'contact_email'))))throw B.error(400,'请填写联系号码或联系邮箱');
+ app.post('/api/v1/auth/registration-requests',{config:{rateLimit:{max:5,timeWindow:'1 hour'}}},async(req,reply)=>{
+  const cookie=req.cookies.musonoi_registration_csrf;
+  if(req.headers.origin!==origin||!cookie||digest(cookie)!==digest(String(req.headers['x-csrf-token']||'')))throw B.error(403,'注册申请安全令牌无效，请重新打开申请窗口');
+  A.body(req.body,['username','display_name','password','confirm','contact','contact_phone','contact_email']);
+  const reject=(status,errors)=>reply.code(status).send({type:'field_validation',code:'REGISTRATION_FIELDS_INVALID',error:Policy.errors[Object.values(errors)[0]][0],fields:Object.entries(errors).map(([field,code])=>({field,code}))});
+  // Existing API clients submit a single password. The web form also sends its confirmation.
+  const {errors,values:b}=Policy.validate(req.body,{requireConfirmation:false});
+  if(Object.keys(errors).length)return reject(400,errors);
   const hash=A.password(b.password);
-  return transaction(pool,async c=>{if((await c.query('SELECT 1 FROM users WHERE username=$1',[b.username])).rowCount)throw B.error(409,'该账号已存在，请使用其他账号或联系管理员');if((await c.query("SELECT 1 FROM registration_requests WHERE username=$1 AND status='PENDING'",[b.username])).rowCount)throw B.error(409,'该账号已有待审批申请，请勿重复提交');const r=(await c.query('INSERT INTO registration_requests(username,display_name,password_hash,contact,contact_phone,contact_email) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,status,created_at',[b.username,display,hash,contact,contact_phone,contact_email])).rows[0];reply.code(201);return r;});
+  try {
+   return await transaction(pool,async c=>{
+    if((await c.query('SELECT 1 FROM users WHERE username=$1',[b.username])).rowCount)return reject(409,{username:'USERNAME_USED'});
+    const result=await c.query("INSERT INTO registration_requests(username,display_name,password_hash,contact,contact_phone,contact_email) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT (username) WHERE status='PENDING' DO NOTHING RETURNING id,status,created_at",[b.username,b.display_name,hash,b.contact,b.contact_phone,b.contact_email]);
+    if(!result.rowCount)return reject(409,{username:'USERNAME_PENDING'});
+    reply.code(201);
+    return result.rows[0];
+   });
+  }catch(e){
+   if(e.code==='23505'&&e.constraint==='registration_requests_pending_username')return reject(409,{username:'USERNAME_PENDING'});
+   throw e;
+  }
  });
  app.get('/api/v1/users/registration-requests',{preHandler:admin},req=>S.read(pool,req,'users:manage',async(c,a)=>{S.systemAdministrator(a);const status=req.query.status||'PENDING';if(!['PENDING','APPROVED','REJECTED','ALL'].includes(status))throw B.error(400,'申请状态筛选无效');return{items:(await c.query('SELECT '+publicFields+' FROM registration_requests WHERE ($1=\'ALL\' OR status=$1) ORDER BY created_at DESC LIMIT 200',[status])).rows,pending:(await c.query("SELECT count(*)::int n FROM registration_requests WHERE status='PENDING'")).rows[0].n};}));
  app.post('/api/v1/users/registration-requests/:id/review',{preHandler:[admin,csrf]},req=>transaction(pool,async c=>{
@@ -19,4 +33,11 @@ module.exports=async({app,pool,permitted,csrf,secure,origin})=>{
   else if(!b.reason?.trim())throw B.error(400,'驳回申请须填写原因');
   const updated=(await c.query('UPDATE registration_requests SET status=$1,reviewed_at=now(),reviewed_by=$2,review_reason=$3,approved_user_id=$4 WHERE id=$5 RETURNING '+publicFields,[b.decision,req.user.id,b.reason?.trim()||null,userId,r.id])).rows[0];await B.audit(c,req,'registration_'+b.decision.toLowerCase(),'registration_requests',r.id,{status:r.status},{status:updated.status,approved_user_id:userId,reason:updated.review_reason});return updated;
  }));
+};
+module.exports.pending=async(c,req)=>{
+ if(req.user.role_code!=='admin'||!req.user.permissions.includes('users:manage'))return [];
+ const {rows}=await c.query(`SELECT id,username document_no,status,created_at,'REGISTRATION_REQUEST_REVIEW' kind,
+  'REGISTRATION_REQUEST' doc_type,'/workbench/accounts?registrations=pending' href
+  FROM registration_requests WHERE status='PENDING' ORDER BY created_at DESC,id`);
+ return rows;
 };

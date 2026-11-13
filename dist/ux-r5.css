@@ -15,6 +15,7 @@
 .r5-document-status[data-state=MISSING]{background:#fff3df;color:#946822;}
 .r5-document-status[data-state=EXITED]{background:#e5f1ee;color:#216448;}
 .r5-document .p46-grid{grid-template-columns:minmax(0,1fr) minmax(300px,360px);align-items:start;}
+.r5-document .r5-document-shell>.p46-grid.p46-full{grid-template-columns:minmax(0,1fr);}
 .r5-document .p46-main,.r5-document .p46-aside{min-width:0;display:flex;flex-direction:column;gap:22px;}
 .r5-document .p46-card{padding:24px;min-width:0;overflow:hidden;}
 .r5-document .p46-card>h3,.r5-document .p46-card>h2{font-size:19px;margin:0 0 20px;}
@@ -30,6 +31,9 @@
 .r5-document .r5-native-panel h3{font-size:16px;}
 .r5-document-actions .business-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin:0 0 18px;}
 .r5-document .r5-document-actions form,.r5-document .r5-gate-exit form{display:flex;flex-direction:column;gap:16px;}
+.r5-document .r5-document-actions form[data-wms-validation]{width:100%;min-width:0;max-width:none;gap:var(--uix-gap);}
+.r5-document .r5-document-actions form[data-wms-validation]>.wms-field-grid{width:100%;}
+.r5-document .r5-document-actions form[data-wms-validation]>.wms-filter-actions{justify-content:flex-end;flex-wrap:wrap;}
 .r5-document form label{display:flex;flex-direction:column;gap:8px;font-size:14px;}
 .r5-document form :is(input:not([type=checkbox]),select,textarea){width:100%;max-width:100%;min-width:0;box-sizing:border-box;}
 .r5-document .gate-check{flex-direction:row;align-items:flex-start;gap:10px;line-height:1.7;}

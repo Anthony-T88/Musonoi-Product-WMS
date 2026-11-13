@@ -3,7 +3,7 @@
 // controls, tables and their event handlers are moved, never duplicated.
 window.UI46Pages={
  t:(z,e)=>I18n.language==='en'?e:z,cache:new Map(),ready:false,
- init(){if(this.ready)return;this.ready=true;Object.assign(TRANSLATIONS.en,{'计划发运数量（吨）':'Planned Shipment Quantity (MT)','计划备货批次数量':'Planned Lots','预计ARECOMS金属吨':'Planned ARECOMS MT','计划车辆数量':'Planned Vehicles','销售业务员提交 → 销售经理审批 → 商务部经理终审。终审通过后方可派车、备货或装车。':'Sales Operator → Sales Manager → Commercial Department Manager. Dispatch, preparation and loading require final approval.','提交销售经理审批':'Submit for Sales Approval','保存并重新提交审批':'Save and Resubmit for Approval','返回销售管理':'Back to Sales Plans','商务部经理终审':'Commercial Department Manager Review','销售经理审批':'Sales Manager Review','通过并送商务部经理审批':'Approve and Send to Commercial Manager','终审通过，完成创建':'Approve and Create','审批说明（驳回必填）':'Review Note (required when rejecting)','驳回业务员修改':'Return to Sales Operator','销售审批说明':'Sales Review Note','商务审批说明':'Commercial Review Note'});I18n.pattern=new RegExp(Object.keys(TRANSLATIONS.en).filter(Boolean).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');const request=API.request.bind(API);API.request=async(url,options)=>{const key=this.signature(),data=await request(url,options);if((!options?.method||options.method==='GET')&&this.signature()===key&&!/^\/(auth|me|users|roles|product-context)/.test(url)){this.cache.set(url.split('?')[0],{key,data});if(this.cache.size>20)this.cache.delete(this.cache.keys().next().value);}return data;};window.addEventListener('session-expired',()=>this.cache.clear());
+ init(){if(this.ready)return;this.ready=true;this.bindFieldValidation();Object.assign(TRANSLATIONS.en,{'计划发运数量（吨）':'Planned Shipment Quantity (MT)','计划备货批次数量':'Planned Lots','预计ARECOMS金属吨':'Planned ARECOMS MT','计划车辆数量':'Planned Vehicles','销售业务员提交 → 销售经理审批 → 商务部经理终审。终审通过后方可派车、备货或装车。':'Sales Operator → Sales Manager → Commercial Department Manager. Dispatch, preparation and loading require final approval.','提交销售经理审批':'Submit for Sales Approval','保存并重新提交审批':'Save and Resubmit for Approval','返回销售管理':'Back to Sales Plans','商务部经理终审':'Commercial Department Manager Review','销售经理审批':'Sales Manager Review','通过并送商务部经理审批':'Approve and Send to Commercial Manager','终审通过，完成创建':'Approve and Create','审批说明（驳回必填）':'Review Note (required when rejecting)','驳回业务员修改':'Return to Sales Operator','销售审批说明':'Sales Review Note','商务审批说明':'Commercial Review Note'});I18n.pattern=new RegExp(Object.keys(TRANSLATIONS.en).filter(Boolean).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');const request=API.request.bind(API);API.request=async(url,options)=>{const key=this.signature(),data=await request(url,options);if((!options?.method||options.method==='GET')&&this.signature()===key&&!/^\/(auth|me|users|roles|product-context)/.test(url)){this.cache.set(url.split('?')[0],{key,data});if(this.cache.size>20)this.cache.delete(this.cache.keys().next().value);}return data;};window.addEventListener('session-expired',()=>this.cache.clear());
   // Sales already has authorized server pagination. Do not paginate that page
   // again with the generic client-side table helper.
   if(typeof PageTables!=='undefined'){const enhance=PageTables.enhance.bind(PageTables);PageTables.enhance=()=>{if(UI46.enabled()&&!UI46.copperMap()){const table=document.getElementById('ux10-sales-table');if(table&&!table.dataset.v34Server){table.dataset.v34Server='true';table.dataset.p46Server='';}}enhance();if(UI46.state?.composition)this.normalize(UI46.state);};}
@@ -48,6 +48,8 @@ window.UI46Pages={
  },
  host(root){return root.querySelector('.ux10-sales,.co-sales-page,.co-reports-page,.co-execution-page,.co-count-page,.co-preparation-detail,.co-work-page,.co-stock-page,.gate-page')||root.querySelector(':scope>.co-page')||root;},
  compose(root,s){s.composition={classes:[],hidden:[],watch:[],family:this.family(root)};s.root.dataset.pageFamily=s.composition.family;this.cls(root,'p46-root',s);
+  const composed=root.querySelector(':scope > [data-page-composed]');
+  if(composed){s.composition.anchor=composed;this.finish(root,s);return;}
   if(window.Operations468R4?.compose(root,s))return;
   if(window.LoadingDetails465?.matches(root)&&LoadingDetails465.compose(root,s))return;
   if(window.DocumentLayouts?.matches(root)){DocumentLayouts.compose(root,s);return;}const f=s.composition.family;if(f==='workstation'){this.workstation(root,s);return;}
@@ -70,7 +72,115 @@ window.UI46Pages={
   for(const n of [...root.children])if(n!==host&&!n.contains(host)&&n!==shell&&!n.matches('[data-ui46-generated]')&&!shell.contains(n)&&!n.matches('.ux10-workflow')){if(n.matches('#ux11-load-corrections,#ux11-co-corrections'))this.move(n,s.composition.left||shell,s);}
   this.decorate(shell,s);this.finish(root,s);
  },
- finish(root,s){if(!s.composition.anchor)s.composition.anchor=s.generated.find(n=>n.isConnected)||root.firstElementChild;s.anchor=s.composition.anchor;for(const form of root.querySelectorAll('form'))if(!form.closest('[hidden]')&&!form.matches('.filters,form[id$="-filter"]'))s.composition.watch.push(form);this.normalize(s);},
+ // Values passed as markup have already been escaped by the document renderer.
+ factList(entries){
+  return '<dl class="wms-facts">'+entries.map(([label,value])=>'<div><dt>'+esc(label)+'</dt><dd>'+value+'</dd></div>').join('')+'</dl>';
+ },
+ identity(title,status,actions,summary,classes=''){
+  return '<section class="panel wms-identity wms-section '+classes+'" data-no-i18n><header><div><h2>'+esc(title)+'</h2>'+status+'</div>'+
+   (actions?'<div class="business-toolbar wms-document-actions">'+actions+'</div>':'')+'</header>'+summary+'</section>';
+ },
+ table(html,{responsive=false,numeric=[],center=[],actions=[]}={}){
+  const template=document.createElement('template');
+  template.innerHTML=html;
+  const table=template.content.querySelector('table'),head=table.tHead.rows[0];
+  table.classList.add('wms-table');
+  if(responsive)table.classList.add('permit-sales-table');
+  for(const [index,column] of [...head.cells].entries()){
+   column.scope='col';
+   const kind=numeric.includes(index)?'number':center.includes(index)?'center':actions.includes(index)?'actions':null;
+   if(kind)column.dataset.wmsColumn=kind;
+  }
+  for(const row of table.tBodies[0].rows){
+   if(row.cells.length!==head.cells.length)continue;
+   for(const [index,cell] of [...row.cells].entries()){
+    const column=head.cells[index];
+    if(column.dataset.wmsColumn)cell.dataset.wmsColumn=column.dataset.wmsColumn;
+    if(!responsive)continue;
+    cell.dataset.label=column.textContent;
+    const value=document.createElement('div');
+    value.append(...cell.childNodes);cell.append(value);
+   }
+  }
+  return template.innerHTML;
+ },
+ bindFieldValidation(){
+  let next=0;
+  const feedback=new WeakMap();
+  document.addEventListener('invalid',event=>{
+   const control=event.target,field=control.closest('form[data-wms-validation] .wms-field');
+   if(!field||!control.validity||control.getAttribute('aria-invalid')==='true'&&!feedback.has(control))return;
+   let message=feedback.get(control);
+   if(!message){
+    message=document.createElement('small');
+    message.id='wms-field-error-'+(++next);
+    message.className='wms-field-error';
+    field.append(message);
+    control.setAttribute('aria-describedby',[control.getAttribute('aria-describedby'),message.id].filter(Boolean).join(' '));
+    feedback.set(control,message);
+   }
+   event.preventDefault();
+   message.textContent=control.validity.valueMissing
+    ?control.matches('select')?this.t('请选择此项。','Select a value.'):this.t('请填写此项。','Enter a value.')
+    :this.t('请核对输入格式和允许范围。','Check the input format and allowed range.');
+   message.hidden=false;
+   control.setAttribute('aria-invalid','true');
+   if(control.form.querySelector('.wms-field :invalid')===control)control.focus();
+  },true);
+  const clear=event=>{
+   const control=event.target,message=feedback.get(control);
+   if(!message)return;
+   message.hidden=true;
+   message.textContent='';
+   control.removeAttribute('aria-invalid');
+  };
+  document.addEventListener('input',clear);
+  document.addEventListener('change',clear);
+ },
+ async submit(event,run){
+  event.preventDefault();
+  const form=event.target,button=event.submitter,error=form.querySelector('[role="alert"]');
+  if(form.getAttribute('aria-busy')==='true')return;
+  form.setAttribute('aria-busy','true');
+  if(button)button.disabled=true;
+  if(error)error.textContent='';
+  try{await run();}
+  catch(err){if(error)error.textContent=err.message;else notify(err.message);}
+  finally{
+   form.removeAttribute('aria-busy');
+   if(button?.isConnected)button.disabled=false;
+  }
+ },
+ alignControls(root,s){
+  if(location.pathname.startsWith('/stock-map'))return;
+  const forms=root.querySelectorAll('form.filters,form[id$="-filter"],.user-form .form-grid:not(.permit-books)');
+  for(const node of forms){
+   if(!node.querySelector('label input,label select,label textarea'))continue;
+   if(!node.matches('form')){
+    if(node.querySelector(':scope > label'))this.cls(node,'wms-field-grid',s);
+    continue;
+   }
+   const direct=node.querySelector(':scope > label'),fields=node.querySelector(':scope > .form-grid');
+   if(!direct&&!fields)continue;
+   this.cls(node,'wms-filter-row',s);
+   let actions=node.querySelector(':scope > .wms-filter-actions,:scope > .business-toolbar,:scope > .s468-filter-actions,:scope > .c461-filter-actions');
+   if(!actions){
+    const children=[...node.children];
+    const index=children.findIndex(el=>el.matches('button[type=submit],button:not([type])'));
+    if(index!==-1){
+     const controls=[];
+     for(const el of children.slice(index)){
+      if(!el.matches('button,a.button'))break;
+      controls.push(el);
+     }
+     actions=this.el('div','wms-filter-actions',node,s);
+     for(const control of controls)this.move(control,actions,s);
+    }
+   }
+   if(actions)this.cls(actions,'wms-filter-actions',s);
+  }
+ },
+ finish(root,s){this.alignControls(root,s);if(!s.composition.anchor)s.composition.anchor=s.generated.find(n=>n.isConnected)||root.firstElementChild;s.anchor=s.composition.anchor;for(const form of root.querySelectorAll('form'))if(!form.closest('[hidden]')&&!form.matches('.filters,form[id$="-filter"]'))s.composition.watch.push(form);this.normalize(s);},
  grid(shell,s,right=true){const grid=this.el('div','p46-grid'+(right?'':' p46-full'),shell,s),left=this.el('div','p46-main',grid,s),aside=right?this.el('aside','p46-aside',grid,s):null;s.composition.left=left;s.composition.aside=aside;return {grid,left,aside};},
  isFilter(n){return n.nodeType===1&&n.matches('form.filters,form[id$="-filter"],form.account-toolbar,.filters,.co-stock-filter');},
  isStats(n){return n.nodeType===1&&n.matches('.shipping-kpis,.yard-counts,.co-stock-metrics,.co-report-metrics,.v34-kpi-grid,.v34-summary,.v261-summary,.receipt-bundle-total');},
@@ -132,10 +242,10 @@ window.UI46Pages={
  permissions(host,nodes,shell,s){for(const n of nodes)this.move(n,shell,s);const layout=shell.querySelector('.account-role-layout');if(layout)this.cls(layout,'p46-permissions',s);const form=shell.querySelector('#account-role-form');if(form){this.cls(form,'p46-permission-form',s);for(const fieldset of form.querySelectorAll('fieldset'))this.cls(fieldset,'p46-permission-group',s);}},
  stats(parent,items,s){const strip=this.el('div','p46-stats',parent,s);for(const [z,e,value]of items){const cell=this.el('div','p46-stat',strip,s),label=this.el('span','',cell,s),strong=this.el('strong','',cell,s);label.textContent=this.t(z,e);strong.textContent=value==null?'—':String(value);}return strip;},
  workstation(root,s){const workspace=root.querySelector('[data-operation-workspace]');this.cls(workspace,'p46-workstation',s);const heading=workspace.querySelector('.op-heading'),split=workspace.querySelector('.op-split');if(split)for(const selector of ['.op-heading','.op-stats','.op-filter']){const node=workspace.querySelector(selector);if(node){this.move(node,workspace,s);workspace.insertBefore(node,split);}}s.composition.anchor=heading||workspace;s.anchor=s.composition.anchor;OperationWorkspace.fit(OperationWorkspace.active);},
- overview(root,s){const analysis=root.querySelector('[data-overview-analysis]');if(analysis){s.composition.anchor=analysis;this.finish(root,s);return;}const host=root.querySelector('.co-overview-page')||root;UI46.overviewLayout(host,s);this.cls(root,'p46-overview',s);for(const section of root.querySelectorAll('.v34-overview-section')){const grid=section.querySelector(':scope>.v34-kpi-grid');if(grid){this.cls(grid,'p46-stat-strip',s);this.cls(section,'p46-overview-metrics',s);}for(const p of section.querySelectorAll(':scope>p.v34-definition')){const details=this.el('details','p46-basis',section,s),label=this.el('summary','',details,s);label.textContent=this.t('统计口径','Calculation Basis');this.move(p,details,s);}}this.decorate(root,s);this.finish(root,s);},
+ overview(root,s){const analysis=root.querySelector('[data-overview-analysis]');if(analysis){s.composition.anchor=analysis;this.finish(root,s);return;}const host=root.querySelector('.co-overview-page')||root;UI46.overviewLayout(host,s);this.cls(root,'p46-overview',s);for(const section of root.querySelectorAll('.v34-overview-section')){const grid=section.querySelector(':scope>.v34-kpi-grid');if(grid){this.cls(grid,'p46-stat-strip',s);this.cls(section,'p46-overview-metrics',s);}}this.decorate(root,s);this.finish(root,s);},
  inventory(root,s){this.cls(root,'p46-inventory',s);for(const section of root.querySelectorAll(':scope>.panel'))this.cls(section,'p46-card',s);for(const n of root.querySelectorAll('.metrics,.metric-grid,.inventory-metrics'))this.cls(n,'p46-stat-strip',s);this.finish(root,s);},
  
- decorate(root,s){for(const n of root.querySelectorAll('form.filters,form[id$="-filter"]'))this.cls(n,'p46-filter',s);for(const n of root.querySelectorAll('.business-table,.table-scroll,.account-table-scroll'))this.cls(n,'p46-table-wrap',s);for(const n of root.querySelectorAll('.co-stock-metrics,.co-report-metrics,.shipping-kpis,.yard-counts'))this.cls(n,'p46-stat-strip',s);for(const n of root.querySelectorAll('dl:not(.p46-facts,.v470-lot-plan-grid)'))this.cls(n,'p46-facts-native',s);for(const n of root.querySelectorAll('.ux10-workflow'))this.cls(n,'p46-flow',s);},
+ decorate(root,s){for(const n of root.querySelectorAll('form.filters,form[id$="-filter"]'))if(!n.classList.contains('wms-map-filter-row'))this.cls(n,'p46-filter',s);for(const n of root.querySelectorAll('.business-table,.table-scroll,.account-table-scroll'))this.cls(n,'p46-table-wrap',s);for(const n of root.querySelectorAll('.co-stock-metrics,.co-report-metrics,.shipping-kpis,.yard-counts'))this.cls(n,'p46-stat-strip',s);for(const n of root.querySelectorAll('dl:not(.p46-facts,.v470-lot-plan-grid,.wms-facts)'))if(!n.closest('.map465-detail-body'))this.cls(n,'p46-facts-native',s);for(const n of root.querySelectorAll('.ux10-workflow'))this.cls(n,'p46-flow',s);},
  normalize(s){const root=s.root;if(!s.composition)return;for(const form of root.querySelectorAll('form[data-v34-reset]')){const original=form.querySelector('a[href],button[type=reset]');if(original&&/重置|清除|Reset|Clear/i.test(original.textContent))for(const b of [...form.children].filter(n=>n.matches('button[type=button]')&&!n.id&&/清除条件|Clear (Filters|Conditions)/i.test(n.textContent)))this.hide(b,s);}
   const sales=root.querySelector('#ux10-sales-table');if(sales&&root.querySelector('.co-pager')){for(const pager of root.querySelectorAll('.v34-pagination'))this.hide(pager,s);for(const row of sales.tBodies[0]?.rows||[])if(row.hidden){if(!s.composition.hidden.some(r=>r.node===row))s.composition.hidden.push({node:row,old:true});row.hidden=false;}}
  },

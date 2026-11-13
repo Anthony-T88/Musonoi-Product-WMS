@@ -3,10 +3,18 @@
   "historicalBackfill": false,
   "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
   "entries": [
+    {"entity":"preparation_plans","policy":"ADMIN_ONLY","basis":"Scoped workflow events are listed through the preparation-plan route."},
+    {"entity":"historical_movement_documents","policy":"ADMIN_ONLY","basis":"Only system administrators access the separate historical ledger and its import audit."},
+    {"entity":"document_drafts","policy":"ADMIN_ONLY","basis":"Private working content is never audited. Global audit retains only the owner's form type and draft version."},
     {
       "entity": "export_licenses",
       "policy": "ADMIN_ONLY",
       "basis": "Scoped operational history is available in license detail. Global audit uses the conservative administrator-only fallback."
+    },
+    {
+      "entity": "export_license_record_books",
+      "policy": "ADMIN_ONLY",
+      "basis": "Record creation is audited by scoped identifier and kind; global audit remains administrator-only."
     },
     {
       "entity": "allocations",

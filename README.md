@@ -1,4 +1,11 @@
-# Musonoi Product WMS 4.7.2
+# Musonoi Product WMS 4.8.0
+
+Runtime baseline: PostgreSQL migration 190. Upgrade the existing database after verifying a full backup and a migration dry run.
+
+[UI design standard](docs/uiux/DESIGN.md) | [UI coverage](docs/uiux/COVERAGE.md) | [UI quality checks](docs/uiux/QUALITY.md)
+
+## V4.7.2 release history
+
 
 V4.7.2 从 V4.7.1-ui1（迁移 181）增量开发，新增独立铜钴出口许可证、审批、额度预占与核销。使用许可证的新装车计划由后端分配发票号，现有单据编号和 UUID 保留。运行时要求迁移 182。
 

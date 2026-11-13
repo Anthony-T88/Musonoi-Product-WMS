@@ -33,14 +33,27 @@ async function invoiceConflict(c,invoice,owner=null){
 async function lockInvoice(c,invoice){
  await c.query('SELECT pg_advisory_xact_lock(472,hashtext(lower($1)))',[invoice]);
 }
+const invoices=`SELECT invoice_no FROM export_license_allocations UNION ALL SELECT invoice_no FROM loading_plan_documents
+ UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans`;
+async function invoiceCandidate(c,l){
+ const {rows:[row]}=await c.query(`WITH suffixes AS (
+  SELECT substr(invoice_no,length($1)+2) suffix FROM (${invoices}) invoices
+  WHERE left(lower(invoice_no),length($1)+1)=lower($1)||'-'
+ ) SELECT greatest($2::numeric,coalesce(max(CASE WHEN suffix~'^[0-9]+$' THEN suffix::numeric END),0)+1)::text serial FROM suffixes`,
+ [l.proforma_no,l.next_serial]);
+ const invoice=l.proforma_no+'-'+row.serial.padStart(2,'0');
+ if(invoice.length>77||BigInt(row.serial)>=9223372036854775807n)throw B.error(409,'生成的发票号超长');
+ return {invoice,serial:row.serial};
+}
 async function nextInvoice(c,l){
- for(let i=0;i<10000;i++){
-  const {rows:[r]}=await c.query('UPDATE export_licenses SET next_serial=next_serial+1 WHERE id=$1 RETURNING public.short_document_serial(next_serial-1) serial',[l.id]);
-  const code=l.proforma_no+'-'+r.serial;
-  if(code.length>77)throw B.error(409,'生成的发票号超长');
-  await lockInvoice(c,code);
-  const duplicate=(await c.query("SELECT 1 FROM (SELECT invoice_no FROM export_license_allocations UNION ALL SELECT invoice_no FROM loading_plan_documents UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans) x WHERE lower(invoice_no)=lower($1) LIMIT 1",[code])).rowCount;
-  if(!duplicate)return code;
+ // The license row is already locked. Reserve the final number against legacy/manual writes too.
+ for(let i=0;i<100;i++){
+  const {invoice,serial}=await invoiceCandidate(c,l);
+  await lockInvoice(c,invoice);
+  const duplicate=(await c.query(`SELECT 1 FROM (${invoices}) invoices WHERE lower(invoice_no)=lower($1) LIMIT 1`,[invoice])).rowCount;
+  if(duplicate)continue;
+  await c.query('UPDATE export_licenses SET next_serial=$2::bigint+1 WHERE id=$1',[l.id,serial]);
+  return invoice;
  }
  throw B.error(409,'历史发票号冲突过多，请联系管理员核对');
 }
@@ -98,4 +111,4 @@ async function cancelCobalt(c,req,plan){
  return {id:plan.id,status:'CANCELLED',project_id:plan.project_id,warehouse_id:plan.warehouse_id,customer_id:plan.customer_id};
 }
 
-module.exports={link,prepare,bind,beforeMatch,cancelCobalt,invoiceConflict};
+module.exports={link,prepare,bind,beforeMatch,cancelCobalt,invoiceConflict,invoiceCandidate};

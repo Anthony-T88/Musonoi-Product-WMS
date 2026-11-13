@@ -5,7 +5,8 @@ const E=require('./environment.cjs'),R=require('./uiux-routes.cjs'),M=require('.
 const {crc32,inflateSync}=require('node:zlib'),{createHash}=require('node:crypto');
 const presets=path.join(__dirname,'uiux-baselines');
 const requiredTokens=['canvas','surface','text','muted','border','brand','danger','warning','success','focus',
- 'title','section','body','caption','gap','radius','control','touch'];
+ 'title','section','body','caption','gap','radius','control','touch','font','line','label-line','weight-emphasis',
+ 'panel-gap','shadow-dialog','focus-ring','field-min','filter-min','border-width','compact'];
 const core=new Set(['login','overview','inventory','map','customers','sales','receipts','receipt-new','preparation','arrivals',
  'loading-search','outbounds','metal','stocktakes','reports','accounts','permissions','audit']);
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
@@ -17,6 +18,8 @@ function lint(){
  const tokens=[...root.matchAll(/(--uix-[\w-]+)\s*:/g)].map(m=>m[1]);
  assert.equal(new Set(tokens).size,tokens.length,'Duplicate token declaration');
  for(const token of requiredTokens)assert(tokens.includes('--uix-'+token),'Missing design token: '+token);
+ const guide=fs.readFileSync(path.join(E.root,'docs/uiux/DESIGN.md'),'utf8');
+ for(const token of tokens)assert(guide.includes('`'+token+'`'),'Document the shared token '+token);
  const rules=css.replace(root,'');
  for(const token of tokens)assert(rules.includes('var('+token+')'),'Unused design token '+token);
  assert(!/font-size\s*:\s*(?:\d|\.)/.test(rules),'Use tokens for shared font sizes');

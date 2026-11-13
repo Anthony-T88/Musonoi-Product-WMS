@@ -39,7 +39,7 @@ async function detail(c,req,id){
  contracts:[...new Set(items.map(i=>i.contract_no).filter(Boolean))],lots:[...new Set(items.map(i=>i.lot_no).filter(Boolean))],plans:[...new Map(items.map(i=>[i.plan_id,{id:i.plan_id,code:i.plan_code}])).values()],
  transport,document,missing_weights:missing,transport_changes:(await c.query("SELECT a.occurred_at,a.before_data->'fields' before_fields,a.after_data->'fields' after_fields,a.after_data->>'reason' reason,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.entity_id=$1 AND a.action='export_transport_updated' ORDER BY a.id DESC",[l.id])).rows,revisions:(await c.query('SELECT revision,file_name,file_sha256,template_sha256,generated_at,generated_by,reason FROM packing_list_revisions WHERE loading_id=$1 ORDER BY revision DESC',[l.id])).rows};
 }
-async function list(c,req,formal,includeApproved=false){
+async function list(c,req,formal,includeApproved=false,includeHistory=false){
  const v31=await LP.enabled(c),selected=v31?' AND NOT i.plan_removed':'';const q=req.query||{},page=Number(q.page||1);if(!Number.isInteger(page)||page<1||page>100000)throw C.error(400,'页码无效');
  const values=[req.user.id],parts=[scope];if(formal)parts.push(includeApproved?packingEligible:posted);
  const bind=v=>{values.push(v);return '$'+values.length;};
@@ -60,15 +60,31 @@ async function list(c,req,formal,includeApproved=false){
  // Counts share all original authorization and business filters, while the
  // selected workflow state narrows only the list. Keep parameter positions.
  const scopeFrom=statusPredicate?from.replace(statusPredicate,'('+statusPredicate.split('=')[1]+'::text IS NOT NULL)'):from,stateCounts=(await c.query('SELECT l.workflow_state state,count(*)::int count '+scopeFrom+' GROUP BY l.workflow_state',values)).rows,state_counts=Object.fromEntries(stateCounts.map(r=>[r.state||'UNKNOWN',r.count])),scope_total=stateCounts.reduce((n,r)=>n+r.count,0);
- const total=Number((await c.query('SELECT count(*) n '+from,values)).rows[0].n);values.push((page-1)*30);
- const items=(await c.query(`SELECT ${v31?"(SELECT x.packing_list_no FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id) packing_list_no,":''} l.id,l.created_at,l.code,l.workflow_state,l.logistics_review_by,l.status,l.vehicle_no,coalesce((SELECT cr.proposed_data->>'vehicle_no' FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' ORDER BY cr.applied_at DESC,cr.id DESC LIMIT 1),nullif(t.fields->>'vehicle_no',''),l.vehicle_no) shipping_vehicle_no,cu.name customer_name,
+ let total=Number((await c.query('SELECT count(*) n '+from,values)).rows[0].n),visibleTotal=scope_total;
+ const live=`SELECT ${v31?"(SELECT x.packing_list_no FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id) packing_list_no,":''} l.id,l.created_at,l.code,l.workflow_state,l.logistics_review_by,l.status,l.vehicle_no,coalesce((SELECT cr.proposed_data->>'vehicle_no' FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' ORDER BY cr.applied_at DESC,cr.id DESC LIMIT 1),nullif(t.fields->>'vehicle_no',''),l.vehicle_no) shipping_vehicle_no,cu.name customer_name,
  coalesce((SELECT o.code FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED' ORDER BY o.created_at DESC LIMIT 1),l.code) outbound_no,
  ${at} outbound_at,to_char((${at}) AT TIME ZONE 'Africa/Lubumbashi','YYYY-MM-DD') outbound_date,(${posted}) posted,(${packingEligible}) packing_eligible,d.document_no,d.revision,d.generated_at,
  (SELECT count(*)::int FROM loading_items i WHERE i.loading_id=l.id ${selected}) bundle_count,
  (SELECT sum(i.original_weight)::text FROM loading_items i WHERE i.loading_id=l.id ${selected}) total_net_weight,
  (SELECT string_agg(DISTINCT a.lot_no,' / ') FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations a ON a.id=r.allocation_id WHERE i.loading_id=l.id ${selected}) lot_no,
  (SELECT string_agg(DISTINCT k.contract_no,' / ') FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations a ON a.id=r.allocation_id JOIN sales_plans p ON p.id=a.plan_id LEFT JOIN customer_contracts k ON k.id=p.contract_id WHERE i.loading_id=l.id ${selected}) contract_no
- ${from} ORDER BY l.created_at DESC,l.id LIMIT 30 OFFSET $${values.length}`,values)).rows;return {items:items.map(r=>({...r,internal_loading_no:r.code,outbound_no:r.packing_list_no||r.document_no||r.outbound_no})),total,page,page_size:30,state_counts,scope_total};
+ ${from}`;
+ let archive='';
+ if(includeHistory){
+  const scopeValues=[req.user.id],scopeSql=require('./historical-backfill.cjs').outboundListSql('CU_CATHODE',q,value=>'$'+scopeValues.push(value));
+  const historyCount=(await c.query(`SELECT count(*)::int n FROM (${scopeSql}) h`,scopeValues)).rows[0].n;
+  if(historyCount){state_counts.OUTBOUND=(state_counts.OUTBOUND||0)+historyCount;visibleTotal+=historyCount;}
+  if(historyCount&&(!q.status||q.status==='OUTBOUND')){
+   total+=historyCount;
+   const history=require('./historical-backfill.cjs').outboundListSql('CU_CATHODE',q,bind);
+   archive=` UNION ALL SELECT h.id,h.created_at,to_jsonb(h)||jsonb_build_object('workflow_state','OUTBOUND','status','OUTBOUND',
+    'bundle_count',h.quantity,'total_net_weight',h.net_weight,'lot_no',h.preparation_batch_no,'outbound_no',h.outbound_code,
+    'outbound_date',h.planned_load_day,'packing_eligible',false) FROM (${history}) h`;
+  }
+ }
+ const {rows}=await c.query(`SELECT data FROM (SELECT live.id,live.created_at,to_jsonb(live) data FROM (${live}) live${archive}) records
+  ORDER BY created_at DESC,id LIMIT 30 OFFSET ${bind((page-1)*30)}`,values);
+ return {items:rows.map(({data:r})=>({...r,internal_loading_no:r.code,outbound_no:r.historical_import?r.outbound_no:r.packing_list_no||r.document_no||r.outbound_no})),total,page,page_size:30,state_counts,scope_total:visibleTotal};
 }
 async function progress(c,req,id){
  const p=await A.planAccess(c,req,id),values=[req.user.id,p.id];

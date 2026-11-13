@@ -1,9 +1,9 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),Chain=require('../../scripts/migration-chain.cjs');
 const root=path.resolve(__dirname,'../..'),chain=Chain.load();
-test('release migration baseline accepts the reviewed chain and known historical filename gaps',()=>{assert.equal(chain.length,182);assert.equal(chain.at(-1).version,'182_v472_export_licenses.sql');assert(chain.some(e=>e.version==='004b_bundle_row_lock.sql'));});
+test('release migration baseline accepts the reviewed chain and known historical filename gaps',()=>{assert.equal(chain.length,190);assert.equal(chain.at(-1).version,'190_v478_historical_backfill.sql');assert(chain.some(e=>e.version==='004b_bundle_row_lock.sql'));});
 test('applied migrations must be a checksum-matching prefix; unknown versions and holes fail closed',()=>{
- assert.equal(Chain.applied([],chain).size,0);assert.equal(Chain.applied(chain.slice(0,138),chain).size,138);assert.equal(Chain.applied(chain,chain,{complete:true}).size,182);
+ assert.equal(Chain.applied([],chain).size,0);assert.equal(Chain.applied(chain.slice(0,138),chain).size,138);assert.equal(Chain.applied(chain,chain,{complete:true}).size,chain.length);
  for(const [rows,options,code] of [[[{version:'999_unknown.sql',checksum:'a'.repeat(64)}],{},'MIGRATION_DATABASE_VERSION_UNKNOWN'],[[{...chain[0],checksum:'a'.repeat(64)}],{},'MIGRATION_CHECKSUM_CHANGED'],[[chain[1]],{},'MIGRATION_DATABASE_HISTORY_GAP'],[chain.slice(0,-1),{complete:true},'MIGRATION_DATABASE_INCOMPLETE']])assert.throws(()=>Chain.applied(rows,chain,options),{code});
 });
 test('missing, injected, edited SQL and reordered baseline are rejected before any database query',()=>{

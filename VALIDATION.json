@@ -1,10 +1,8 @@
 {
-  "version": "4.7.2",
-  "baseCommit": "82e98ca01277de68654673882aff7615025396e7",
-  "runtimeMigrationCount": 182,
-  "status": "IN_DEVELOPMENT",
-  "historicalMigrationFilesUnchanged": 181,
-  "mapDesigns": "review only",
-  "baseline": "4.7.1-ui1",
-  "revision": "4.7.2-ui1"
+  "version": "4.8.0",
+  "revision": "4.8.0-ui1",
+  "sourceCommit": "0932da5ed121977d0329618a8f41c2ec5ed72aa8",
+  "runtimeMigrationCount": 190,
+  "status": "LOCAL_TEST_CANDIDATE",
+  "preproduction": "pending"
 }

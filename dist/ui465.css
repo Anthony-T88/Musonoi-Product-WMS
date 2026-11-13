@@ -111,7 +111,6 @@ html[data-release-ui="46"] body #page-content.loading465 :is(.loading465-table,.
 .workspace .page-heading h1{overflow-wrap:anywhere}
 html body .workspace :is(.page-heading h1,#page-content h2,#page-content h3,#page-content h4,#dashboard h2,#dashboard h3,#inventory h2,#inventory h3):not(.packing-sheet *,.print-page *,.shipping-preview *){text-align:left!important}
 html body .workspace #page-content :is(.p46-table-card,.loading465-table)>h2{text-align:center!important}
-:is(#page-content,#dashboard-content,#inventory) table:not(.packing-sheet table,.print-page table,.shipping-preview table) :is(th,td){text-align:center!important}
 .oa467 .oa-execution th{white-space:normal}
 .oa467 .oa-execution td :is(a,small){overflow-wrap:anywhere}
 .oa467 .oa-plot-scroll{overflow-x:auto;max-width:100%;scrollbar-gutter:stable;outline-offset:2px}

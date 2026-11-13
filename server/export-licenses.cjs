@@ -1,12 +1,12 @@
 'use strict';
 
-const {createHash}=require('node:crypto'),B=require('./business-common.cjs'),C=require('./cobalt.cjs');
-const CU='CU_CATHODE',CO='CO_HYDROXIDE',today="(clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date";
+const {createHash}=require('node:crypto'),B=require('./business-common.cjs'),C=require('./cobalt.cjs'),Books=require('./export-license-books.cjs');
+const CU='CU_CATHODE',CO='CO_HYDROXIDE',today="(statement_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date";
 const read='export-license:read',write='export-license:write',approve='export-license:approve';
 const actions=['ISSUE','AMEND','EXTEND','CANCEL','CLOSE','CLOSE_EXCEPTION','SETTLE','CORRECT'];
 const categories=['LICENSE','PROFORMA','EXTENSION','CLOSURE','USAGE','OTHER'];
 const allowed=(path,method)=>{
- const m=/^\/api\/v1\/cobalt\/export-permits(?:\/operations\/status|\/(options|contracts|preferences|[0-9a-f-]{36})(?:\/(actions|attachments)(?:\/([0-9a-f-]{36}))?)?)?$/i.exec(path);
+ const m=/^\/api\/v1\/cobalt\/export-permits(?:\/operations\/status|\/(options|contracts|preferences|record-books|[0-9a-f-]{36})(?:\/(actions|attachments)(?:\/([0-9a-f-]{36}))?)?)?$/i.exec(path);
  return !!m&&['GET','POST','PATCH'].includes(method);
 };
 const fail=(status,message)=>B.error(status,message);
@@ -28,15 +28,14 @@ function fields(value,keys){
 }
 function optional(value,label,max){return value==null||value===''?'':B.text(value,label,max);}
 function form(body,product){
- fields(body,['contract_id','applied_on','proforma_no','quantity','unit_basis','unit','clearing_agent','issuing_bank','unit_price','price_unit','amount','currency','destination','note','version']);
+ fields(body,['contract_id','applied_on','proforma_no','quantity','unit_basis','unit','clearing_agent','issuing_bank','unit_price','price_unit','amount','currency','destination','note','processing_records','version']);
  const basis=body.unit_basis,unit=B.text(body.unit,'计量单位',40),currency=B.text(body.currency,'币种',3).toUpperCase();
  if(!['PHYSICAL_MT','COBALT_MT','CUSTOM'].includes(basis)||basis==='COBALT_MT'&&product!==CO||!/^[A-Z]{3}$/.test(currency))throw fail(400,'计量口径或币种无效');
  return {
   applied_on:B.date(body.applied_on),proforma_no:B.text(body.proforma_no,'形式发票号',64),
   quantity:decimal(body.quantity,'批准数量'),unit_basis:basis,unit,currency,
-  clearing_agent:optional(body.clearing_agent,'清关公司',160),issuing_bank:optional(body.issuing_bank,'银行',160),
   unit_price:body.unit_price?decimal(body.unit_price,'单价',true):null,price_unit:optional(body.price_unit,'计价单位',64),
-  amount:body.amount?decimal(body.amount,'许可证金额',true):null,destination:optional(body.destination,'目的地',320),note:optional(body.note,'备注',1000)
+  amount:body.amount?decimal(body.amount,'许可证金额',true):null
  };
 }
 async function contract(c,req,id){
@@ -54,33 +53,64 @@ async function patch(c,table,id,values){
  await c.query('UPDATE '+table+' SET '+keys.map((key,i)=>key+'=$'+(i+2)).join(',')+' WHERE id=$1',[id,...Object.values(values)]);
 }
 async function detail(c,req,id){
- await record(c,req,id);
+ const license=await record(c,req,id);
  const data=(await c.query(projection+' WHERE l.id=$1',[id])).rows[0];
- const history=(await c.query('SELECT a.*,u.display_name requester,v.display_name reviewer FROM export_license_actions a JOIN users u ON u.id=a.requested_by LEFT JOIN users v ON v.id=a.reviewed_by WHERE a.license_id=$1 ORDER BY a.requested_at DESC,a.id',[id])).rows;
+ const history=(await c.query(`SELECT a.*,u.display_name requester,v.display_name reviewer,(SELECT jsonb_object_agg(s.key,b.value) FROM jsonb_each_text(coalesce(a.payload->'processing_records','{}')) s LEFT JOIN export_license_record_books b ON b.id::text=s.value AND b.product_code=$2 AND b.project_id=$3 AND b.customer_id=$4 AND b.kind=s.key) processing_changes FROM export_license_actions a JOIN users u ON u.id=a.requested_by LEFT JOIN users v ON v.id=a.reviewed_by WHERE a.license_id=$1 ORDER BY a.requested_at DESC,a.id`,[id,license.product_code,license.project_id,license.customer_id])).rows;
  const allocations=(await c.query("SELECT a.id,a.plan_id,a.batch_id,a.invoice_no,a.reserved_quantity::text,a.used_quantity::text,a.state,a.closed_at,p.loading_id,p.posted_at,p.net_mt::text,p.estimated_metal_mt::text,p.confirmed_metal_mt::text,coalesce(d.code,cp.code) plan_no FROM export_license_allocations a LEFT JOIN export_license_postings p ON p.allocation_id=a.id LEFT JOIN loading_plan_documents d ON d.id=a.cu_plan_id LEFT JOIN co_loading_plans cp ON cp.id=a.co_plan_id WHERE a.license_id=$1 ORDER BY a.created_at,a.id",[id])).rows;
  const attachments=(await c.query('SELECT a.id,a.category,a.filename,a.mime,a.sha256,a.created_at,u.display_name uploader FROM export_license_attachments a JOIN users u ON u.id=a.created_by WHERE a.license_id=$1 ORDER BY a.created_at DESC,a.id',[id])).rows;
- return {...data,history,allocations,attachments};
+ const {issuing_bank_account,offshore_bank,offshore_bank_account,processing_records}=license;
+ const {local_day}=(await c.query('SELECT '+today+'::text local_day')).rows[0];
+ return {...data,issuing_bank_account,offshore_bank,offshore_bank_account,processing_records,history,allocations,attachments,local_day};
 }
 async function list(c,req,eligible){
  const q=req.query||{},page=Number(q.page||1),filter=String(q.search||'').trim().slice(0,160);
  if(!Number.isInteger(page)||page<1||page>100000)throw fail(400,'页码无效');
  const v=[req.user.id,req.productCode],conditions=['l.product_code=$2',scope()],add=(sql,value)=>{v.push(value);conditions.push(sql.replace('?', '$'+v.length));};
  if(filter)add("strpos(lower(concat_ws(' ',l.proforma_no,l.license_no,k.contract_no,k.buyer)),lower(?))>0",filter);
+ for(const [key,expression] of Object.entries({buyer_contract:"concat_ws(' ',k.buyer,k.contract_no)",clearing_agent:'l.clearing_agent',issuing_bank:'l.issuing_bank'})){
+  if(q[key])add('strpos(lower('+expression+'),lower(?))>0',B.text(q[key],key,160));
+ }
+ if(q.valid_from)add(effective+'>=?::date',B.date(q.valid_from));
+ if(q.valid_until)add('l.valid_from<=?::date',B.date(q.valid_until));
+ if(q.valid_from&&q.valid_until&&q.valid_from>q.valid_until)throw fail(400,'有效日期范围无效');
  if(q.status==='EXPIRING')conditions.push(status+"='ACTIVE' AND "+effective+"<="+today+"+(SELECT expiry_days FROM export_license_preferences WHERE product_code=$2)");
  else if(q.status){if(!['APPLYING','ACTIVE','SCHEDULED','EXPIRED','CLOSED','CANCELLED'].includes(q.status))throw fail(400,'许可证状态无效');add(status+'=?',q.status);}
  if(eligible){
   const p=req.productCode===CO?await require('./cobalt-sales.cjs').access(c,req,'plan',B.uuid(q.sales_plan_id)):await require('./allocations.cjs').planAccess(c,req,B.uuid(q.sales_plan_id));
   conditions.push(status+"='ACTIVE' AND (l.quantity-t.used-t.reserved)>0");
   add('l.contract_id=?',p.contract_id);add('l.project_id=?',p.project_id);add('l.customer_id=?',p.customer_id);
+  if(q.invoice_preview_id)add('l.id=?',B.uuid(q.invoice_preview_id));
   if(q.planned_load_date){add('l.valid_from<=?::date',B.date(q.planned_load_date));add(effective+'>=?::date',q.planned_load_date);}
  }
- const where=' WHERE '+conditions.join(' AND '),result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT 50 OFFSET '+((page-1)*50),v);
- if(eligible)return {items:result.rows};
- const count=(await c.query('SELECT count(*)::int n FROM ('+projection+where+') q',v)).rows[0].n;
- const units=(await c.query("SELECT unit_basis,unit,count(*)::int licenses,sum(quantity::numeric)::text quantity,sum(used::numeric)::text used,sum(remaining::numeric)::text remaining,sum(available::numeric)::text available FROM ("+projection+" WHERE l.product_code=$2 AND "+scope()+") q WHERE status='ACTIVE' GROUP BY unit_basis,unit ORDER BY unit_basis,unit",v.slice(0,2))).rows;
- const pref=(await c.query('SELECT expiry_days FROM export_license_preferences WHERE product_code=$1',[req.productCode])).rows[0];
- const indicators=(await c.query("SELECT count(*) FILTER(WHERE status='ACTIVE')::int active,count(*) FILTER(WHERE status='ACTIVE' AND effective_until<="+today+"+$3::int)::int expiring,count(*) FILTER(WHERE status='EXPIRED' AND open_allocations=0)::int pending_close FROM ("+projection+" WHERE l.product_code=$2 AND "+scope()+") q",[...v.slice(0,2),pref.expiry_days])).rows[0];
- return {items:result.rows,total:count,page,page_size:50,units,indicators,expiry_days:pref.expiry_days};
+ const where=' WHERE '+conditions.join(' AND ');
+ const result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT 50 OFFSET '+((page-1)*50),v);
+ if(eligible){
+  const license=result.rows[0];
+  if(q.invoice_preview_id&&license){
+   const {rows:[serial]}=await c.query('SELECT next_serial FROM export_licenses WHERE id=$1',[license.id]);
+   const {invoice}=await require('./export-license-plans.cjs').invoiceCandidate(c,{...license,...serial});
+   return {items:result.rows,invoice_preview:invoice};
+  }
+  return {items:result.rows};
+ }
+ // One aggregate pass produces the filtered count and the unfiltered indicators
+ // and per-unit totals. The page and summary share the same read transaction.
+ const pref='(SELECT expiry_days FROM export_license_preferences WHERE product_code=$2)';
+ const summarySql="SELECT GROUPING(unit_basis)=1 AS all_units,unit_basis,unit,"+
+  "count(*)::int licenses_total,count(*) FILTER(WHERE matched)::int total,count(*) FILTER(WHERE status='CLOSED')::int closed,"+
+  "count(*) FILTER(WHERE status='ACTIVE')::int active,"+
+  "count(*) FILTER(WHERE status='ACTIVE' AND effective_until<="+today+"+expiry_days)::int expiring,"+
+  "count(*) FILTER(WHERE status='EXPIRED' AND open_allocations=0)::int pending_close,"+
+  "sum(quantity) FILTER(WHERE status='ACTIVE')::text quantity,sum(used) FILTER(WHERE status='ACTIVE')::text used,"+
+  "sum(quantity-used) FILTER(WHERE status='ACTIVE')::text remaining,sum(quantity-used-reserved) FILTER(WHERE status='ACTIVE')::text available,"+
+  pref+" expiry_days FROM (SELECT l.unit_basis,l.unit,l.quantity,"+effective+" effective_until,"+status+" status,"+
+  "("+(conditions.slice(2).join(' AND ')||'true')+") matched,"+pref+" expiry_days,t.used,t.reserved,t.open_allocations FROM export_licenses l JOIN "+contracts+
+  " k ON k.id=l.contract_id AND k.product_code=l.product_code CROSS JOIN LATERAL("+totalsSQL+") t WHERE l.product_code=$2 AND "+scope()+") q "+
+  "GROUP BY GROUPING SETS((),(unit_basis,unit)) ORDER BY unit_basis,unit";
+ const summary=(await c.query(summarySql,v)).rows;
+ const {total,licenses_total,closed,expiry_days,active,expiring,pending_close}=summary.find(r=>r.all_units);
+ const units=summary.filter(r=>!r.all_units&&r.active).map(({unit_basis,unit,active:licenses,quantity,used,remaining,available})=>({unit_basis,unit,licenses,quantity,used,remaining,available}));
+ return {items:result.rows,total,page,page_size:50,units,indicators:{total:licenses_total,active,expiring,closed,pending_close},expiry_days};
 }
 async function save(c,req,id=null){
  const b=req.body,p=await contract(c,req,b?.contract_id),f=form(b,req.productCode);
@@ -88,18 +118,19 @@ async function save(c,req,id=null){
   const l=await record(c,req,id,true);
   if(l.state!=='APPLYING'||l.version!==B.version(b.version)||l.contract_id!==p.id)throw fail(409,'许可证申请已变更，或须通过审核修改');
   if((await c.query("SELECT 1 FROM export_license_actions WHERE license_id=$1 AND decision='PENDING'",[id])).rowCount)throw fail(409,'请先完成在途审核');
-  await patch(c,'export_licenses',id,{...f,version:l.version+1});
-  await B.audit(c,req,'export_license_application_edited','export_licenses',id,l,f);
+  const values={...f,...await Books.selections(c,req,p,b,l)};
+  await patch(c,'export_licenses',id,{...values,version:l.version+1});
+  await B.audit(c,req,'export_license_application_edited','export_licenses',id,Books.auditSnapshot(l),Books.auditSnapshot(values));
  }else{
   if(!p.active)throw fail(409,'销售合同已停用');
-  const values={...f,product_code:req.productCode,project_id:p.project_id,customer_id:p.customer_id,[req.productCode===CO?'co_contract_id':'cu_contract_id']:p.id,created_by:req.user.id};
+  const values={...f,...await Books.selections(c,req,p,b),product_code:req.productCode,project_id:p.project_id,customer_id:p.customer_id,[req.productCode===CO?'co_contract_id':'cu_contract_id']:p.id,created_by:req.user.id};
   const keys=Object.keys(values);
   id=(await c.query('INSERT INTO export_licenses('+keys.join(',')+') VALUES('+keys.map((_,i)=>'$'+(i+1)).join(',')+') RETURNING id',Object.values(values))).rows[0].id;
-  await B.audit(c,req,'export_license_application_created','export_licenses',id,null,values);
+  await B.audit(c,req,'export_license_application_created','export_licenses',id,null,Books.auditSnapshot(values));
  }
  return detail(c,req,id);
 }
-async function approvedChange(c,l,a){
+async function approvedChange(c,req,l,a){
  const p=a.payload;
  if(a.action==='ISSUE'){
   fields(p,['license_no','valid_from','valid_until']);
@@ -117,10 +148,10 @@ async function approvedChange(c,l,a){
   return {extension_on:on,extended_until:until};
  }
  if(a.action==='AMEND'){
-  fields(p,['quantity','clearing_agent','issuing_bank','unit_price','price_unit','amount','currency','destination','note']);
+  fields(p,['quantity','clearing_agent','issuing_bank','unit_price','price_unit','amount','currency','destination','note','processing_records']);
   if(l.state!=='ISSUED')throw fail(409,'仅已签发许可证可审核修改');
-  const result={};
-  for(const key of ['clearing_agent','issuing_bank','price_unit','destination','note'])if(Object.hasOwn(p,key))result[key]=optional(p[key],key,key==='note'?1000:key==='destination'?320:160);
+  const result=await Books.selections(c,req,l,p,l);
+  if(Object.hasOwn(p,'price_unit'))result.price_unit=optional(p.price_unit,'计价单位',64);
   for(const key of ['unit_price','amount'])if(Object.hasOwn(p,key))result[key]=p[key]?decimal(p[key],key,true):null;
   if(p.currency){const value=String(p.currency).toUpperCase();if(!/^[A-Z]{3}$/.test(value))throw fail(400,'币种无效');result.currency=value;}
   if(p.quantity){result.quantity=decimal(p.quantity,'批准数量');await assertCapacity(c,l.id,null,'0',result.quantity);}
@@ -163,7 +194,8 @@ async function requestAction(c,req,id){
  const l=await record(c,req,id,true),b=req.body;
  fields(b,['action','payload','reason','version']);
  if(!actions.includes(b.action)||!b.payload||Array.isArray(b.payload)||typeof b.payload!=='object'||l.version!==B.version(b.version))throw fail(409,'审核申请状态或版本无效');
- if(!['SETTLE','CORRECT'].includes(b.action))await approvedChange(c,l,{action:b.action,payload:b.payload});
+ if((await c.query("SELECT 1 FROM export_license_actions WHERE license_id=$1 AND decision='PENDING'",[id])).rowCount)throw fail(409,'已有申请待审批，请先完成审核');
+ if(!['SETTLE','CORRECT'].includes(b.action))await approvedChange(c,req,l,{action:b.action,payload:b.payload});
  const a=(await c.query('INSERT INTO export_license_actions(license_id,action,payload,reason,requested_by) VALUES($1,$2,$3,$4,$5) RETURNING *',[id,b.action,b.payload,B.text(b.reason,'申请原因',1000),req.user.id])).rows[0];
  await B.audit(c,req,'export_license_action_requested','export_licenses',id,null,a);
  return a;
@@ -175,11 +207,12 @@ async function review(c,req,id,actionId){
  if(!a||a.decision!=='PENDING'||a.requested_by===req.user.id||!['APPROVED','REJECTED'].includes(b.decision))throw fail(409,'审核状态无效或需要独立审核人');
  let result=null;
  if(b.decision==='APPROVED'){
-  result=['SETTLE','CORRECT'].includes(a.action)?await usage(c,l,a):await approvedChange(c,l,a);
+  result=['SETTLE','CORRECT'].includes(a.action)?await usage(c,l,a):await approvedChange(c,req,l,a);
   await patch(c,'export_licenses',id,{...(['SETTLE','CORRECT'].includes(a.action)?{}:result),version:l.version+1});
+  if(a.action==='EXTEND')result={...result,previous_effective_until:l.effective_until};
  }
  await patch(c,'export_license_actions',a.id,{decision:b.decision,reviewed_by:req.user.id,reviewed_at:new Date(),review_note:B.text(b.note,'审核意见',1000),result});
- await B.audit(c,req,'export_license_action_reviewed','export_licenses',id,{id:a.id,state:l.state},{action:a.action,decision:b.decision,result});
+ await B.audit(c,req,'export_license_action_reviewed','export_licenses',id,{id:a.id,state:l.state},{action:a.action,decision:b.decision,result:Books.auditSnapshot(result)});
  return detail(c,req,id);
 }
 function fileData(b){
@@ -192,22 +225,32 @@ function fileData(b){
 }
 function register({app,pool,permitted,csrf}){
  for(const prefix of ['/api/v1/export-permits','/api/v1/cobalt/export-permits']){
-  const mutation=(permission,fn)=>({preHandler:[permitted(read),permitted(permission),csrf],handler:req=>B.mutate(pool,req,c=>fn(c,req))});
+  const mutation=(permission,fn,check)=>({preHandler:[permitted(read),permitted(permission),csrf,async req=>{
+   if(req.params.id)await record(pool,req,req.params.id);
+   if(check)await check(req);
+  }],handler:req=>B.mutate(pool,req,c=>fn(c,req))});
   app.get(prefix,{preHandler:permitted(read)},req=>C.readTransaction(pool,c=>list(c,req,false)));
   app.get(prefix+'/options',{preHandler:permitted('loading-plan:read')},req=>C.readTransaction(pool,c=>list(c,req,true)));
   app.get(prefix+'/operations/status',{preHandler:permitted(read)},req=>C.readTransaction(pool,async c=>{
    const {method,path,key}=req.query,base=prefix.slice('/api/v1'.length),target=typeof path==='string'&&path.startsWith(base)?path.slice(base.length):null;
    const matched=target!==null&&/^\/([0-9a-f-]{36})(?:\/(?:actions(?:\/[0-9a-f-]{36})?|attachments))?$/i.exec(target);
-   const accepted=method==='POST'&&(target===''||target==='/preferences'||matched&&target.includes('/',1))||method==='PATCH'&&matched&&!target.includes('/',1);
+   const accepted=method==='POST'&&(target===''||target==='/preferences'||target==='/record-books'||matched&&target.includes('/',1))||method==='PATCH'&&matched&&!target.includes('/',1);
    if(!accepted||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw fail(400,'操作查询参数无效');
    const {rows:[receipt]}=await c.query('SELECT response FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,method+' /api/v1'+path,key]);
    const license=matched?.[1]||target===''&&receipt?.response.id;
    if(license)await record(c,req,license);
+   if(target==='/record-books'&&!req.user.permissions.includes(write))throw fail(403,'办证资料需要许可证办理权限');
    return {committed:!!receipt};
   }));
   app.get(prefix+'/contracts',{preHandler:permitted(read)},async req=>({items:(await pool.query('SELECT id,project_id,customer_id,contract_no,buyer FROM '+contracts+' l WHERE product_code=$2 AND active AND '+scope()+' ORDER BY buyer,contract_no LIMIT 500',[req.user.id,req.productCode])).rows}));
+  app.get(prefix+'/record-books',{preHandler:[permitted(read),permitted(write)]},req=>C.readTransaction(pool,async c=>Books.list(c,req,await contract(c,req,req.query.contract_id))));
+  app.post(prefix+'/record-books',{preHandler:[permitted(read),permitted(write),csrf,async req=>{await contract(pool,req,req.body?.contract_id);}]},req=>B.mutate(pool,req,async c=>{
+   const context=await contract(c,req,req.body?.contract_id);
+   if(!context.active)throw fail(409,'销售合同已停用');
+   return Books.create(c,req,context);
+  }));
   app.get(prefix+'/:id',{preHandler:permitted(read)},req=>C.readTransaction(pool,c=>detail(c,req,req.params.id)));
-  app.route({method:'POST',url:prefix,...mutation(write,(c,req)=>save(c,req))});
+  app.route({method:'POST',url:prefix,...mutation(write,(c,req)=>save(c,req),req=>contract(pool,req,req.body?.contract_id))});
   app.route({method:'PATCH',url:prefix+'/:id',...mutation(write,(c,req)=>save(c,req,req.params.id))});
   app.route({method:'POST',url:prefix+'/:id/actions',...mutation(write,(c,req)=>requestAction(c,req,req.params.id))});
   app.route({method:'POST',url:prefix+'/:id/actions/:action',...mutation(approve,(c,req)=>review(c,req,req.params.id,req.params.action))});

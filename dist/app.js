@@ -14,7 +14,30 @@ function serviceError(error){serviceReady=false;selected.clear();$('metrics').re
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 function notify(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
 function audit(action){logs.unshift({time:new Date().toLocaleString('zh-CN'),role:$('role').selectedOptions[0].textContent,action});if(logs.length>50)logs.pop();}
-function dialog(title,html){$('dialog').classList.remove('business-dialog');$('dialog-title').textContent=title;$('dialog-content').innerHTML=html;$('dialog').showModal();}
+const DialogDismiss={
+ guard:null,
+ configure(form){
+  this.guard=form?{form,initial:JSON.stringify([...new FormData(form)]),pending:false}:null;
+ },
+ async request(){
+  const box=$('dialog'),guard=this.guard;
+  if(!box.open)return;
+  if(guard?.pending)return;
+  if(guard&&JSON.stringify([...new FormData(guard.form)])!==guard.initial){
+   guard.pending=true;
+   try{
+    if(!await OperationConfirm.ask({title:I18n.language==='en'?'Discard unsaved changes?':'放弃未保存的输入？'}))return;
+   }finally{guard.pending=false;}
+   if(this.guard!==guard||!box.open)return;
+  }
+  box.close();
+ }
+};
+function dialog(title,html,{protectForm}={}){
+ $('dialog').classList.remove('business-dialog');$('dialog-title').textContent=title;$('dialog-content').innerHTML=html;
+ DialogDismiss.configure(protectForm?$('dialog-content').querySelector(protectForm):null);
+ $('dialog').showModal();
+}
 function format(n){return Tonnes.format(n,true);}
 async function populateOptions(){const options=remote?await API.request('/inventory/options'):Object.fromEntries(['location','batch','customer'].map(k=>[k,[...new Set(I.data.map(r=>r[k]))].sort()]));for(const k of (remote?['location','batch','customer','allocated_customer']:['location','batch','customer'])){const previous=$(k).value;const first=document.createElement('option');first.value='';first.textContent={location:'全部货位',batch:'全部批次',customer:'全部客户',allocated_customer:'全部分配客户'}[k];$(k).replaceChildren(first);for(const value of [...new Set([...options[k],...(previous?[previous]:[])])]){const o=document.createElement('option');o.value=value;o.textContent=value;$(k).append(o);}$(k).value=previous;}if(typeof I18n!=='undefined')I18n.apply();}
 function updateMetrics(t=I.totals(filtered)){
@@ -56,12 +79,12 @@ async function render(){
   const pages=Math.max(1,Math.ceil(totalRows/size));
   updateMetrics(metrics);$('result-count').textContent=totalRows+' 捆';$('table-subtitle').textContent='当前筛选结果 · 库存明细 · 净重单位：吨';
   const active=keys.filter(k=>f[k]).length;$('filter-summary').textContent=active?`已应用 ${active} 项筛选 · 日期按入库日期（含首尾）`:'筛选条件实时生效 · 日期按入库日期（含首尾）';
-  $('rows').innerHTML=part.length?part.map(r=>`<tr class="${selected.has(r.id)?'selected':''}"><td class="check-cell"><input type="checkbox" data-id="${esc(r.id)}" aria-label="选择 ${esc(r.id)}" ${selected.has(r.id)?'checked':''}></td><td class="bundle">${esc(r.id)}</td><td>${esc(r.batch)}</td><td>${remote?`<a class="location-chip" href="/stock-map?${esc(new URLSearchParams({project_id:r.project_id,warehouse_id:r.warehouse_id,location_code:r.location}).toString())}" title="在库存地图定位货位">${esc(r.location)}</a>`:`<span class="location-chip">${esc(r.location)}</span>`}</td><td>${r.sheets_per_bundle??'未录入'}</td><td>${esc(r.seal_no?(r.seal_no+(r.seal_valid===false?'（待确认）':'')):'未录入')}</td><td class="database-column numeric">${r.weight===null?'待检斤':esc(r.gross_weight?Tonnes.format(r.gross_weight):'历史未知')}</td><td class="numeric" title="${esc(r.weight)} 吨（完整精度）">${format(r.weight)}</td><td data-column="inventory-status">${UI.inventory(r)}</td><td data-column="business-status" data-business-status="${esc(r.business_status||'')}">${UI.status(r.business_status,'business',r.business_status||'—')}</td><td data-column="production-date" data-no-i18n>${esc(r.production_date||'—')}</td><td>${esc(r.date)}</td><td class="database-column">${esc(r.current_customer||r.allocated_customer||r.customer)}</td><td class="database-column">${esc(r.lot_no||'—')}</td><td class="database-column" data-column="sampling-status">${UI.sampling(r)}</td><td><button class="detail-button" data-detail="${esc(r.id)}">详情</button></td></tr>`).join(''):`<tr><td colspan="${inventoryColumnCount()}" class="empty"><strong>${invalid?'请检查日期范围':'没有匹配的捆包'}</strong>${invalid?'开始日期应早于或等于结束日期。':'请尝试其他搜索条件，或点击“重置筛选”。'}</td></tr>`;
+  $('rows').innerHTML=part.length?part.map(r=>`<tr class="${selected.has(r.id)?'selected':''}"><td class="check-cell"><input type="checkbox" data-id="${esc(r.id)}" aria-label="选择 ${esc(r.id)}" ${selected.has(r.id)?'checked':''}></td><td class="bundle">${esc(r.id)}</td><td>${r.historical_import?"—":esc(r.batch)}</td><td>${r.historical_import?'—':remote?`<a class="location-chip" href="/stock-map?${esc(new URLSearchParams({project_id:r.project_id,warehouse_id:r.warehouse_id,location_code:r.location}).toString())}" title="在库存地图定位货位">${esc(r.location)}</a>`:`<span class="location-chip">${esc(r.location)}</span>`}</td><td>${r.sheets_per_bundle??'未录入'}</td><td>${esc(r.seal_no?(r.seal_no+(r.seal_valid===false?'（待确认）':'')):'未录入')}</td><td class="database-column numeric">${r.weight===null?'待检斤':esc(r.gross_weight?Tonnes.format(r.gross_weight):'历史未知')}</td><td class="numeric" title="${esc(r.weight)} 吨（完整精度）">${format(r.weight)}</td><td data-column="inventory-status">${UI.inventory(r)}</td><td data-column="business-status" data-business-status="${esc(r.business_status||'')}">${UI.status(r.business_status,'business',r.business_status||'—')}</td><td data-column="production-date" data-no-i18n>${esc(r.production_date||'—')}</td><td>${esc(r.historical_import?(r.original_receipt_date||''):r.date)}</td><td class="database-column">${esc(r.current_customer||r.allocated_customer||r.customer)}</td><td class="database-column" data-no-i18n>${esc(r.lot_no||'—')}</td><td class="database-column" data-column="sampling-status">${UI.sampling(r)}</td><td>${r.historical_import?HistoricalMovements.t('历史数据导入','Imported Historical Data'):esc(r.remark||'')}</td><td>${r.historical_import?'<a class="button secondary compact" data-no-i18n href="/inventory/historical/'+esc(r.uuid)+'">'+HistoricalMovements.t('详情','Details')+'</a>':`<button class="detail-button" data-detail="${esc(r.id)}">详情</button>`}</td></tr>`).join(''):`<tr><td colspan="${inventoryColumnCount()}" class="empty"><strong>${invalid?'请检查日期范围':'没有匹配的捆包'}</strong>${invalid?'开始日期应早于或等于结束日期。':'请尝试其他搜索条件，或点击“重置筛选”。'}</td></tr>`;
   $('page-summary').textContent=totalRows?`共 ${totalRows} 条 · 第 ${(page-1)*size+1}–${Math.min(page*size,totalRows)} 条`:'共 0 条记录';
   $('previous').disabled=page<=1;$('next').disabled=page>=pages;
   const visible=[...new Set([1,page-1,page,page+1,pages])].filter(n=>n>=1&&n<=pages).sort((a,b)=>a-b);let last=0;
   $('page-buttons').innerHTML=visible.map(n=>{const gap=n-last>1?'<span class="ellipsis">…</span>':'';last=n;return gap+`<button class="page-button ${n===page?'active':''}" data-page="${n}" aria-label="第 ${n} 页" ${n===page?'aria-current="page"':''}>${n}</button>`;}).join('');
-  const checked=part.filter(r=>selected.has(r.id)).length;$('select-page').checked=part.length>0&&checked===part.length;$('select-page').indeterminate=checked>0&&checked<part.length;$('select-page').disabled=!part.length;
+  const selectable=part,checked=selectable.filter(r=>selected.has(r.id)).length;$('select-page').checked=selectable.length>0&&checked===selectable.length;$('select-page').indeterminate=checked>0&&checked<selectable.length;$('select-page').disabled=!selectable.length;
   $('selection-count').textContent=selected.size?`已选 ${selected.size} 捆`:'全部筛选结果';
   const allowed=canExport();for(const id of ['csv','excel']){$(id).disabled=!allowed||!totalRows;$(id).title=!allowed?(remote?'服务端未授予导出权限':'只读访客没有导出权限（前端演示）'):!totalRows?'暂无可导出的记录':selected.size?'导出当前筛选中所有已选捆包':'导出全部筛选结果，包含所有分页';}
   $('export-note').textContent=allowed?(selected.size?'仅导出已选捆包':'管理员可导出 · 全部筛选结果'):(remote?'当前账号无导出权限':'只读访客 · 无导出权限（演示）');
@@ -70,7 +93,7 @@ async function render(){
 function apply(){page=1;render();}
 let searchTimer;keys.forEach(k=>$(k).addEventListener(k==='search'?'input':'change',()=>{clearTimeout(searchTimer);if(remote&&k==='search')searchTimer=setTimeout(apply,200);else apply();}));
 $('filter-form').addEventListener('submit',async e=>{e.preventDefault();page=1;await render();if(remote&&!serviceReady)return;if(!$('date-error').hidden){notify('日期范围无效，请先调整日期。');return;}audit(`查询库存：${totalRows} 捆`);notify(`查询完成，共找到 ${totalRows} 捆${remote?'数据库':'演示'}库存。`);});
-$('reset').onclick=()=>{keys.forEach(k=>$(k).value=k==='status'?'CURRENT':'');selected.clear();page=1;render();notify('已重置全部筛选条件。');};
+$('reset').onclick=()=>{keys.forEach(k=>$(k).value=k==='status'?'ALL':'');selected.clear();page=1;render();notify('已重置全部筛选条件。');};
 $('page-size').onchange=()=>{size=Number($('page-size').value);page=1;render();};
 $('previous').onclick=()=>{if(page>1){page--;render();}};$('next').onclick=()=>{if(page<Math.ceil(totalRows/size)){page++;render();}};
 $('page-buttons').onclick=e=>{const b=e.target.closest('[data-page]');if(b){page=Number(b.dataset.page);render();}};
@@ -81,7 +104,10 @@ $('rows').onclick=async e=>{try{const id=e.target.closest('[data-detail]')?.data
 $('role').onchange=()=>{selected.clear();render();audit('切换演示角色');notify($('role').value==='viewer'?'已切换至只读访客：可查询、查看详情，不能导出。':'已切换至库存管理员：可查询和导出。');};
 async function download(kind){if(remote){if(!canExport()||!serviceReady)return;try{const result=await API.request('/inventory/exports',{method:'POST',binary:true,body:{format:kind,filters:filterValues(),sort:{sort,direction},selected_ids:[...selected]}});const url=URL.createObjectURL(result.blob),a=document.createElement('a');a.href=url;a.download='穆松尼_'+AppConfig.environment+'_'+result.count+'捆.'+kind;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);notify('已生成 '+result.count+' 捆的授权导出文件。');}catch(error){notify(error.message);}return;}if($('role').value!=='manager'){notify('当前角色无导出权限（演示）。');return;}if(!filtered.length){notify('没有可导出的记录。');return;}const rows=selected.size?filtered.filter(r=>selected.has(r.id)):filtered;try{const blob=new Blob([kind==='csv'?I.csv(rows):I.xlsx(rows)],{type:kind==='csv'?'text/csv;charset=utf-8':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`穆松尼_库存演示_${selected.size?'已选':'筛选结果'}_${rows.length}捆_${BusinessTime.today()}.${kind}`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);audit(`导出 ${kind.toUpperCase()}：${rows.length} 捆（演示数据）`);notify(`已生成 ${rows.length} 捆的 ${kind.toUpperCase()} 演示文件，请查看浏览器下载。`);}catch(error){console.error(error);notify('导出失败，请稍后重试。');}}
 $('csv').onclick=()=>download('csv');$('excel').onclick=()=>download('xlsx');
-$('close-dialog').onclick=()=>$('dialog').close();$('dialog').onclick=e=>{if(e.target===$('dialog')){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('dialog').close();}};
+$('close-dialog').onclick=()=>DialogDismiss.request();
+$('dialog').addEventListener('cancel',event=>{if(DialogDismiss.guard){event.preventDefault();DialogDismiss.request();}});
+$('dialog').addEventListener('close',()=>{if(!$('dialog').open)DialogDismiss.configure(null);});
+$('dialog').onclick=e=>{if(e.target===$('dialog')&&!DialogDismiss.guard){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('dialog').close();}};
 document.querySelectorAll('[data-info]').forEach(b=>b.onclick=()=>dialog(b.dataset.info+' · 功能范围',`<p>本次原型实现库存查询与导出。${esc(b.dataset.info)}列为后续模块，尚未实现。</p><p>后续接入数据库时，可在此建立相应的业务单据与审批流程。</p>`));
 $('audit-nav').onclick=async()=>{if(remote){try{const r=await API.request('/audit');dialog('服务端操作日志','<p>最近 100 条授权日志，时间由服务端记录。</p><ol>'+r.items.map(l=>'<li>'+esc(l.occurred_at)+' · '+esc(l.username||'系统')+' · '+esc(typeof AuditLabels!=='undefined'?AuditLabels.label(l.action):l.action)+'<br>'+esc(JSON.stringify(l.after_data||{}))+'</li>').join('')+'</ol>');}catch(error){notify(error.message);}return;}dialog('演示操作记录',`<p class="dialog-notice">仅保存在当前页面内存，刷新后清空。正式审计日志需由服务端持久化。</p>${logs.length?'<ol>'+logs.map(l=>`<li>${esc(l.time)} · ${esc(l.role)}<br>${esc(typeof AuditLabels!=='undefined'?AuditLabels.label(l.action):l.action)}</li>`).join('')+'</ol>':'<p>暂无操作记录。</p>'}`);};
 

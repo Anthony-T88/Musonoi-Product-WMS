@@ -1,7 +1,7 @@
 'use strict';
 const LoadingPlans={
  states:{WAITING:'待匹配',MATCHED:'已匹配',LOADING:'装车中',OUTBOUND:'已正式出库',CANCELLED:'已取消'},
- labels:{packing_list_no:'装箱单号（Packing List No.）',export_license_no:'出口许可证号（Export License No.）',transporter:'运输商（Transporter）',destination:'目的地（Destination）',vehicle_no:'车牌号（Truck Plate No.）',shipment_batch_no:'发运批次号（Shipment Batch No.）',planned_load_date:'计划装车日期'},
+ labels:{packing_list_no:'装箱单号（Packing List No.）',export_license_no:'出口许可证号（Export License No.）',transporter:'运输商（Transporter）',destination:'目的地（Destination）',vehicle_no:'车牌号（Truck Plate No.）',shipment_batch_no:'发运批次号（Shipment Lot Number）',planned_load_date:'计划装车日期'},
  can(){return Business.can('loading-plan:write');},
  context(d){return `<div class="lp-context"><span>客户<strong data-no-i18n>${esc(d.customer_name||'—')}</strong></span><span>合同号<strong data-no-i18n>${esc(d.contract_no||'—')}</strong></span><span>销售计划<strong data-no-i18n>${esc(d.sales_plan_code||'—')}</strong></span></div>`;},
  badge(s){return `<span class="lp-badge lp-${s}">${this.states[s]||esc(s)}</span>`;},

@@ -34,8 +34,8 @@ node tests/release/uiux-workflows.cjs .runtime/uiux/workflows
 
 ## 证据
 
-- coverage.json 包含提交、产品、角色、语言、分辨率、业务状态、落地地址、控件和页面问题。
+- coverage.json 包含提交、产品、角色、语言、分辨率、业务状态、落地地址、实际显示的组件和页面问题。全量检查包含 1280×800、1440×900 和 390×844，并保留原有核心宽度。页面登记见[覆盖清单](COVERAGE.md)。
 - pixel-results.json 逐图记录平均色差、显著差异像素比例、容差及结果。权限矩阵、库存金属量和正式出库净重及确认值均有稳定裁剪区域。仅出库数字区允许横向配准 10 像素，以适应左侧合成合同和车牌的字宽变化。报告保留实际偏移值。
-- workflows.json 记录实际审批、旧入口操作、键盘筛选及 Excel 下载结果。filter-390 PNG 包含完整筛选区域。
+- workflows.json 记录实际审批、旧入口操作、键盘筛选、只读预览读取失败后的恢复及 Excel 下载结果。filter-390 PNG 包含完整筛选区域。
 - exits.json 记录每个执行阶段退出码。shipment-results.json 汇总发运测试的 8 项子检查。failed PNG 留存失败页面。
 - 截图基准按图审核。另一个操作系统或浏览器版本以布局和操作门禁为准，像素对比使用匹配环境。

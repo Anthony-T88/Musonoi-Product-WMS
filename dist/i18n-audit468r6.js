@@ -11,7 +11,7 @@ Object.assign(TRANSLATIONS.en,{
  "业务明细": "Business Details",
  "填写摘要": "Entry Summary",
  "销售计划信息": "Sales Plan Information",
- "批次号与归属": "Batch Number and Ownership",
+ "批次号与归属": "Lot Number and Ownership",
  "备货捆包明细": "Preparation Bundle Details",
  "办理提示": "Guidance",
  "当前办理": "Current Actions",
@@ -541,7 +541,7 @@ Object.assign(TRANSLATIONS.en,{
  "由具有出厂权限的销售业务员或销售经理核对并办理；当前账号无办理权限。": "A Sales Operator or Sales Manager with gate-exit permission must verify and confirm exit. This account cannot perform this action.",
  "出口装箱单": "Export Packing List",
  "已生成 · 版本 ": "Generated · Revision ",
- "备货批次号": "Preparation Batch",
+ "备货批次号": "Preparation Lot Number",
  "装箱单原版预览": "Original Packing List Preview",
  "运输与装车计划资料": "Transport and Loading Plan Details",
  "单证办理说明": "Document Guidance",
@@ -570,7 +570,7 @@ Object.assign(TRANSLATIONS.en,{
  "查看出门证": "View Permit",
  "生成出门证": "Generate Permit",
  "车辆出门证与出厂确认": "Gate Permit and Physical Exit",
- "该单据保存的是旧版式。修订并重新生成后，将应用当前模板和批次编号；原版本保留。": "This permit uses the previous format. Revise it to apply the current template and batch number; the original version is retained.",
+ "该单据保存的是旧版式。修订并重新生成后，将应用当前模板和批次编号；原版本保留。": "This permit uses the previous format. Revise it to apply the current template and lot number; the original version is retained.",
  "该单据为历史归档，保留原版式和编号。模板调整适用于新生成单据。": "This archived permit retains its original format and number. Template changes apply to newly generated permits.",
  "车牌 / 司机": "Truck / Driver",
  "模板日期（项目时间）": "Permit Date (Project Time)",
@@ -1159,4 +1159,21 @@ Object.assign(TRANSLATIONS.en,{'制单岗位':'Submitter','入库审核人':'Rec
 
 Object.assign(TRANSLATIONS.en,{'到厂后建单':'Plan After Arrival','配货匹配':'Stock Matching','客户未关联':'No Customer Linked'});
 
+Object.assign(TRANSLATIONS.en,{
+ '历史出入库导入':'Historical Stock Imports','历史导入数据':'Historical Import','历史补录记账日':'Historical Posting Date',
+ '原始入库日期':'Original Receipt Date','归档仓库':'Archive Warehouse','发运日期缺失':'Shipping date is missing',
+ '发运日期字段重复':'More than one shipping date field','整张已回滚，可重试':'The entire file was rolled back. Retry.',
+ '仅系统管理员可办理历史出入库导入':'Only system administrators can import historical stock',
+ '历史单据不存在或超出授权范围':'Historical document is missing or outside your scope',
+ '历史库存不存在或超出授权范围':'Historical stock is missing or outside your scope',
+ '装箱单表头、产品或重量单位与支持模板不符':'Packing list headers, product or units do not match the supported template',
+ '缺少可识别的 PL 装箱单工作表':'Recognizable PL worksheet is missing',
+ '更多筛选与操作':'More Filters and Actions','库存地图，可滚动查看货位':'Stock map, scroll to browse locations',
+ '刷新实时数据':'Refresh Live Stock','仅显示有授权库存货位':'Show Locations with Authorized Stock Only',
+ '可输入部分批次号':'Partial lot number accepted','可输入部分捆包号':'Partial bundle number accepted',
+ '阴极铜堆场交互地图':'Copper Yard Map','点击空白位置，避让道路、设施和固定库区。':'Select an empty point clear of roads, facilities and fixed zones.',
+ '显示货位编号':'Show Location Codes','发运':'Shipped','显示列':'Show Columns',
+ '检斤时间（卢本巴希）':'Weighed at (Lubumbashi)','卢本巴希':'Lubumbashi',
+ '请使用批量装箱单导入':'Use batch packing list import'
+});
 globalThis.AuditLocale468R6=true;

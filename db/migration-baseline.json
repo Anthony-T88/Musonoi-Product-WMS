@@ -729,6 +729,38 @@
     {
       "version": "182_v472_export_licenses.sql",
       "checksum": "00cf27e5fb87e180b3cfec690120e356236fbc134b847ca80dd8772d308a3862"
+    },
+    {
+      "version": "183_v473_single_session.sql",
+      "checksum": "b0f7a409a621a0f8513a5564759ab4562b69b333ca84fafcc9656eb4298fb9f7"
+    },
+    {
+      "version": "184_v473_copper_storage_areas.sql",
+      "checksum": "58a34aaeec0917e6db4db41f39bde0bfce17298c5c8af0e7e3073d99f6ade621"
+    },
+    {
+      "version": "185_v473_license_record_books.sql",
+      "checksum": "426eb23a28ed5076b50ed9c3727ac019d39b9765c5d49d0882e566c68e27c135"
+    },
+    {
+      "version": "186_v474_preparation_plans.sql",
+      "checksum": "1e65083e748984e419122f399cbd11f8206e6e641e3668d65259dc78ebe83261"
+    },
+    {
+      "version": "187_v475_stocktake_periods.sql",
+      "checksum": "fbff7abf7f7681203c721dffd537b6b728f5b5ea551550373ffffdfcc6f082f5"
+    },
+    {
+      "version": "188_v476_document_drafts.sql",
+      "checksum": "7707877d28c9fad02e22c9aa2b360a847b99b4cbe9be281f2e138982226331f7"
+    },
+    {
+      "version": "189_v477_historical_movements.sql",
+      "checksum": "ff446ebc44999fd4f95d2c14bb994a62ab1baba0b0b69cb0c0af7f29de59cb87"
+    },
+    {
+      "version": "190_v478_historical_backfill.sql",
+      "checksum": "945660f49e236696b1487016923b4c6010ccc71c871d0da1b6ae2736cf12f852"
     }
   ]
 }

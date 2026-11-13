@@ -6,6 +6,7 @@ async function serve(req,reply,{auth,permitted,permission,systemHub,authenticate
  try{
   if(req.cookies.musonoi_session){
    if(systemHub){await auth(req);if(!systemPermissions.some(p=>req.user.permissions.includes(p)))throw Object.assign(Error('当前账号没有此页面权限'),{statusCode:403});}
+   else if(typeof permission==='function')await permission(req);
    else if(permission)await permitted(permission)(req);
    else if(authenticatedView)await auth(req);
   }

@@ -2,6 +2,8 @@
   "registry": {
     "CU_CATHODE": [
       "^\\/(?:sales-plans|preparation\\/plans)\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/(receipts|loading-plans|outbounds|stock-outbound)\\/historical$",
+      "^\\/(receipts|loading-plans|outbounds|stock-outbound|inventory)\\/historical\\/([0-9a-f-]{36})$",
       "^\\/audit$",
       "^\\/cobalt-metal$",
       "^\\/customers$",
@@ -12,7 +14,10 @@
       "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
+      "^\\/historical-movements$",
+      "^\\/historical-movements\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
+      "^\\/inventory\\/([0-9a-f-]{36})\\/archive$",
       "^\\/inventory\\/([^/]+)$",
       "^\\/inventory\\/([^/]+)\\/history$",
       "^\\/loading-plans$",
@@ -51,6 +56,8 @@
       "^\\/preparation\\/history-sampling\\/([0-9a-f-]{36})$",
       "^\\/preparation\\/new$",
       "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/preparation\\/work-plans$",
+      "^\\/preparation\\/work-plans\\/([0-9a-f-]{36})$",
       "^\\/receipts$",
       "^\\/receipts\\/([0-9a-f-]{36})$",
       "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
@@ -68,10 +75,14 @@
       "^\\/stocktaking\\/new$",
       "^\\/workbench$",
       "^\\/workbench\\/accounts$",
+      "^\\/workbench\\/historical-movements$",
+      "^\\/workbench\\/historical-movements\\/([0-9a-f-]{36})$",
       "^\\/workbench\\/permissions$"
     ],
     "CO_HYDROXIDE": [
       "^\\/(?:sales-plans|preparation\\/plans)\\/(new|[0-9a-f-]{36}\\/edit)$",
+      "^\\/(receipts|loading-plans|outbounds|stock-outbound)\\/historical$",
+      "^\\/(receipts|loading-plans|outbounds|stock-outbound|inventory)\\/historical\\/([0-9a-f-]{36})$",
       "^\\/audit$",
       "^\\/cobalt-metal$",
       "^\\/customers$",
@@ -82,7 +93,10 @@
       "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
+      "^\\/historical-movements$",
+      "^\\/historical-movements\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
+      "^\\/inventory\\/([0-9a-f-]{36})\\/archive$",
       "^\\/inventory\\/([^/]+)$",
       "^\\/inventory\\/([^/]+)\\/history$",
       "^\\/loading-plans$",
@@ -121,6 +135,8 @@
       "^\\/preparation\\/history-sampling\\/([0-9a-f-]{36})$",
       "^\\/preparation\\/new$",
       "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
+      "^\\/preparation\\/work-plans$",
+      "^\\/preparation\\/work-plans\\/([0-9a-f-]{36})$",
       "^\\/receipts$",
       "^\\/receipts\\/([0-9a-f-]{36})$",
       "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
@@ -138,6 +154,8 @@
       "^\\/stocktaking\\/new$",
       "^\\/workbench$",
       "^\\/workbench\\/accounts$",
+      "^\\/workbench\\/historical-movements$",
+      "^\\/workbench\\/historical-movements\\/([0-9a-f-]{36})$",
       "^\\/workbench\\/permissions$"
     ]
   },
@@ -221,6 +239,14 @@
       ],
       "state": "standard",
       "template": "/inventory/:id"
+    },
+    {
+      "key": "co-stock-archive",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/inventory/:id/archive"
     },
     {
       "key": "co-stock-history-alias",
@@ -403,6 +429,15 @@
       "template": "/export-licenses"
     },
     {
+      "key": "export-licenses-filtered",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "status filter",
+      "template": "/export-licenses"
+    },
+    {
       "key": "legacy-export-licenses",
       "products": [
         "CU_CATHODE",
@@ -417,7 +452,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "seven persistent record selectors",
       "template": "/export-licenses/new"
     },
     {
@@ -630,8 +665,49 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "select approved preparation plan",
       "template": "/preparation/new"
+    },
+    {
+      "key": "preparation-plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/preparation/work-plans"
+    },
+    {
+      "key": "cu-work-plan-detail",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "approved",
+      "template": "/preparation/work-plans/:id"
+    },
+    {
+      "key": "co-work-plan-detail",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "approved",
+      "template": "/preparation/work-plans/:id"
+    },
+    {
+      "key": "cu-preparation-from-plan",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "approved plan",
+      "template": "/preparation/new"
+    },
+    {
+      "key": "co-preparation-from-plan",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "approved plan",
+      "template": "/receipts/new"
     },
     {
       "key": "cu-lot",
@@ -839,15 +915,6 @@
       "template": "/outbounds"
     },
     {
-      "key": "printers",
-      "products": [
-        "CU_CATHODE",
-        "CO_HYDROXIDE"
-      ],
-      "state": "standard",
-      "template": "/outbounds"
-    },
-    {
       "key": "templates",
       "products": [
         "CU_CATHODE",
@@ -985,6 +1052,116 @@
       ],
       "state": "standard",
       "template": "/cobalt-metal"
+    },
+    {
+      "key": "historical-movements",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "ledger and upload",
+      "template": "/workbench/historical-movements"
+    },
+    {
+      "key": "historical-former-entry",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "redirected",
+      "template": "/historical-movements"
+    },
+    {
+      "key": "historical-former-record",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "redirected",
+      "template": "/historical-movements/:id"
+    },
+    {
+      "key": "cu-historical-record",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "imported",
+      "template": "/workbench/historical-movements/:id"
+    },
+    {
+      "key": "co-historical-record",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "imported",
+      "template": "/workbench/historical-movements/:id"
+    },
+    {
+      "key": "historical-receipts",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "imported list",
+      "template": "/receipts/historical"
+    },
+    {
+      "key": "historical-loading-plans",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "imported list",
+      "template": "/loading-plans/historical"
+    },
+    {
+      "key": "historical-outbounds",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "imported list",
+      "template": "/outbounds/historical"
+    },
+    {
+      "key": "historical-stock-outbound",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "imported list",
+      "template": "/stock-outbound/historical"
+    },
+    {
+      "key": "cu-historical-stock",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "historical outbound",
+      "template": "/inventory/historical/:id"
+    },
+    {
+      "key": "co-historical-stock",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "historical outbound",
+      "template": "/inventory/historical/:id"
+    },
+    {
+      "key": "cu-historical-receipt",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "historical posted receipt",
+      "template": "/receipts/historical/:id"
+    },
+    {
+      "key": "co-historical-plan",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "historical plan",
+      "template": "/loading-plans/historical/:id"
     },
     {
       "key": "stocktakes",

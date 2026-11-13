@@ -36,6 +36,7 @@ function query(user,f,stock){
  const alias=stock?'i':'p',args=[user.id],clauses=[scope(alias,alias+'.customer_id')];
  const add=(sql,value)=>{args.push(value);clauses.push(sql.replace('?', '$'+args.length));};
  for(const key of filters)if(f[key])add((key==='preparation_id'?(stock?'i':'m')+'.preparation_id':key==='sales_plan_id'?(stock?'i.sales_plan_id':'p.id'):alias+'.'+key)+'=?',B.uuid(f[key]));
+ if(f.contract_no)add(`EXISTS(SELECT 1 FROM co_sales_contracts k WHERE k.id=${alias}.contract_id AND strpos(lower(k.contract_no),lower(?))>0)`,f.contract_no);
  return {args,clauses,add,where(){return ' WHERE '+clauses.join(' AND ');}};
 }
 function stockFilter(user,f){

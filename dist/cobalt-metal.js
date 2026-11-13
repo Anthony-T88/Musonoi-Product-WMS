@@ -33,26 +33,27 @@ window.CobaltMetal={
   const text=String(value),mt=text.endsWith(' MT');
   return '<article class="v34-kpi"><span>'+esc(label)+'</span><strong>'+esc(mt?text.slice(0,-3):text)+(mt?'<small> MT</small>':'')+'</strong></article>';
  },
- overview(data,fulfilment,cards){
-  return data&&cards?this.stockCards(data.inventory,cards,fulfilment)+(data.period||data.month?this.confirmationCards(data.period||data.month):''):'';
+ overview(data,cards){
+  return data&&cards?this.stockCards(data.inventory,cards,data.period||data.month):'';
  },
- stockCards(inventory,cards,fulfilment){
+ stockCards(inventory,cards,period){
   const a=OverviewAnalysis,t=this.t,metal=this.format(inventory.estimated_mt);
   return '<div class="oa-kpis oa-kpis-cobalt">'+
    a.batchCard(t('备货作业中吨包','Bags in Preparation'),cards.preparing)+
    a.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),cards.prepared,true)+
    a.batchCard(t('装车中库存','Stock in Loading'),cards.loading,true)+
-   a.batchCard(t('已装车待出库','Loaded, Awaiting Outbound'),cards.loaded||{quantity:0,batches:0},true)+
-   a.card(t('在库库存金属量','Estimated Cobalt in Stock'),metal,metal==='—'?'':t('金属吨','MT of cobalt'),'')+
-   a.card(t('销售计划履约','Sales Fulfilment'),fulfilment==null?'—':a.number(fulfilment,1),fulfilment==null?'':'%','')+'</div>';
+   a.card(t('在库库存预估金属量','Estimated In-Stock Cobalt Metal'),metal,metal==='—'?'':t('金属吨','MT of cobalt'),t('按在库预计钴金属量汇总','Estimated cobalt metal in stock'))+
+   a.card(t('ARECOMS确认车数与钴金属量','ARECOMS Confirmed Vehicles and Cobalt'),CountValues.display(period?.completed??0)+' '+t('车','vehicles')+' / '+this.format(period?.confirmed_mt??'0'),t('金属吨','MT of cobalt'),'')+
+   a.batchCard(t('已出库重量','Outbound Weight'),cards.outbound,true)+
+   '</div>';
  },
- confirmationCards(period){
+ confirmationCards(period,withTitle=true,shipmentVehicles=period.vehicles){
   const a=OverviewAnalysis,t=this.t,vehicles=t('车','vehicles'),confirmed=this.format(period.confirmed_mt??'0');
-  return '<section class="oa-arecoms"><h2>'+t('ARECOMS金属量确认','ARECOMS Metal Confirmation')+
-   '</h2><div class="oa-kpis oa-kpis-confirmation">'+
-   a.card(t('发运车辆数','Shipment Vehicles'),period.vehicles,vehicles,'')+
-   a.card(t('ARECOMS金属量确认进度','ARECOMS Confirmation Progress'),period.completed+' '+vehicles+' / '+period.vehicles,vehicles,'')+
-   a.card(t('已确认车数与钴金属量','Confirmed Vehicles and Cobalt'),period.completed+' '+vehicles+' / '+confirmed,t('金属吨','MT of cobalt'),'')+
+  return '<section class="oa-arecoms" aria-label="'+t('ARECOMS确认汇总','ARECOMS Confirmation Summary')+'">'+
+   (withTitle?'<h2>'+t('ARECOMS金属量确认','ARECOMS Metal Confirmation')+'</h2>':'')+'<div class="oa-kpis oa-kpis-confirmation">'+
+   a.card(t('发运车辆数','Shipment Vehicles'),CountValues.display(shipmentVehicles),vehicles,'')+
+   a.card(t('ARECOMS金属量确认进度','ARECOMS Confirmation Progress'),CountValues.display(period.completed)+' '+vehicles+' / '+CountValues.display(period.vehicles),vehicles,'')+
+   a.card(t('已确认车数与钴金属量','Confirmed Vehicles and Cobalt'),CountValues.display(period.completed)+' '+vehicles+' / '+confirmed,t('金属吨','MT of cobalt'),'')+
    '</div></section>';
  },
  chart(rows){
@@ -89,7 +90,7 @@ window.CobaltMetal={
  async list(){
   const t=this.t,q=new URLSearchParams(location.search),canStock=CobaltUI.can('co:read'),canOutbound=CobaltUI.can('outbound:read');
   const outbound=canOutbound&&(q.get('view')==='outbound'||!canStock),view=outbound?'outbound':'inventory';q.set('view',view);
-  const d=await API.request(this.base+'?'+q),s=d.summary,base='/cobalt-metal';
+  const d=await API.request(this.base+'?'+q),base='/cobalt-metal';
   const fields=outbound?[['PENDING_ARECOMS',this.status('PENDING_ARECOMS')],['COMPLETED',this.status('COMPLETED')]]:
    ['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED','MATCHED','LOADING','REVIEW_PENDING','LOADED','DEPARTED','OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION'].map(k=>[k,this.stockStatus(k)]);
   const sorts=[['date',t('日期','Date')],['batch',t('备货批次','Preparation Batch')],['net',t('实物净重','Wet Net Weight')],...(outbound?[['metal',t('确认金属量','Confirmed Metal')]]:[])];
@@ -114,7 +115,7 @@ window.CobaltMetal={
    esc(this.stockStatus(r.status)),r.bags,val(r.net_mt),val(r.estimated_mt),esc(this.basis(r)),val(r.location_codes,'—'),esc(BusinessTime.display(r.received_at))
   ]))+'</tr>');
   CobaltUI.page(t('钴金属量管理','Cobalt Metal Management'),`<div class="co-metal-page">
-   <div class="oa467 co-metal-kpis" data-no-i18n>${s.stock_cards?this.stockCards(s.inventory,s.stock_cards,OverviewAnalysis.cobaltFulfilment(s.execution)):''}${s.period?this.confirmationCards(s.period):''}</div>
+   ${d.summary.period?'<div class="oa467 co-metal-kpis" data-no-i18n>'+this.confirmationCards(d.summary.period,false)+'</div>':''}
    ${tabs}<form id="co-metal-filter" class="filters co-metal-filters"><input type="hidden" name="view" value="${view}">
    <label>${t('搜索','Search')}<input type="search" name="search" maxlength="160" value="${esc(q.get('search')||'')}"
     placeholder="${t(outbound?'批次、装车单、客户、合同或车牌':'入库单、批次、袋号、铅封或货位',outbound?'Batch, order, customer, contract or truck':'Receipt, batch, bag, seal or location')}"></label>
