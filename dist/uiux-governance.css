@@ -494,6 +494,7 @@ html[data-release-ui="46"] #page-content .wms-table :is(th,td)[data-wms-column="
   white-space: nowrap;
 }
 .wms-fulfillment progress { inline-size: 100%; block-size: var(--uix-gap-sm); accent-color: var(--uix-brand); }
+html[data-release-ui="46"] #ux10-sales-table thead th a { color: var(--uix-text); }
 @media (min-width: 1180px) {
   #page-content :is(.sales-list-filter,#stocktake-list-filter) > label { flex: 1 1 var(--uix-filter-min); }
 }
@@ -512,6 +513,33 @@ html[data-release-ui="46"] #page-content .wms-table :is(th,td)[data-wms-column="
 .wms-map-controls .wms-map-actions { margin-inline-start: auto; }
 .wms-map-controls :is(.wms-map-zones,.wms-feedback,.wms-map-matches) { flex: 1 0 100%; margin: 0; }
 .wms-map-controls [hidden] { display: none; }
+#page-content .p46-grid:not(:has(> .p46-aside > :not([hidden]):not(:empty))) {
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 0;
+}
+#page-content .p46-grid > .p46-aside:not(:has(> :not([hidden]):not(:empty))) { display: none; }
+html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-region="P3"],[data-map-region="P5"]) {
+  font-size: var(--uix-section);
+  font-weight: var(--uix-weight-emphasis);
+  line-height: var(--uix-label-line);
+  white-space: normal;
+}
+.map-app .v271-temporary-label > span:not([hidden]) {
+  font-size: clamp(var(--uix-section), 1.45vw, var(--uix-title));
+  font-weight: var(--uix-weight-emphasis);
+  line-height: var(--uix-label-line);
+}
+#page-content .co2-filter #co-stock-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--uix-gap-sm);
+}
+#page-content .co2-filter #co-stock-filter > label { flex: 1 1 7.5rem; }
+#page-content .co2-filter #co-stock-filter > .co2-filter-actions { margin-inline-start: auto; }
+@media (max-width: 480px) {
+  #page-content .co2-filter #co-stock-filter > label { flex-basis: 100%; }
+}
 .wms-map-advanced { margin-block-end: var(--uix-gap); }
 .wms-map-advanced summary { color: var(--uix-brand); cursor: pointer; }
 .wms-map-reviewed :is(.stock-map-layout,.map465-grid) { position: relative; min-inline-size: 0; }

@@ -103,7 +103,7 @@ window.InventoryArchives={
   return labels[action]?this.t(...labels[action]):CobaltWorkUI.actionName(action);
  },
  async cobalt(id){
-  const t=this.t,query=new URLSearchParams(location.search),filter=new URLSearchParams(query),unit=(query.get('archive_unit')||'').slice(0,80);
+  const t=this.t,query=CobaltStock469R2.clean(location.search),filter=new URLSearchParams(query),unit=(query.get('archive_unit')||'').slice(0,80);
   const page=Math.max(1,Math.min(1000000,Number.parseInt(query.get('archive_page'),10)||1));
   filter.delete('archive_unit');filter.delete('archive_page');
   const stock=query.get('stock_state'),base='/cobalt/stock/batches/'+id;

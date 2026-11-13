@@ -158,7 +158,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.evaluate(()=>I18n.change('zh-CN'));
  await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
- assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','已装车待出库','在库库存金属量','销售计划履约']);
+ assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','已装车待出库','在库库存预估金属量','销售计划履约']);
  assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),3);
  assert.match(await page.locator('.oa-kpis-cobalt .oa-kpi').nth(4).innerText(),/\d+\.\d{5}\s*金属吨/);
  assert.equal(await page.getByText('查看待确认车辆',{exact:true}).count(),0);
@@ -193,6 +193,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await go(page,'/cobalt-metal?view=outbound&status=COMPLETED');await page.locator('#co-metal-list').waitFor();
  assert.match(await page.locator('#co-metal-list').innerText(),/0\.35641/);
  assert.equal(await page.locator('.co-metal-kpis .oa-kpis-confirmation .oa-kpi').count(),3);
+ assert.equal(await page.locator('.co-metal-kpis .oa-kpis-cobalt').count(),0);
  assert.equal(await page.locator('.sidebar [data-primary-route=cobalt-metal]').count(),1);
  for(const language of ['zh-CN','en']){
   await page.evaluate(l=>I18n.set(l),language);
@@ -238,7 +239,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await go(page,'/receipts/new?preparation_plan='+f.coUiWorkPlan);await page.locator('input[name=total_bags]').waitFor();
  assert.equal(await page.locator('input[name=production_batch],input[name=production_batch_code],select[name=production_batch_id]').count(),0);
  await go(page,'/overview');
- for(const chart of ['net','vehicles','stock']){
+ for(const chart of ['net','vehicles','prepared']){
   await page.locator('[data-oa-plot="'+chart+'"] svg').waitFor();
   for(const mode of ['line','bar']){await page.locator('[data-oa-key="'+chart+'"][data-oa-type="'+mode+'"]').click();assert.equal(await page.locator('[data-oa-plot="'+chart+'"]').getAttribute('data-chart-type'),mode);}
  }
@@ -459,7 +460,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(!await sales.page.getByText('终审通过后方可派车', {exact:false}).isVisible());
  const overviewPage='/overview';
  await go(page,overviewPage,'CU_CATHODE');
- for(const chart of ['net','vehicles','receipts','stock']){
+ for(const chart of ['net','vehicles','receipts','unprepared','prepared']){
   const host=page.locator('[data-oa-plot="'+chart+'"]');
   await host.locator('svg').waitFor();
   assert.deepEqual(await host.locator('.oa-date-tick').allTextContents(),JSON.parse(await host.getAttribute('data-rows')).map(row=>row.period));

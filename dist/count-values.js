@@ -1,6 +1,7 @@
 (function(root){
  'use strict';
- const isCount=key=>/(?:^|_)(?:bundles|bags|vehicles)$|^(?:bundle|bag|vehicle)_count$/.test(key);
+ const isCount=key=>/(?:^|_)(?:bundles|bags|vehicles|bundle_count|bag_count|vehicle_count)$/.test(key)||
+  ['stock_units','stock_unknown_units','inbound_units','inbound_unknown_weights','unknown_weights','sheets_per_bundle'].includes(key);
  function display(value){
   if(value===null||value===undefined||value==='')return '—';
   // Preserve anomalous fractional source counts for reconciliation.

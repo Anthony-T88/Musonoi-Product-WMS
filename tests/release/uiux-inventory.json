@@ -12,7 +12,10 @@
       "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
+      "^\\/historical-movements$",
+      "^\\/historical-movements\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
+      "^\\/inventory\\/([0-9a-f-]{36})\\/archive$",
       "^\\/inventory\\/([^/]+)$",
       "^\\/inventory\\/([^/]+)\\/history$",
       "^\\/loading-plans$",
@@ -84,7 +87,10 @@
       "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
+      "^\\/historical-movements$",
+      "^\\/historical-movements\\/([0-9a-f-]{36})$",
       "^\\/inventory$",
+      "^\\/inventory\\/([0-9a-f-]{36})\\/archive$",
       "^\\/inventory\\/([^/]+)$",
       "^\\/inventory\\/([^/]+)\\/history$",
       "^\\/loading-plans$",
@@ -1038,6 +1044,31 @@
       ],
       "state": "standard",
       "template": "/cobalt-metal"
+    },
+    {
+      "key": "historical-movements",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "ledger and upload",
+      "template": "/historical-movements"
+    },
+    {
+      "key": "cu-historical-record",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "imported",
+      "template": "/historical-movements/:id"
+    },
+    {
+      "key": "co-historical-record",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "imported",
+      "template": "/historical-movements/:id"
     },
     {
       "key": "stocktakes",

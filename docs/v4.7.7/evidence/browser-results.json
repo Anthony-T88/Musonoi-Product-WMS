@@ -1,0 +1,150 @@
+[
+  {
+    "name": "before Copper toolbar labels",
+    "width": 1440,
+    "labels": [
+      {
+        "text": "P3 剩余捆包堆存区",
+        "font": "13px",
+        "weight": "400",
+        "visible": true,
+        "clipped": false
+      },
+      {
+        "text": "P5 新生产捆包堆存区",
+        "font": "13px",
+        "weight": "400",
+        "visible": true,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "name": "before Copper toolbar labels",
+    "width": 1280,
+    "labels": [
+      {
+        "text": "P3 剩余捆包堆存区",
+        "font": "13px",
+        "weight": "400",
+        "visible": true,
+        "clipped": false
+      },
+      {
+        "text": "P5 新生产捆包堆存区",
+        "font": "13px",
+        "weight": "400",
+        "visible": true,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "name": "Copper canvas labels fit inside both areas",
+    "width": 1440,
+    "defaultZoom": 100,
+    "minZoom": 100,
+    "labels": [
+      {
+        "code": "P3",
+        "text": "剩余捆包堆存区\n2 捆",
+        "titleVisible": true,
+        "within": true
+      },
+      {
+        "code": "P5",
+        "text": "新生产捆包堆存区\n0 捆",
+        "titleVisible": true,
+        "within": true
+      }
+    ]
+  },
+  {
+    "name": "after Copper toolbar labels",
+    "width": 1440,
+    "labels": [
+      {
+        "text": "P3 剩余捆包堆存区",
+        "font": "18px",
+        "weight": "600",
+        "visible": true,
+        "clipped": false
+      },
+      {
+        "text": "P5 新生产捆包堆存区",
+        "font": "18px",
+        "weight": "600",
+        "visible": true,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "name": "after Copper toolbar labels",
+    "width": 1280,
+    "labels": [
+      {
+        "text": "P3 剩余捆包堆存区",
+        "font": "18px",
+        "weight": "600",
+        "visible": true,
+        "clipped": false
+      },
+      {
+        "text": "P5 新生产捆包堆存区",
+        "font": "18px",
+        "weight": "600",
+        "visible": true,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "name": "copper overview integer counts and traceable trend",
+    "zero": true,
+    "positive": true,
+    "missing": true,
+    "series": 2
+  },
+  {
+    "name": "cobalt overview integer counts and traceable trend",
+    "zero": true,
+    "positive": true,
+    "missing": true,
+    "series": 1
+  },
+  {
+    "name": "Cobalt map first visit, reload, switch, empty, occupied, zoom and bag search",
+    "locations": 2,
+    "stock": 3,
+    "stockListAgrees": true,
+    "errorFeedback": [
+      503,
+      403
+    ]
+  },
+  {
+    "name": "Cobalt stock list, filters, sort, archive and return",
+    "widths": [
+      1440,
+      1280,
+      390
+    ],
+    "removedFilters": 4,
+    "pageTwoRestored": true,
+    "testPageSize": 1
+  },
+  {
+    "name": "Cobalt metal inventory and ARECOMS entry",
+    "removedTopCards": 6
+  },
+  {
+    "name": "Historical movement interface and permission",
+    "admin": true,
+    "viewerDenied": true,
+    "widths": [
+      1440,
+      390
+    ]
+  }
+]

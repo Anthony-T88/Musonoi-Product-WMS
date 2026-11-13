@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "product": "CU_CATHODE",
+      "originalRows": 19,
+      "template": "CU-PL",
+      "sourceDate": "SHIPPING_DATE",
+      "originalImportBlockedByMissingActualDate": true,
+      "syntheticInbound": true,
+      "syntheticOutbound": true,
+      "failedWriteRolledBack": true,
+      "duplicatesAndConflicts": true,
+      "sourceRoundTrip": true,
+      "concurrent": true,
+      "permissions": true,
+      "correction": true
+    },
+    {
+      "product": "CO_HYDROXIDE",
+      "originalRows": 52,
+      "template": "CO-PL",
+      "sourceDate": "SHIPPING_DATE",
+      "originalImportBlockedByMissingActualDate": true,
+      "syntheticInbound": true,
+      "syntheticOutbound": true,
+      "failedWriteRolledBack": true,
+      "duplicatesAndConflicts": true,
+      "sourceRoundTrip": true,
+      "concurrent": true,
+      "permissions": true,
+      "correction": true
+    }
+  ],
+  "liveLedgerUnchanged": true
+}

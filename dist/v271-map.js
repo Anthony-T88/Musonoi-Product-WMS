@@ -27,7 +27,8 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
  },
  positionTemporary(){
   const canvas=$('stock-map-canvas'),svg=$('stock-map-svg');if(!canvas||!svg)return;
-  const cells=new Map(StockMap.data.locations.filter(l=>['TEMPORARY','LEFTOVER'].includes(l.map_usage)&&l.cell_code).map(l=>[l.cell_code,l]));
+  const cells=new Map(StockMap.data.cells.filter(c=>['P3','P5'].includes(c.code)).map(c=>[c.code,{map_usage:c.code==='P3'?'LEFTOVER':'TEMPORARY'}]));
+  for(const l of StockMap.data.locations)if(cells.has(l.cell_code))cells.set(l.cell_code,l);
   const bounds=canvas.getBoundingClientRect();
   for(const label of canvas.querySelectorAll('.v271-temporary-label'))if(!cells.has(label.dataset.mapCell)||!svg.querySelector('[data-map-cell="'+CSS.escape(label.dataset.mapCell)+'"]'))label.remove();
   for(const [code,location] of cells){
@@ -39,10 +40,17 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
     label.setAttribute('aria-hidden','true');label.dataset.noI18n='';
     label.innerHTML='<span></span><strong></strong>';canvas.append(label);
    }
-   label.firstElementChild.textContent=StockMap.areaName(location);
+   const title=StockMap.areaName(location);
+   label.firstElementChild.textContent=I18n.language==='en'&&rect.width<175?
+    (code==='P3'?'Leftover Bundle Storage':'New Bundle Storage'):title;
+   label.title=title;
    label.style.width=Math.max(0,Math.min(245,rect.width-8))+'px';
-   label.firstElementChild.hidden=rect.width<104||rect.height<52;
-   label.lastElementChild.textContent=rect.width<58?String(location.current.bundle_count):location.current.bundle_count+' '+ProductContext.text('捆','bundles');
+   const cell=svg.querySelector('[data-map-cell="'+CSS.escape(code)+'"]');
+   cell.classList.add('map-shared-storage');
+   cell.querySelectorAll('text').forEach(text=>text.remove());
+   label.firstElementChild.hidden=rect.width<98||rect.height<69;
+   const count=CountValues.display(location.current?.bundle_count);
+   label.lastElementChild.textContent=count==='—'||rect.width<58?count:count+' '+ProductContext.text('捆','bundles');
    label.hidden=rect.width<26||rect.height<22;
    label.style.left=(rect.left+rect.width/2-bounds.left+canvas.scrollLeft)+'px';
    label.style.top=(rect.top+rect.height/2-bounds.top+canvas.scrollTop)+'px';

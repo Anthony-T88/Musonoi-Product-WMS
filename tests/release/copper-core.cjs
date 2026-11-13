@@ -47,10 +47,14 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const prior=await api('/v34/overview?'+new URLSearchParams({project_id:f.project,from:earlier,to:earlier}));
  assert.equal(prior.window.history_unavailable,true);assert.equal(prior.chart_trend.rows[0].period,earlier);
  assert.equal(prior.chart_trend.rows[0].stock_units,null);
+ assert.equal(prior.chart_trend.rows[0].stock_unprepared_bundles,null);
+ assert.equal(prior.chart_trend.rows[0].stock_prepared_net_mt,null);
  const workingOverview=await api(overviewUrl);
  assert.equal(workingOverview.metrics.preparing.bundles,2);
  assert.equal(workingOverview.metrics.preparing.batches,1);
  assert.equal(workingOverview.chart_trend.rows[0].stock_units,workingOverview.metrics.physical.bundles);
+ assert.equal(workingOverview.chart_trend.rows[0].stock_unprepared_bundles,2);
+ assert.equal(Number(workingOverview.chart_trend.rows[0].stock_prepared_net_mt),0);
  assert.equal(workingOverview.chart_trend.rows[0].inbound_units,2);
  assert.equal(workingOverview.analysis.states.find(s=>s.key==='preparing').quantity,2);
  assert.equal(workingOverview.chart_trend.rows[0].inbound_bundles,2);
@@ -69,6 +73,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(approvedOverview.metrics.prepared_pending_outbound.batches,1);
  assert.equal(approvedOverview.metrics.prepared_pending_outbound.bundles,2);
  assert.equal(approvedOverview.metrics.preparing.bundles,0);
+ assert.equal(approvedOverview.chart_trend.rows[0].stock_unprepared_bundles,0);
+ assert.equal(Number(approvedOverview.chart_trend.rows[0].stock_prepared_net_mt),4.065);
  assert.equal(Number(approvedOverview.chart_trend.rows[0].inbound_net_weight),4.065);
  const detail=await api('/stock-map/locations/'+location.id+'?'+mapQuery);assert.equal(detail.items[0].id,number);steps.push('native sampling, repacking, location assignment and gross minus 2.5kg');
  const workbook=new(require('exceljs').Workbook)();
@@ -185,6 +191,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(loadingOverview.metrics.loading.batches,1);
  assert.equal(loadingOverview.metrics.loading.bundles,1);
  assert.equal(loadingOverview.metrics.prepared_pending_outbound.bundles,1);
+ assert.equal(Number(loadingOverview.chart_trend.rows[0].stock_prepared_net_mt),4.065);
  steps.push('Excel dispatch capacity, arrival registration, native loading plan and duplicate batch lock');
  const approvedUrl='/v26/loads/'+load.id+'/approve',approvedBody={version:load.version},approvalKey=crypto.randomUUID();
  const approvals=await Promise.all([request(approvedUrl,'site_supervisor',approvedBody,approvalKey),request(approvedUrl,'site_supervisor',approvedBody,approvalKey)]);
@@ -194,6 +201,9 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(p3.map_usage,'LEFTOVER');assert.equal(p3.p3_customer_id,customer.id);assert.equal(p3.bundle_no,otherNumber);assert.equal(Number(p3.net_weight),2.0325);assert(p3.seal_no);
  assert.equal((await c.query('SELECT count(*)::int n FROM lot_bundle_releases WHERE loading_id=$1 AND bundle_id=$2',[load.id,other.id])).rows[0].n,1);
  assert.equal((await c.query('SELECT count(*)::int n FROM lot_bundle_releases WHERE loading_id=$1 AND bundle_id=$2',[load.id,bundle.id])).rows[0].n,0);
+ const afterRelease=(await api(overviewUrl)).chart_trend.rows[0];
+ assert.equal(afterRelease.stock_unprepared_bundles,1);
+ assert.equal(Number(afterRelease.stock_prepared_net_mt),2.0325);
  const p3map=await api('/stock-map?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,region:'P3'}));
  assert.equal(p3map.cells.filter(x=>x.region_code==='P3').length,1);
  assert.equal(p3map.region_summary.find(x=>x.region_code==='P3').bundle_count,1);
@@ -263,6 +273,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const line=report.items.find(item=>item.vehicle_no===plate);assert(line);
  assert.equal(line.bundles,1);assert.equal(Number(line.net_weight),2.0325);
  const chart=(await api(overviewUrl)).chart_trend.rows[0];assert.equal(chart.vehicles,1);assert.equal(Number(chart.net_weight),2.0325);
+ assert.equal(chart.stock_unprepared_bundles,1);
+ assert.equal(Number(chart.stock_prepared_net_mt),0);
  const exported=await request('/v34/reports/export','admin',{type:'outbound',group_by:'vehicle_no',from:today,to:today,contract_id:contract.id});
  assert.equal(exported.statusCode,200,exported.body.slice(0,200));
  const exportedBook=new(require('exceljs').Workbook)();await exportedBook.xlsx.load(exported.rawPayload);

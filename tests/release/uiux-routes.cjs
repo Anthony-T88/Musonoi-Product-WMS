@@ -43,7 +43,9 @@ async function examples(client,fixture){
   coLoad:'SELECT id value FROM co_loading_orders ORDER BY created_at DESC LIMIT 1',
   coDraft:'SELECT id value FROM co_preparations WHERE status=\'DRAFT\' ORDER BY created_at DESC LIMIT 1',
   coCount:'SELECT id value FROM co_stocktakes ORDER BY created_at DESC LIMIT 1',
-  permit:'SELECT id value FROM gate_permits ORDER BY created_at DESC LIMIT 1'
+  permit:'SELECT id value FROM gate_permits ORDER BY created_at DESC LIMIT 1',
+  cuHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CU_CATHODE' AND voided_at IS NULL LIMIT 1",
+  coHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CO_HYDROXIDE' AND voided_at IS NULL LIMIT 1"
  };
  const ids={coPrep:fixture.preparation,coPrepEditable:fixture.estimatedPreparation,warehouse:fixture.warehouse,project:fixture.project};
  for(const [key,sql] of Object.entries(specs)){
@@ -59,7 +61,9 @@ async function examples(client,fixture){
  const admin=fixture.accounts.find(a=>a.role==='admin').id;
  ids.coMapDefault=(await client.query(`SELECT w.id,w.project_id FROM warehouses w WHERE EXISTS(SELECT 1 FROM user_scopes s
   WHERE s.user_id=$1 AND s.project_id=w.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id) AND s.customer_id IS NULL)
-  ORDER BY w.name LIMIT 1`,[admin])).rows[0];
+  AND EXISTS(SELECT 1 FROM co_locations l JOIN co_zones z ON z.id=l.zone_id WHERE l.warehouse_id=w.id AND l.active AND z.active)
+  ORDER BY EXISTS(SELECT 1 FROM co_stock_map_configs c WHERE c.warehouse_id=w.id) DESC,
+   (SELECT min(l.code) FROM co_locations l JOIN co_zones z ON z.id=l.zone_id WHERE l.warehouse_id=w.id AND l.active AND z.active),w.id LIMIT 1`,[admin])).rows[0];
  return ids;
 }
 
@@ -176,6 +180,9 @@ function pages(ids){
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
+ add('historical-movements','/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger and upload'});
+ add('cu-historical-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported'});
+ add('co-historical-record','/historical-movements/:id',[CO],{example:'coHistorical',state:'imported'});
  add('stocktakes','/stocktaking',BOTH,{screenshot:true,roles:['site_supervisor','production_manager']});
  add('stocktake-new','/stocktaking/new',BOTH);
  add('cu-stocktake','/stocktaking/:id',[CU],{example:'cuCount'});

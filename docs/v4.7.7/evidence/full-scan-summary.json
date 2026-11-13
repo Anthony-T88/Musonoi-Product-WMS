@@ -1,0 +1,937 @@
+{
+  "status": "PASS",
+  "mode": "full",
+  "browser": "157.0.8103.51",
+  "createdAt": "2026-11-13T06:50:53.906Z",
+  "scenarios": 127,
+  "routeRegistrations": 146,
+  "unmappedRoutes": 0,
+  "attempts": 1446,
+  "screenshots": 724,
+  "byOutcome": {
+    "rendered": 1412,
+    "denied": 34
+  },
+  "byProduct": {
+    "public": 16,
+    "CU_CATHODE": 778,
+    "CO_HYDROXIDE": 652
+  },
+  "byLanguage": {
+    "zh-CN": 723,
+    "en": 723
+  },
+  "byWidth": {
+    "390": 322,
+    "1280": 322,
+    "1366": 338,
+    "1440": 322,
+    "1920": 142
+  },
+  "byRole": {
+    "guest": 16,
+    "admin": 1242,
+    "sales_operator": 28,
+    "logistics_manager": 30,
+    "logistics_field_operator": 30,
+    "site_supervisor": 18,
+    "production_manager": 18,
+    "production_operator": 24,
+    "customer_admin": 16,
+    "sales_manager": 8,
+    "commerce_manager": 8,
+    "export_supervisor": 4,
+    "limited_role_manager": 4
+  },
+  "scenariosMeasured": [
+    {
+      "key": "login",
+      "template": "/",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "register-dialog",
+      "template": "/",
+      "state": "registration dialog",
+      "checks": 6,
+      "screenshots": 6
+    },
+    {
+      "key": "overview",
+      "template": "/overview",
+      "state": "standard",
+      "checks": 48,
+      "screenshots": 20
+    },
+    {
+      "key": "todo",
+      "template": "/overview",
+      "state": "standard",
+      "checks": 20,
+      "screenshots": 0
+    },
+    {
+      "key": "overview-detail",
+      "template": "/overview/details",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "warnings",
+      "template": "/overview/warning-settings",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "inventory",
+      "template": "/inventory",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-bag",
+      "template": "/inventory/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-bag-history",
+      "template": "/inventory/:id/history",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-stock-detail",
+      "template": "/inventory/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-stock-archive",
+      "template": "/inventory/:id/archive",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-stock-history-alias",
+      "template": "/inventory/:id/history",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "map",
+      "template": "/stock-map",
+      "state": "standard",
+      "checks": 20,
+      "screenshots": 20
+    },
+    {
+      "key": "map-move",
+      "template": "/stock-map/relocate",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "customers",
+      "template": "/customers",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "co-customer-edit",
+      "template": "/customers",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-contract-edit",
+      "template": "/customers",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master",
+      "template": "/customers/master-data",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-customers-new",
+      "template": "/customers/master-data/customers/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-customers-edit",
+      "template": "/customers/master-data/customers/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-batches-new",
+      "template": "/customers/master-data/batches/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-batches-edit",
+      "template": "/customers/master-data/batches/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-warehouses-new",
+      "template": "/customers/master-data/warehouses/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-warehouses-edit",
+      "template": "/customers/master-data/warehouses/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-yards-new",
+      "template": "/customers/master-data/yards/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-yards-edit",
+      "template": "/customers/master-data/yards/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-locations-new",
+      "template": "/customers/master-data/locations/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "master-locations-edit",
+      "template": "/customers/master-data/locations/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-contract-new",
+      "template": "/customers/contracts/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-contract-detail",
+      "template": "/customers/contracts/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-contract-edit",
+      "template": "/customers/contracts/:id/edit",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "sales",
+      "template": "/sales-plans",
+      "state": "standard",
+      "checks": 36,
+      "screenshots": 20
+    },
+    {
+      "key": "export-licenses",
+      "template": "/export-licenses",
+      "state": "standard",
+      "checks": 36,
+      "screenshots": 20
+    },
+    {
+      "key": "export-licenses-filtered",
+      "template": "/export-licenses",
+      "state": "status filter",
+      "checks": 20,
+      "screenshots": 20
+    },
+    {
+      "key": "legacy-export-licenses",
+      "template": "/export-licenses",
+      "state": "historical",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "export-license-new",
+      "template": "/export-licenses/new",
+      "state": "seven persistent record selectors",
+      "checks": 20,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-export-license",
+      "template": "/export-licenses/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-export-license",
+      "template": "/export-licenses/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-export-license-edit",
+      "template": "/export-licenses/:id/edit",
+      "state": "applying",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-export-license-edit",
+      "template": "/export-licenses/:id/edit",
+      "state": "applying",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "sales-new",
+      "template": "/sales-plans/new",
+      "state": "standard",
+      "checks": 16,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-sales-detail",
+      "template": "/sales-plans/:id",
+      "state": "approved",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-sales-edit",
+      "template": "/sales-plans/:id/edit",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-dispatch",
+      "template": "/sales-plans/:id/dispatch",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 10
+    },
+    {
+      "key": "co-sales-detail",
+      "template": "/sales-plans/:id",
+      "state": "approved",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-sales-edit",
+      "template": "/sales-plans/:id/edit",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-dispatch",
+      "template": "/sales-plans/:id/dispatch",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-sales-shipping",
+      "template": "/sales-plans/:id/shipping",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "legacy-sales-new",
+      "template": "/preparation/plans/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "legacy-sales-edit",
+      "template": "/preparation/plans/:id/edit",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "legacy-sales-shipping",
+      "template": "/preparation/plans/:id/shipping",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "receipts",
+      "template": "/receipts",
+      "state": "standard",
+      "checks": 32,
+      "screenshots": 20
+    },
+    {
+      "key": "receipt-new",
+      "template": "/receipts/new",
+      "state": "standard",
+      "checks": 24,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-receipt",
+      "template": "/receipts/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-receipt-edit",
+      "template": "/receipts/:id/edit",
+      "state": "draft",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-receipt-import",
+      "template": "/receipts/import",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-prep",
+      "template": "/receipts/:id",
+      "state": "completed",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-prep-work",
+      "template": "/receipts/:id",
+      "state": "editable",
+      "checks": 14,
+      "screenshots": 10
+    },
+    {
+      "key": "co-prep-draft",
+      "template": "/receipts/:id",
+      "state": "draft",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-prep-alias",
+      "template": "/receipts/:id/work",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "preparation",
+      "template": "/preparation",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "preparation-new",
+      "template": "/preparation/new",
+      "state": "select approved preparation plan",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "preparation-plans",
+      "template": "/preparation/work-plans",
+      "state": "standard",
+      "checks": 32,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-work-plan-detail",
+      "template": "/preparation/work-plans/:id",
+      "state": "approved",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-work-plan-detail",
+      "template": "/preparation/work-plans/:id",
+      "state": "approved",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-preparation-from-plan",
+      "template": "/preparation/new",
+      "state": "approved plan",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-preparation-from-plan",
+      "template": "/receipts/new",
+      "state": "approved plan",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-lot",
+      "template": "/preparation/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-preparation-alias",
+      "template": "/preparation/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-work-alias",
+      "template": "/preparation/:id/work",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-sampling",
+      "template": "/preparation/history-sampling",
+      "state": "retired permission",
+      "checks": 2,
+      "screenshots": 2
+    },
+    {
+      "key": "cu-sampling-detail",
+      "template": "/preparation/history-sampling/:id",
+      "state": "retired permission",
+      "checks": 2,
+      "screenshots": 2
+    },
+    {
+      "key": "cu-weighings",
+      "template": "/outbounds/weighings",
+      "state": "retired permission",
+      "checks": 2,
+      "screenshots": 2
+    },
+    {
+      "key": "cu-weigh-new",
+      "template": "/outbounds/weighings/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-weigh",
+      "template": "/outbounds/weighings/:id",
+      "state": "retired permission",
+      "checks": 2,
+      "screenshots": 2
+    },
+    {
+      "key": "arrivals",
+      "template": "/loading-plans",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-arrival",
+      "template": "/loading-plans",
+      "state": "waiting-arrival",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-arrival",
+      "template": "/loading-plans",
+      "state": "waiting-arrival",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "loading-search",
+      "template": "/loading-plans/query",
+      "state": "standard",
+      "checks": 20,
+      "screenshots": 20
+    },
+    {
+      "key": "loading-new",
+      "template": "/loading-plans/new",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-plan-group",
+      "template": "/loading-plans/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-plan-group-edit",
+      "template": "/loading-plans/:id/edit",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-plan-group-cancel",
+      "template": "/loading-plans/:id/cancel",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-plan-order-new",
+      "template": "/loading-plans/:id/orders/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-loading-plan",
+      "template": "/loading-plans/orders/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-loading-plan-edit",
+      "template": "/loading-plans/orders/:id/edit",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-loading-plan-cancel",
+      "template": "/loading-plans/orders/:id/cancel",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-loading-plan",
+      "template": "/loading-plans/orders/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "co-loading-edit",
+      "template": "/loading-plans/:id/edit",
+      "state": "draft",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-loading-execution",
+      "template": "/loading-plans/execution/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "outbounds",
+      "template": "/outbounds",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "outbound-vehicles",
+      "template": "/outbounds",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "templates",
+      "template": "/outbounds/templates",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "weight-settings",
+      "template": "/outbounds/weight-settings",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-loads",
+      "template": "/outbounds/loads",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-load-new",
+      "template": "/outbounds/loads/new",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-load-detail",
+      "template": "/outbounds/loads/:id",
+      "state": "posted",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-load-matching",
+      "template": "/outbounds/loads/:id/matching",
+      "state": "pending",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-outbound-detail",
+      "template": "/outbounds/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-outbound-detail",
+      "template": "/outbounds/:id",
+      "state": "posted",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "cu-corrections",
+      "template": "/outbounds/corrections",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-correction-detail",
+      "template": "/outbounds/corrections/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-packing-legacy",
+      "template": "/outbounds/packing-list/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-packing",
+      "template": "/outbounds/:id/packing-list",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "shipping",
+      "template": "/export-shipments",
+      "state": "standard",
+      "checks": 20,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-invoice",
+      "template": "/export-shipments/:id",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "metal",
+      "template": "/cobalt-metal",
+      "state": "standard",
+      "checks": 14,
+      "screenshots": 10
+    },
+    {
+      "key": "metal-outbound",
+      "template": "/cobalt-metal",
+      "state": "confirmed and pending",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "metal-confirmations",
+      "template": "/cobalt-metal",
+      "state": "standard",
+      "checks": 10,
+      "screenshots": 10
+    },
+    {
+      "key": "historical-movements",
+      "template": "/historical-movements",
+      "state": "ledger and upload",
+      "checks": 24,
+      "screenshots": 20
+    },
+    {
+      "key": "cu-historical-record",
+      "template": "/historical-movements/:id",
+      "state": "imported",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-historical-record",
+      "template": "/historical-movements/:id",
+      "state": "imported",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "stocktakes",
+      "template": "/stocktaking",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "stocktake-new",
+      "template": "/stocktaking/new",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "cu-stocktake",
+      "template": "/stocktaking/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "co-stocktake",
+      "template": "/stocktaking/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "adjustment",
+      "template": "/stocktaking/adjustments/:id",
+      "state": "standard",
+      "checks": 6,
+      "screenshots": 0
+    },
+    {
+      "key": "reports",
+      "template": "/reports",
+      "state": "standard",
+      "checks": 24,
+      "screenshots": 20
+    },
+    {
+      "key": "reports-outbound",
+      "template": "/reports",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "reports-inventory",
+      "template": "/reports",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "reports-monthly",
+      "template": "/reports",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "workbench",
+      "template": "/workbench",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "accounts",
+      "template": "/workbench/accounts",
+      "state": "standard",
+      "checks": 20,
+      "screenshots": 20
+    },
+    {
+      "key": "permissions",
+      "template": "/workbench/permissions",
+      "state": "standard",
+      "checks": 28,
+      "screenshots": 20
+    },
+    {
+      "key": "diagnostics",
+      "template": "/workbench/diagnostics",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "former-design-entry",
+      "template": "/workbench/design",
+      "state": "standard",
+      "checks": 12,
+      "screenshots": 0
+    },
+    {
+      "key": "audit",
+      "template": "/audit",
+      "state": "standard",
+      "checks": 24,
+      "screenshots": 20
+    }
+  ]
+}

@@ -4,6 +4,7 @@
   "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
   "entries": [
     {"entity":"preparation_plans","policy":"ADMIN_ONLY","basis":"Scoped workflow events are listed through the preparation-plan route."},
+    {"entity":"historical_movement_documents","policy":"ADMIN_ONLY","basis":"Only system administrators access the separate historical ledger and its import audit."},
     {"entity":"document_drafts","policy":"ADMIN_ONLY","basis":"Private working content is never audited. Global audit retains only the owner's form type and draft version."},
     {
       "entity": "export_licenses",

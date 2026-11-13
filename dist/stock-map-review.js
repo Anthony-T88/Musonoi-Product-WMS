@@ -46,7 +46,7 @@ const StockMapReview={
   const show=async(row)=>{
    results.hidden=true;
    feedback.textContent=t('已定位 ','Located ')+row.code;
-   if(cobalt){CobaltMapSite.focusLocation?.(row);await CobaltMap465.select(row.id);}
+   if(cobalt){if(CobaltMap465.data.site_plan)CobaltMapSite.focusLocation?.(row);else CobaltStockUI.focusMapLocation?.(row);await CobaltMap465.select(row.id);}
    else{
     const cell=StockMap.data.cells.find(c=>c.code===row.cell_code);
     if(cell&&$('stock-map-svg')){

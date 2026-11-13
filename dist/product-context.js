@@ -2,7 +2,7 @@
 window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false,
  isCopper(){return this.code==='CU_CATHODE';},
  cobaltPage(path){return !this.isCopper()&&(window.AppConfig?.cobaltMetalV471&&path==='/cobalt-metal'||window.AppConfig?.cobaltReportsV441&&path==='/reports'||window.AppConfig?.cobaltPackingV44&&/^\/outbounds\/[0-9a-f-]{36}\/packing-list$/.test(path)||window.AppConfig?.cobaltExecutionV43&&(/^\/loading-plans\/execution\/[0-9a-f-]{36}$/.test(path)||/^\/outbounds(?:\/[0-9a-f-]{36})?$/.test(path))||window.AppConfig?.cobaltLoadingV42&&/^\/loading-plans\/(?:query|new|orders\/[0-9a-f-]{36}|[0-9a-f-]{36}\/edit)$/.test(path)||window.AppConfig?.cobaltSalesV41&&/^\/(?:sales-plans(?:\/(?:new|[0-9a-f-]{36}(?:\/(?:edit|dispatch))?))?|customers|loading-plans)$/.test(path)||window.AppConfig?.cobaltStockV40&&/^\/(?:inventory(?:\/[0-9a-f-]{36}(?:\/archive)?)?|overview|stock-map)$/.test(path)||window.AppConfig?.cobaltV38&&/^\/preparation(?:\/(?:new|[0-9a-f-]{36}(?:\/work)?))?$/.test(path));},
- globalPage(path){return /^\/workbench(?:\/|$)/.test(path)||path==='/audit';},
+ globalPage(path){return /^\/(?:workbench|historical-movements)(?:\/|$)/.test(path)||path==='/audit';},
  text(zh,en){return window.I18n?.language==='en'?en:zh;},
  async init(){
   this.key='musonoi-product:'+CurrentUser.id;

@@ -13,7 +13,8 @@ const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'
 const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
  'site_supervisor/CU_CATHODE/receipts',...R.BOTH.flatMap(p=>[
-  'production_manager/'+p+'/stocktakes','production_operator/'+p+'/permissions','production_operator/'+p+'/audit','production_operator/'+p+'/export-licenses'
+  'production_manager/'+p+'/stocktakes','production_operator/'+p+'/permissions','production_operator/'+p+'/audit','production_operator/'+p+'/export-licenses',
+  'production_operator/'+p+'/historical-movements'
  ])
 ]);
 // Each exception is scoped to one role, product, state and scenario. Expired entries fail the gate.
@@ -73,8 +74,8 @@ function expectedLanding(spec,product,ids){
   'cu-invoice':'/outbounds/packing-list/'+ids.cuLoad,
   'former-design-entry':'/workbench'
  };
- replacements['preparation-new']='/preparation/work-plans?state=APPROVED';
- if(co)Object.assign(replacements,{'overview-detail':'/inventory',preparation:'/receipts','receipt-new':'/preparation/work-plans?state=APPROVED'});
+ replacements['preparation-new']=co?'/receipts/new':'/preparation/new';
+ if(co)Object.assign(replacements,{'overview-detail':'/inventory',preparation:'/receipts','receipt-new':'/receipts/new'});
  if(copper&&spec.key==='inventory')replacements.inventory='/inventory?status=CURRENT';
  if(co&&spec.key==='map'&&ids.coMapDefault)replacements.map='/stock-map?'+new URLSearchParams({project_id:ids.coMapDefault.project_id,warehouse_id:ids.coMapDefault.id});
  if(copper&&['cu-plan-group-edit','cu-plan-order-new'].includes(spec.key)&&ids.cuGroupChild){
@@ -96,6 +97,9 @@ function selectors(key,product,landing){
   'loading-search':['.r9-document-filter input','.r9-document-filter select','.r9-document-filter button'],
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],
   'metal-confirmations':['#co-metal-filter','#page-content table'],
+  'historical-movements':['#historical-upload','#historical-filter'],
+  'cu-historical-record':['#historical-source','#historical-void'],
+  'co-historical-record':['#historical-source','#historical-void'],
   'sales':['#s468-filter','#ux10-sales-table','.sales-execution-metrics'],
   'preparation-plans':['#preparation-plan-filter','#preparation-plans-table'],
   'cu-work-plan-detail':['.wms-identity .status-pill','.wms-facts'],

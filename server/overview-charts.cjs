@@ -36,15 +36,30 @@ async function stock(c,req,chart,f,cutoff,{co=false,epoch=null}={}){
  if(points.length&&scopeSupported&&epoch){
   if(co){
    records=(await c.query(`WITH points AS(SELECT * FROM jsonb_to_recordset($1) AS p(period text,cutoff timestamptz)),
-    scoped AS(SELECT m.occurred_at,m.bags_delta,m.unknown_bags_delta,m.known_net_delta_kg
+    scoped AS(SELECT m.bag_id,b.preparation_id,m.occurred_at,m.bags_delta,m.unknown_bags_delta,m.known_net_delta_kg
      FROM co_report_movements m JOIN co_bags b ON b.id=m.bag_id
      WHERE ($4::uuid IS NULL OR m.project_id=$4) AND ($5::uuid IS NULL OR m.warehouse_id=$5)
       AND ($6::uuid IS NULL OR b.preparation_id=$6)
       AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$2 AND s.project_id=m.project_id
-       AND(s.warehouse_id IS NULL OR s.warehouse_id=m.warehouse_id) AND s.customer_id IS NULL))
-    SELECT p.period,coalesce(sum(m.bags_delta),0)::int units,coalesce(sum(m.unknown_bags_delta),0)::int unknown,
-     (coalesce(sum(m.known_net_delta_kg),0)/1000)::text net
-    FROM points p LEFT JOIN scoped m ON m.occurred_at<p.cutoff WHERE p.cutoff>$3 GROUP BY p.period`,
+       AND(s.warehouse_id IS NULL OR s.warehouse_id=m.warehouse_id) AND s.customer_id IS NULL)),
+    batch_stock AS(SELECT p.period,p.cutoff,m.preparation_id,sum(m.bags_delta)::int units,
+      sum(m.unknown_bags_delta)::int unknown,sum(m.known_net_delta_kg) net
+     FROM points p JOIN scoped m ON m.occurred_at<p.cutoff WHERE p.cutoff>$3
+     GROUP BY p.period,p.cutoff,m.preparation_id HAVING sum(m.bags_delta)>0),
+    classified AS(SELECT b.*,coalesce(prior.status,first_event.status) status
+     FROM batch_stock b
+     LEFT JOIN LATERAL(SELECT e.after_data->>'status' status FROM co_work_events e
+      WHERE e.preparation_id=b.preparation_id AND e.bag_id IS NULL AND e.occurred_at<b.cutoff
+      ORDER BY e.occurred_at DESC,e.id DESC LIMIT 1) prior ON true
+     LEFT JOIN LATERAL(SELECT e.before_data->>'status' status FROM co_work_events e
+      WHERE prior.status IS NULL AND e.preparation_id=b.preparation_id AND e.bag_id IS NULL
+      ORDER BY e.occurred_at,e.id LIMIT 1) first_event ON true)
+    SELECT p.period,coalesce(sum(m.units),0)::int units,coalesce(sum(m.unknown),0)::int unknown,
+     (coalesce(sum(m.net),0)/1000)::text net,
+     CASE WHEN count(*) FILTER(WHERE m.preparation_id IS NOT NULL AND m.status IS NULL)>0
+       OR coalesce(sum(m.unknown) FILTER(WHERE m.status='COMPLETED'),0)>0 THEN NULL
+       ELSE (coalesce(sum(m.net) FILTER(WHERE m.status='COMPLETED'),0)/1000)::text END prepared_net
+    FROM points p LEFT JOIN classified m USING(period) WHERE p.cutoff>$3 GROUP BY p.period`,
     [JSON.stringify(points),req.user.id,epoch,f.project_id||null,f.warehouse_id||null,f.preparation_id||null])).rows;
   }else{
    const scope={...f};delete scope.customer_id;
@@ -52,18 +67,24 @@ async function stock(c,req,chart,f,cutoff,{co=false,epoch=null}={}){
     revisions AS(SELECT p.period,(SELECT max(id) FROM inventory_revisions WHERE posted_at<p.cutoff) revision
      FROM points p WHERE p.cutoff>$3),
     snapshots AS(SELECT r.revision,a.* FROM (SELECT DISTINCT revision FROM revisions WHERE revision IS NOT NULL) r
-     CROSS JOIN LATERAL(SELECT count(*)::int units,count(*) FILTER(WHERE s.state->>'weight' IS NULL)::int unknown,
-      coalesce(sum((s.state->>'weight')::numeric),0)::text net FROM v32_inventory_history(r.revision) s
-      WHERE s.state->>'physical_status'='IN_STOCK' AND v24_visible($2,s.state,$4)
-       AND ($5::text IS NULL OR coalesce(s.state->>'allocated_customer_id',s.state->>'dispatched_customer_id',s.state->>'customer_id')=$5)) a)
-    SELECT r.period,s.units,s.unknown,s.net FROM revisions r JOIN snapshots s USING(revision)`,
+     CROSS JOIN LATERAL(SELECT count(*)::int units,count(*) FILTER(WHERE wet IS NULL)::int unknown,
+      coalesce(sum(wet),0)::text net,count(*) FILTER(WHERE NOT prepared)::int unprepared,
+      CASE WHEN count(*) FILTER(WHERE prepared AND wet IS NULL)=0
+       THEN coalesce(sum(wet) FILTER(WHERE prepared),0)::text END prepared_net
+      FROM (SELECT (s.state->>'weight')::numeric wet,
+        coalesce(s.state->>'lot_workflow_state' IN('PREPARED','PARTIAL','FULFILLED'),false) prepared
+       FROM v32_inventory_history(r.revision) s
+       WHERE s.state->>'physical_status'='IN_STOCK' AND v24_visible($2,s.state,$4)
+        AND ($5::text IS NULL OR coalesce(s.state->>'allocated_customer_id',s.state->>'dispatched_customer_id',s.state->>'customer_id')=$5)) facts) a)
+    SELECT r.period,s.units,s.unknown,s.net,s.unprepared,s.prepared_net FROM revisions r JOIN snapshots s USING(revision)`,
     [JSON.stringify(points),req.user.id,epoch,scope,f.customer_id||null])).rows;
   }
  }
  const byPeriod=new Map(records.map(r=>[r.period,r]));
  return {...chart,stock_scope_supported:scopeSupported,stock_traceable_from:epoch,rows:chart.rows.map(row=>{
   const r=byPeriod.get(row.period);
-  return {...row,stock_units:r?.units??null,stock_unknown_units:r?.unknown??null,stock_known_net_mt:r&&(!r.units||r.units>r.unknown)?r.net:null};
+  return {...row,stock_units:r?.units??null,stock_unknown_units:r?.unknown??null,stock_known_net_mt:r&&(!r.units||r.units>r.unknown)?r.net:null,
+   stock_unprepared_bundles:r?.unprepared??null,stock_prepared_net_mt:r?.prepared_net??null};
  })};
 }
 module.exports={trend,stock};

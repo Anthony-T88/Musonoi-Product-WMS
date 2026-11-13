@@ -9,6 +9,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(url,role,body,expected=200)=>{const r=await request(url,role,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),salt=crypto.randomBytes(4).toString('hex'),customer=f.customers.CO_HYDROXIDE;
+ const trend=async preparation=>Number((await api('/cobalt/overview?'+new URLSearchParams({from:today,to:today,preparation_id:preparation}))).chart_trend.rows[0].stock_prepared_net_mt);
  const P=require('./preparation-fixture.cjs'),co='CO_HYDROXIDE',planApi=(role,product,url,body)=>api(url,role,body);
  let sales,prep,plan,matched,review,preview,licensePath;
  await check('two independent sales approvals and a dispatch arrival feed the loading plan',async()=>{
@@ -25,11 +26,13 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  await check('native preparation preserves exact ARECOMS precision and final receipt independence',async()=>{
   const intakePlan=await P.approved(planApi,co,sales.id,P.batch(co,211));
   prep=await api('/cobalt/preparations','logistics_field_operator',{preparation_plan_id:intakePlan.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:1});const base='/cobalt/preparations/'+prep.id;
+  assert.equal(await trend(prep.id),0);
   await api(base+'/submit','logistics_field_operator',{version:prep.version});let w=await api(base+'/work','logistics_field_operator');
   await api(base+'/work/save','logistics_field_operator',{batch_version:w.work.version,arecoms_quantity_mt:'1.23456789',bags:w.bags.map(b=>({bag_id:b.bag_id,version:b.version,actual_gross_kg:'650.123',seal_no:'RC2-SEAL-'+salt,sampled:true}))});w=await api(base+'/work');
   const zone=(await c.query('SELECT zone_id FROM co_locations WHERE id=$1',[f.location])).rows[0].zone_id;await c.query("SELECT set_config('musonoi.co_location_reason','Synthetic rc2 location',false)");const loc=(await c.query('INSERT INTO co_locations(zone_id,project_id,warehouse_id,code,x,y,width,height,updated_by) VALUES($1,$2,$3,$4,300,100,100,100,$5) RETURNING *',[zone,f.project,f.warehouse,'RC2-'+salt,f.accounts.find(a=>a.role==='admin').id])).rows[0];
   const place={preparation_id:prep.id,batch_version:w.work.version,selection:'ALL',target_location_id:loc.id,target_version:loc.version,source:'PREPARATION'},pv=await api('/cobalt/stock/place-preview','site_supervisor',place);await api('/cobalt/stock/place','site_supervisor',{...place,preview_hash:pv.preview_hash});await api(base+'/work/submit','logistics_field_operator',{batch_version:w.work.version});w=await api(base+'/work');await api(base+'/work/approve','site_supervisor',{batch_version:w.work.version});let p=await api(base);await api(base+'/production-approve','production_manager',{version:p.version});
   const raw=(await c.query('SELECT arecoms_quantity_mt::text v FROM co_work_batches WHERE preparation_id=$1',[prep.id])).rows[0].v;assert.equal(raw,'1.23456789');assert.equal((await api('/cobalt/stock/batches/'+prep.id)).batch.arecoms_display_mt,'1.23457');
+  assert.equal(await trend(prep.id),0.647123);
   const s=await api('/cobalt/stock/summary');assert.equal(s.completed_arecoms_mt,'1.23456789');assert.equal(s.confirmed_arecoms_batches,1);assert(s.unconfirmed_arecoms_batches>=1);
   const report=await api('/cobalt/reports');assert.equal(report.inventorySummary.confirmed_arecoms_mt,'1.23456789');assert(report.inventorySummary.arecoms_unconfirmed_batches>=1);
   const exported=await request('/cobalt/stock/export');assert.equal(exported.statusCode,200);const book=new(require('exceljs').Workbook)();await book.xlsx.load(exported.rawPayload);const text=JSON.stringify(book.worksheets[0].getSheetValues());assert(text.includes('1.23457'));assert(text.includes('1.23456789'));
@@ -83,6 +86,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const base='/cobalt/execution/orders/'+matched.order.id,act=async(action,role,extra={})=>{const d=await api(base);await api(base+'/'+action,role,{...(action==='start'?{order_version:d.order.version}:{version:d.execution.version}),note:'Synthetic rc2 '+action,...extra});};
   await api('/cobalt/packing/orders/'+matched.order.id,'admin',undefined,409);
   await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
+  assert.equal(await trend(prep.id),0.647123);
   assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);const d=await api(base),key=crypto.randomUUID(),body={version:d.execution.version,note:'Synthetic rc3 final approval'};
   const approvals=await Promise.all([request(base+'/production-approve','production_manager',body,key),request(base+'/production-approve','production_manager',body,key)]);
   assert.equal(approvals[0].statusCode,200,approvals[0].body);
@@ -90,6 +94,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.deepEqual(approvals[0].json(),approvals[1].json());
   assert.equal((await c.query('SELECT count(*)::int n FROM co_outbounds WHERE order_id=$1',[matched.order.id])).rows[0].n,1);
   assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
+  assert.equal(await trend(prep.id),0);
   await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET reason='tamper' WHERE id=$1",[review.id]));
  });
  await check('sales confirmation alone adds posted cobalt net weight to fulfilment',async()=>{

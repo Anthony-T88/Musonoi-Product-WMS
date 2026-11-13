@@ -26,3 +26,5 @@
 .oa467 .oa-plot-empty{position:absolute;inset:38% 14px auto;text-align:center;color:var(--oa-muted);pointer-events:none;font-size:12px}
 
 .oa467 .oa-kpi .oa-batch-value strong{font-size:clamp(13px,1.25vw,19px);line-height:1.55;white-space:normal;}
+.oa-stock-trends { min-inline-size: 0; }
+.oa-stock-trends > .oa-chart + .oa-chart { margin-block-start: var(--uix-gap-sm); }
