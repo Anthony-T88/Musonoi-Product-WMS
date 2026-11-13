@@ -1429,7 +1429,7 @@
     },
     {
       "path": "dist/stock-map-review.js",
-      "sha256": "6c2148e0d8d88edf29ef97182980414bc2b27d5ed7dcb4d44901a9c58d70881d"
+      "sha256": "fcee06b4c3ca35c6963a1464c2be00e6e875d06d57c49e26c1f98d8dfd805f11"
     },
     {
       "path": "dist/stock-map.css",
@@ -2493,7 +2493,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "c72b436092292ca7059e3ac2ad36eb126e668ef92e8de3fe7ab1d97c3c6cb05f"
+      "sha256": "1dcd03390c9bd9b48dc3f273ab26243b61a7961c418d1aa69a10eecc78d3ebd8"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

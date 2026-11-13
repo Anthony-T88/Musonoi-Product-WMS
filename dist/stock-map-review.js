@@ -4,7 +4,7 @@ const StockMapReview={
  copperLabel(code){
   const t=this.t;
   return ({P1:t('P1库区','P1 Zone'),P2:t('P2库区','P2 Zone'),P4:t('P3库区','P3 Zone'),
-   P3:t('剩余捆包堆存区','Leftover Bundle Storage'),P5:t('新生产捆包堆存区','New Production Bundle Storage')})[code]||code;
+   P3:t('剩余捆包堆存区','Left Over Bundles Stock Area'),P5:t('新生产捆包堆存区','New Production Bundles Stock Area')})[code]||code;
  },
  copperMetrics(root){
   const t=this.t,d=StockMap.data,o=d.occupancy,metrics=root.querySelector('#stock-map-metrics');

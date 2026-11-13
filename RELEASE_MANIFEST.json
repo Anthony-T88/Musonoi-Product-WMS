@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 93559,
-      "sha256": "c32934d0ca9b78c7f295d3d03c19ac31dc0e414136054196ca7213f63583606c"
+      "sha256": "0cf00bdc3c98a3c3d4d693f667957b2833a4dfa84c2f9b602a7c32c535a0e2e4"
     },
     {
       "path": "VALIDATION.json",
@@ -1823,8 +1823,8 @@
     },
     {
       "path": "dist/stock-map-review.js",
-      "bytes": 10743,
-      "sha256": "6c2148e0d8d88edf29ef97182980414bc2b27d5ed7dcb4d44901a9c58d70881d"
+      "bytes": 10752,
+      "sha256": "fcee06b4c3ca35c6963a1464c2be00e6e875d06d57c49e26c1f98d8dfd805f11"
     },
     {
       "path": "dist/stock-map.css",
@@ -3913,8 +3913,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "bytes": 44424,
-      "sha256": "c72b436092292ca7059e3ac2ad36eb126e668ef92e8de3fe7ab1d97c3c6cb05f"
+      "bytes": 44432,
+      "sha256": "1dcd03390c9bd9b48dc3f273ab26243b61a7961c418d1aa69a10eecc78d3ebd8"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

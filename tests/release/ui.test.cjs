@@ -279,9 +279,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert.match(await page.locator('.v27-map-toolbar #v33-map-move').getAttribute('href'),/^\/stock-map\/relocate\?/);
  assert(await page.locator('.stock-map-layout + #v271-map-labels .v47-map-temporary h3').isVisible());
  assert.equal(await page.locator('#stock-map-svg g[data-map-cell="P3"]').count(),1);
- assert.match(await page.locator('#stock-map-svg g[data-map-cell="P5"]').getAttribute('aria-label'),/新生产捆包堆存区|New Production Bundle Storage/);
+ assert.match(await page.locator('#stock-map-svg g[data-map-cell="P5"]').getAttribute('aria-label'),/新生产捆包堆存区|New Production Bundles Stock Area/);
  await page.evaluate(()=>I18n.set('en'));
- await page.locator('#stock-map-svg g[data-map-cell="P5"][aria-label^="New Production Bundle Storage"]').waitFor();
+ await page.locator('#stock-map-svg g[data-map-cell="P5"][aria-label^="New Production Bundles Stock Area"]').waitFor();
  await page.evaluate(()=>I18n.set('zh-CN'));
  await page.locator('#stock-map-canvas [data-map-cell="P1-01"]').press('Enter');
  await page.locator('.stock-map-layout.v27-has-detail #stock-map-detail h2').first().waitFor();
