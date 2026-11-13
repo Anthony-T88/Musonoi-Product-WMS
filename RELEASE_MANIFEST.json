@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 93559,
-      "sha256": "bc3de798c32a3ed06ac34d02e8a8a7eea87a0ffdb6c21f40c345813d66f3f1af"
+      "sha256": "c32934d0ca9b78c7f295d3d03c19ac31dc0e414136054196ca7213f63583606c"
     },
     {
       "path": "VALIDATION.json",
@@ -3678,8 +3678,8 @@
     },
     {
       "path": "server/warehouse-templates.cjs",
-      "bytes": 4583,
-      "sha256": "89095c640fe9d517ee65868432dbd8bfd145e2d7eb452ebf8ea7dfadc640d842"
+      "bytes": 4560,
+      "sha256": "0b40bec6e15d62bbfcae4912337723a579e5270d7e8f461ff51e448ef263d401"
     },
     {
       "path": "server/weighing.cjs",
@@ -4038,8 +4038,8 @@
     },
     {
       "path": "tests/release/v478-history.cjs",
-      "bytes": 16632,
-      "sha256": "19c1417baa96a8be25a017a73cbffe7b1ddcb7f59a36b2bd19c5f02027216db5"
+      "bytes": 16722,
+      "sha256": "8b3ef59c2c5be4d3fba23389ab279925b42d54b8414777907b9f411638c79862"
     }
   ],
   "fixedBaseline": "3e8f0d6d1a667828c1ba9f4cd42441af0d74eaea"

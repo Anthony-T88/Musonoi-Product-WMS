@@ -2305,7 +2305,7 @@
     },
     {
       "path": "server/warehouse-templates.cjs",
-      "sha256": "89095c640fe9d517ee65868432dbd8bfd145e2d7eb452ebf8ea7dfadc640d842"
+      "sha256": "0b40bec6e15d62bbfcae4912337723a579e5270d7e8f461ff51e448ef263d401"
     },
     {
       "path": "server/weighing.cjs",
@@ -2593,7 +2593,7 @@
     },
     {
       "path": "tests/release/v478-history.cjs",
-      "sha256": "19c1417baa96a8be25a017a73cbffe7b1ddcb7f59a36b2bd19c5f02027216db5"
+      "sha256": "8b3ef59c2c5be4d3fba23389ab279925b42d54b8414777907b9f411638c79862"
     }
   ]
 }

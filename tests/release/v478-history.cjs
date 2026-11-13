@@ -86,6 +86,7 @@ async function main(){
    assert.deepEqual(entry.documents.map(row=>row.event_order),[1,2,3,4]);
    const archived=await request(admin,co?'/cobalt/stock?stock_state=OUTBOUND&bag='+unit:'/inventory?status=OUTBOUND&search='+unit,undefined,product);
    assert.equal(archived.total,1);assert(archived.items[0].historical_import);
+   if(!co)assert.equal(archived.items[0].date,null);
    const active=await request(admin,co?'/cobalt/stock?stock_state=IN_STOCK&bag='+unit:'/inventory?status=CURRENT&search='+unit,undefined,product);
    assert.equal(active.total,0);
    const key=co?archived.items[0].preparation_id:archived.items[0].uuid;
@@ -126,7 +127,7 @@ async function main(){
   const hidden=await overview(CU,scoped);
   assert.equal(hidden.historical_imports,null);
   const bag='TEST-CO-UNIT-'+tag;
-  const exportStock=await fetch(origin+'/api/v1/cobalt/stock/export?'+new URLSearchParams({stock_state:'ALL',bag}),{
+  const exportStock=await fetch(origin+'/api/v1/cobalt/stock/export?'+new URLSearchParams({stock_state:'ALL',bag,language:'zh-CN'}),{
    headers:{...admin,origin,'x-product-code':CO}
   });
   assert.equal(exportStock.status,200);
@@ -134,7 +135,7 @@ async function main(){
   const exported=XLSX.utils.sheet_to_json(excel.Sheets['袋级明细']);
   assert.equal(exported.length,1);
   assert.equal(exported[0]['袋号'],bag);
-  assert.equal(exported[0]['来源'],'历史导入数据');
+  assert.equal(exported[0]['来源']??exported[0].Source,'历史导入数据');
   assert.equal(exported[0]['发运日期'],'2020-03-05');
   const repeated=await submit(admin,withTokens.filter((_,i)=>i===0||i===2));
   assert.deepEqual(repeated.results.map(row=>row.status),['ALREADY_IMPORTED','ALREADY_IMPORTED']);
