@@ -1,2 +1,2 @@
 'use strict';
-globalThis.ClientRelease=Object.freeze({version:'4.8.0',displayVersion:'4.8.0',revision:'4.8.0-ui1'});
+globalThis.ClientRelease=Object.freeze({version:'4.8.1',displayVersion:'4.8.1',revision:'4.8.1-ui1'});

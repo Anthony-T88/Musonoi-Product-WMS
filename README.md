@@ -1,6 +1,8 @@
-# Musonoi Product WMS 4.8.0
+# Musonoi Product WMS 4.8.1
 
 Runtime baseline: PostgreSQL migration 190. Upgrade the existing database after verifying a full backup and a migration dry run.
+
+[V4.8.1 release and update guide](docs/v4.8.1/Release.md) | [Chinese and English user guide](docs/v4.8.1/Musonoi-WMS-V4.8.1-User-Guide-ZH-EN.docx)
 
 [UI design standard](docs/uiux/DESIGN.md) | [UI coverage](docs/uiux/COVERAGE.md) | [UI quality checks](docs/uiux/QUALITY.md)
 

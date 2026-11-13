@@ -1242,6 +1242,51 @@
       "template": "/reports"
     },
     {
+      "key": "report-center-shipping",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "shipping",
+      "template": "/reports"
+    },
+    {
+      "key": "report-center-movement",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "movement",
+      "template": "/reports"
+    },
+    {
+      "key": "report-center-balance",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "balance",
+      "template": "/reports"
+    },
+    {
+      "key": "report-center-stocktake",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "stocktake",
+      "template": "/reports"
+    },
+    {
+      "key": "report-center-sales",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "sales",
+      "template": "/reports"
+    },
+    {
       "key": "workbench",
       "products": [
         "CU_CATHODE",
