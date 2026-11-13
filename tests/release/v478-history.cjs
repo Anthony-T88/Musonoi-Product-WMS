@@ -5,7 +5,7 @@ const {randomUUID}=require('node:crypto');
 const {Client}=require('pg');
 const XLSX=require('xlsx');
 const E=require('./environment.cjs');
-const f=require('../../.runtime/v478-test-config.json');
+const f=require(require('node:path').join(E.root,process.env.WMS_480_HISTORY_FIXTURE||'.runtime/v478-test-config.json'));
 const CU='CU_CATHODE',CO='CO_HYDROXIDE',origin=f.appCfg.origin;
 const path='/historical-movements/batch';
 const preview=(user,files)=>request(user,path+'/preview',{files});
@@ -42,7 +42,7 @@ function workbook(product,{name,unit,date='2020-03-05',receipt,duplicateDate}){
  return {file_name:name+'.'+bookType,file_base64:XLSX.write(book,{bookType,type:'buffer'}).toString('base64'),warehouse_id:f.warehouse};
 }
 async function main(){
- assert.equal(origin,'http://127.0.0.1:4191');
+ assert.match(origin,/^http:\/\/127\.0\.0\.1:419[12]$/);
  assert.equal(f.appCfg.environment,'test');assert.match(f.database,/^musonoi_audit_[0-9a-f]{10}_test$/);
  const db=new Client(E.options(f.database));await db.connect();
  try{
@@ -136,7 +136,8 @@ async function main(){
   assert(flows.rows.some(row=>row.bundle_no==='TEST-CU-UNIT-'+tag&&row.type==='历史导入出库'));
   for(const [product,url,body,lot] of [
    [CU,'/v34/reports/export',{type:'outbound',group_by:'lot_no',from:'2020-03-05',to:'2020-03-05'},cuLot.lot_no],
-   [CO,'/cobalt/reports/export',{filters:coReport.filters,signature:coReport.signature},coLot.preparation_batch_no]
+   [CO,'/cobalt/reports/export',{filters:coReport.filters,signature:coReport.signature},coLot.preparation_batch_no],
+   [CU,'/v34/reports/export',{comprehensive:true,from:'2020-03-05',to:'2020-03-05'},cuLot.lot_no]
   ]){
    const response=await fetch(origin+'/api/v1'+url,{method:'POST',headers:{...admin,origin,'x-product-code':product,
     'content-type':'application/json','idempotency-key':randomUUID()},body:JSON.stringify(body)});
@@ -223,11 +224,11 @@ async function main(){
    assert(!blocked.importable&&blocked.rows[0].flags.includes('UNIT_CONFLICT')&&blocked.rows[0].conflicts.length);
   }finally{await testApp.close();}
   const proof={field:field.map(({product_code,totals,shipping_date})=>({product_code,units:totals.quantity,shipping_date})),
-   mixedBatch:true,missingInvalidAmbiguousDates:true,inventoryAndDocumentTrace:true,legacyIdentifierConflict:true,liveStockConflict:true,historicalOverviewScopeAndDates:true,cobaltHistoricalExport:true,
+   mixedBatch:true,missingInvalidAmbiguousDates:true,inventoryAndDocumentTrace:true,legacyIdentifierConflict:true,liveStockConflict:true,historicalOverviewScopeAndDates:true,cobaltHistoricalExport:true,historicalReportAndExcel:true,
    permissionDenial:true,customerScopeDenial:true,repeatAndConcurrent:true,transactionRollbackAndRetry:true,legacyLedgerReused:true,liveLedgersUnchanged:true};
   fs.mkdirSync('.runtime/v478-evidence',{recursive:true});
   fs.writeFileSync('.runtime/v478-evidence/history.json',JSON.stringify(proof,null,2)+'\n');
   console.log(JSON.stringify(proof));
  }finally{await db.end();}
 }
-main().catch(error=>{console.error(error.stack);process.exitCode=1;});
+main().catch(error=>{console.error(error.stack,error.cause||'');process.exitCode=1;});

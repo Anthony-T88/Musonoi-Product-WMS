@@ -51,7 +51,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
   await sales.selectOption({index:1});
   assert(await form.locator('[name=customer]').inputValue());
-  const batch=P.batch(product,87),batchField=form.locator('[name=batch_no]');
+  const suffix=product==='CU_CATHODE'?20+Math.floor(Math.random()*79):100+Math.floor(Math.random()*899);
+  const batch=P.batch(product,suffix),batchField=form.locator('[name=batch_no]');
   await form.locator('button.primary').click();
   assert.equal(await batchField.getAttribute('aria-invalid'),'true');
   assert(await form.locator('.wms-field-error:not([hidden])').first().isVisible());
@@ -97,8 +98,16 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await reviewer.page.locator('#operation-confirm-accept').click();
   await reviewer.page.getByText(/Synthetic browser return reason/).waitFor();
   await planner.page.reload();await ready(planner.page);
-  await planner.page.locator('[data-plan-action=submit]').click();
-  await planner.page.locator('#operation-confirm-accept').click();
+  await planner.page.getByText('Synthetic browser return reason',{exact:false}).first().waitFor();
+  const resubmit=planner.page.locator('[data-plan-action=submit]');
+  await resubmit.focus();
+  await resubmit.press('Enter');
+  const confirmResubmit=planner.page.locator('#operation-confirm-accept');
+  await confirmResubmit.click().catch(async error=>{
+   const state=await planner.page.evaluate(()=>({title:document.title,submit:!!document.querySelector('[data-plan-action=submit]'),
+    modal:!!document.querySelector('dialog[open]'),session:AppSignedIn,loading:Router.rendering}));
+   throw Error(JSON.stringify({state,errors}),{cause:error});
+  });
   await planner.page.locator('[data-plan-action=submit]').waitFor({state:'detached'});
   await reviewer.page.reload();await ready(reviewer.page);
   await reviewer.page.locator('[data-plan-action=approve]').click();

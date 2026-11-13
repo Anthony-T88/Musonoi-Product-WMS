@@ -2145,7 +2145,7 @@
     },
     {
       "path": "server/professional-reports.cjs",
-      "sha256": "d3ad67757e3126bbe0d0ffd944669ed0d03801ba6db4576a36bc6d6f6ff949de"
+      "sha256": "6b5ef667c795f9eba625832336db6994eb8f1ab94840d73984599de06ce1527e"
     },
     {
       "path": "server/professional-stocktake.cjs",
@@ -2493,7 +2493,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "14ee1af35edcd37d722671c2cf4e9f995a7f9824f2af0f12a6bfe6914f57d035"
+      "sha256": "394fe2c4f059820772e92e1f7339080d69e6f761c61b3013fc160507bd810d86"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
@@ -2593,7 +2593,7 @@
     },
     {
       "path": "tests/release/v478-history.cjs",
-      "sha256": "cccb948b06d5ff5ca0d297a2729260259a34c221f2ed53ab0c8759b36bb2542f"
+      "sha256": "66402797587dca3e593c27dfe3d240042ba82477b13fab82e038897a29db0883"
     }
   ]
 }
