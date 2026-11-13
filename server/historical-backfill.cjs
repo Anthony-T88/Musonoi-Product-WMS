@@ -214,6 +214,7 @@ async function overview(c,req,chart,filters){
   FROM historical_outbound_units h WHERE h.product_code=$2 AND ${scope('h')}
    AND ($3::uuid IS NULL OR h.project_id=$3) AND ($4::uuid IS NULL OR h.warehouse_id=$4)
    AND ($5::uuid IS NULL OR h.customer_id=$5)
+   AND ($9='' OR strpos(lower(h.source_facts->>'contract_no'),lower($9))>0)
   GROUP BY h.source_id,h.shipping_date,h.original_receipt_date,h.source_facts
  ), flow AS (
   SELECT shipping_date AS movement_date,'OUTBOUND' direction,units,net_mt,
@@ -226,7 +227,7 @@ async function overview(c,req,chart,filters){
  ) SELECT (SELECT max(shipping_date)::text FROM documents) latest_shipping_date,
   coalesce((SELECT jsonb_agg(buckets ORDER BY period,direction) FROM buckets),'[]'::jsonb) rows`,
  [req.user.id,req.productCode,filters.project_id||null,filters.warehouse_id||null,filters.customer_id||null,
-  chart.from,chart.observed_through<chart.to?chart.observed_through:chart.to,period]);
+  chart.from,chart.observed_through<chart.to?chart.observed_through:chart.to,period,filters.contract_no||'']);
  return result.latest_shipping_date?result:null;
 }
 

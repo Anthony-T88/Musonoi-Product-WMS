@@ -559,6 +559,34 @@ html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-r
   touch-action: none;
 }
 .map465 .site-plan-svg [data-location-label] { pointer-events: none; }
+.map465 .co-site-readable-canvas.co-site-overview #co-map-svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+.map-app #stock-map-metrics.v479-copper-metrics {
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,10rem),1fr));
+}
+html[data-release-ui="46"] #business-page > .page-heading {
+  display:flex; justify-content:flex-start; align-items:center; flex-wrap:wrap;
+}
+#business-page > .page-heading > #page-back { order: -1; flex: 0 0 auto; margin:0; }
+.overview-filter-box .v479-overview-fields {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  flex: 1 1 40rem;
+  min-inline-size: 0;
+  gap: var(--uix-gap-sm);
+}
+.overview-filter-box form.v479-overview-form { display: flex; flex-wrap: wrap; align-items: end; gap: var(--uix-gap-sm); }
+.overview-filter-box .v479-overview-form .wms-filter-actions { margin-inline-start: auto; }
+.overview-filter-box .v479-overview-form :is(input,select,.button) { min-block-size: var(--uix-control); box-sizing: border-box; }
+.overview-filter-box .v479-overview-fields label { min-inline-size:0; margin:0; }
+@media(max-width:820px){
+  .overview-filter-box .v479-overview-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:380px){
+  .overview-filter-box .v479-overview-fields { grid-template-columns: minmax(0,1fr); }
+}
 html[data-release-ui="46"] #page-content .wms-map-reviewed .wms-map-advanced :is(#stock-map-filter,#co-stock-filter).wms-map-filter-row {
   display: flex;
   flex-wrap: wrap;

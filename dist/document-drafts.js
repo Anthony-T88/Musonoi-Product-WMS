@@ -114,6 +114,7 @@ window.DocumentDrafts={
     form_key:form.id,route:record.route,fields:this.collect(form),version:record.version
    }});
    feedback.textContent=this.t('草稿已保存','Draft saved');
+   this.listCache=null;this.refresh();
    ProductContext.dirty=false;
   }catch(error){feedback.textContent=I18n.translate(error.message,true);}
   finally{button.disabled=false;}
@@ -150,63 +151,119 @@ window.DocumentDrafts={
   form.querySelector('[data-draft-feedback]').textContent=this.t('已载入草稿','Draft loaded');
   ProductContext.dirty=false;
  },
- async browse(scope){
-  const {items}=await API.request(this.api()+'?'+new URLSearchParams({module:scope}));
-  const title=this.t('我的草稿','My Drafts');
-  dialog(title,items.length?'<div class="business-table"><table><thead><tr><th>'+this.t('单据类型','Document Type')+
-   '</th><th>'+this.t('最近保存','Last Saved')+'</th><th>'+this.t('操作','Actions')+'</th></tr></thead><tbody>'+items.map(row=>{
-    const type=this.forms[row.form_key];
-    return '<tr><td>'+esc(type?this.t(type[0],type[1]):row.form_key)+'</td><td>'+esc(BusinessTime.display(row.updated_at))+
-     '</td><td><div class="wms-filter-actions"><button class="button secondary" data-draft-open="'+esc(row.id)+'">'+this.t('继续填写','Continue')+
-     '</button><button class="button danger-outline" data-draft-close="'+esc(row.id)+'">'+this.t('删除草稿','Delete Draft')+'</button></div></td></tr>';
-   }).join('')+'</tbody></table></div>':'<p>'+this.t('当前模块没有已保存的草稿','No saved drafts for this module')+'</p>');
-  for(const button of $('dialog-content').querySelectorAll('[data-draft-open]'))button.onclick=async()=>{
-   button.disabled=true;
-   try{
-    const record=await API.request(this.api()+'/'+button.dataset.draftOpen);
-    this.resume=record;
-    $('dialog').close();
-    await Router.go(record.route);
-    if(record.form_key==='preparation-plan-form'){
-     const id=location.pathname.split('/')[3];
-     PreparationPlans.form(id?await API.request(PreparationPlans.api()+'/'+id):null);
-    }else if(record.form_key==='pending-load-edit'&&$('edit-pending-load')){
-     $('edit-pending-load').click();
-    }else if(record.form_key==='v27-observation'){
-     const bundle=record.fields.find(([key])=>key==='recorded_bundle_no')?.[3];
-     const trigger=bundle?[...document.querySelectorAll('[data-v27-edit-count]')].find(entry=>entry.dataset.v27EditCount===bundle):$('v27-record');
-     if(!trigger)throw Error(this.t('该盘点记录当前不可编辑','This stocktake observation is no longer editable'));
-     await trigger.onclick();
-    }else if(!document.getElementById(record.form_key)){
-     throw Error(this.t('请在此单据打开原填写入口以继续草稿','Open the original entry form on this document to resume'));
-    }else{
-     const form=document.getElementById(record.form_key);
-     for(let container=form.closest('details');container;container=container.parentElement?.closest('details'))container.open=true;
-    }
-   }catch(error){this.resume=null;notify(I18n.translate(error.message,true));}
-   finally{button.disabled=false;}
-  };
-  for(const button of $('dialog-content').querySelectorAll('[data-draft-close]'))button.onclick=async()=>{
-   if(!await OperationConfirm.ask({title:this.t('删除这份草稿？','Delete this draft?')}))return;
-   try{
-    const row=items.find(item=>item.id===button.dataset.draftClose);
-    await API.request(this.api()+'/'+row.id,{method:'DELETE',body:{version:row.version}});
-    $('dialog').close();await this.browse(scope);
-   }catch(error){notify(I18n.translate(error.message,true));}
-  };
+ lists:{
+  '/receipts':['#op-table,#co-intake-table,.business-table table','v26-receipt','receipt-editor','co-create','co469-work-draft'],
+  '/preparation':['#op-table,#ux10-preparation-list,.business-table table','v26-preparation','v261-create'],
+  '/preparation/work-plans':['#preparation-plans-table','preparation-plan-form'],
+  '/loading-plans':['#cu-arrivals-table,#co-arrivals-table','yard-arrival-form','co-arrival-form'],
+  '/loading-plans/query':['#co-loading-plans,.business-table table','single-plan-form','co-loading-form','co-loading-documents'],
+  '/outbounds':['#op-table,#co-execution-list,.business-table table','v26-load','lp-load-form','pending-load-edit','cu-departure-draft','co-execution-departure','shipping-generate','co-packing-generate'],
+  '/stocktaking':['#stocktake-list-table','v27-count-create','v33-count-create','co-count-create','v27-observation','co-count-record'],
+  '/export-licenses':['#export-license-table','export-license-application','permit-extension-form'],
+  '/sales-plans':['#co-sales-table,#ux10-sales-table','ux10-plan-form','co-sales-plan-form']
+ },
+ async open(button){
+  button.disabled=true;
+  try{
+   const record=await API.request(this.api()+'/'+button.dataset.draftOpen);
+   this.resume=record;
+   await Router.go(record.route);
+   if(record.form_key==='preparation-plan-form'){
+    const id=location.pathname.split('/')[3];
+    PreparationPlans.form(id?await API.request(PreparationPlans.api()+'/'+id):null);
+   }else if(record.form_key==='pending-load-edit'&&$('edit-pending-load')){
+    $('edit-pending-load').click();
+   }else if(record.form_key==='v27-observation'){
+    const bundle=record.fields.find(([key])=>key==='recorded_bundle_no')?.[3];
+    const trigger=bundle?[...document.querySelectorAll('[data-v27-edit-count]')].find(entry=>entry.dataset.v27EditCount===bundle):$('v27-record');
+    if(!trigger)throw Error(this.t('该盘点记录当前不可编辑','This stocktake observation is no longer editable'));
+    await trigger.onclick();
+   }else if(!document.getElementById(record.form_key)){
+    throw Error(this.t('请在此单据打开原填写入口以继续草稿','Open the original entry form on this document to resume'));
+   }else{
+    const form=document.getElementById(record.form_key);
+    for(let container=form.closest('details');container;container=container.parentElement?.closest('details'))container.open=true;
+   }
+  }catch(error){this.resume=null;notify(I18n.translate(error.message,true));}
+  finally{button.disabled=false;}
+ },
+ async remove(row){
+  if(!await OperationConfirm.ask({title:this.t('删除这份草稿？','Delete this draft?')}))return;
+  try{
+   await API.request(this.api()+'/'+row.id,{method:'DELETE',body:{version:row.version}});
+   this.listCache=null;
+   this.refresh();
+  }catch(error){notify(I18n.translate(error.message,true));}
+ },
+ draftRow(table,headers,row){
+  const entry=table.tBodies[0].insertRow(0),type=this.forms[row.form_key];
+  entry.dataset.documentDraftRow=row.id;
+  const title=this.t(type[0],type[1]),date=OperationWorkspace.date(row.updated_at);
+  const status=headers.findIndex(h=>/状态|status|workflow/i.test(h.textContent));
+  const created=headers.findIndex(h=>/创建日期|创建时间|^created/i.test(h.textContent));
+  const action=headers.findIndex(h=>/^(操作|Actions?)$/i.test(h.textContent.trim()));
+  headers.forEach((header,index)=>{
+   const cell=entry.insertCell();
+   cell.dataset.label=header.textContent.trim();
+   if(header.dataset.wmsColumn)cell.dataset.wmsColumn=header.dataset.wmsColumn;
+   cell.textContent='—';
+   if(index===0){
+    cell.dataset.noI18n='';
+    cell.textContent=row.display_no||title+' · '+row.id.slice(0,8);
+    if(row.display_no){const label=document.createElement('small');label.textContent=title;cell.append(label);}
+   }
+   if(index===created)cell.textContent=date;
+   if(index===status)cell.innerHTML=UI.status('DRAFT','approval',this.t('草稿','Draft'));
+   if(index===(action<0?headers.length-1:action)){
+    cell.innerHTML='<div class="wms-row-actions">'+(status<0?UI.status('DRAFT','approval',this.t('草稿','Draft')):'')+
+     '<button type="button" class="button secondary compact" data-draft-open="'+esc(row.id)+'">'+this.t('继续填写','Continue')+'</button>'+
+     '<button type="button" class="button danger-outline compact" data-draft-close="'+esc(row.id)+'">'+this.t('删除草稿','Delete Draft')+'</button></div>';
+    cell.querySelector('[data-draft-open]').onclick=event=>this.open(event.currentTarget);
+    cell.querySelector('[data-draft-close]').onclick=()=>this.remove(row);
+   }
+  });
+ },
+ async list(){
+  const route=location.pathname,spec=this.lists[route],root=$('page-content');
+  const q=new URLSearchParams(location.search);
+  const state=q.get('state')||q.get('status'),view=q.get('view');
+  const departureList=route==='/outbounds'&&view==='departures';
+  const documentList=route==='/outbounds'&&view==='shipments';
+  if(!spec||q.has('workflow')||Number(q.get('page')||1)>1||
+   state&&!['ALL','DRAFT'].includes(state.toUpperCase())||q.get('work_status')||q.get('document_status')||
+   route==='/loading-plans'&&(q.has('vehicle_id')||q.has('tab')&&q.get('tab')!=='arrivals')||
+   route==='/outbounds'&&view==='printers'||route==='/export-licenses'&&view==='legacy')return;
+  const [selector,...keys]=departureList?['#cu-departures-table,#co-departures-table','cu-departure-draft','co-execution-departure']:
+   documentList?['#co-execution-list,.business-table table','shipping-generate','co-packing-generate']:spec;
+  const table=root.querySelector(selector);
+  if(!table?.tBodies[0]||!table.tHead?.rows[0]||$('business-page').hidden)return;
+  const language=I18n.language,context=ProductContext.code+'|'+location.href+'|'+Router.sequence;
+  if(this.listCache?.context!==context){
+   const request=API.request(this.api()+'?'+new URLSearchParams({module:this.scope()}));
+   this.listCache={context,request};
+  }
+  const {items}=await this.listCache.request;
+  if(context!==ProductContext.code+'|'+location.href+'|'+Router.sequence||!table.isConnected||I18n.language!==language)return;
+  const search=(q.get('search')||'').trim().toLowerCase();
+  const rows=items.filter(row=>keys.includes(row.form_key)&&
+   (!q.get('created_date')||OperationWorkspace.date(row.updated_at)===q.get('created_date'))&&
+   (!search||[row.display_no,...this.forms[row.form_key].slice(0,2)].some(value=>value?.toLowerCase().includes(search))));
+  const signature=language+'|'+rows.map(row=>row.id+':'+row.version).join('|');
+  if(table.dataset.documentDraftSignature===signature)return;
+  table.dataset.documentDraftSignature=signature;
+  const body=table.tBodies[0],headers=[...table.tHead.rows[0].cells];
+  body.querySelectorAll('[data-document-draft-row]').forEach(row=>row.remove());
+  const empty=body.rows.length===1&&body.rows[0].cells[0].colSpan>1?body.rows[0]:null;
+  if(empty)empty.hidden=rows.length>0;
+  if(rows.length){
+   delete table.dataset.s46Empty;
+   if(table.nextElementSibling?.matches('.s46-empty-container'))table.nextElementSibling.remove();
+  }
+  for(const row of rows.reverse())this.draftRow(table,headers,row);
  },
  refresh(){
   for(const form of document.querySelectorAll('#page-content form,#dialog-content form'))if(this.forms[form.id])this.bind(form);
-  const scope=this.scope(),header=$('business-page')?.querySelector('.page-heading');
-  const permissions={preparation:['allocation:write','co:create','co:work-edit','plan:read'],receipts:['receipt:write'],outbounds:['load:write','load:execute','document:generate'],
-   'loading-plans':['loading-plan:write','vehicle-arrival:write'],stocktaking:['stocktake:write'],'export-licenses':['export-license:write'],'sales-plans':['plan:write']};
-  const available=permissions[scope]?.some(permission=>Business.can(permission))&&header&&!$('business-page').hidden;
-  const current=$('module-document-drafts');
-  if(!available){current?.remove();return;}
-  if(current)return;
-  const button=document.createElement('button');button.id='module-document-drafts';button.type='button';button.className='button secondary';
-  button.textContent=this.t('我的草稿','My Drafts');button.onclick=()=>this.browse(this.scope()).catch(error=>notify(error.message));
-  header.append(button);
+  this.list().catch(error=>{if(error.status!==401&&error.status!==403)console.warn('Document draft list:',error.message);});
  },
  install(){
   if(this.installed)return;
@@ -221,7 +278,7 @@ window.DocumentDrafts={
      const current=await request(path);
      if(current.version!==pending.record.version)throw Error(this.t('草稿已在另一窗口更新，请重新打开','Draft changed in another window. Reopen it first.'));
      const result=await request(url,{...options,idempotencyKey:pending.record.id});
-     try{await request(path,{method:'DELETE',body:{version:current.version}});}
+     try{await request(path,{method:'DELETE',body:{version:current.version}});this.listCache=null;}
      catch{notify(this.t('业务单据已保存，草稿清理待重试','Document saved. Draft cleanup can be retried.'));}
      return result;
     })().catch(error=>{if(this.pending===pending)this.pending=null;throw error;});

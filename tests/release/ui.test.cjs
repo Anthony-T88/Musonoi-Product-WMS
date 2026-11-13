@@ -158,8 +158,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.evaluate(()=>I18n.change('zh-CN'));
  await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
- assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','已装车待出库','在库库存预估金属量','销售计划履约']);
- assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),3);
+ assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','在库库存预估金属量','ARECOMS确认车数与钴金属量','已出库库存','销售计划履约']);
+ assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),0);
  assert.match(await page.locator('.oa-kpis-cobalt .oa-kpi').nth(4).innerText(),/\d+\.\d{5}\s*金属吨/);
  assert.equal(await page.getByText('查看待确认车辆',{exact:true}).count(),0);
  assert.equal(await page.getByRole('heading',{name:'月度发运金属量统计',exact:true}).count(),1);
@@ -170,14 +170,14 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await route.fulfill({response,json:data});
  });
  await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
- assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),3);
+ assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),0);
  await page.unroute(legacyOverview);
  await go(page,'/inventory/'+f.preparation);
  assert.deepEqual(await page.locator('#co-stock-filter > label').evaluateAll(labels=>labels.slice(0,4).map(label=>label.querySelector('select').name)),['location_id','stock_state','phase','zone_id']);
  assert.equal(await page.locator('#co-stock-filter details').count(),0);
  await page.locator('.co2-filter').screenshot({path:path.join(E.runtime,'cobalt-inventory-filters.png')});
- const headers=await page.evaluate(()=>I18n.language)==='en'?['Batch No.','Location','Bags','Net Weight (MT)','Stock Status','Workflow Status','Receipt Date','Sampling Status','Actions']:
-  ['批次号','货位','吨包数','净重（MT）','库存状态','业务状态','入库日期','取样状态','操作'];
+ const headers=await page.evaluate(()=>I18n.language)==='en'?['Batch No.','Location','Bags','Net Weight (MT)','Stock Status','Workflow Status','Receipt Date','Sampling Status','Remarks','Actions']:
+  ['批次号','货位','吨包数','净重（MT）','库存状态','业务状态','入库日期','取样状态','备注','操作'];
  assert.deepEqual(await page.locator('.co2-batches thead th').allTextContents(),headers);
  assert.match(await page.locator('.co2-batches tbody td:nth-child(4)').first().innerText(),/\d+\.\d{4}\b/);
  assert.equal(await page.locator('.co2-batches tbody td:nth-child(8)').first().evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
@@ -274,16 +274,14 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('#filter-form').screenshot({path:path.join(E.runtime,'copper-inventory-filters.png')});
  await go(page,'/stock-map?project_id='+f.project+'&warehouse_id='+f.warehouse,'CU_CATHODE');
  await page.locator('.stock-map-layout #stock-map-canvas').waitFor();
- await page.locator('.wms-map-advanced > summary').click();
- assert.equal(await page.locator('.map-filter-box').evaluate(el=>el.tagName),'SECTION');
- for(const field of ['project_id','warehouse_id','customer_id','contract_no','region','location_id','status','preparation_batch','bundle_no','mode','only_occupied'])assert(await page.locator('#stock-map-filter [name='+field+']').isVisible(),field);
- for(const field of ['sample','preparation','outbound'])assert.equal(await page.locator('#stock-map-filter [name='+field+']').count(),0);
+ assert.equal(await page.locator('.wms-map-advanced,#stock-map-filter').count(),0);
+ assert.equal(await page.locator('#stock-map-metrics article').count(),5);
  assert.match(await page.locator('.v27-map-toolbar #v33-map-move').getAttribute('href'),/^\/stock-map\/relocate\?/);
  assert(await page.locator('.stock-map-layout + #v271-map-labels .v47-map-temporary h3').isVisible());
  assert.equal(await page.locator('#stock-map-svg g[data-map-cell="P3"]').count(),1);
- assert.match(await page.locator('#stock-map-svg g[data-map-cell="P5"]').getAttribute('aria-label'),/新生产捆包堆存区|New Production Bundles Stock Area/);
+ assert.match(await page.locator('#stock-map-svg g[data-map-cell="P5"]').getAttribute('aria-label'),/新生产捆包堆存区|New Production Bundle Storage/);
  await page.evaluate(()=>I18n.set('en'));
- await page.locator('#stock-map-svg g[data-map-cell="P5"][aria-label^="New Production Bundles Stock Area"]').waitFor();
+ await page.locator('#stock-map-svg g[data-map-cell="P5"][aria-label^="New Production Bundle Storage"]').waitFor();
  await page.evaluate(()=>I18n.set('zh-CN'));
  await page.locator('#stock-map-canvas [data-map-cell="P1-01"]').press('Enter');
  await page.locator('.stock-map-layout.v27-has-detail #stock-map-detail h2').first().waitFor();

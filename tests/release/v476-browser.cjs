@@ -1,11 +1,11 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),{pathToFileURL}=require('node:url');
 const {Client}=require('pg'),{chromium}=require('playwright'),E=require('./environment.cjs');
-const fixture=require(path.join(E.root,'.runtime/v476-test-config.json')),origin=fixture.appCfg.origin;
-const CU='CU_CATHODE',CO='CO_HYDROXIDE',output=path.join(E.root,'.runtime/v476-evidence');
+const fixture=require(path.join(E.root,process.env.WMS_TEST_FIXTURE||'.runtime/v476-test-config.json')),origin=fixture.appCfg.origin;
+const CU='CU_CATHODE',CO='CO_HYDROXIDE',output=path.join(E.root,process.env.WMS_TEST_EVIDENCE||'.runtime/v476-evidence');
 const results=[];
 async function main(){
- assert.equal(origin,'http://127.0.0.1:4187');
+ assert.match(origin,/^http:\/\/127\.0\.0\.1:(4187|4191|4392)$/);
  assert.equal(fixture.appCfg.environment,'test');
  assert.match(fixture.database,/^musonoi_audit_[0-9a-f]{10}_test$/);
  assert.equal(new URL(fixture.appCfg.databaseUrl).pathname,'/'+fixture.database);
@@ -121,8 +121,10 @@ async function main(){
    await form.getByText('草稿已保存',{exact:true}).waitFor();
    await shot(page,'preparation-draft-saved');
    await page.reload();await ready();
-   await page.locator('#module-document-drafts').click();
-   await page.locator('[data-draft-open]').first().click();
+   assert.equal(await page.locator('#module-document-drafts').count(),0);
+   const row=page.locator('#preparation-plans-table [data-document-draft-row]').filter({hasText:'RMM-CU-2097-84'});
+   await row.getByText('草稿',{exact:true}).waitFor();
+   await row.locator('[data-draft-open]').click();
    await form.getByText('已载入草稿',{exact:true}).waitFor();
    assert.equal(await form.locator('[name=batch_no]').inputValue(),'RMM-CU-2097-84');
    const select=form.locator('[name=sales_plan_id]');
@@ -297,7 +299,6 @@ async function main(){
   });
   await check('stocktake drafts reopen the copper dialog and restore the cobalt bag row',async()=>{
    const draftOpen=async id=>{
-    await page.locator('#module-document-drafts').click();
     await page.locator('[data-draft-open="'+id+'"]').click();
    };
    const save=async(form,key)=>{
@@ -358,7 +359,6 @@ async function main(){
     const response=await saved;assert.equal(response.status(),200,await response.text());
     const draft=await response.json();
     await go(product,'/loading-plans?tab=arrivals');
-    await page.locator('#module-document-drafts').click();
     await page.locator('[data-draft-open="'+draft.id+'"]').click();
     await driver.waitFor();
     await page.waitForFunction(formId=>document.querySelector(formId+' [name="driver_name"]')?.value==='Synthetic driver draft',selector);

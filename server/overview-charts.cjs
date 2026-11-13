@@ -37,11 +37,11 @@ function addHistory(chart,history){
 }
 async function stock(c,req,chart,f,cutoff,{co=false,epoch=null}={}){
  const points=closingPoints(chart,cutoff);
- const scopeSupported=!co||(!['customer_id','contract_id','sales_plan_id','status'].some(key=>f[key])&&(await c.query(
+ const scopeSupported=co?(!['contract_no','customer_id','contract_id','sales_plan_id','status'].some(key=>f[key])&&(await c.query(
   `SELECT EXISTS(SELECT 1 FROM warehouses w JOIN user_scopes s ON s.project_id=w.project_id
    WHERE s.user_id=$1 AND s.customer_id IS NULL AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id)
     AND ($2::uuid IS NULL OR w.project_id=$2) AND ($3::uuid IS NULL OR w.id=$3)) AS ok`,
-  [req.user.id,f.project_id||null,f.warehouse_id||null])).rows[0].ok);
+  [req.user.id,f.project_id||null,f.warehouse_id||null])).rows[0].ok):true;
  if(co&&!epoch)epoch=(await c.query('SELECT activated_at FROM co_report_epoch WHERE singleton')).rows[0]?.activated_at;
  let records=[];
  if(points.length&&scopeSupported&&epoch){
@@ -86,9 +86,10 @@ async function stock(c,req,chart,f,cutoff,{co=false,epoch=null}={}){
         coalesce(s.state->>'lot_workflow_state' IN('PREPARED','PARTIAL','FULFILLED'),false) prepared
        FROM v32_inventory_history(r.revision) s
        WHERE s.state->>'physical_status'='IN_STOCK' AND v24_visible($2,s.state,$4)
-        AND ($5::text IS NULL OR coalesce(s.state->>'allocated_customer_id',s.state->>'dispatched_customer_id',s.state->>'customer_id')=$5)) facts) a)
+        AND ($5::text IS NULL OR coalesce(s.state->>'allocated_customer_id',s.state->>'dispatched_customer_id',s.state->>'customer_id')=$5)
+        AND ($6='' OR strpos(lower(s.state->>'contract_no'),lower($6))>0)) facts) a)
     SELECT r.period,s.units,s.unknown,s.net,s.unprepared,s.prepared_net FROM revisions r JOIN snapshots s USING(revision)`,
-    [JSON.stringify(points),req.user.id,epoch,scope,f.customer_id||null])).rows;
+    [JSON.stringify(points),req.user.id,epoch,scope,f.customer_id||null,f.contract_no||''])).rows;
   }
  }
  const byPeriod=new Map(records.map(r=>[r.period,r]));

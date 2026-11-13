@@ -11,7 +11,7 @@ async function copper(c,x,states){
     AND v24_visible($1,jsonb_build_object('project_id',r.project_id,'customer_id',r.customer_id,'warehouse_id',l.warehouse_id,
      'location_id',rl.location_id,'yard_id',l.yard_id,'batch_id',rl.batch_id),$4)`,
   [x.req.user.id,x.w.flow_start,x.w.end,x.f])).rows;
- return events.map(e=>{const s=byId.get(e.bundle_id),prepared=!!s&&(['PREPARED','PARTIAL','FULFILLED'].includes(s.lot_workflow_state)||s.physical_status==='OUTBOUND');
+ return events.filter(e=>!x.f.contract_no||String(byId.get(e.bundle_id)?.contract_no||'').toLowerCase().includes(x.f.contract_no.toLowerCase())).map(e=>{const s=byId.get(e.bundle_id),prepared=!!s&&(['PREPARED','PARTIAL','FULFILLED'].includes(s.lot_workflow_state)||s.physical_status==='OUTBOUND');
   const weight=prepared?s.weight??null:null;
   return {date:e.date,net_weight:weight,bundles:weight==null?1:0,prepared,unknown_weights:weight==null?1:0};
  });
@@ -20,6 +20,7 @@ async function cobalt(c,req,q,w,asOf){
  asOf=new Date(Math.min(+new Date(asOf),Date.parse(w.to+'T00:00:00+02:00')+86400000)).toISOString();
  const values=[req.user.id,w.from,w.to,asOf],where=[`p.status='RECEIVED'`,`i.received_at >= ($2::date::timestamp AT TIME ZONE 'Africa/Lubumbashi')`,`i.received_at < LEAST((($3::date+1)::timestamp AT TIME ZONE 'Africa/Lubumbashi'),$4::timestamptz)`,`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id) AND(s.customer_id IS NULL OR s.customer_id=sp.customer_id))`];
  for(const key of ['project_id','warehouse_id','customer_id','contract_id','preparation_id'])if(q[key]){values.push(q[key]);where.push((key==='preparation_id'?'p.id':['project_id','warehouse_id'].includes(key)?'p.'+key:'sp.'+key)+'=$'+values.length);}
+ if(q.contract_no){values.push(q.contract_no);where.push(`EXISTS(SELECT 1 FROM co_sales_contracts k WHERE k.id=sp.contract_id AND strpos(lower(k.contract_no),lower($${values.length}))>0)`);}
  if(q.status){values.push(q.status);where.push(`coalesce(e.state,CASE WHEN o.id IS NOT NULL THEN 'MATCHED' ELSE work.status END)=$${values.length}`);}
  // Retain the last known in-stock weight when the same bag has since shipped.
  // Ledger history before its baseline is deliberately unknown.

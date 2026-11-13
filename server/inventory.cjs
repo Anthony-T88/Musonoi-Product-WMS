@@ -17,17 +17,17 @@ const stockCategorySql=`CASE
  ELSE 'other'
  END`;
 const sorts={production_date:'v.production_date',business_status:"CASE WHEN "+preparingSql+" THEN '"+preparingLabel+"' ELSE v.business_status END",id:'v.id',batch:'v.batch',location:'v.location',customer:"coalesce(v.current_customer,v.customer)",weight:'v.weight',gross_weight:'v.gross_weight',packaging_weight:'v.packaging_weight',contract_no:'v.contract_no',status:'v.status',sample:samplingSql,date:'v.date',allocated_customer:"coalesce(v.current_customer,v.customer)",receipt_code:'v.receipt_code',confirmed_at:'v.confirmed_at'};
-const legacySelection=`SELECT v.*,false AS historical_import,NULL::date AS shipping_date,NULL::text AS historical_packing_no,
+const legacySelection=`SELECT v.*,false AS historical_import,NULL::date AS shipping_date,NULL::text AS historical_packing_no,NULL::date AS original_receipt_date,
  (SELECT physical_status FROM bundles b WHERE b.id=v.uuid) AS physical_status FROM inventory_view v`;
 const outboundSelection=legacySelection+`
  UNION ALL
- SELECT v.*,true,h.shipping_date,h.packing_list_no,'OUTBOUND'
+ SELECT v.*,true,h.shipping_date,h.packing_list_no,h.original_receipt_date,'OUTBOUND'
  FROM historical_outbound_units h
  CROSS JOIN LATERAL jsonb_populate_record(NULL::inventory_view,jsonb_build_object(
   'uuid',h.id,'id',h.unit_id,'project_id',h.project_id,'warehouse_id',h.warehouse_id,'customer_id',h.customer_id,
   'customer',h.source_facts->>'customer','location','','weight',h.net_kg/1000,
   'original_weight',h.net_kg/1000,'gross_weight',h.gross_kg/1000,'status','已出库','sample','',
-  'date',h.shipping_date::text,'contract_no',h.source_facts->>'contract_no','lot_no',h.source_facts->>'batch_no',
+  'date',h.original_receipt_date::text,'contract_no',h.source_facts->>'contract_no','lot_no',h.source_facts->>'batch_no',
   'business_status','已出库','workflow_detail','已出库','inventory_state_code','OUTBOUND',
   'current_customer',h.source_facts->>'customer','sheets_per_bundle',h.sheets_count,'seal_no',h.seal_no,'data_kind','HISTORICAL',
   'vehicle_no',h.source_facts->>'truck',

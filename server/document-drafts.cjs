@@ -157,7 +157,12 @@ function register({app,pool,auth,csrf}){
  for(const prefix of ['/api/v1/document-drafts','/api/v1/cobalt/document-drafts']){
   app.get(prefix,{preHandler:auth},async req=>{
    const keys=Object.keys(specs).filter(key=>can(req,specs[key])&&(!req.query.module||specs[key].module===req.query.module));
-   const {rows}=await pool.query('SELECT id,form_key,route,version,updated_at FROM document_drafts WHERE actor_id=$1 AND product_code=$2 AND closed_at IS NULL AND form_key=ANY($3::text[]) ORDER BY updated_at DESC,id LIMIT 100',
+   const {rows}=await pool.query(`SELECT id,form_key,route,version,updated_at,
+    (SELECT left(item->>3,160) FROM jsonb_array_elements(fields) WITH ORDINALITY field(item, position)
+     WHERE item->>0 IN ('batch_no','preparation_batch_no','document_no','invoice_no','proforma_no','code','title','truck_no')
+      AND jsonb_typeof(item->3)='string' AND nullif(trim(item->>3),'') IS NOT NULL ORDER BY position LIMIT 1) AS display_no
+    FROM document_drafts WHERE actor_id=$1 AND product_code=$2 AND closed_at IS NULL AND form_key=ANY($3::text[])
+    ORDER BY updated_at DESC,id LIMIT 100`,
     [req.user.id,req.productCode,keys]);
    return {items:rows};
   });

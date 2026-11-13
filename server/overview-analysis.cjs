@@ -6,7 +6,7 @@ async function copper(c,req,q,data){
  return {execution,current_customers:data.customers.filter(row=>row.bundles>0).map(row=>({id:row.customer_id,name:row.customer_name,quantity:row.bundles,batches:row.batches||0,known_net_mt:row.bundles>row.unknown_weights?row.known_net_weight:null,unknown:row.unknown_weights})),states:['available','preparing','locked','assigned','loaded'].map(key=>{const m=data.metrics[key];return {key,quantity:m.bundles,batches:m.batches,known_net_mt:m.bundles>m.unknown_weights?m.known_net_weight:null,unknown:m.unknown_weights};})};
 }
 async function cobalt(c,req,data){
- const pendingScope=!(data.filters.customer_id||data.filters.contract_id||data.filters.sales_plan_id);
+ const pendingScope=!(data.filters.customer_id||data.filters.contract_id||data.filters.contract_no||data.filters.sales_plan_id);
  const pending=pendingScope?(await c.query(`SELECT p.id preparation_id,p.bag_count bags,
   (p.bag_count-count(bw.actual_net_kg))::int unconfirmed_bags,sum(bw.actual_net_kg)::text actual_net_kg,
   CASE WHEN w.status='COMPLETED' THEN 'PENDING_COMPLETION_REVIEW' ELSE w.status END work_status,w.status

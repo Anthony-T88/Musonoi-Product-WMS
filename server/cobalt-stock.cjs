@@ -48,10 +48,10 @@ function archivedBatches(f,q){
  if(!where)return {values,sql:''};
  const sql=`, archived AS (
   SELECT h.source_id AS preparation_id,h.source_facts->>'batch_no' AS preparation_batch_no,
-   h.shipping_date::timestamptz AS received_at,h.shipping_date::text AS shipping_date,
+   h.shipping_date::timestamptz AS received_at,h.shipping_date::text AS shipping_date,h.original_receipt_date::text AS original_receipt_date,
    count(*)::int AS bags,round(sum(h.net_kg)/1000,4)::text AS effective_net_mt
   FROM historical_outbound_units h WHERE ${where}
-  GROUP BY h.source_id,h.source_facts->>'batch_no',h.shipping_date
+  GROUP BY h.source_id,h.source_facts->>'batch_no',h.shipping_date,h.original_receipt_date
  ), combined AS (
   SELECT preparation_id,preparation_batch_no,received_at,bags,effective_net_mt,to_jsonb(grouped) AS row FROM grouped
   UNION ALL

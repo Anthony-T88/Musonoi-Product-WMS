@@ -16,9 +16,9 @@ window.CobaltStock469R2={
  metrics(){const s=this.data.list.summary,t=this.t;return '<section class="co2-metrics">'+[[t('当前库存袋数','Current Stock Bags'),s.bags,t('袋','bags')],[t('已确认净重','Confirmed Net'),CobaltMetal.format(s.actual_net_mt,4),'MT'],[t('待录重量','Weight Pending'),s.unconfirmed_bags,t('袋','bags')],[t('未定位库存','Unlocated Stock'),s.unlocated_bags,t('袋','bags')]].map(([label,value,unit])=>'<div><span>'+label+'</span><strong>'+value+' <small>'+unit+'</small></strong></div>').join('')+'</section>';},
  batchTable(){
   const d=this.data,t=this.t,heads=[t('批次号','Batch No.'),t('货位','Location'),t('吨包数','Bags'),t('净重（MT）','Net Weight (MT)'),
-   t('库存状态','Stock Status'),t('业务状态','Workflow Status'),t('入库日期','Receipt Date'),t('取样状态','Sampling Status'),t('操作','Actions')];
+   t('库存状态','Stock Status'),t('业务状态','Workflow Status'),t('入库日期','Receipt Date'),t('取样状态','Sampling Status'),t('备注','Remarks'),t('操作','Actions')];
   const rows=d.list.items.map(b=>{
-   if(b.historical_import)return '<tr data-historical-stock>'+[esc(b.preparation_batch_no)+' '+HistoricalMovements.badge(),'—',CountValues.display(b.bags),CobaltMetal.format(b.effective_net_mt,4),t('已出库','Outbound'),t('历史归档','Archived'),t('发运','Shipped')+' '+esc(b.shipping_date),'—','<a class="button secondary compact" href="/inventory/historical/'+esc(b.preparation_id)+'">'+t('详情','Details')+'</a>'].map((v,i)=>'<td data-label="'+heads[i]+'">'+v+'</td>').join('')+'</tr>';
+   if(b.historical_import)return '<tr data-historical-stock>'+[esc(b.preparation_batch_no),'—',CountValues.display(b.bags),CobaltMetal.format(b.effective_net_mt,4),t('已出库','Outbound'),'—',esc(b.original_receipt_date||''),'—',t('历史数据导入','Imported Historical Data'),'<a class="button secondary compact" href="/inventory/historical/'+esc(b.preparation_id)+'">'+t('详情','Details')+'</a>'].map((v,i)=>'<td data-label="'+heads[i]+'">'+v+'</td>').join('')+'</tr>';
    const url=esc(this.link(b.preparation_id,{bag_page:1,batch_page:d.list.page,page:null,bag_size:null})),archiveUrl=esc(this.link(b.preparation_id+'/archive',{batch_page:d.list.page,page:null,bag_page:null,bag_size:null})),selected=b.preparation_id===d.id;
    const receiptDate=b.received_at?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(b.received_at)):'—';
    const sample=b.batch_sampled_bags===b.batch_total_bags?t('已完成','Complete'):b.batch_sampled_bags?t('部分完成','Partially Complete'):t('待取样','Pending');
@@ -27,12 +27,12 @@ window.CobaltStock469R2={
     '<a href="'+url+'">'+esc(b.preparation_batch_no)+'</a>',esc(b.location_codes?.join(' / ')||t('未定位','Unlocated')),esc(CountValues.display(b.bags)),
     CobaltMetal.format(b.effective_net_mt,4)+(b.unconfirmed_bags&&b.effective_net_mt!=null?' <small title="'+t('含预计重量','Includes estimated weight')+'">'+t('含预计','Incl. est.')+'</small>':''),
     b.status==='OUTBOUND'?t('已出库','Outbound'):t('在库','In Stock'),esc(business),esc(receiptDate),
-    esc(sample)+' <small>'+b.batch_sampled_bags+' / '+b.batch_total_bags+'</small>',
+    esc(sample)+' <small>'+b.batch_sampled_bags+' / '+b.batch_total_bags+'</small>',esc(b.remark||''),
     '<a class="button secondary compact" href="'+archiveUrl+'">'+t('详情','Details')+'</a>'
    ].map((v,i)=>'<td data-label="'+heads[i]+'">'+v+'</td>').join('')+'</tr>';
   });
   return '<section class="co2-panel"><header><h2>'+t('批次库存明细','Batch Stock Details')+'</h2><label>'+t('排序','Sort')+' <select id="co2-sort">'+[['batch',t('批次号','Batch No.')],['date',t('最新入库','Newest Receipt')],['bags',t('袋数从多到少','Bags Descending')],['net',t('净重从高到低','Net Weight Descending')]].map(([key,label])=>'<option value="'+key+'" '+((d.q.get('sort')||'batch')===key?'selected':'')+'>'+label+'</option>').join('')+'</select></label></header>'+
-   '<div class="business-table">'+UI46Pages.table('<table class="co2-batches" data-v34-enhanced="true"><thead><tr>'+heads.map(v=>'<th>'+v+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>',{numeric:[2,3],center:[4,5,6,7,8]})+'</div>'+
+   '<div class="business-table">'+UI46Pages.table('<table class="co2-batches" data-v34-enhanced="true"><thead><tr>'+heads.map(v=>'<th>'+v+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>',{numeric:[2,3],center:[4,5,6,7,9]})+'</div>'+
    (!rows.length?'<p class="co2-empty">'+t('暂无符合筛选条件的授权库存','No authorized stock matches these filters')+'</p>':'')+this.pager('batch',d.list.page,d.list.total,d.list.page_size)+'</section>';
  },
  pager(kind,page,total,size){const t=this.t,pages=Math.max(1,Math.ceil(total/size)),url=n=>kind==='bag'?this.link(this.data.id,{bag_page:n,bag_size:this.data.detail.page_size,page:null}):this.link(null,{batch_page:n,page:null,bag_page:null,bag_size:null});return '<footer class="co2-pager"><span>'+t('共 ','Total ')+total+' · '+page+' / '+pages+'</span><div>'+(page>1?'<a class="button secondary compact" href="'+esc(url(page-1))+'">'+t('上一页','Previous')+'</a>':'')+(page<pages?'<a class="button secondary compact" href="'+esc(url(page+1))+'">'+t('下一页','Next')+'</a>':'')+'</div></footer>';},

@@ -1,6 +1,21 @@
 'use strict';
 const StockMapReview={
  t:(zh,en)=>I18n.language==='en'?en:zh,
+ copperLabel(code){
+  const t=this.t;
+  return ({P1:t('P1库区','P1 Zone'),P2:t('P2库区','P2 Zone'),P4:t('P3库区','P3 Zone'),
+   P3:t('剩余捆包堆存区','Leftover Bundle Storage'),P5:t('新生产捆包堆存区','New Production Bundle Storage')})[code]||code;
+ },
+ copperMetrics(root){
+  const t=this.t,d=StockMap.data,o=d.occupancy,metrics=root.querySelector('#stock-map-metrics');
+  const active=d.locations.filter(l=>l.active&&l.map_usage==='FORMAL');
+  const occupied=l=>l.current.bundle_count>0||['PLANNED','OCCUPIED','PENDING_REALLOCATION'].includes(l.allocation_state);
+  const cards=[[t('已占用货位数','Occupied Locations'),d.full_customer_scope?active.filter(occupied).length:null],
+   [t('未占用货位数','Unoccupied Locations'),o.empty_locations],...['P1','P2','P4'].map((key,index)=>[
+    t('P'+(index+1)+'库区占用货位数','Occupied Locations in P'+(index+1)),d.full_customer_scope?active.filter(l=>l.region_code===key&&occupied(l)).length:null])];
+  metrics.innerHTML=cards.map(([label,n])=>'<article class="map-metric panel"><span>'+label+'</span><strong>'+CountValues.display(n)+'</strong></article>').join('');
+  metrics.dataset.noI18n='';metrics.classList.add('v479-copper-metrics');root.prepend(metrics);
+ },
  bind(root,cobalt){
   if(!root||root.classList.contains('wms-map-reviewed'))return;
   root.classList.add('wms-map-reviewed');
@@ -14,7 +29,7 @@ const StockMapReview={
    '"></label><div class="wms-filter-actions"><button class="button primary">'+t('定位','Locate')+'</button><button class="button secondary" type="button" data-map-clear>'+t('清除','Clear')+'</button></div></form>'+
    '<div class="wms-map-actions"></div><div class="wms-map-zones" role="group" aria-label="'+t('按库区查看','Browse Zones')+'"></div>'+
    '<p class="wms-feedback" role="status"></p><div class="wms-map-matches" hidden></div>';
-  root.prepend(controls);controls.after(advanced);
+  root.prepend(controls);if(cobalt)controls.after(advanced);
   const form=controls.querySelector('form'),input=form.elements.location_query,feedback=controls.querySelector('[role="status"]'),results=controls.querySelector('.wms-map-matches');
   const move=(selector,target)=>{const node=root.querySelector(selector);if(node)target.append(node);};
   const actions=controls.querySelector('.wms-map-actions'),zones=controls.querySelector('.wms-map-zones');
@@ -23,8 +38,13 @@ const StockMapReview={
   if(fit)fit.textContent=t('适应画布','Fit Map');
   const refresh=document.createElement('button');refresh.type='button';refresh.className='button secondary';refresh.textContent=t('刷新','Refresh');
   refresh.onclick=()=>Router.go(location.pathname+location.search,true);actions.append(refresh);
-  for(const selector of cobalt?['.co-stock-page > form','.co-stock-filter','.map465-stats','.map465-actions']:['.map-filter-box','#stock-map-metrics','.v27-map-filter'])move(selector,advanced);
-  advanced.append(toolbar);
+  if(cobalt){
+   for(const selector of ['.co-stock-page > form','.co-stock-filter','.map465-stats','.map465-actions'])move(selector,advanced);
+   advanced.append(toolbar);
+  }else{
+   this.copperMetrics(root);
+   root.querySelectorAll('.map-filter-box,.v27-map-filter').forEach(node=>node.remove());
+  }
   const filters=advanced.querySelector(cobalt?'#co-stock-filter':'#stock-map-filter');
   if(filters){
    filters.classList.add('wms-filter-row','wms-map-filter-row');
@@ -42,14 +62,14 @@ const StockMapReview={
    if(!buttons.isConnected)filters.append(buttons);
    new MutationObserver(collectButtons).observe(filters,{childList:true});
   }
-  const regions=cobalt?root.querySelectorAll('[data-site-zone]'):root.querySelectorAll('[data-map-region]');
+  const regions=cobalt?[...root.querySelectorAll('[data-site-zone]')]:
+   ['P1','P2','P4','P5','P3'].map(code=>root.querySelector('[data-map-region="'+code+'"]')).filter(Boolean);
   const all=document.createElement('button');all.type='button';all.className='button secondary compact';all.textContent=t('全场','Entire Site');
   all.onclick=()=>fit?.click();zones.append(all);
   for(const region of regions){
    const code=region.dataset.siteZone||region.dataset.mapRegion;
-   const copperNames={P3:t('P3 剩余捆包堆存区','P3 Leftover Bundles'),P5:t('P5 新生产捆包堆存区','P5 New Bundles')};
    const siteZone=CobaltMap465.data?.site_plan?.zones.find(item=>item.code===code);
-   region.textContent=cobalt&&siteZone?CobaltMapSite.label(code+' · '+siteZone.name):copperNames[code]||code+' '+t('库区','Zone');
+   region.textContent=cobalt?(siteZone?CobaltMapSite.label(code+' · '+siteZone.name):code+' '+t('库区','Zone')):this.copperLabel(code);
    zones.append(region);
   }
   const detail=root.querySelector(cobalt?'#co-map-detail':'#stock-map-detail');
@@ -62,7 +82,7 @@ const StockMapReview={
   let sequence=0;
   const show=async(row)=>{
    results.hidden=true;
-   feedback.textContent=t('已定位 ','Located ')+row.code;
+   feedback.textContent=t('已定位 ','Located ')+(cobalt?row.code:StockMap.areaName(row));
    if(cobalt){if(CobaltMap465.data.site_plan)CobaltMapSite.focusLocation?.(row);else CobaltStockUI.focusMapLocation?.(row);await CobaltMap465.select(row.id);}
    else{
     const cell=StockMap.data.cells.find(c=>c.code===row.cell_code);
@@ -80,10 +100,10 @@ const StockMapReview={
    if(!query){feedback.textContent=t('请输入定位条件。','Enter a location, batch or search term.');return;}
    try{
     const rows=cobalt?CobaltMap465.data.locations:StockMap.data.locations;
-    const locationCode=query.replace(/^(p\d+-|co-[abc]-)([1-9])$/,(_,prefix,serial)=>prefix+'0'+serial);
+    const locationCode=(cobalt?query:query.replace(/^p3-(\d+)$/,'p4-$1')).replace(/^(p\d+-|co-[abc]-)([1-9])$/,(_,prefix,serial)=>prefix+'0'+serial);
     const exact=rows.find(row=>[row.code,row.cell_code].some(value=>[query,locationCode].includes(value?.toLowerCase())));
     let hits=exact?[exact]:rows.filter(row=>(cobalt?[row.code,row.preparation_batch_no]:
-     [row.code,row.cell_code,row.claim_lot_no,...(row.current.lots||[]),...row.current.customers.map(c=>c.name)])
+     [row.code,row.cell_code,StockMap.areaName(row),row.claim_lot_no,...(row.current.lots||[]),...row.current.customers.map(c=>c.name)])
      .some(value=>value?.toLowerCase().includes(query)));
     if(cobalt&&!hits.length){
      const filters=new URLSearchParams(location.search);
@@ -99,7 +119,7 @@ const StockMapReview={
      feedback.textContent=hits.length?t('选择匹配的货位','Select a matching location'):t('未找到匹配货位','No matching location');
      results.replaceChildren(...hits.map(row=>{
       const button=document.createElement('button');button.type='button';button.className='button secondary compact';
-      button.textContent=row.code;button.onclick=()=>show(row).catch(err=>{feedback.textContent=err.message;});return button;
+      button.textContent=cobalt?row.code:StockMap.areaName(row);button.onclick=()=>show(row).catch(err=>{feedback.textContent=err.message;});return button;
      }));results.hidden=!hits.length;
     }
    }catch(err){if(token===sequence&&root.isConnected)feedback.textContent=err.message;}
