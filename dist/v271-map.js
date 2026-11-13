@@ -32,7 +32,8 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
   const bounds=canvas.getBoundingClientRect();
   for(const label of canvas.querySelectorAll('.v271-temporary-label'))if(!cells.has(label.dataset.mapCell)||!svg.querySelector('[data-map-cell="'+CSS.escape(label.dataset.mapCell)+'"]'))label.remove();
   for(const [code,location] of cells){
-   const rect=svg.querySelector('[data-map-cell="'+CSS.escape(code)+'"] rect')?.getBoundingClientRect();
+   const cell=svg.querySelector('[data-map-cell="'+CSS.escape(code)+'"]');
+   const rect=cell?.querySelector('rect')?.getBoundingClientRect();
    if(!rect)continue;
    let label=canvas.querySelector('.v271-temporary-label[data-map-cell="'+CSS.escape(code)+'"]');
    if(!label){
@@ -44,11 +45,12 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
    label.firstElementChild.textContent=I18n.language==='en'&&rect.width<175?
     (code==='P3'?'Leftover Bundle Storage':'New Bundle Storage'):title;
    label.title=title;
-   label.style.width=Math.max(0,Math.min(245,rect.width-8))+'px';
-   const cell=svg.querySelector('[data-map-cell="'+CSS.escape(code)+'"]');
+   const font=Math.min(24,Math.max(9,Math.min(13*this.zoom,rect.width/8,rect.height/5)));
+   label.style.setProperty('--map-area-label-size',font+'px');
+   label.style.width=Math.max(0,rect.width-8)+'px';
    cell.classList.add('map-shared-storage');
    cell.querySelectorAll('text').forEach(text=>text.remove());
-   label.firstElementChild.hidden=rect.width<98||rect.height<69;
+   label.firstElementChild.hidden=rect.width<66||rect.height<46;
    const count=CountValues.display(location.current?.bundle_count);
    label.lastElementChild.textContent=count==='—'||rect.width<58?count:count+' '+ProductContext.text('捆','bundles');
    label.hidden=rect.width<26||rect.height<22;

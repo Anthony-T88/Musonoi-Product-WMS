@@ -69,9 +69,9 @@ window.OverviewAnalysis={
    net:{title:t('出入库净重统计','Inbound & Outbound Net Weight'),unit:'MT',series:net,columns:[
     ['inbound_net_weight',t('入库净重（吨）','Inbound Net (MT)'),true],['net_weight',t('出库净重（吨）','Outbound Net (MT)'),true],
     ['inbound_unknown_weights',t('入库重量待确认','Unconfirmed Inbound Weights')],['unknown_weights',t('出库重量待确认','Unconfirmed Outbound Weights')]]},
-   vehicles:{title:t('出库车辆统计','Outbound Vehicles'),unit:t('辆','vehicles'),series:[
+   vehicles:{title:t('出库车辆统计','Outbound Vehicles'),unit:t('辆','vehicles'),count:true,series:[
     {key:'vehicles',name:t('出库车辆','Outbound Vehicles'),css:'oa-outbound'}],columns:[['vehicles',t('出库车辆','Outbound Vehicles')]]},
-   receipts:{title:t(model.co?'入库吨包统计':'入库捆包统计',model.co?'Inbound Bags':'Inbound Bundles'),unit:quantity,series:[
+   receipts:{title:t(model.co?'入库吨包统计':'入库捆包统计',model.co?'Inbound Bags':'Inbound Bundles'),unit:quantity,count:true,series:[
     {key:'inbound_units',name:t(model.co?'入库吨包':'入库捆包',model.co?'Inbound Bags':'Inbound Bundles'),css:'oa-inbound'}],
     columns:[['inbound_units',t('入库数量','Received Quantity')],['inbound_unknown_weights',unknown]]},
    unprepared:{title:t('未完成备货的捆包数','Bundles Awaiting Preparation Completion'),unit:quantity,
@@ -81,14 +81,21 @@ window.OverviewAnalysis={
     series:[{key:'stock_prepared_net_mt',name:t('已备货的在库净重','Prepared Stock Net Weight'),css:'oa-inbound'}],
     columns:[['stock_prepared_net_mt',t('已备货的在库净重（吨）','Prepared Stock Net Weight (MT)'),true]]}
   };
+  if(key==='stock'){
+   const {unprepared,prepared}=definitions;
+   return {
+    title:t('库存趋势统计','Stock Trend'),unit:unprepared.unit,count:true,secondaryUnit:t('吨','MT'),
+    series:[...unprepared.series,...prepared.series.map(item=>({...item,css:'oa-outbound',secondary:true}))],
+    columns:[...unprepared.columns,...prepared.columns]
+   };
+  }
   return definitions[key];
  },
  chart(model,key){
-  if(key==='stock')return this.panel('库存趋势统计','Stock Trend','',
-   (model.co?['prepared']:['unprepared','prepared']).map(metric=>this.chart(model,metric)).join(''),'oa-stock-trends');
-  const t=this.t,{title,unit,columns,series}=this.chartDefinition(model,key),rows=model.trend.rows,type=this.chartType(model.co,key);
-  const sum=name=>rows.reduce((n,r)=>n+Number(r[name]||0),0),stock=['unprepared','prepared'].includes(key),field=series[0].key;
-  const last=stock&&rows.at(-1),value=last?.[field];
+  if(key==='stock'&&model.co)return this.panel('库存趋势统计','Stock Trend','',this.chart(model,'prepared'),'oa-stock-trends');
+  const t=this.t,{title,unit,secondaryUnit,columns,series}=this.chartDefinition(model,key),rows=model.trend.rows,type=this.chartType(model.co,key);
+  const sum=name=>rows.reduce((n,r)=>n+Number(r[name]||0),0),stock=key==='stock'||key==='prepared';
+  const last=stock&&rows.at(-1);
   const netTotal=rows.some(r=>r.inbound_units)&&!rows.some(r=>r.inbound_units&&r.inbound_net_weight!=null)?null:sum('inbound_net_weight');
   const figures={
    net:t('入库','Inbound')+' '+this.number(netTotal)+' MT · '+t('出库','Outbound')+' '+this.number(model.outbound)+' MT',
@@ -100,15 +107,21 @@ window.OverviewAnalysis={
    receipts:t('按实际入库日期统计已确认单据，包含净重待确认的数量。','Counts confirmed receipts by recorded receipt date, including items awaiting weight confirmation.'),
    prepared:model.trend.stock_scope_supported===false?t('当前筛选范围没有可核实的历史库存。','Verified historical stock is unavailable for this scope.'):t('按日末或月末库存快照统计，未到期的期间截至所选时点。记录或重量依据缺失时显示空缺。','Uses day-end or month-end snapshots, capped at the selected cutoff. Missing records or weight evidence appear blank.')
   };
-  const controls='<div class="oa-chart-controls"><span>'+t('单位','Unit')+' · '+unit+'</span><div role="group" aria-label="'+title+'">'+[['bar',t('柱状图','Bar')],['line',t('折线图','Line')]].map(([value,label])=>'<button type="button" class="button secondary compact" data-oa-type="'+value+'" data-oa-key="'+key+'" aria-pressed="'+(value===type)+'">'+label+'</button>').join('')+'</div></div>';
+  const units=secondaryUnit?t('左轴','Left axis')+' · '+unit+'　'+t('右轴','Right axis')+' · '+secondaryUnit:t('单位','Unit')+' · '+unit;
+  const controls='<div class="oa-chart-controls"><span>'+units+'</span><div role="group" aria-label="'+title+'">'+[['bar',t('柱状图','Bar')],['line',t('折线图','Line')]].map(([value,label])=>'<button type="button" class="button secondary compact" data-oa-type="'+value+'" data-oa-key="'+key+'" aria-pressed="'+(value===type)+'">'+label+'</button>').join('')+'</div></div>';
   const legend='<div class="oa-legend">'+series.map(s=>'<span class="'+(s.css==='oa-outbound'?'is-outbound':'is-inbound')+'">'+s.name+'</span>').join('')+'</div>';
   const table='<details><summary>'+t('查看图表数据','View Chart Data')+'</summary><div class="oa-table-scroll"><table><thead><tr><th>'+t('期间','Period')+'</th>'+columns.map(([,label])=>'<th>'+label+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.period)+'</td>'+columns.map(([field,,decimal])=>'<td class="oa-numeric">'+(r[field]==null?'—':decimal?this.number(r[field]):esc(CountValues.display(r[field])))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>';
-  const summary=stock?last?last.period+' · '+(value==null?'—':unit==='MT'?this.number(value):CountValues.display(value))+' '+unit:t('暂无可追溯库存','No Traceable Stock'):figures[key];
+  const latest=last?series.map(item=>{
+   const reading=last[item.key];
+   const display=reading==null?'—':item.secondary||unit==='MT'?this.number(reading):CountValues.display(reading);
+   return display+' '+(item.secondary?secondaryUnit:unit);
+  }).join(' / '):null;
+  const summary=stock?last?last.period+' · '+latest:t('暂无可追溯库存','No Traceable Stock'):figures[key];
   return this.panel(title,title,esc(model.trend.from)+' — '+esc(model.trend.to)+' · '+(model.trend.granularity==='month'?t('按月','Monthly'):t('按日','Daily')),
-   controls+legend+'<div class="oa-plot-scroll" tabindex="0" aria-label="'+title+'"><div class="oa-plot" data-oa-plot="'+key+'" role="group" aria-label="'+title+'"></div></div><div class="oa-chart-footer"><strong>'+esc(summary)+'</strong></div>'+table+(notes[key]?'<p class="oa-note">'+notes[key]+'</p>':''),'oa-chart');
+   controls+legend+'<div class="oa-plot-scroll" tabindex="0" aria-label="'+title+'"><div class="oa-plot" data-oa-plot="'+key+'" role="group" aria-label="'+title+'"></div></div><div class="oa-chart-footer"><strong>'+esc(summary)+'</strong></div>'+table+((notes[key]||secondaryUnit)?'<p class="oa-note">'+(notes[key]||notes.prepared)+'</p>':''),'oa-chart'+(secondaryUnit?' oa-stock-trends':''));
  },
  chartType(co,key){
-  const storageKey='wms-overview-analysis:'+CurrentUser.id+':'+(co?'co':'cu')+':'+key,fallback=['net','unprepared','prepared'].includes(key)?'line':'bar';
+  const storageKey='wms-overview-analysis:'+CurrentUser.id+':'+(co?'co':'cu')+':'+key,fallback=['net','stock','prepared'].includes(key)?'line':'bar';
   try{const saved=localStorage.getItem(storageKey);return this.types[storageKey]||(['bar','line'].includes(saved)?saved:fallback);}catch{return this.types[storageKey]||fallback;}
  },
  bindCharts(root,model){
@@ -126,17 +139,77 @@ window.OverviewAnalysis={
   requestAnimationFrame(draw);
  },
  draw(root,model,key){
-  const {unit,series}=this.chartDefinition(model,key),type=this.chartType(model.co,key),rows=model.trend.rows;
+  const definition=this.chartDefinition(model,key),{series}=definition,type=this.chartType(model.co,key),rows=model.trend.rows;
   for(const b of root.querySelectorAll('[data-oa-key="'+key+'"]'))b.setAttribute('aria-pressed',String(b.dataset.oaType===type));
   const hasRecords=key==='net'?rows.some(r=>r.vehicles||r.inbound_units):rows.some(r=>series.some(s=>r[s.key]!=null));
-  this.plot(root.querySelector('[data-oa-plot="'+key+'"]'),model,series,type,unit,hasRecords);
+  this.plot(root.querySelector('[data-oa-plot="'+key+'"]'),model,definition,type,hasRecords);
  },
  plotWidth(model){return Math.max(200,82+model.trend.rows.length*22);},
- plot(host,model,series,type,unit,hasRecords){if(!host||!host.parentElement.clientWidth)return;const rows=model.trend.rows,width=host.clientWidth,height=280,L=62,R=20,T=24,B=88,w=width-L-R,h=height-T-B,values=series.flatMap(s=>rows.map(r=>r[s.key]==null?null:Number(r[s.key]))),max=Math.max(0,...values.filter(v=>v!==null)),base=max?Math.pow(10,Math.floor(Math.log10(max))):1,count=unit!=='MT',countPower=Math.pow(10,Math.floor(Math.log10(Math.max(1,max/3)))),countStep=[1,2,5,10].find(v=>v*countPower>=Math.max(1,max/3))*countPower,top=count?Math.max(countStep,Math.ceil(max/countStep)*countStep):max?Math.ceil(max/base)*base:1,x=i=>L+(i+.5)*w/Math.max(1,rows.length),y=v=>T+h-v/top*h;host.dataset.chartType=type;host.dataset.rows=JSON.stringify(rows);if(!rows.length){host.innerHTML=this.empty('所选期间暂无记录','No records in this period');return;}
- let svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(series.map(s=>s.name).join(' / ')+' · '+unit)+'">';const ticks=count?Array.from({length:Math.round(top/countStep)+1},(_,i)=>i*countStep):[0,top/3,top*2/3,top];for(const v of ticks)svg+='<line class="oa-gridline" x1="'+L+'" y1="'+y(v)+'" x2="'+(width-R)+'" y2="'+y(v)+'"/><text class="oa-axis" x="'+(L-9)+'" y="'+(y(v)+4)+'" text-anchor="end">'+this.number(v,count?Number.isInteger(v)?0:1:max<1?3:1)+'</text>';
- const labelY=height-B+12;rows.forEach((r,i)=>{const xx=x(i);svg+='<text class="oa-axis oa-date-tick" x="'+xx+'" y="'+labelY+'" transform="rotate(-54 '+xx+' '+labelY+')" text-anchor="end">'+esc(r.period)+'</text>';});
- series.forEach((s,j)=>{const vals=rows.map(r=>r[s.key]==null?null:Number(r[s.key])),tip=(v,i)=>esc(rows[i].period+' · '+s.name+' · '+(count?CountValues.display(rows[i][s.key]):this.number(v,4))+' '+unit),bw=Math.min(24,w/rows.length*.7/series.length);if(type==='bar')svg+=vals.map((v,i)=>v==null?'':'<rect class="oa-bar '+s.css+'" x="'+(x(i)+(j-(series.length-1)/2)*bw-bw/2)+'" y="'+y(v)+'" width="'+Math.max(1,bw-1)+'" height="'+(y(0)-y(v))+'"><title>'+tip(v,i)+'</title></rect>').join('');else{let connected=false;const d=vals.map((v,i)=>{if(v==null){connected=false;return '';}const segment=(connected?'L':'M')+x(i)+','+y(v);connected=true;return segment;}).join(' ');svg+='<path class="oa-line '+s.css+'" d="'+d+'"/>'+vals.map((v,i)=>v==null?'':(j===0?'<circle class="oa-dot '+s.css+'" cx="'+x(i)+'" cy="'+y(v)+'" r="3.5">':'<rect class="oa-dot '+s.css+'" x="'+(x(i)-3)+'" y="'+(y(v)-3)+'" width="6" height="6">')+'<title>'+tip(v,i)+'</title>'+(j===0?'</circle>':'</rect>')).join('');}});
- svg+='<text class="oa-axis" x="'+(L+w/2)+'" y="'+(height-3)+'" text-anchor="middle">'+this.t('日期','Date')+'</text><text class="oa-axis" transform="translate(13 '+(T+h/2)+') rotate(-90)" text-anchor="middle">'+unit+'</text></svg>';host.innerHTML=svg+(!hasRecords?'<p class="oa-plot-empty">' +this.t('所选期间暂无记录','No records in this period')+'</p>':'');
+ plot(host,model,{series,unit,secondaryUnit,count=false},type,hasRecords){
+  if(!host||!host.parentElement.clientWidth)return;
+  const rows=model.trend.rows,width=host.clientWidth,height=280,L=62,R=secondaryUnit?62:20,T=24,B=88;
+  const w=width-L-R,h=height-T-B,right=width-R;
+  host.dataset.chartType=type;host.dataset.rows=JSON.stringify(rows);
+  if(!rows.length){host.innerHTML=this.empty('所选期间暂无记录','No records in this period');return;}
+  const data=series.map(item=>({...item,values:rows.map(row=>{
+   const value=row[item.key];
+   return value==null||value===''||!Number.isFinite(Number(value))?null:Number(value);
+  })}));
+  const maxFor=secondary=>Math.max(0,...data.filter(item=>Boolean(item.secondary)===secondary).flatMap(item=>item.values));
+  const x=i=>L+(i+.5)*w/rows.length;
+  const makeAxis=(max,integer,divisions)=>{
+   const target=Math.max(integer?1:0,(max||1)/divisions);
+   const power=10**Math.floor(Math.log10(target));
+   const step=[1,2,5,10].find(n=>n*power>=target)*power;
+   const ticks=secondaryUnit?divisions:Math.max(1,Math.ceil(max/step));
+   const digits=Math.min(4,Math.max(0,-Math.floor(Math.log10(step))));
+   return {ticks,step,y:value=>T+h-value/(ticks*step)*h,
+    label:value=>integer?CountValues.display(value):this.number(value,digits)};
+  };
+  const leftAxis=makeAxis(maxFor(false),count,secondaryUnit?4:3);
+  const rightAxis=secondaryUnit?makeAxis(maxFor(true),false,4):null;
+  const units=secondaryUnit?unit+' / '+secondaryUnit:unit;
+  let svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(series.map(item=>item.name).join(' / ')+' · '+units)+'">';
+  const axisText=(text,x,y,align,side='')=>'<text class="oa-axis '+side+'" x="'+x+'" y="'+y+'" text-anchor="'+align+'">'+esc(text)+'</text>';
+  for(let i=0;i<=leftAxis.ticks;i++){
+   const tick=i*leftAxis.step,y=leftAxis.y(tick);
+   svg+='<line class="oa-gridline" x1="'+L+'" y1="'+y+'" x2="'+right+'" y2="'+y+'"/>';
+   svg+=axisText(leftAxis.label(tick),L-9,y+4,'end','oa-y-left');
+   if(rightAxis)svg+=axisText(rightAxis.label(i*rightAxis.step),right+9,y+4,'start','oa-y-right');
+  }
+  const labelY=height-B+12;
+  rows.forEach((row,i)=>{
+   const xx=x(i);
+   svg+='<text class="oa-axis oa-date-tick" x="'+xx+'" y="'+labelY+'" transform="rotate(-54 '+xx+' '+labelY+')" text-anchor="end">'+esc(row.period)+'</text>';
+  });
+  const barWidth=Math.min(24,w/rows.length*.7/series.length);
+  data.forEach((item,j)=>{
+   const {y}=item.secondary?rightAxis:leftAxis,seriesUnit=item.secondary?secondaryUnit:unit;
+   const tip=(value,i)=>'<title>'+esc(rows[i].period+' · '+item.name+' · '+
+    (count&&!item.secondary?CountValues.display(rows[i][item.key]):this.number(value,4))+' '+seriesUnit)+'</title>';
+   if(type==='bar'){
+    svg+=item.values.map((value,i)=>{
+     if(value==null)return '';
+     const barHeight=y(0)-y(value);
+     return '<rect class="oa-bar '+item.css+'" x="'+(x(i)+(j-(series.length-1)/2)*barWidth-barWidth/2)+'" y="'+
+      (barHeight?y(value):y(0)-1)+'" width="'+Math.max(1,barWidth-1)+'" height="'+Math.max(1,barHeight)+'">'+tip(value,i)+'</rect>';
+    }).join('');
+   }else{
+    let connected=false;
+    const path=item.values.map((value,i)=>{
+     if(value==null){connected=false;return '';}
+     const segment=(connected?'L':'M')+x(i)+','+y(value);connected=true;return segment;
+    }).join(' ');
+    svg+='<path class="oa-line '+item.css+'" d="'+path+'"/>';
+    svg+=item.values.map((value,i)=>value==null?'':j===0?
+     '<circle class="oa-dot '+item.css+'" cx="'+x(i)+'" cy="'+y(value)+'" r="3.5">'+tip(value,i)+'</circle>':
+     '<rect class="oa-dot '+item.css+'" x="'+(x(i)-3)+'" y="'+(y(value)-3)+'" width="6" height="6">'+tip(value,i)+'</rect>').join('');
+   }
+  });
+  const unitLabel=(label,x)=>'<text class="oa-axis" transform="translate('+x+' '+(T+h/2)+') rotate(-90)" text-anchor="middle">'+esc(label)+'</text>';
+  svg+=axisText(this.t('日期','Date'),L+w/2,height-3,'middle')+unitLabel(unit,13);
+  if(rightAxis)svg+=unitLabel(secondaryUnit,width-13);
+  host.innerHTML=svg+'</svg>'+(!hasRecords?'<p class="oa-plot-empty">'+this.t('所选期间暂无记录','No records in this period')+'</p>':'');
  },
  stock(m){const t=this.t,labels={available:t('可用库存','Available'),locked:t('备货锁定','Preparation Locked'),preparing:t('备货作业中','Preparing'),review:t('待完工审核','Completion Review'),prepared:t('备货完成待匹配','Prepared, Unmatched'),assigned:t('已分配装车','Assigned to Loading'),loaded:t('已装车待出库','Loaded, Not Outbound')};return this.panel('库存状态结构','Inventory State',t('批次 / 数量 / 已知净重','Batches / Quantity / Known Net Weight'),'<div class="oa-state-list">'+m.states.map(s=>'<div><div class="oa-pair"><span>'+labels[s.key]+'</span><strong>'+this.structure(s,m.unit)+'</strong></div><progress max="'+Math.max(1,m.states.reduce((sum,row)=>sum+row.quantity,0))+'" value="'+s.quantity+'" aria-label="'+labels[s.key]+'"></progress></div>').join('')+'</div><div class="oa-quality"><div class="oa-pair"><span>'+t('实际重量确认覆盖','Actual Weight Coverage')+'</span><strong>'+(m.physical?this.number((m.physical-m.unknown)/m.physical*100,1)+'%':'—')+'</strong></div><p>'+m.unknown+' '+m.unit+' '+t('重量待确认','awaiting weight confirmation')+'</p></div>');},
  customers(m){const t=this.t;return this.panel('客户库存结构','Customer Inventory',t('批次 / 数量 / 已知净重','Batches / Quantity / Known Net Weight'),m.customers.length?m.customers.map(c=>'<div class="oa-customer"><div class="oa-pair"><span data-no-i18n>'+esc(c.name||t('未关联客户','Unassigned Customer'))+'</span><strong>'+this.structure(c,m.unit)+'</strong></div><progress max="'+Math.max(1,m.physical)+'" value="'+c.quantity+'" aria-label="'+esc(c.name||t('未关联客户','Unassigned Customer'))+'"></progress>'+(c.unknown?'<p class="oa-warning-text">'+c.unknown+' '+m.unit+' '+t('重量待确认','weight unconfirmed')+'</p>':'')+'</div>').join(''):this.empty('当前无客户库存','No current customer inventory'));},

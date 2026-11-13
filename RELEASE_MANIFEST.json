@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 92967,
-      "sha256": "6c4585744f003bb1fa3012c23f2ac4a4dcaca4b4e4e075ca81d2c841831ad89e"
+      "sha256": "1af2ecac6503086d5aa488ec05883dda4f95537392eb3bf723c9718158c4ff7b"
     },
     {
       "path": "VALIDATION.json",
@@ -1514,7 +1514,7 @@
     {
       "path": "dist/index.html",
       "bytes": 15761,
-      "sha256": "ae43c47089225a2fca987fe7817703d039c171830544a0b80fba528e400ddcec"
+      "sha256": "26fa2458912a205ef5a0b7df9c8492bcff2ac29424b86595f2fc8a21bc9768ec"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1648,13 +1648,13 @@
     },
     {
       "path": "dist/overview-analysis.css",
-      "bytes": 10127,
-      "sha256": "fc7f7ece8c649e368b7787377e3817b6c2497647a42b87d462ff8a6cddecd889"
+      "bytes": 10156,
+      "sha256": "dac380132d6365bc6015e21fb7811fe7019f4ba2beb4d26b6f1fb10cd6d77779"
     },
     {
       "path": "dist/overview-analysis.js",
-      "bytes": 29176,
-      "sha256": "0a6dc9544614b101756798da4d14672a6b5f3e8fb71c39c574b2cbbaaf6bbfcc"
+      "bytes": 31095,
+      "sha256": "0fd78c61c1a96467c0eb30d95647b0ceedc6486b529c67dcb7646c971b1dc1af"
     },
     {
       "path": "dist/overview-design-model.js",
@@ -1784,7 +1784,7 @@
     {
       "path": "dist/release.js",
       "bytes": 117,
-      "sha256": "c41cb242102dcaec3a9b0772cb700fad049ae1a0e5ee675cccce0bd2cd0a26fa"
+      "sha256": "c355da03afd373f6d6f72ab073d93080ad9a9ecc0dae7c27a19844d0e45a448d"
     },
     {
       "path": "dist/reports463.js",
@@ -1844,7 +1844,7 @@
     {
       "path": "dist/sw.js",
       "bytes": 2901,
-      "sha256": "0535cf79123d3bb86e26ef46399f919735c9f35248e79e2cda2b35211a9d77c6"
+      "sha256": "2f72f3610ed95fbbad9c1ad8adeb2b7050cf810d3881d5b08fff9adb2a03ee15"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1948,8 +1948,8 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "bytes": 31581,
-      "sha256": "f8f5f206b76dffdcf26a5456c91ea6f52de50f60e8142f4c9ea864883e4f4d9a"
+      "bytes": 31679,
+      "sha256": "65a6cfa7b817deb43fc7b7ed2353720d7e3042c9cef783306b5420d88c19b61f"
     },
     {
       "path": "dist/ux-r4.css",
@@ -2038,8 +2038,8 @@
     },
     {
       "path": "dist/v271-map.js",
-      "bytes": 15574,
-      "sha256": "3497641b5663af6d4adceeedb656ab452da2f1ca204cdf1bfd328d459a387423"
+      "bytes": 15678,
+      "sha256": "960a6479d4015292e7543eea0b658d6608edded5ff25b10761956d44dae61502"
     },
     {
       "path": "dist/v272-ui.js",
@@ -2428,8 +2428,8 @@
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "bytes": 10031,
-      "sha256": "63ce0bf73e5cf985d401950234757636f9a5086eec81b84e90d6aec781bcb1d2"
+      "bytes": 10364,
+      "sha256": "74a9cdc69fc5e40823351d4b897544ab5dffa178271c6e3f4951310b5f9ca508"
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3419,7 +3419,7 @@
     {
       "path": "server/release.cjs",
       "bytes": 214,
-      "sha256": "42c2991976215fd2a64990d033ca9e079a06ce21f59b7f4afec38f29b2dfe00e"
+      "sha256": "b81fc11c344a4fd2e9787eb13a7c8cf9c57cca5623f4713954aadcaa612bee77"
     },
     {
       "path": "server/report-periods.cjs",
@@ -3818,8 +3818,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "bytes": 44100,
-      "sha256": "40ab5f5a222fd702b06be131be545004d93f6bffec60d2591d4cbc368d84a369"
+      "bytes": 44772,
+      "sha256": "4c11c9afb9c8a1b583e36061a5a39f249abca27f6d2ab20f9ab24a82007e659b"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
@@ -3928,8 +3928,8 @@
     },
     {
       "path": "tests/release/v477-browser.cjs",
-      "bytes": 15342,
-      "sha256": "a2bff22e39f6c6d3d6efffb088b167e905a52d4b0e9adc9ac63627d8bdf2738b"
+      "bytes": 15817,
+      "sha256": "db169975026f98b9b81ba0b630e0f2da12a8a23de894ae2ec6ae5d7b4ba0702d"
     },
     {
       "path": "tests/release/v477-history.cjs",

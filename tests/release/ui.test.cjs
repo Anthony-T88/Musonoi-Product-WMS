@@ -248,7 +248,21 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('.oa-metal-chart').screenshot({path:path.join(E.runtime,'overview-monthly-metal.png')});
  await go(page,'/overview','CU_CATHODE');
  await page.locator('[data-oa-plot="net"] svg').waitFor();
- await page.locator('[data-oa-plot="vehicles"] svg').waitFor();
+ for(const key of ['vehicles','receipts','stock']){
+  const plot=page.locator('[data-oa-plot="'+key+'"]');
+  await plot.locator('svg').waitFor();
+  assert.equal(await plot.locator('svg').count(),1);
+  const ticks=await plot.locator('.oa-y-left').allTextContents();
+  assert(ticks.length>1&&ticks.every(value=>/^\d+$/.test(value)));
+  if(key==='stock'){
+   assert.equal(await page.locator('.oa-stock-trends svg').count(),1);
+   assert.equal(await plot.locator('.oa-y-right').count(),ticks.length);
+  }else{
+   const unit=key==='vehicles'?'辆|vehicles':'捆|bundles';
+   const titles=await plot.locator('svg title').allTextContents();
+   assert(titles.length&&titles.every(value=>new RegExp(' · \\d+ ('+unit+')$').test(value)));
+  }
+ }
  assert.match(await page.locator('.oa-kpis .oa-kpi').nth(1).innerText(),/备货作业中捆包|Bundles in Preparation/);
  assert.equal(await page.locator('.oa-design-intro').count(),0);
  await go(page,'/inventory','CU_CATHODE');

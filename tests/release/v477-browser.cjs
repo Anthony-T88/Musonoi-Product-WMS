@@ -47,7 +47,7 @@ async function mapShots(browser,fixture,phase){
     text:n.textContent,font:getComputedStyle(n).fontSize,weight:getComputedStyle(n).fontWeight,visible:n.offsetWidth>0,clipped:n.scrollWidth>n.clientWidth+1
    })));
    assert.equal(labels.length,2);assert(labels.every(label=>label.visible&&!label.clipped));
-   if(phase==='after')assert(labels.every(label=>parseFloat(label.font)>=17),JSON.stringify(labels));
+   if(phase==='after')assert(labels.every(label=>parseFloat(label.font)===14),JSON.stringify(labels));
    if(width===1440){
     await screenshot(page,phase+'-copper-map-default-1440');
     await page.locator('#v271-map-out').evaluate(button=>button.click());
@@ -67,7 +67,14 @@ async function mapShots(browser,fixture,phase){
       return {code:node.dataset.mapCell,text:node.innerText,titleVisible:!node.firstElementChild.hidden,within:rect.left>=tile.left&&rect.right<=tile.right&&rect.top>=tile.top&&rect.bottom<=tile.bottom};
      }));
      assert.equal(onCanvas.length,2);assert(onCanvas.every(label=>label.titleVisible&&label.within),JSON.stringify(onCanvas));
-     record('Copper canvas labels fit inside both areas',{width,defaultZoom:100,minZoom:100,labels:onCanvas});
+     const sizes=()=>frame.locator('.v271-temporary-label > span').evaluateAll(nodes=>nodes.map(n=>parseFloat(getComputedStyle(n).fontSize)));
+     const baseSizes=await sizes();
+     await page.locator('#v271-map-in').evaluate(button=>button.click());
+     const zoomedSizes=await sizes();
+     assert(baseSizes.every((size,index)=>size<=13&&zoomedSizes[index]>size));
+     await page.locator('#v271-map-out').evaluate(button=>button.click());
+     assert.deepEqual(await sizes(),baseSizes);
+     record('Copper canvas labels fit inside both areas and scale',{width,defaultZoom:100,minZoom:100,baseSizes,zoomedSizes,labels:onCanvas});
     }
    }
    record(phase+' Copper toolbar labels',{width,labels});
@@ -87,9 +94,9 @@ async function main(){
     await go(product,'/overview');
     await page.locator('.oa-stock-trends').waitFor();
     const plots=page.locator('.oa-stock-trends [data-oa-plot]');
-    assert.equal(await plots.count(),product===CU?2:1);
+    assert.equal(await plots.count(),1);
     await page.locator('.oa-stock-trends svg').first().waitFor();
-    const values=await page.locator('[data-oa-plot="prepared"]').evaluate(el=>JSON.parse(el.dataset.rows));
+    const values=await plots.evaluate(el=>JSON.parse(el.dataset.rows));
     assert(values.some(row=>row.stock_prepared_net_mt!==null));
     assert(values.some(row=>row.stock_prepared_net_mt===null));
     await screenshot(page,slug+'-overview-1440');

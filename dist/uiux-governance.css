@@ -519,15 +519,19 @@ html[data-release-ui="46"] #ux10-sales-table thead th a { color: var(--uix-text)
 }
 #page-content .p46-grid > .p46-aside:not(:has(> :not([hidden]):not(:empty))) { display: none; }
 html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-region="P3"],[data-map-region="P5"]) {
-  font-size: var(--uix-section);
+  font-size: var(--uix-body);
   font-weight: var(--uix-weight-emphasis);
   line-height: var(--uix-label-line);
   white-space: normal;
 }
 .map-app .v271-temporary-label > span:not([hidden]) {
-  font-size: clamp(var(--uix-section), 1.45vw, var(--uix-title));
+  font-size: var(--map-area-label-size);
   font-weight: var(--uix-weight-emphasis);
   line-height: var(--uix-label-line);
+}
+.map-app .v271-temporary-label > strong {
+  font-size: calc(var(--map-area-label-size) * 1.12);
+  margin-block-start: .2em;
 }
 #page-content .co2-filter #co-stock-filter {
   display: flex;
