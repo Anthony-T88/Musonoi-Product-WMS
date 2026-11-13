@@ -24,6 +24,10 @@ const names={
  invoiced:['确认开票净重','Invoice-confirmed Net','weight'],rate:['履约率','Fulfilment','percent'],
  confirmed:['开票确认日期','Invoice Confirmation Date','date']
 };
+Object.assign(names,{
+ metal:['ARECOMS 确认金属量（MT）','Confirmed ARECOMS Metal (MT)','metal'],
+ metalPending:['待确认金属量车次','Unconfirmed Metal Vehicles','number']
+});
 const enums={
  ONLINE:['在线单据','Online'],HISTORICAL:['历史导入','Historical Import'],INBOUND:['入库','Receipt'],OUTBOUND:['出库','Outbound'],
  RETURN:['返场','Return'],ADJUSTMENT:['调整','Adjustment'],WEIGHT:['重量确认 / 更正','Weight Confirmation / Correction'],
@@ -64,6 +68,11 @@ const rate=(actual,target)=>actual!=null&&Number(target)>0?Number(actual)/Number
 const col=(key,en)=>({key,label:names[key][+en],type:names[key][2]||'text'});
 function groupRows(rows,fn,aggregate){
  return [...groupBy(rows,fn)].map(([key,items])=>({...aggregate(items),scope:key}));
+}
+function cobaltMetal(rows){
+ const live=rows.filter(row=>row.source==='ONLINE');
+ const known=live.filter(row=>row.metal!=null);
+ return {metal:known.length?sum(known,'metal'):null,metalPending:countTrips(live.filter(row=>row.metal==null))};
 }
 function select(rows,q,keys){return rows.filter(row=>keys.every(key=>includes(row[key],q[key])));}
 function stockSummary(items){
@@ -108,8 +117,9 @@ async function report(c,req,input){
  let detail,summary,metric,warehouses=[],traceableFrom=null;
  if(kind==='shipping'){
   detail=dataSourceFilter(await D.shipping(c,req,{...q,contract_no:q.contract}),{...q,kind:null});
-  summary=groupRows(detail,row=>JSON.stringify(row[q.group]??null),items=>({[q.group]:items[0][q.group],...shipMetrics(items)}));
-  metric=shipMetrics(detail);
+  const shippingMetrics=rows=>({...shipMetrics(rows),...(req.productCode==='CO_HYDROXIDE'?cobaltMetal(rows):{})});
+  summary=groupRows(detail,row=>JSON.stringify(row[q.group]??null),items=>({[q.group]:items[0][q.group],...shippingMetrics(items)}));
+  metric=shippingMetrics(detail);
  }else if(kind==='movement'){
   detail=dataSourceFilter(await D.movements(c,req,q),{...q,kind:q.kind_filter});
   summary=groupRows(detail,row=>row.kind+'|'+row.source,items=>({kind:items[0].kind,source:items[0].source,...moveMetrics(items)}));
@@ -140,6 +150,10 @@ async function report(c,req,input){
  if(selected)detail=detail.filter(matcher[kind]);
  const [detailCols,summaryCols]=formats[kind].map(s=>s.split(' '));
  if(kind==='shipping')summaryCols.unshift(q.group);
+ if(kind==='shipping'&&req.productCode==='CO_HYDROXIDE'){
+  detailCols.push('metal');
+  summaryCols.push('metal','metalPending');
+ }
  const customerOptions=[...new Set([...summary,...detail].map(r=>r.customer).filter(Boolean))].sort();
  const columns=(keys)=>keys.map(key=>{
   const column=col(key,en);
@@ -164,6 +178,13 @@ async function workbook(data,req){
   const columns=section.columns.map(col=>W.col(col.key,col.label,col.label,col.type==='enum'?null:col.type,Math.max(18,col.label.length+5)));
   const rows=section.rows.map(row=>Object.fromEntries(section.columns.map(col=>[col.key,col.type==='enum'?data.labels[row[col.key]]??row[col.key]:row[col.key]])));
   const last=W.table(ctx,sheet,6,columns,rows,{filter:true});
+  if(data.product==='CO_HYDROXIDE'&&data.kind==='shipping'){
+   const metalColumn=columns.findIndex(column=>column.key==='metal')+2;
+   for(let row=7;row<=last;row++){
+    const cell=sheet.getCell(row,metalColumn);
+    if(cell.value!=null){cell.value=Number(cell.value);cell.numFmt='#,##0.00000';cell.alignment={horizontal:'right'};}
+   }
+  }
   if(data.kind==='balance')W.note(ctx,sheet,last+2,'历史导入的发运单独列示，在线账只包含正式业务。','Historical shipments are shown separately from the live ledger.');
   if(data.kind==='sales')W.note(ctx,sheet,last+2,'履约率以确认开票净重计算。','Fulfilment uses invoice-confirmed net weight.');
  }

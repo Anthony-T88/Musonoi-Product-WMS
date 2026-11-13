@@ -1405,7 +1405,7 @@
     },
     {
       "path": "dist/reports463.js",
-      "sha256": "e6384db29584839165275a25ff85464724fe7b618fc9806d0728aae793b0d5c0"
+      "sha256": "07b9853b73a5179bf21356f967c8cdb8ef9f661bc033b41cecc420bcc9680237"
     },
     {
       "path": "dist/route-permissions.js",
@@ -2177,11 +2177,11 @@
     },
     {
       "path": "server/report-center-data.cjs",
-      "sha256": "8401032a305d7b742e95ebb04ba4ccb7db82fde50f8647722de16101cd897abc"
+      "sha256": "1491da5b9a4e9f278a07e2e855dc2e7e971600865eb1866e7af8c8cebb674c27"
     },
     {
       "path": "server/report-center.cjs",
-      "sha256": "31d28d8b4d819d22c8e8d97ddd4ac22d13ea827f7d1bd6bd3c3e8933a89a4464"
+      "sha256": "f78155e392043623a578ac330f253f3b8b562f587059b2b4d45835b40a235e13"
     },
     {
       "path": "server/report-periods.cjs",
@@ -2489,7 +2489,7 @@
     },
     {
       "path": "tests/release/shipment-reports.cjs",
-      "sha256": "8245373fb56732fd1534955840db11ac518c31b41f395fe5cc4d36b5122ca840"
+      "sha256": "e64d615ffdec00df4407ec68cbd00656f6a0d37dd6bde820d71148fdd8b40105"
     },
     {
       "path": "tests/release/source-check.cjs",
@@ -2501,7 +2501,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "394fe2c4f059820772e92e1f7339080d69e6f761c61b3013fc160507bd810d86"
+      "sha256": "53f90b18e8cc98c55b605d7f114fd1976e747db986a50e09c09ca294cea51360"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

@@ -35,7 +35,7 @@ async function shipping(c,req,q){
   live=result.outbound.map(row=>({
    date:row.posted_at,document:row.outbound_code||row.order_no,customer:row.customer_name,contract:row.contract_no,
    vehicle:row.truck_no,lot:row.preparation_batch_no,packing:row.document_no,invoice:invoices.get(row.order_id),
-   qty:row.bags,gross:mt(row.actual_gross_kg),net:mt(row.actual_net_kg),trip:row.order_id,
+   qty:row.bags,gross:mt(row.actual_gross_kg),net:mt(row.actual_net_kg),metal:row.arecoms_mt,trip:row.order_id,
    status:documentStatus(row.packing_revision,row.invoice_confirmed_at),href:'/outbounds/'+row.order_id
   }));
  }else{
