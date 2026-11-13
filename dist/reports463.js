@@ -129,6 +129,7 @@ window.Reports463={
   if(type==='number')return CountValues.display(v);
   if(type==='percent')return Number(v).toLocaleString(I18n.language==='en'?'en':'zh-CN',{style:'percent',minimumFractionDigits:1,maximumFractionDigits:1});
   if(type==='weight')return Tonnes.format(String(v));
+  if(type==='metal')return Tonnes.fixed(Tonnes.scaled(String(v),5),5);
   return v;
  },
  cell(row,col,data){
@@ -158,7 +159,7 @@ window.Reports463={
    '>'+this.t('导出 Excel','Export Excel')+'</button>':'')+'</div></div>';
   const scope=data.scopeLabel==null?'':'<div class="r481-scope">'+esc(data.scopeLabel)+' <button id="r481-clear-scope" class="button compact secondary" type="button">'+
    this.t('清除明细范围','Clear Detail Scope')+'</button></div>';
-  const cellClass=col=>['number','weight','percent'].includes(col.type)?' class="r481-number"':'';
+  const cellClass=col=>['number','weight','metal','percent'].includes(col.type)?' class="r481-number"':'';
   const table=!total?'<p class="r463-empty">'+this.t('当前筛选条件下暂无记录','No records under the current filters')+'</p>':
    '<div class="r463-table-wrap" tabindex="0" role="region" aria-label="'+esc(data.title)+'"><table class="r463-table"><thead><tr>'+
    columns.map(col=>'<th scope="col"'+cellClass(col)+'>'+esc(col.label)+'</th>').join('')+

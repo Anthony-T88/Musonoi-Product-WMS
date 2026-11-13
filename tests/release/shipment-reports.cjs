@@ -67,8 +67,11 @@ test('cobalt shipment reconciliation through report API, workbook and page prese
  });
  await check('active report page distinguishes subtotal, unknown and confirmed zero',async()=>{
   const context={window:{},I18n:{language:'en',translate:x=>x},ManagementLabels:{columns:{}},CobaltReportsUI:{labels:{}},esc:String,Tonnes:require('../../dist/tonnes.js'),CountValues:require('../../dist/count-values.js')};
-  vm.runInNewContext(fs.readFileSync(path.join(E.root,'dist/reports463.js'),'utf8'),context);const ui=context.window.Reports463,d=await get({month:'2025-01',customer_id:a});ui.current={kind:'co',view:'shipping',data:d};assert.match(ui.metrics(),/Confirmed ARECOMS Subtotal/);assert.match(ui.metrics(),/0\.32346/);assert.match(ui.metrics(),/Unconfirmed Metal Vehicles/);
-  ui.current.view='execution';assert(ui.dataset().columns.includes('arecoms_unconfirmed_vehicles'));assert.match(ui.cell({arecoms_mt:'0'},'arecoms_mt'),/0\.00000/);assert.equal(ui.cell({arecoms_mt:null},'arecoms_mt'),'Unknown');
+  vm.runInNewContext(fs.readFileSync(path.join(E.root,'dist/reports463.js'),'utf8'),context);const ui=context.window.Reports463,d=await get({month:'2025-01',customer_id:a});
+  const metrics=ui.metrics({metrics:[{key:'metal',label:'Confirmed ARECOMS Metal (MT)',type:'metal',value:d.shippingSummary.arecoms_mt},
+   {key:'metalPending',label:'Unconfirmed Metal Vehicles',type:'number',value:d.shippingSummary.arecoms_unconfirmed_vehicles}]});
+  assert.match(metrics,/Confirmed ARECOMS Metal/);assert.match(metrics,/0\.32346/);assert.match(metrics,/Unconfirmed Metal Vehicles/);
+  const column={key:'metal',type:'metal'};assert.match(ui.cell({metal:'0'},column,d),/0\.00000/);assert.equal(ui.cell({metal:null},column,d),'—');
  });
  }finally{await app.close();await c.end();E.save('rc2-shipment-results.json',{syntheticOnly:true,status:checks.length===8&&checks.every(x=>x.status==='PASS')?'PASS':'FAIL',checks});}
 });

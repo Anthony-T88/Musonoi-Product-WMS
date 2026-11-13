@@ -165,10 +165,10 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert.equal(await page.evaluate(()=>ClientRelease.revision),release.frontendRevision);
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
- await page.waitForFunction(()=>window.Reports463?.current?.view==='shipping'&&document.querySelector('.r463-stats'));
- const ship=await page.evaluate(()=>Reports463.current.data.shippingSummary);assert.equal(ship.arecoms_mt,'0.35641');assert.equal(ship.arecoms_unconfirmed_vehicles,1);
+ await page.waitForFunction(()=>window.Reports463?.current?.data?.kind==='shipping'&&document.querySelector('.r463-stats'));
+ const ship=await page.evaluate(()=>Object.fromEntries(Reports463.current.data.metrics.map(m=>[m.key,m.value])));assert.equal(ship.metal,0.35641);assert.equal(ship.metalPending,1);
  assert.match(await page.locator('.r463-stats').innerText(),/0\.35641/);
- await page.locator('.r463-advanced summary').click();assert(await page.locator('select[name=sales_plan_id]').isVisible());
+ await page.locator('#r481-filter details summary').click();assert(await page.locator('input[name=lot]').isVisible());
  await page.goto(origin+'/workbench/accounts');await ready(page);await page.locator('#account-filter').waitFor();assert.equal(await page.locator('#account-registration-requests').count(),1);
  await page.locator('#account-create').click();for(const name of ['username','contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
