@@ -474,7 +474,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(!await sales.page.getByText('终审通过后方可派车', {exact:false}).isVisible());
  const overviewPage='/overview';
  await go(page,overviewPage,'CU_CATHODE');
- for(const chart of ['net','vehicles','receipts','unprepared','prepared']){
+ for(const chart of ['net','vehicles','receipts','stock']){
   const host=page.locator('[data-oa-plot="'+chart+'"]');
   await host.locator('svg').waitFor();
   assert.deepEqual(await host.locator('.oa-date-tick').allTextContents(),JSON.parse(await host.getAttribute('data-rows')).map(row=>row.period));
