@@ -51,7 +51,8 @@ async function main(){
   const admin=await login('admin'),viewer=await login('limited_viewer'),scoped=await login('customer_admin'),tag=randomUUID().slice(0,8);
   const actual=[process.env.WMS_PL_CU,process.env.WMS_PL_CO].map((name,i)=>({file_name:i?'field-cobalt.xlsx':'field-copper.xls',file_base64:fs.readFileSync(name).toString('base64'),warehouse_id:f.warehouse}));
   const field=(await preview(admin,actual)).results;
-  assert.deepEqual(field.map(row=>[row.product_code,row.totals.quantity,row.importable]),[[CU,19,true],[CO,52,true]]);
+  assert.deepEqual(field.map(row=>[row.product_code,row.totals.quantity]),[[CU,19],[CO,52]]);
+  assert(field.every(row=>row.importable||row.already_imported||row.issues.includes('DOCUMENT_CONFLICT')||row.rows.some(line=>line.flags.includes('UNIT_CONFLICT'))));
   assert(field.every(row=>row.shipping_cell==='PL!E7'));
   const cu=workbook(CU,{name:'TEST-CU-'+tag,unit:'TEST-CU-UNIT-'+tag}),co=workbook(CO,{name:'TEST-CO-'+tag,unit:'TEST-CO-UNIT-'+tag,receipt:'2020-03-02'});
   const missing=workbook(CU,{name:'TEST-MISSING-'+tag,unit:'TEST-BAD-'+tag,date:null});
@@ -71,6 +72,9 @@ async function main(){
    (SELECT count(*) FROM loading_plan_documents) plans,(SELECT count(*) FROM export_license_allocations) licences,
    (SELECT count(*) FROM inventory_revisions) revisions`)).rows[0];
   const before=await counts();
+  const overview=(product,user=admin,day='2020-03-05')=>request(user,(product===CU?'/v34/overview':'/cobalt/overview')+'?'+new URLSearchParams({from:day,to:day}),undefined,product);
+  const tally=(data,direction)=>data.historical_imports?.rows.filter(row=>row.direction===direction).reduce((n,row)=>n+row.units,0)||0;
+  const prior=await Promise.all([overview(CU),overview(CO),overview(CO,admin,'2020-03-02')]);
   const imported=await submit(admin,withTokens);
   assert.deepEqual(imported.results.map(row=>row.status),['IMPORTED','FAILED','IMPORTED','FAILED','FAILED']);
   const cuId=imported.results[0].id,coId=imported.results[2].id;
@@ -94,6 +98,28 @@ async function main(){
    assert.equal(loaded.rows[0].unit_id,unit);assert.equal(loaded.net_kg,record.net_kg);
    await request(scoped,base+'/historical-backfill/stock/batch/'+key,undefined,product,404);
   }
+  const updated=await Promise.all([overview(CU),overview(CO),overview(CO,admin,'2020-03-02')]);
+  assert.equal(tally(updated[0],'OUTBOUND')-tally(prior[0],'OUTBOUND'),1);
+  assert.equal(tally(updated[1],'OUTBOUND')-tally(prior[1],'OUTBOUND'),1);
+  assert.equal(tally(updated[0],'INBOUND')-tally(prior[0],'INBOUND'),0);
+  assert.equal(tally(updated[2],'INBOUND')-tally(prior[2],'INBOUND'),1);
+  assert.deepEqual(updated[0].outbound,prior[0].outbound);
+  assert.deepEqual(updated[1].shipping,prior[1].shipping);
+  assert.deepEqual(updated[0].metrics,prior[0].metrics);
+  assert.deepEqual(updated[1].inventory,prior[1].inventory);
+  const hidden=await overview(CU,scoped);
+  assert.equal(hidden.historical_imports,null);
+  const bag='TEST-CO-UNIT-'+tag;
+  const exportStock=await fetch(origin+'/api/v1/cobalt/stock/export?'+new URLSearchParams({stock_state:'ALL',bag}),{
+   headers:{...admin,origin,'x-product-code':CO}
+  });
+  assert.equal(exportStock.status,200);
+  const excel=XLSX.read(Buffer.from(await exportStock.arrayBuffer()));
+  const exported=XLSX.utils.sheet_to_json(excel.Sheets['袋级明细']);
+  assert.equal(exported.length,1);
+  assert.equal(exported[0]['袋号'],bag);
+  assert.equal(exported[0]['来源'],'历史导入数据');
+  assert.equal(exported[0]['发运日期'],'2020-03-05');
   const repeated=await submit(admin,withTokens.filter((_,i)=>i===0||i===2));
   assert.deepEqual(repeated.results.map(row=>row.status),['ALREADY_IMPORTED','ALREADY_IMPORTED']);
   const fail=workbook(CU,{name:'TEST-ROLLBACK-'+tag,unit:'TEST-ROLLBACK-UNIT-'+tag});
@@ -160,7 +186,7 @@ async function main(){
    assert(!blocked.importable&&blocked.rows[0].flags.includes('UNIT_CONFLICT')&&blocked.rows[0].conflicts.length);
   }finally{await testApp.close();}
   const proof={field:field.map(({product_code,totals,shipping_date})=>({product_code,units:totals.quantity,shipping_date})),
-   mixedBatch:true,missingInvalidAmbiguousDates:true,inventoryAndDocumentTrace:true,legacyIdentifierConflict:true,liveStockConflict:true,
+   mixedBatch:true,missingInvalidAmbiguousDates:true,inventoryAndDocumentTrace:true,legacyIdentifierConflict:true,liveStockConflict:true,historicalOverviewScopeAndDates:true,cobaltHistoricalExport:true,
    permissionDenial:true,customerScopeDenial:true,repeatAndConcurrent:true,transactionRollbackAndRetry:true,legacyLedgerReused:true,liveLedgersUnchanged:true};
   fs.mkdirSync('.runtime/v478-evidence',{recursive:true});
   fs.writeFileSync('.runtime/v478-evidence/history.json',JSON.stringify(proof,null,2)+'\n');

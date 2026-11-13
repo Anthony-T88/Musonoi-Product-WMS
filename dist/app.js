@@ -93,7 +93,7 @@ async function render(){
 function apply(){page=1;render();}
 let searchTimer;keys.forEach(k=>$(k).addEventListener(k==='search'?'input':'change',()=>{clearTimeout(searchTimer);if(remote&&k==='search')searchTimer=setTimeout(apply,200);else apply();}));
 $('filter-form').addEventListener('submit',async e=>{e.preventDefault();page=1;await render();if(remote&&!serviceReady)return;if(!$('date-error').hidden){notify('日期范围无效，请先调整日期。');return;}audit(`查询库存：${totalRows} 捆`);notify(`查询完成，共找到 ${totalRows} 捆${remote?'数据库':'演示'}库存。`);});
-$('reset').onclick=()=>{keys.forEach(k=>$(k).value=k==='status'?'CURRENT':'');selected.clear();page=1;render();notify('已重置全部筛选条件。');};
+$('reset').onclick=()=>{keys.forEach(k=>$(k).value=k==='status'?'ALL':'');selected.clear();page=1;render();notify('已重置全部筛选条件。');};
 $('page-size').onchange=()=>{size=Number($('page-size').value);page=1;render();};
 $('previous').onclick=()=>{if(page>1){page--;render();}};$('next').onclick=()=>{if(page<Math.ceil(totalRows/size)){page++;render();}};
 $('page-buttons').onclick=e=>{const b=e.target.closest('[data-page]');if(b){page=Number(b.dataset.page);render();}};

@@ -42,6 +42,12 @@ window.HistoricalMovements={
    'loading-plans':'loading-plan:read',outbounds:'load:read','stock-outbound':'load:read'})[area];
  },
  canArea(area){return CurrentUser.permissions.includes(this.permission(area));},
+ stockPath(facts={}){
+  const q=new URLSearchParams(ProductContext.isCopper()?{status:'OUTBOUND'}:{stock_state:'OUTBOUND'});
+  if(ProductContext.isCopper()&&facts.packing_list_no)q.set('packing_list_no',facts.packing_list_no);
+  if(!ProductContext.isCopper()&&facts.batch_no)q.set('batch',facts.batch_no);
+  return '/inventory?'+q;
+ },
  recordLink(id,product,label){
   const query=product?'?'+new URLSearchParams({product}):'';
   return '<a class="button secondary compact" href="'+this.path+'/'+esc(id)+query+'">'+label+'</a>';
@@ -134,7 +140,8 @@ window.HistoricalMovements={
      p?.totals?CountValues.display(p.totals.quantity)+' '+t('件','units')+' / '+this.weight(p.totals.net_kg)+' MT':null,status].filter(Boolean).map(esc).join(' · ')+'</summary>'+
     (review.length?'<p class="error" role="status">'+esc(review.join(' · '))+'</p>':'')+
     (p?.rows?.length?this.lines(result?.rows?.length?result.rows:p.rows,product):'')+
-    (id?this.recordLink(id,product,t('查看导入记录','View Import Record')):
+   (id?'<div class="business-toolbar">'+this.recordLink(id,product,t('查看导入记录','View Import Record'))+
+    (product===ProductContext.code&&this.canArea('inventory')&&p?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')+'</div>':
      '<label class="wms-field">'+t('单独重传此文件','Replace This File')+'<input type="file" accept=".xls,.xlsx" data-historical-replace="'+index+'"></label>')+
     '</details>';
   }).join('')+'<div class="wms-filter-actions"><button type="button" class="button primary" id="historical-confirm">'+t('确认导入合格文件','Import Valid Files')+
@@ -185,7 +192,8 @@ window.HistoricalMovements={
    '</a><button type="button" class="button secondary" id="historical-source">'+t('下载原文件','Download Source')+'</button></div>'+
    this.section('导入资料','Import Information',this.badge()+this.facts(r))+
     (r.documents?.length?this.section('关联单据','Related Documents',r.product_code!==ProductContext.code?
-    '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':'<ol>'+this.links(r.documents)+'</ol>'):'')+
+    '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':'<ol>'+this.links(r.documents)+'</ol>'+
+    (!r.voided_at&&r.product_code===ProductContext.code&&this.canArea('inventory')?'<a class="button secondary" href="'+esc(this.stockPath({packing_list_no:r.document_no,batch_no:r.source_facts.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')):'')+
    this.section('原表明细','Source Lines',this.lines(r.rows,r.product_code))+
    (!r.voided_at?this.section('导入纠错','Import Correction','<form id="historical-void" class="user-form"><label>'+t('作废原因','Void Reason')+
     '<textarea name="reason" required minlength="5" maxlength="500"></textarea></label><button class="button danger-outline">'+t('作废该条历史单据','Void Historical Record')+'</button></form>'):
@@ -201,17 +209,28 @@ window.HistoricalMovements={
    }}catch(error){$('historical-detail-error').textContent=I18n.translate(error.message,true);}finally{button.disabled=false;}
   };
  },
+ documentTable(data,area){
+  const t=this.t,path='/'+area+'/historical';
+  if(!data.items.length)return '<p class="wms-feedback" role="status">'+t('没有符合条件的历史单据。','No historical documents match.')+'</p>';
+  return this.table([t('单号','Document No.'),t('业务日期','Business Date'),t('装箱单号','Packing List No.'),
+   t('备货批次','Preparation Batch'),t('客户','Customer'),t('车辆','Truck'),t('净重（吨）','Net Weight (MT)'),t('来源','Source')],
+   data.items.map(r=>['<a href="'+path+'/'+esc(r.id)+'">'+esc(r.document_no)+'</a>'+
+    (area==='outbounds'&&r.outbound_document?'<br><a href="/stock-outbound/historical/'+esc(r.outbound_document.id)+'">'+esc(r.outbound_document.document_no)+'</a>':''),esc(r.business_date),this.text(r.packing_list_no),
+    this.text(r.source_facts.batch_no),this.text(r.source_facts.customer),this.text(r.source_facts.truck),this.weight(r.net_kg),this.badge()]),[6]);
+ },
+ getDocuments(area,search,page){
+  return API.request(this.prefix()+'/historical-backfill/documents?'+new URLSearchParams({kind:this.kinds[area],search,page}));
+ },
  async documents(area){
   const t=this.t,kind=this.kinds[area],path='/'+area+'/historical',q=new URLSearchParams(location.search);
-  const data=await API.request(this.prefix()+'/historical-backfill/documents?'+new URLSearchParams({...Object.fromEntries(q),kind}));
+  const data=await this.getDocuments(area,q.get('search')||'',q.get('page')||1);
   const pager=(page,label)=>{const next=new URLSearchParams(q);next.set('page',page);return '<a class="button secondary compact" href="'+path+'?'+esc(next)+'">'+label+'</a>';};
-  const back=area==='stock-outbound'?(ProductContext.isCopper()?'inventory?status=OUTBOUND':'inventory?stock_state=OUTBOUND'):area;
+  const back=area==='stock-outbound'?'outbounds':area==='loading-plans'&&!ProductContext.isCopper()?'loading-plans/query':area;
   this.page(this.kind(kind),this.kind(kind),'<div class="business-toolbar"><a class="button secondary" href="/'+back+'">'+t('返回业务列表','Back to Business List')+'</a></div>'+
    '<form id="historical-document-search" class="filters wms-filter-row"><label>'+t('单号、批次、客户或车辆','Document, Batch, Customer or Vehicle')+
    '<input type="search" name="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+
    '</button><a class="button secondary" href="'+path+'">'+t('重置','Reset')+'</a></div></form>'+
-   this.table([t('单号','Document No.'),t('业务日期','Business Date'),t('备货批次','Preparation Batch'),t('客户','Customer'),t('净重（吨）','Net Weight (MT)'),t('来源','Source')],
-    data.items.map(r=>['<a href="'+path+'/'+esc(r.id)+'">'+esc(r.document_no)+'</a>',esc(r.business_date),this.text(r.source_facts.batch_no),this.text(r.source_facts.customer),this.weight(r.net_kg),this.badge()]),[4])+
+   this.documentTable(data,area)+
    '<div class="wms-filter-actions">'+(data.page>1?pager(data.page-1,t('上一页','Previous')):'')+(data.has_next?pager(data.page+1,t('下一页','Next')):'')+'</div>');
   $('historical-document-search').onsubmit=e=>{e.preventDefault();Router.go(path+'?'+new URLSearchParams(new FormData(e.target)));};
  },
@@ -220,7 +239,7 @@ window.HistoricalMovements={
   const api=this.prefix()+'/historical-backfill';
   const row=await API.request(stock?api+'/stock/batch/'+id+'?'+new URLSearchParams({unit:q.get('unit')||''}):api+'/documents/'+id+'?kind='+kind);
   const title=stock?t(cu?'捆包详情档案':'批次详情档案',cu?'Bundle Detail Archive':'Batch Detail Archive'):this.kind(kind);
-  const back=stock?'/inventory?'+(cu?'status=OUTBOUND':'stock_state=OUTBOUND'):'/'+area+'/historical';
+  const back=stock?this.stockPath():'/'+(area==='loading-plans'&&!cu?'loading-plans/query':area==='stock-outbound'?'outbounds':area);
   this.page(title,title,'<div class="inventory-archive"><div class="business-toolbar"><a class="button secondary" href="'+back+'">'+t('返回列表','Back to List')+'</a></div>'+
    this.section(stock?(cu?'捆包资料':'备货批次'):'单据资料',stock?(cu?'Bundle Information':'Preparation Batch'):'Document Information',
     '<h3>'+esc(stock?(cu?row.rows[0]?.unit_id:row.source_facts.batch_no):row.document_no)+'</h3>'+this.badge()+
@@ -235,13 +254,38 @@ window.HistoricalMovements={
   if($('historical-unit-search'))$('historical-unit-search').onsubmit=e=>{e.preventDefault();Router.go(location.pathname+'?'+new URLSearchParams(new FormData(e.target)));};
  },
  async installPageEntries(){
-  const path=location.pathname;
+  const path=location.pathname,q=new URLSearchParams(location.search);
   const area=path==='/loading-plans/query'?'loading-plans':path.slice(1);
-  if(!Object.hasOwn(this.kinds,area)||area==='stock-outbound'||!this.canArea(area)||$('historical-business-link'))return;
-  const heading=document.querySelector('#business-page:not([hidden]) .page-heading');
-  if(!heading)return;
-  const link=document.createElement('a');link.id='historical-business-link';link.href='/'+area+'/historical';link.className='button secondary';
-  link.dataset.noI18n='';link.textContent=this.kind(this.kinds[area]);heading.append(link);
+  if(!Object.hasOwn(this.kinds,area)||area==='stock-outbound'||!this.canArea(area)||q.has('workflow')||['departures','printers'].includes(q.get('view'))||!System46.canRoute())return;
+  const host=document.querySelector('#business-page:not([hidden]) #page-content');
+  if(!host||host.querySelector('[role="alert"]:not(:empty)')||host.querySelector('[data-historical-business]'))return;
+  const t=this.t,kind=this.kinds[area],search=q.get('search')||'';
+  const signature=location.href;
+  const panel=document.createElement('section');panel.className='panel wms-section';panel.dataset.historicalBusiness=area;panel.dataset.noI18n='';
+  panel.innerHTML='<h2>'+(area==='outbounds'?t('历史装车与出库单','Historical Loading and Outbound Orders'):this.kind(kind))+'</h2><form class="filters wms-filter-row"><label>'+t('单号、批次、客户、合同或车辆','Document, Batch, Customer, Contract or Vehicle')+
+   '<input type="search" name="search" maxlength="160" value="'+esc(search)+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询历史','Search History')+
+   '</button><button type="reset" class="button secondary" data-wms-reset>'+t('重置','Reset')+'</button></div></form><div data-history-results aria-live="polite"></div>';
+  const form=panel.querySelector('form'),results=panel.querySelector('[data-history-results]');let sequence=0;
+  const show=async(page,term)=>{
+   const request=++sequence;
+   try{
+    const data=await this.getDocuments(area,term,page);
+    if(location.href!==signature||request!==sequence||!host.isConnected)return;
+    if(!panel.isConnected&&!data.items.length&&!term)return;
+    if(!panel.isConnected)host.prepend(panel);
+    const button=(page,label)=>'<button type="button" class="button secondary compact" data-history-page="'+page+'">'+label+'</button>';
+    results.innerHTML=this.documentTable(data,area)+'<div class="wms-filter-actions">'+(data.page>1?button(data.page-1,t('上一页','Previous')):'')+
+     (data.has_next?button(data.page+1,t('下一页','Next')):'')+'</div>';
+    for(const control of results.querySelectorAll('[data-history-page]'))control.onclick=()=>show(Number(control.dataset.historyPage),term);
+   }catch(error){
+    if(request!==sequence||location.href!==signature||!host.isConnected)return;
+    if(!panel.isConnected)host.prepend(panel);
+    results.textContent=t('暂时无法读取历史单据，请重新查询。','Historical documents could not be loaded. Search again.');
+   }
+  };
+  form.onsubmit=e=>{e.preventDefault();show(1,form.elements.search.value.trim());};
+  form.onreset=e=>{e.preventDefault();form.elements.search.value='';show(1,'');};
+  await show(1,search);
  },
  install(){
   RoutePermissions.register('historical-movements',path=>/^\/(?:workbench\/)?historical-movements(?:\/|$)/.test(path),()=>this.canImport()?undefined:'__historical_admin_only');
@@ -254,7 +298,6 @@ window.HistoricalMovements={
   Router.add(/^\/(receipts|loading-plans|outbounds|stock-outbound|inventory)\/historical\/([0-9a-f-]{36})$/,(area,id)=>this.document(area,id));
   const show=Router.performShow.bind(Router);
   Router.performShow=async(...args)=>{
-   $('historical-business-link')?.remove();
    const path=location.pathname;
    if(!this.documentRoute(path)&&!path.startsWith(this.path)&&!path.startsWith('/historical-movements')){
     await show(...args);await this.installPageEntries();return;
@@ -281,7 +324,9 @@ window.HistoricalMovements={
    if(previous!==I18n.language){
     if(path===this.path&&!this.busy)this.list({retain:true}).catch(e=>notify(I18n.translate(e.message,true)));
     else if(path.startsWith(this.path+'/')||this.documentRoute(path))Router.show();
-    else if($('historical-business-link'))$('historical-business-link').textContent=this.kind(this.kinds[path.split('/')[1]]);
+    else if(document.querySelector('[data-historical-business]')){
+     document.querySelector('[data-historical-business]').remove();this.installPageEntries();
+    }
    }
    return result;
   };

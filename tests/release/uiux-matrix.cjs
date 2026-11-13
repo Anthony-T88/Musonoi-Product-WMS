@@ -78,7 +78,7 @@ function expectedLanding(spec,product,ids){
  };
  replacements['preparation-new']=co?'/receipts/new':'/preparation/new';
  if(co)Object.assign(replacements,{'overview-detail':'/inventory',preparation:'/receipts','receipt-new':'/receipts/new'});
- if(copper&&spec.key==='inventory')replacements.inventory='/inventory?status=CURRENT';
+ if(spec.key==='inventory')replacements.inventory=copper?'/inventory?status=ALL':'/inventory?stock_state=ALL';
  if(co&&spec.key==='map'&&ids.coMapDefault)replacements.map='/stock-map?'+new URLSearchParams({project_id:ids.coMapDefault.project_id,warehouse_id:ids.coMapDefault.id});
  if(copper&&['cu-plan-group-edit','cu-plan-order-new'].includes(spec.key)&&ids.cuGroupChild){
   replacements[spec.key]='/loading-plans/orders/'+ids.cuGroupChild+(ids.cuGroupLocked?'':'/edit');

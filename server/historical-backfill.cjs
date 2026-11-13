@@ -160,6 +160,7 @@ function registerBatch(app,pool,admin,csrf,transaction){
 const documentSelect=`SELECT d.id,d.kind,d.document_no,d.business_date::text,d.event_order,d.source_id,
  m.document_no packing_list_no,m.product_code,m.business_date::text shipping_date,m.source_name,m.source_facts,
  b.original_receipt_date::text,b.import_batch_id,w.name warehouse_name,u.display_name imported_by,b.backfilled_at imported_at,
+ (SELECT jsonb_build_object('id',o.id,'document_no',o.document_no) FROM historical_business_documents o WHERE o.source_id=d.source_id AND o.kind='OUTBOUND') outbound_document,
  (SELECT count(*)::int FROM historical_movement_lines l WHERE l.document_id=m.id) quantity,
  (SELECT sum(l.net_kg)::text FROM historical_movement_lines l WHERE l.document_id=m.id) net_kg
  FROM historical_business_documents d JOIN historical_backfills b ON b.source_id=d.source_id
@@ -170,6 +171,30 @@ const related=(c,id)=>c.query(`SELECT id,kind,document_no,business_date::text,ev
 const lines=(c,id,query='',unitId=null)=>c.query(`SELECT id,source_row,unit_id,seal_no,sheets_count,net_kg::text,gross_kg::text
  FROM historical_outbound_units WHERE source_id=$1 AND ($2::uuid IS NULL OR id=$2) AND ($3='' OR
  strpos(lower(unit_id),lower($3))>0 OR strpos(lower(coalesce(seal_no,'')),lower($3))>0) ORDER BY source_row`,[id,unitId,query]).then(result=>result.rows);
+
+async function overview(c,req,chart,filters){
+ // Packing lists do not establish an association with these live dimensions.
+ if(['yard_id','location_id','batch_id','allocated_customer_id','contract_id','sales_plan_id','preparation_id','status'].some(key=>filters[key]))return null;
+ const period=chart.granularity==='month'?'YYYY-MM':'YYYY-MM-DD';
+ const {rows:[result]}=await c.query(`WITH documents AS (
+  SELECT h.source_id,h.shipping_date,h.original_receipt_date,count(*)::int units,sum(h.net_kg)/1000 net_mt
+  FROM historical_outbound_units h WHERE h.product_code=$2 AND ${scope('h')}
+   AND ($3::uuid IS NULL OR h.project_id=$3) AND ($4::uuid IS NULL OR h.warehouse_id=$4)
+   AND ($5::uuid IS NULL OR h.customer_id=$5)
+  GROUP BY h.source_id,h.shipping_date,h.original_receipt_date
+ ), flow AS (
+  SELECT shipping_date AS movement_date,'OUTBOUND' direction,units,net_mt FROM documents
+  UNION ALL
+  SELECT original_receipt_date,'INBOUND',units,net_mt FROM documents WHERE original_receipt_date IS NOT NULL
+ ), buckets AS (
+  SELECT to_char(movement_date,$8) period,direction,count(*)::int documents,sum(units)::int units,sum(net_mt)::text net_mt
+  FROM flow WHERE movement_date BETWEEN $6::date AND $7::date GROUP BY 1,2
+ ) SELECT (SELECT max(shipping_date)::text FROM documents) latest_shipping_date,
+  coalesce((SELECT jsonb_agg(buckets ORDER BY period,direction) FROM buckets),'[]'::jsonb) rows`,
+ [req.user.id,req.productCode,filters.project_id||null,filters.warehouse_id||null,filters.customer_id||null,
+  chart.from,chart.observed_through<chart.to?chart.observed_through:chart.to,period]);
+ return result.latest_shipping_date?result:null;
+}
 
 function permission(req,name){
  if(!req.user.permissions.includes(permissions[req.productCode]?.[name]))throw bad('HISTORY_PERMISSION','当前账号没有此页面权限',403);
@@ -191,7 +216,7 @@ function registerRead(app,pool,auth){
    const search=req.query.search||'',page=Number(req.query.page||1);
    if(typeof search!=='string'||search.length>160||!Number.isSafeInteger(page)||page<1||page>100000)throw bad('HISTORY_QUERY','查询条件无效');
    const {rows}=await pool.query(documentSelect+` WHERE ${scope()} AND m.product_code=$2 AND d.kind=$3 AND
-    ($4='' OR strpos(lower(concat_ws(' ',d.document_no,m.source_facts->>'batch_no',m.source_facts->>'customer',m.source_facts->>'truck')),lower($4))>0)
+    ($4='' OR strpos(lower(concat_ws(' ',d.document_no,m.source_facts->>'batch_no',m.source_facts->>'customer',m.source_facts->>'truck',m.source_facts->>'contract_no')),lower($4))>0)
     ORDER BY d.business_date DESC,d.id LIMIT 26 OFFSET $5`,[req.user.id,req.productCode,kind,search,(page-1)*25]);
    return {items:rows.slice(0,25),page,has_next:rows.length>25};
   });
@@ -220,4 +245,4 @@ function registerRead(app,pool,auth){
  }
 }
 
-module.exports={allowed,docKinds,scope,registerBatch,registerRead,related,authorizePage};
+module.exports={allowed,docKinds,scope,overview,registerBatch,registerRead,related,authorizePage};
