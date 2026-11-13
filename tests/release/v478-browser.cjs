@@ -125,14 +125,23 @@ async function occupyCobaltLocation(location){
    await page.locator('a[href^="/receipts/historical/"]').first().click();
    await page.getByRole('heading',{name:'历史入库单',exact:true}).first().waitFor();
    if(cu)await page.getByText(/历史补录记账日/).waitFor();
-   for(const [url,area] of [['/receipts','receipts'],[cu?'/loading-plans':'/loading-plans/query','loading-plans'],['/outbounds','outbounds']]){
+   for(const [url,area] of [['/receipts','receipts'],['/loading-plans/query','loading-plans'],['/outbounds','outbounds']]){
     await go(product,url);
-    const panel=page.locator('[data-historical-business="'+area+'"]');
-    await panel.locator('table tbody tr').first().waitFor();
-    await panel.locator('input[name=search]').fill(cu?'TEST-CU-':'TEST-CO-');
-    await panel.getByRole('button',{name:'查询历史',exact:true}).click();
-    await panel.locator('table tbody').getByText(cu?/TEST-CU-/:/TEST-CO-/).first().waitFor();
-    if(area==='outbounds')await panel.locator('a[href^="/stock-outbound/historical/"]').first().waitFor();
+    const regular=page.locator('#page-content table tbody a[href^="/'+area+'/historical/"]').first();
+    await regular.waitFor().catch(async error=>{console.error(product,area,page.url(),(await page.locator('#page-content').innerText()).slice(0,250));throw error;});
+    assert.equal(await page.locator('[data-historical-business]').count(),0);
+    const href=await regular.getAttribute('href');
+    if(await regular.getAttribute('data-op-select')){
+     await regular.click();
+     const preview=page.locator('#op-preview');
+     await preview.getByText('历史导入数据',{exact:true}).waitFor();
+     assert.equal(await preview.locator('[data-op-open-detail]').getAttribute('href'),href);
+     await preview.locator('[data-op-open-detail]').click();
+    }else await regular.click();
+    await ready().catch(async error=>{
+     console.error(product,area,page.url(),await page.locator('body').innerText().then(text=>text.slice(0,250)));throw error;
+    });
+    await page.locator('[data-historical-page]').waitFor();
    }
    await go(product,cu?'/overview':'/overview?from=2020-03-05&to=2020-03-05');
    if(cu){
@@ -142,11 +151,11 @@ async function occupyCobaltLocation(location){
     await form.locator('button[type=submit],button.primary').first().click();
     await refreshed;
    }
-   const overview=page.locator('.oa-panel').filter({has:page.getByRole('heading',{name:'历史导入收发统计',exact:true})});
-   await overview.locator('details').filter({has:page.getByText('按期间查看历史收发明细',{exact:true})}).waitFor();
-   await overview.getByText('按期间查看历史收发明细',{exact:true}).click();
-   await overview.getByRole('cell',{name:'2020-03-05',exact:true}).first().waitFor();
-   await overview.getByRole('link',{name:/查看已出库库存/}).waitFor();
+   const overview=page.locator('.oa-chart').filter({has:page.locator('[data-oa-plot=net]')});
+   await overview.getByText('查看图表数据',{exact:true}).click();
+   const period=overview.getByRole('row').filter({hasText:'2020-03-05'});
+   await period.waitFor();assert(Number((await period.locator('td').nth(2).innerText()).replaceAll(',',''))>0);
+   assert.equal(await page.locator('[data-history-overview]').count(),0);
    proofs.push({product,defaultStockIncludesHistorical:true,businessLists:true,historicalOverview:true});
    const query=cu?'?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse}):'';
    for(const language of ['zh-CN','en']){

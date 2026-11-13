@@ -72,7 +72,15 @@ async function register({app,pool,permitted,csrf}){
   if(!Number.isInteger(page)||page<1||page>100000||!['','DRAFT','PREPARING','SITE_PENDING','PRODUCTION_PENDING','REJECTED','WITHDRAWN','RECEIVED'].includes(status)||!['','PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED'].includes(work))throw B.error(400,'CO_INVALID_INPUT');
   const visible=`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id) AND s.customer_id IS NULL)`,from=' FROM co_preparations p LEFT JOIN co_work_batches w ON w.preparation_id=p.id WHERE '+visible,filtered=from+" AND($2='' OR p.status=$2) AND($3='' OR w.status=$3)",v=[req.user.id,status,work];
   const summary=(await c.query("SELECT count(*)::int total,coalesce(sum(p.bag_count),0)::int bags,count(*) FILTER(WHERE p.status='DRAFT')::int draft,count(*) FILTER(WHERE p.status='SITE_PENDING' OR w.status='PENDING_COMPLETION_REVIEW')::int site_pending,count(*) FILTER(WHERE p.status='PRODUCTION_PENDING')::int production_pending,count(*) FILTER(WHERE p.status IN('RECEIVED','PREPARING') AND w.status='PREPARING')::int preparing,count(*) FILTER(WHERE w.status='PENDING_COMPLETION_REVIEW')::int review,count(*) FILTER(WHERE p.status='RECEIVED' AND w.status='COMPLETED')::int completed,count(*) FILTER(WHERE p.status='RECEIVED')::int received"+from,[req.user.id])).rows[0];
-  return {items:(await c.query('SELECT p.*,w.status work_status,p.bag_count*647 expected_net_kg'+filtered+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET '+(page-1)*50,v)).rows,total:Number((await c.query('SELECT count(*)'+filtered,v)).rows[0].count),page,page_size:50,summary};
+  const archive=require('./historical-backfill.cjs').listSql('RECEIPT')+" AND m.product_code='CO_HYDROXIDE'";
+  const {rows:[historical]}=await c.query(`SELECT count(*)::int receipts,coalesce(sum(quantity),0)::int bags FROM (${archive}) h`,[req.user.id]);
+  summary.total+=historical.receipts;summary.received+=historical.receipts;summary.bags+=historical.bags;
+  const showHistory=!work&&(!status||status==='RECEIVED');
+  const offset=(page-1)*50,liveTotal=Number((await c.query('SELECT count(*)'+filtered,v)).rows[0].count);
+  const combined=`SELECT p.id,p.created_at,to_jsonb(p)||jsonb_build_object('work_status',w.status,'expected_net_kg',p.bag_count*647) data${filtered}`+
+   (showHistory?` UNION ALL SELECT h.id,h.created_at,to_jsonb(h)||jsonb_build_object('status','RECEIVED','bag_count',h.quantity) FROM (${archive}) h`:'' );
+  const {rows}=await c.query(`SELECT data FROM (${combined}) records ORDER BY created_at DESC,id LIMIT 50 OFFSET ${offset}`,v);
+  return {items:rows.map(row=>row.data),total:liveTotal+(showHistory?historical.receipts:0),page,page_size:50,summary};
  }));
 }
 module.exports={allowed,enabled,register,submission,access};

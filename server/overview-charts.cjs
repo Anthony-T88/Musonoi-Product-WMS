@@ -24,6 +24,17 @@ function closingPoints(chart,cutoff){
   return {period,cutoff:new Date(Math.min(next,limit)).toISOString()};
  });
 }
+function addHistory(chart,history){
+ if(!history?.rows.length)return chart;
+ const imported=new Map(history.rows.map(row=>[row.period+'|'+row.direction,row]));
+ const addWeight=(current,extra)=>T.fixed(T.scaled(current??'0',9)+T.scaled(extra,9),9);
+ return {...chart,rows:chart.rows.map(row=>{
+  const inbound=imported.get(row.period+'|INBOUND'),outbound=imported.get(row.period+'|OUTBOUND');
+  return {...row,
+   ...(inbound?{inbound_net_weight:addWeight(row.inbound_net_weight,inbound.net_mt),inbound_units:row.inbound_units+inbound.units,inbound_bundles:row.inbound_bundles+inbound.units}:{}),
+   ...(outbound?{net_weight:addWeight(row.net_weight,outbound.net_mt),vehicles:row.vehicles+outbound.vehicles,historical_outbound_units:outbound.units}:{})};
+ })};
+}
 async function stock(c,req,chart,f,cutoff,{co=false,epoch=null}={}){
  const points=closingPoints(chart,cutoff);
  const scopeSupported=!co||(!['customer_id','contract_id','sales_plan_id','status'].some(key=>f[key])&&(await c.query(
@@ -87,4 +98,4 @@ async function stock(c,req,chart,f,cutoff,{co=false,epoch=null}={}){
    stock_unprepared_bundles:r?.unprepared??null,stock_prepared_net_mt:r?.prepared_net??null};
  })};
 }
-module.exports={trend,stock};
+module.exports={trend,stock,addHistory};

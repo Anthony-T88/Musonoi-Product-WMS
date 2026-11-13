@@ -73,6 +73,10 @@ function expectedLanding(spec,product,ids){
   'cu-corrections':'/outbounds',
   'cu-correction-detail':'/outbounds/loads/'+ids.cuCorrectionLoad+'?correction='+ids.cuCorrection,
   shipping:'/outbounds?state=OUTBOUND',
+  'historical-receipts':'/receipts',
+  'historical-loading-plans':'/loading-plans/query',
+  'historical-outbounds':'/outbounds',
+  'historical-stock-outbound':'/outbounds',
   'cu-invoice':'/outbounds/packing-list/'+ids.cuLoad,
   'former-design-entry':'/workbench'
  };

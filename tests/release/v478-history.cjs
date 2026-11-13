@@ -107,6 +107,22 @@ async function main(){
   assert.deepEqual(updated[1].shipping,prior[1].shipping);
   assert.deepEqual(updated[0].metrics,prior[0].metrics);
   assert.deepEqual(updated[1].inventory,prior[1].inventory);
+  for(let i=0;i<2;i++){
+   const beforeNet=prior[i].chart_trend.rows[0].net_weight,afterNet=updated[i].chart_trend.rows[0].net_weight;
+   assert.equal(Number((Number(afterNet)-Number(beforeNet)).toFixed(9)),0.647123456);
+  }
+  assert.equal(updated[2].chart_trend.rows[0].inbound_units-prior[2].chart_trend.rows[0].inbound_units,1);
+  for(const [product,needle,receiptPath,planPath,outboundPath] of [
+   [CU,'TEST-CU-'+tag,'/v34/lists/receipts?status=CONFIRMED','/v34/lists/loading?status=COMPLETED','/outbound-workspace?status=OUTBOUND'],
+   [CO,'TEST-CO-'+tag,'/cobalt/sales-workflow/preparations?status=RECEIVED','/cobalt/loading/plans?status=OUTBOUND','/cobalt/outbound-workspace?state=OUTBOUND']
+  ]){
+   for(const path of [receiptPath,planPath,outboundPath]){
+    const list=await request(admin,path+'&search='+needle,undefined,product);
+    assert(list.items.some(row=>row.historical_import&&row.code.includes(needle)),path);
+   }
+   const pending=await request(admin,receiptPath.replace(/status=\w+$/,'status=DRAFT'),undefined,product);
+   assert(pending.items.every(row=>!row.historical_import));
+  }
   const hidden=await overview(CU,scoped);
   assert.equal(hidden.historical_imports,null);
   const bag='TEST-CO-UNIT-'+tag;

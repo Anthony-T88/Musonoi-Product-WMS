@@ -172,22 +172,56 @@ const lines=(c,id,query='',unitId=null)=>c.query(`SELECT id,source_row,unit_id,s
  FROM historical_outbound_units WHERE source_id=$1 AND ($2::uuid IS NULL OR id=$2) AND ($3='' OR
  strpos(lower(unit_id),lower($3))>0 OR strpos(lower(coalesce(seal_no,'')),lower($3))>0) ORDER BY source_row`,[id,unitId,query]).then(result=>result.rows);
 
+// Row projection for the regular business lists. Keep archival identifiers
+// and facts separate from records that participate in live workflows.
+function listSql(kind){
+ const facts="m.source_facts";
+ return `SELECT d.id,d.document_no AS code,d.document_no,d.business_date,d.business_date::text AS planned_load_day,
+  b.backfilled_at created_at,b.project_id,b.warehouse_id,b.customer_id,m.document_no packing_list_no,m.product_code,
+  ${facts}->>'batch_no' preparation_batch_no,${facts}->>'batch_no' shipment_batch_no,
+  ${facts}->>'customer' customer_name,${facts}->>'contract_no' contract_no,${facts}->>'truck' vehicle_no,
+  to_char(m.business_date,'YYYY-MM') shipment_month,true historical_import,
+  weight.quantity,weight.net_kg::text,(weight.net_kg/1000)::text net_weight,
+  (SELECT o.document_no FROM historical_business_documents o WHERE o.source_id=m.id AND o.kind='OUTBOUND') outbound_code,
+  '/${Object.keys(docKinds).find(area=>docKinds[area]===kind)}/historical/'||d.id AS href
+ FROM historical_business_documents d JOIN historical_backfills b ON b.source_id=d.source_id
+ JOIN historical_movement_documents m ON m.id=b.source_id AND m.voided_at IS NULL
+ CROSS JOIN LATERAL(SELECT count(*)::int quantity,sum(l.net_kg) net_kg FROM historical_movement_lines l WHERE l.document_id=m.id) weight
+ WHERE ${scope()} AND d.kind='${kind}'`;
+}
+
+function outboundListSql(product,q,bind){
+ const conditions=[`m.product_code=${bind(product)}`];
+ // The supplied packing list has no status in the live generation workflow.
+ if(q.plan_id||q.document_status)conditions.push('false');
+ for(const [key,field] of Object.entries({customer:"m.source_facts->>'customer'",vehicle_no:"m.source_facts->>'truck'",
+  contract_no:"m.source_facts->>'contract_no'",outbound_no:'m.document_no'})){
+  if(q[key])conditions.push(`strpos(lower(${field}),lower(${bind(q[key].trim())}))>0`);
+ }
+ if(q.search)conditions.push(`strpos(lower(concat_ws(' ',d.document_no,m.document_no,m.source_facts->>'batch_no',m.source_facts->>'customer',m.source_facts->>'contract_no',m.source_facts->>'truck')),lower(${bind(q.search.trim())}))>0`);
+ if(q.start)conditions.push(`m.business_date>=${bind(B.date(q.start))}::date`);
+ if(q.end)conditions.push(`m.business_date<=${bind(B.date(q.end))}::date`);
+ return listSql('LOADING_ORDER')+' AND '+conditions.join(' AND ');
+}
+
 async function overview(c,req,chart,filters){
  // Packing lists do not establish an association with these live dimensions.
  if(['yard_id','location_id','batch_id','allocated_customer_id','contract_id','sales_plan_id','preparation_id','status'].some(key=>filters[key]))return null;
  const period=chart.granularity==='month'?'YYYY-MM':'YYYY-MM-DD';
  const {rows:[result]}=await c.query(`WITH documents AS (
-  SELECT h.source_id,h.shipping_date,h.original_receipt_date,count(*)::int units,sum(h.net_kg)/1000 net_mt
+  SELECT h.source_id,h.shipping_date,h.original_receipt_date,count(*)::int units,sum(h.net_kg)/1000 net_mt,
+   nullif(trim(h.source_facts->>'truck'),'') truck,h.source_facts->>'trailer_one' trailer_one,h.source_facts->>'trailer_two' trailer_two
   FROM historical_outbound_units h WHERE h.product_code=$2 AND ${scope('h')}
    AND ($3::uuid IS NULL OR h.project_id=$3) AND ($4::uuid IS NULL OR h.warehouse_id=$4)
    AND ($5::uuid IS NULL OR h.customer_id=$5)
-  GROUP BY h.source_id,h.shipping_date,h.original_receipt_date
+  GROUP BY h.source_id,h.shipping_date,h.original_receipt_date,h.source_facts
  ), flow AS (
-  SELECT shipping_date AS movement_date,'OUTBOUND' direction,units,net_mt FROM documents
+  SELECT shipping_date AS movement_date,'OUTBOUND' direction,units,net_mt,
+   CASE WHEN truck IS NOT NULL THEN concat_ws('|',shipping_date,upper(truck),upper(coalesce(trailer_one,'')),upper(coalesce(trailer_two,''))) END trip FROM documents
   UNION ALL
-  SELECT original_receipt_date,'INBOUND',units,net_mt FROM documents WHERE original_receipt_date IS NOT NULL
+  SELECT original_receipt_date,'INBOUND',units,net_mt,NULL FROM documents WHERE original_receipt_date IS NOT NULL
  ), buckets AS (
-  SELECT to_char(movement_date,$8) period,direction,count(*)::int documents,sum(units)::int units,sum(net_mt)::text net_mt
+  SELECT to_char(movement_date,$8) period,direction,count(*)::int documents,sum(units)::int units,sum(net_mt)::text net_mt,count(DISTINCT trip)::int vehicles
   FROM flow WHERE movement_date BETWEEN $6::date AND $7::date GROUP BY 1,2
  ) SELECT (SELECT max(shipping_date)::text FROM documents) latest_shipping_date,
   coalesce((SELECT jsonb_agg(buckets ORDER BY period,direction) FROM buckets),'[]'::jsonb) rows`,
@@ -245,4 +279,4 @@ function registerRead(app,pool,auth){
  }
 }
 
-module.exports={allowed,docKinds,scope,overview,registerBatch,registerRead,related,authorizePage};
+module.exports={allowed,docKinds,scope,listSql,outboundListSql,overview,registerBatch,registerRead,related,authorizePage};

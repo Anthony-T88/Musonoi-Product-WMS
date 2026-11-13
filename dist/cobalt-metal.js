@@ -33,8 +33,8 @@ window.CobaltMetal={
   const text=String(value),mt=text.endsWith(' MT');
   return '<article class="v34-kpi"><span>'+esc(label)+'</span><strong>'+esc(mt?text.slice(0,-3):text)+(mt?'<small> MT</small>':'')+'</strong></article>';
  },
- overview(data,fulfilment,cards){
-  return data&&cards?this.stockCards(data.inventory,cards,fulfilment)+(data.period||data.month?this.confirmationCards(data.period||data.month):''):'';
+ overview(data,fulfilment,cards,shipmentVehicles){
+  return data&&cards?this.stockCards(data.inventory,cards,fulfilment)+(data.period||data.month?this.confirmationCards(data.period||data.month,true,shipmentVehicles):''):'';
  },
  stockCards(inventory,cards,fulfilment){
   const a=OverviewAnalysis,t=this.t,metal=this.format(inventory.estimated_mt);
@@ -46,11 +46,11 @@ window.CobaltMetal={
    a.card(t('在库库存预估金属量','Estimated In-Stock Cobalt Metal'),metal,metal==='—'?'':t('金属吨','MT of cobalt'),t('按在库预计钴金属量汇总','Estimated cobalt metal in stock'))+
    a.card(t('销售计划履约','Sales Fulfilment'),fulfilment==null?'—':a.number(fulfilment,1),fulfilment==null?'':'%','')+'</div>';
  },
- confirmationCards(period,withTitle=true){
+ confirmationCards(period,withTitle=true,shipmentVehicles=period.vehicles){
   const a=OverviewAnalysis,t=this.t,vehicles=t('车','vehicles'),confirmed=this.format(period.confirmed_mt??'0');
   return '<section class="oa-arecoms" aria-label="'+t('ARECOMS确认汇总','ARECOMS Confirmation Summary')+'">'+
    (withTitle?'<h2>'+t('ARECOMS金属量确认','ARECOMS Metal Confirmation')+'</h2>':'')+'<div class="oa-kpis oa-kpis-confirmation">'+
-   a.card(t('发运车辆数','Shipment Vehicles'),CountValues.display(period.vehicles),vehicles,'')+
+   a.card(t('发运车辆数','Shipment Vehicles'),CountValues.display(shipmentVehicles),vehicles,'')+
    a.card(t('ARECOMS金属量确认进度','ARECOMS Confirmation Progress'),CountValues.display(period.completed)+' '+vehicles+' / '+CountValues.display(period.vehicles),vehicles,'')+
    a.card(t('已确认车数与钴金属量','Confirmed Vehicles and Cobalt'),CountValues.display(period.completed)+' '+vehicles+' / '+confirmed,t('金属吨','MT of cobalt'),'')+
    '</div></section>';

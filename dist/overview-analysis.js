@@ -23,8 +23,13 @@ window.OverviewAnalysis={
  },
  card(label,value,unit,note,featured=false){return '<article class="oa-kpi'+(featured?' is-featured':'')+'"><span>'+label+'</span><div><strong data-no-i18n>'+esc(value)+'</strong><small>'+unit+'</small></div><p>'+note+'</p></article>';},
  rate(target,posted){return target!=null&&Number(target)>0&&posted!=null?Number(posted)/Number(target)*100:null;},
+ outboundNet(data,co){
+  const imported=data.historical_imports?.rows.filter(row=>row.direction==='OUTBOUND')||[];
+  const posted=co?this.mt(data.shipping.actual_net_kg):data.outbound.net_weight;
+  return imported.length?Tonnes.fixed(Tonnes.scaled(posted??'0',9)+imported.reduce((sum,row)=>sum+Tonnes.scaled(row.net_mt,9),0n),9):posted;
+ },
  cobaltFulfilment(execution){const rows=(execution||[]).map(row=>({target:row.planned_physical_mt,outbound:this.mt(row.invoiced_net_kg)}));return this.rate(this.sum(rows,'target'),this.sum(rows,'outbound'));},
- model(data,co){const a=data.analysis||{},plans=a.execution?.map(r=>co?{id:r.id,code:r.code,customer:r.customer_name,target:r.planned_physical_mt,outbound:this.mt(r.actual_net_kg),invoiced:this.mt(r.invoiced_net_kg),prepared:null,assigned:null,unknown:null,planned_vehicles:r.planned_vehicles,dispatched:r.dispatched_vehicles,loaded:r.loaded_vehicles}: {id:r.id,code:r.document_no,customer:r.customer_name,target:r.planned_net_weight,outbound:r.outbound_net_weight,invoiced:r.invoiced_net_weight,prepared:r.prepared_net_weight,assigned:r.assigned_net_weight,unknown:r.unknown_weights})||[],target=this.sum(plans,'target'),posted=this.sum(plans,'invoiced');return {raw:data,co,unit:this.t(co?'包':'捆',co?'bags':'bundles'),physical:co?data.inventory.bags:data.metrics.physical.bundles,known:co?this.mt(data.inventory.actual_net_kg):data.metrics.physical.known_net_weight,unknown:co?data.inventory.unconfirmed_bags:data.metrics.physical.unknown_weights,outbound:co?this.mt(data.shipping.actual_net_kg):data.outbound.net_weight,outboundUnknown:co?data.chart_trend.rows.reduce((n,r)=>n+Number(r.unknown_weights||0),0):data.outbound.unknown_weights,vehicles:co?data.shipping.outbound_vehicles:data.outbound.vehicles,customers:a.current_customers||[],states:a.states||[],plans,executionAllowed:a.execution!==null&&a.execution!==undefined,target,posted,rate:this.rate(target,posted),tasks:data.todos||[],alerts:data.alerts||[],trend:data.chart_trend};},
+ model(data,co){const a=data.analysis||{},flows=data.chart_trend.rows,plans=a.execution?.map(r=>co?{id:r.id,code:r.code,customer:r.customer_name,target:r.planned_physical_mt,outbound:this.mt(r.actual_net_kg),invoiced:this.mt(r.invoiced_net_kg),prepared:null,assigned:null,unknown:null,planned_vehicles:r.planned_vehicles,dispatched:r.dispatched_vehicles,loaded:r.loaded_vehicles}: {id:r.id,code:r.document_no,customer:r.customer_name,target:r.planned_net_weight,outbound:r.outbound_net_weight,invoiced:r.invoiced_net_weight,prepared:r.prepared_net_weight,assigned:r.assigned_net_weight,unknown:r.unknown_weights})||[],target=this.sum(plans,'target'),posted=this.sum(plans,'invoiced');return {raw:data,co,unit:this.t(co?'包':'捆',co?'bags':'bundles'),physical:co?data.inventory.bags:data.metrics.physical.bundles,known:co?this.mt(data.inventory.actual_net_kg):data.metrics.physical.known_net_weight,unknown:co?data.inventory.unconfirmed_bags:data.metrics.physical.unknown_weights,outbound:this.outboundNet(data,co),outboundUnknown:co?flows.reduce((n,r)=>n+Number(r.unknown_weights||0),0):data.outbound.unknown_weights,vehicles:flows.reduce((n,r)=>n+r.vehicles,0),customers:a.current_customers||[],states:a.states||[],plans,executionAllowed:a.execution!==null&&a.execution!==undefined,target,posted,rate:this.rate(target,posted),tasks:data.todos||[],alerts:data.alerts||[],trend:data.chart_trend};},
  historyNotice(window,unavailable=false){
   if(!window?.history_started_at)return '';
   const time=BusinessTime.display(window.history_started_at),t=this.t;
@@ -42,29 +47,10 @@ window.OverviewAnalysis={
    loaded:cards.loaded||analysis.states?.find(row=>row.key==='loaded')||{quantity:0,batches:0}};
  },
  cobalt(data){const parent=document.querySelector('.co-overview-page');if(parent)this.render(parent,data,true);},
- historical(data,co){
-  const history=data.historical_imports;if(!history)return '';
-  const t=this.t,unit=t(co?'袋':'捆',co?'bags':'bundles'),rows=history.rows;
-  const totals=direction=>rows.filter(row=>row.direction===direction).reduce((sum,row)=>({documents:sum.documents+row.documents,
-   units:sum.units+row.units,weight:sum.weight+Tonnes.scaled(row.net_mt,9)}),{documents:0,units:0,weight:0n});
-  const inbound=totals('INBOUND'),outbound=totals('OUTBOUND');
-  const card=(title,row)=>this.card(title,this.number(Tonnes.fixed(row.weight,9)),'MT',
-   CountValues.display(row.documents)+' '+t('单','documents')+' · '+CountValues.display(row.units)+' '+unit);
-  const table=rows.length?'<details><summary>'+t('按期间查看历史收发明细','View Historical Movement by Period')+'</summary>'+
-   HistoricalMovements.table([t('期间','Period'),t('方向','Direction'),t('单据数','Documents'),t('数量','Quantity')+' ('+unit+')',t('净重（吨）','Net Weight (MT)')],
-    rows.map(row=>[esc(row.period),row.direction==='INBOUND'?t('入库','Inbound'):t('出库','Outbound'),
-     CountValues.display(row.documents),CountValues.display(row.units),this.number(row.net_mt)]),[2,3,4])+'</details>':'';
-  const note=t('出库按装箱单发运日期统计。仅原始入库日期有据可查的记录计入入库。','Outbound uses the packing list shipping date. Inbound requires an evidenced original receipt date.');
-  const recent=rows.length?'':'<p>'+t('所选期间无历史导入收发。最近发运日为 ','No imported movements in this period. Latest shipping date: ')+esc(history.latest_shipping_date)+'</p>';
-  const drill=HistoricalMovements.canArea('inventory')?'<a class="oa-more" href="'+HistoricalMovements.stockPath()+'">'+t('查看已出库库存','View Outbound Stock')+' →</a>':'';
-  return this.panel('历史导入收发统计','Imported Historical Movements',note,
-   '<div class="oa-kpis" data-history-overview>'+card(t('历史出库净重','Historical Outbound Net'),outbound)+
-   card(t('历史入库净重','Historical Inbound Net'),inbound)+'</div>'+recent+drill+table);
- },
  render(parent,data,co){if(!data.chart_trend)return;const filter=co?parent.querySelector('.overview-filter-box'):null,model=this.model(data,co),root=document.createElement('div');root.className='oa467';root.dataset.noI18n='';root.dataset.overviewAnalysis='true';root.dataset.product=co?'CO_HYDROXIDE':'CU_CATHODE';const generation=++this.sequence;this.current={root,data,co,generation};
  const t=this.t,prepared=co?null:data.metrics.prepared_pending_outbound,unavailable=!!data.window.history_unavailable,cards=co?this.cobaltCards(data.analysis):null;
  root.innerHTML=(data.window?.history_started_at?'<p class="'+(data.window.partial?'oa-warning':'oa-scope')+'">'+esc(this.historyNotice(data.window))+'</p>':'')+
- (co&&data.metal?CobaltMetal.overview(data.metal,model.rate,cards):'<div class="oa-kpis'+(co?'':' oa-kpis-copper')+'">'+(co?(cards?
+ (co&&data.metal?CobaltMetal.overview(data.metal,model.rate,cards,model.vehicles):'<div class="oa-kpis'+(co?'':' oa-kpis-copper')+'">'+(co?(cards?
  this.batchCard(t('备货作业中吨包','Bags in Preparation'),cards.preparing)+
  this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),cards.prepared,true)+
  this.batchCard(t('装车中库存','Stock in Loading'),cards.loading,true)+
@@ -73,8 +59,8 @@ window.OverviewAnalysis={
  this.batchCard(t('备货作业中捆包','Bundles in Preparation'),data.metrics.preparing)+
  this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),prepared,true)+
  this.batchCard(t('装车中库存','Stock in Loading'),data.metrics.loading,true))+
- this.card(t('本期正式出库','Formal Outbound'),this.number(model.outbound),t('吨','MT'),CountValues.display(model.vehicles)+' '+t('辆','vehicles')))+
- this.card(t('销售计划履约','Sales Fulfilment'),model.rate==null?'—':this.number(model.rate,1),'%','')+'</div>')+this.historical(data,co)+
+ this.card(t('本期出库','Period Outbound'),this.number(model.outbound),t('吨','MT'),CountValues.display(model.vehicles)+' '+t('辆','vehicles')))+
+ this.card(t('销售计划履约','Sales Fulfilment'),model.rate==null?'—':this.number(model.rate,1),'%','')+'</div>')+
  '<div class="oa-grid oa-charts">'+['net','vehicles','receipts','stock'].map(key=>co&&data.metal&&key==='receipts'?this.panel('月度发运金属量统计','Monthly Shipment Metal','',CobaltMetal.chart(data.metal.months),'oa-chart oa-metal-chart'):this.chart(model,key)).join('')+'</div><div class="oa-grid oa-three">'+(unavailable?'':this.stock(model)+this.customers(model))+this.attention(model)+'</div>'+this.execution(model)+this.flow(model)+(this.can('report:read')?this.panel('收发存与月度预检','Stock Balance & Monthly Precheck',t('产品＋仓库＋自然月 · 只读，不锁账','Product + warehouse + calendar month · Read-only'),'<div data-oa-balance>'+t('正在读取整仓月度预检…','Loading warehouse monthly precheck…')+'</div>','oa-balance-panel'):'');
  parent.replaceChildren(...(filter?[filter]:[]),root);this.bindCharts(root,model);window.ExportLicenses?.mountOverview(root);if(this.can('report:read'))this.loadBalance(this.current,model);
  },
@@ -160,7 +146,7 @@ window.OverviewAnalysis={
  draw(root,model,key){
   const definition=this.chartDefinition(model,key),{series}=definition,type=this.chartType(model.co,key),rows=model.trend.rows;
   for(const b of root.querySelectorAll('[data-oa-key="'+key+'"]'))b.setAttribute('aria-pressed',String(b.dataset.oaType===type));
-  const hasRecords=key==='net'?rows.some(r=>r.vehicles||r.inbound_units):rows.some(r=>series.some(s=>r[s.key]!=null));
+  const hasRecords=key==='net'?rows.some(r=>r.vehicles||r.inbound_units||r.historical_outbound_units):rows.some(r=>series.some(s=>r[s.key]!=null));
   this.plot(root.querySelector('[data-oa-plot="'+key+'"]'),model,definition,type,hasRecords);
  },
  plotWidth(model){return Math.max(200,82+model.trend.rows.length*22);},
