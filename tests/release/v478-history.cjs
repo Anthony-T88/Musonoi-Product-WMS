@@ -124,6 +124,26 @@ async function main(){
    const pending=await request(admin,receiptPath.replace(/status=\w+$/,'status=DRAFT'),undefined,product);
    assert(pending.items.every(row=>!row.historical_import));
   }
+  const dateQuery='from=2020-03-05&to=2020-03-05';
+  const cuReport=await request(admin,'/v34/reports?type=outbound&group_by=lot_no&'+dateQuery,undefined,CU);
+  const cuLot=cuReport.items.find(row=>row.lot_no==='TEST-CU-'+tag+'-LOT');
+  assert.equal(cuLot?.bundles,1);
+  assert.equal(Number(cuLot.net_weight),0.647123);
+  const coReport=await request(admin,'/cobalt/reports?'+dateQuery,undefined,CO);
+  const coLot=coReport.outbound.find(row=>row.preparation_batch_no==='TEST-CO-'+tag+'-LOT');
+  assert.equal(coLot?.historical_import,true);assert.equal(coLot.arecoms_mt,null);
+  const flows=await request(admin,'/reports?type=flows&'+dateQuery,undefined,CU);
+  assert(flows.rows.some(row=>row.bundle_no==='TEST-CU-UNIT-'+tag&&row.type==='历史导入出库'));
+  for(const [product,url,body,lot] of [
+   [CU,'/v34/reports/export',{type:'outbound',group_by:'lot_no',from:'2020-03-05',to:'2020-03-05'},cuLot.lot_no],
+   [CO,'/cobalt/reports/export',{filters:coReport.filters,signature:coReport.signature},coLot.preparation_batch_no]
+  ]){
+   const response=await fetch(origin+'/api/v1'+url,{method:'POST',headers:{...admin,origin,'x-product-code':product,
+    'content-type':'application/json','idempotency-key':randomUUID()},body:JSON.stringify(body)});
+   assert.equal(response.status,200);
+   const exportBook=XLSX.read(Buffer.from(await response.arrayBuffer()));
+   assert(Object.values(exportBook.Sheets).some(sheet=>Object.values(sheet).some(cell=>cell.v===lot)),lot);
+  }
   const hidden=await overview(CU,scoped);
   assert.equal(hidden.historical_imports,null);
   const bag='TEST-CO-UNIT-'+tag;

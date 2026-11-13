@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{chromium}=require('playwright');
 const f=require('../../.runtime/v478-test-config.json'),origin=f.appCfg.origin;
-const output='.runtime/v479-evidence';
+const output='.runtime/v480-evidence';
 assert.equal(origin,'http://127.0.0.1:4191');
 assert.equal(f.appCfg.environment,'test');
 assert.equal(new URL(f.appCfg.databaseUrl).pathname,'/'+f.database);
@@ -76,6 +76,20 @@ async function occupyCobaltLocation(location){
    }
   };
   await page.goto(origin+'/overview');await ready();await lang('zh-CN');
+  const navigation=await page.evaluate(async()=>{
+   const target=document.getElementById('page-content'),frames=[];
+   const original=Router.performShow;
+   Router.performShow=async function(...args){
+    await original.apply(this,args);
+    await new Promise(resolve=>requestAnimationFrame(()=>{
+     frames.push(getComputedStyle(target).visibility);
+     resolve();
+    }));
+   };
+   try{await Router.go('/workbench');}finally{Router.performShow=original;}
+   return {frames,ready:getComputedStyle(target).visibility};
+  });
+  assert.deepEqual(navigation,{frames:['hidden'],ready:'visible'});
   await go('CU_CATHODE','/workbench');
   await page.locator('.s46-hub-card[href="/workbench/historical-movements"]').click();
   await page.locator('#historical-upload input[multiple]').waitFor();
@@ -119,6 +133,7 @@ async function occupyCobaltLocation(location){
    const facts=await historyRow.evaluate(row=>[...row.cells].map((cell,i)=>({heading:row.closest('table').tHead.rows[0].cells[i].textContent.replace('↕','').trim(),sort:row.closest('table').tHead.rows[0].cells[i].dataset.sort,value:cell.textContent.trim()})));
    assert.equal(facts.find(cell=>cell.value==='历史数据导入').heading,'备注');
    assert.equal(facts.find(cell=>cell.sort==='date'||cell.heading==='入库日期')?.value,cu?'':'2020-03-02',JSON.stringify(facts));
+   assert(facts.some(cell=>cell.heading==='批次号'&&cell.value.includes('-LOT')));
    assert(!facts.some(cell=>cell.value.includes('历史导入数据')||cell.value.includes('发运 ')));
    await historyRow.locator('a[href^="/inventory/historical/"]').click();
    await page.getByRole('heading',{name:cu?'捆包详情档案':'批次详情档案',exact:true}).first().waitFor().catch(async e=>{console.log(page.url(),await page.locator('#business-title').textContent(),(await page.locator('#page-content').innerText()).slice(0,400));throw e;});
@@ -169,7 +184,7 @@ async function occupyCobaltLocation(location){
    await plot.getByRole('tooltip').screenshot({path:output+'/'+(cu?'cu':'co')+'-overview-tooltip.png'});
    if(!cu){
     const cards=page.locator('.oa-kpis-cobalt .oa-kpi > span');
-    assert.deepEqual(await cards.allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','在库库存预估金属量','ARECOMS确认车数与钴金属量','已出库库存','销售计划履约']);
+    assert.deepEqual(await cards.allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','在库库存预估金属量','ARECOMS确认车数与钴金属量','已出库重量']);
    }
    await filter.screenshot({path:output+'/'+(cu?'cu':'co')+'-overview-filters.png'});
    const bounds=await filter.evaluate(form=>{
@@ -282,13 +297,23 @@ async function occupyCobaltLocation(location){
     await empty.press('Enter');await detail.getByText('No physical stock is recorded here.').waitFor();
     await detail.locator('.map465-close').click();
     const canvas=page.locator('#co-map-canvas'),svg=page.locator('#co-map-svg');
+    const size=await svg.boundingBox();
+    const transition=page.evaluate(()=>new Promise(resolve=>{
+     const svg=document.getElementById('co-map-svg'),samples=[];
+     const start=performance.now();
+     const read=()=>{samples.push(svg.viewBox.baseVal.width);if(performance.now()-start<450)requestAnimationFrame(read);else resolve(samples);};
+     requestAnimationFrame(read);
+    }));
     await page.locator('#co-map-in').click();
+    const zoomFrames=await transition;
+    assert(new Set(zoomFrames).size>=4,'Zoom traverses intermediate scales');
+    assert.equal((await svg.boundingBox()).width,size.width,'Zoom preserves canvas width');
     const before=await svg.getAttribute('viewBox'),box=await canvas.boundingBox();
     await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
     await page.mouse.move(box.x+box.width/2+80,box.y+box.height/2+25,{steps:6});await page.mouse.up();
     assert.notEqual(await svg.getAttribute('viewBox'),before,'Zoomed cobalt map can pan');
     await page.locator('#co-map-out').click();
-    assert.equal(await svg.getAttribute('viewBox'),await page.evaluate(()=>CobaltMapSite.data.site_plan.bounds.join(' ')));
+    await page.waitForFunction(()=>document.getElementById('co-map-svg').getAttribute('viewBox')===CobaltMapSite.data.site_plan.bounds.join(' '));
     proofs.push({cobaltMinimum:true,codes:result.codes.length,minimumFont:Math.min(...result.codes.map(row=>row.font)),noOverlap:true,
      emptyKeyboardDetail:true,occupiedClickDetail:true,occupiedBags:occupied.bags,detailFactsAligned:factsAligned,zoomedPan:true});
    }

@@ -81,7 +81,7 @@ function expectedLanding(spec,product,ids){
   'former-design-entry':'/workbench'
  };
  replacements['preparation-new']=co?'/receipts/new':'/preparation/new';
- if(co)Object.assign(replacements,{'overview-detail':'/inventory',preparation:'/receipts','receipt-new':'/receipts/new'});
+ if(co)Object.assign(replacements,{'overview-detail':'/inventory?stock_state=ALL',preparation:'/receipts','receipt-new':'/receipts/new'});
  if(spec.key==='inventory')replacements.inventory=copper?'/inventory?status=ALL':'/inventory?stock_state=ALL';
  if(co&&spec.key==='map'&&ids.coMapDefault)replacements.map='/stock-map?'+new URLSearchParams({project_id:ids.coMapDefault.project_id,warehouse_id:ids.coMapDefault.id});
  if(copper&&['cu-plan-group-edit','cu-plan-order-new'].includes(spec.key)&&ids.cuGroupChild){

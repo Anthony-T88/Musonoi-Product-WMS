@@ -15,7 +15,7 @@ window.CobaltStock469R2={
  },
  metrics(){const s=this.data.list.summary,t=this.t;return '<section class="co2-metrics">'+[[t('当前库存袋数','Current Stock Bags'),s.bags,t('袋','bags')],[t('已确认净重','Confirmed Net'),CobaltMetal.format(s.actual_net_mt,4),'MT'],[t('待录重量','Weight Pending'),s.unconfirmed_bags,t('袋','bags')],[t('未定位库存','Unlocated Stock'),s.unlocated_bags,t('袋','bags')]].map(([label,value,unit])=>'<div><span>'+label+'</span><strong>'+value+' <small>'+unit+'</small></strong></div>').join('')+'</section>';},
  batchTable(){
-  const d=this.data,t=this.t,heads=[t('批次号','Batch No.'),t('货位','Location'),t('吨包数','Bags'),t('净重（MT）','Net Weight (MT)'),
+  const d=this.data,t=this.t,heads=[t('批次号','Lot Number'),t('货位','Location'),t('吨包数','Bags'),t('净重（MT）','Net Weight (MT)'),
    t('库存状态','Stock Status'),t('业务状态','Workflow Status'),t('入库日期','Receipt Date'),t('取样状态','Sampling Status'),t('备注','Remarks'),t('操作','Actions')];
   const rows=d.list.items.map(b=>{
    if(b.historical_import)return '<tr data-historical-stock>'+[esc(b.preparation_batch_no),'—',CountValues.display(b.bags),CobaltMetal.format(b.effective_net_mt,4),t('已出库','Outbound'),'—',esc(b.original_receipt_date||''),'—',t('历史数据导入','Imported Historical Data'),'<a class="button secondary compact" href="/inventory/historical/'+esc(b.preparation_id)+'">'+t('详情','Details')+'</a>'].map((v,i)=>'<td data-label="'+heads[i]+'">'+v+'</td>').join('')+'</tr>';
@@ -31,7 +31,7 @@ window.CobaltStock469R2={
     '<a class="button secondary compact" href="'+archiveUrl+'">'+t('详情','Details')+'</a>'
    ].map((v,i)=>'<td data-label="'+heads[i]+'">'+v+'</td>').join('')+'</tr>';
   });
-  return '<section class="co2-panel"><header><h2>'+t('批次库存明细','Batch Stock Details')+'</h2><label>'+t('排序','Sort')+' <select id="co2-sort">'+[['batch',t('批次号','Batch No.')],['date',t('最新入库','Newest Receipt')],['bags',t('袋数从多到少','Bags Descending')],['net',t('净重从高到低','Net Weight Descending')]].map(([key,label])=>'<option value="'+key+'" '+((d.q.get('sort')||'batch')===key?'selected':'')+'>'+label+'</option>').join('')+'</select></label></header>'+
+  return '<section class="co2-panel"><header><h2>'+t('批次库存明细','Batch Stock Details')+'</h2><label>'+t('排序','Sort')+' <select id="co2-sort">'+[['batch',t('批次号','Lot Number')],['date',t('最新入库','Newest Receipt')],['bags',t('袋数从多到少','Bags Descending')],['net',t('净重从高到低','Net Weight Descending')]].map(([key,label])=>'<option value="'+key+'" '+((d.q.get('sort')||'batch')===key?'selected':'')+'>'+label+'</option>').join('')+'</select></label></header>'+
    '<div class="business-table">'+UI46Pages.table('<table class="co2-batches" data-v34-enhanced="true"><thead><tr>'+heads.map(v=>'<th>'+v+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table>',{numeric:[2,3],center:[4,5,6,7,9]})+'</div>'+
    (!rows.length?'<p class="co2-empty">'+t('暂无符合筛选条件的授权库存','No authorized stock matches these filters')+'</p>':'')+this.pager('batch',d.list.page,d.list.total,d.list.page_size)+'</section>';
  },

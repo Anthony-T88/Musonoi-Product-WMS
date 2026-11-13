@@ -34,29 +34,29 @@ window.PreparationPlans={
   const d=await API.request(this.api()+'?'+q);
   if(location.pathname!==path||new URLSearchParams(location.search).has('preparation_plan'))return;
   const rows=d.items.map(p=>'<tr><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.customer_name)+'</td><td>'+esc(p.shipment_month)+'</td><td><a class="button primary compact" href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a></td></tr>');
-  const table=rows.length?ExportLicenses.table([['备货批次号','Preparation Batch'],['销售计划','Sales Plan'],['客户','Customer'],['发运月','Shipment Month'],['操作','Actions']],rows,'executable-preparation-plans',true,{actions:[4]}):
+  const table=rows.length?ExportLicenses.table([['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['客户','Customer'],['发运月','Shipment Month'],['操作','Actions']],rows,'executable-preparation-plans',true,{actions:[4]}):
    '<p class="wms-feedback" role="status">'+t('暂无可执行的已审批备货计划。','No approved preparation plan is available for execution.')+'</p>';
   Router.page(t('选择备货计划','Select Preparation Plan'),'<section class="wms-page" data-page-composed data-no-i18n><div class="business-toolbar">'+this.backLink()+'</div>'+
-   '<form id="executable-preparation-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Batch / Sales Plan / Customer')+'<input type="search" name="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a data-wms-reset class="button secondary" href="'+path+'">'+t('重置','Reset')+'</a></div></form>'+
+   '<form id="executable-preparation-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Lot Number / Sales Plan / Customer')+'<input type="search" name="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a data-wms-reset class="button secondary" href="'+path+'">'+t('重置','Reset')+'</a></div></form>'+
    table+CobaltStockUI.pager(d.page,d.total,d.page_size)+'</section>');
   $('executable-preparation-filter').onsubmit=e=>{e.preventDefault();Router.go(path+'?'+new URLSearchParams(new FormData(e.target)));};
   CobaltStockUI.bindPager(d);ProductContext.dirty=false;
  },
  fields(p,includeBatch=true){
   const t=this.t,rows=[['销售计划','Sales Plan',p.sales_plan_no],['发运月','Shipment Month',p.shipment_month],['客户','Customer',p.customer_name]];
-  if(includeBatch)rows.unshift(['备货批次号','Preparation Batch',p.batch_no]);
+  if(includeBatch)rows.unshift(['备货批次号','Preparation Lot Number',p.batch_no]);
   return UI46Pages.factList(rows.map(([z,e,value])=>[t(z,e),esc(value||'—')]));
  },
  async list(){
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q);
   const status=['DRAFT','PENDING','APPROVED','REJECTED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
-  const headings=[['备货批次号','Preparation Batch'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
+  const headings=[['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
   const rows=d.items.map(p=>'<tr><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
    (p.allocation_id||p.co_preparation_id?'<a href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':p.actions.start?'<a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'—')+'</td></tr>');
   Router.page(t('备货计划','Preparation Plans'),'<section class="wms-page" data-page-composed data-no-i18n>'+
    '<div class="business-toolbar">'+(d.can_create?'<button type="button" id="preparation-plan-create" class="button primary">'+t('新建备货计划','New Preparation Plan')+'</button>':'')+
    this.backLink()+'</div>'+
-   '<form id="preparation-plan-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Batch / Sales Plan / Customer')+
+   '<form id="preparation-plan-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Lot Number / Sales Plan / Customer')+
    '<input name="search" type="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><label>'+t('审批状态','Review Status')+
    '<select name="state"><option value="">'+t('全部','All')+'</option>'+status+'</select></label><div class="wms-filter-actions">'+
    '<button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+this.route+'">'+t('重置','Reset')+'</a></div></form>'+
@@ -97,7 +97,7 @@ window.PreparationPlans={
    '<label class="wms-field">'+t('销售计划','Sales Plan')+'<select name="sales_plan_id" required></select></label>'+
    '<label class="wms-field">'+t('客户','Customer')+'<input name="customer" readonly></label>'+
    '<label class="wms-field">'+t('发运月','Shipment Month')+'<input name="shipment_month" type="month" required value="'+esc(prior?.shipment_month||'')+'"></label>'+
-   '<label class="wms-field">'+t('备货批次号','Preparation Batch')+'<input name="batch_no" maxlength="48" required placeholder="'+(ProductContext.isCopper()?'RMM-CU-YYYY-01':'RMM-CO-YYYY-001')+'" value="'+esc(prior?.batch_no||'')+'"></label>'+
+   '<label class="wms-field">'+t('备货批次号','Preparation Lot Number')+'<input name="batch_no" maxlength="48" required placeholder="'+(ProductContext.isCopper()?'RMM-CU-YYYY-01':'RMM-CO-YYYY-001')+'" value="'+esc(prior?.batch_no||'')+'"></label>'+
    '</div><p class="error wms-feedback" role="alert"></p><div class="business-toolbar wms-form-actions"><button class="button primary">'+t('保存计划','Save Plan')+'</button></div></form>');
   const form=$('preparation-plan-form'),select=form.elements.sales_plan_id,search=$('preparation-sales-search'),message=form.querySelector('[role=alert]');
   let plans=[],sequence=0;

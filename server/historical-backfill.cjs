@@ -190,6 +190,47 @@ function listSql(kind){
  WHERE ${scope()} AND d.kind='${kind}'`;
 }
 
+async function reportShipments(c,req,filters,from,to){
+ if(['location_id','yard_id','batch_id','allocated_customer_id','preparation_id','sales_plan_id'].some(key=>filters[key])||
+  filters.status&&filters.status!=='OUTBOUND')return [];
+ const {rows}=await c.query(`SELECT h.source_id,d.id,h.shipping_date::text date,h.original_receipt_date::text,
+   h.packing_list_no document_no,h.customer_id,
+   (SELECT k.id FROM co_sales_contracts k WHERE h.product_code='CO_HYDROXIDE' AND k.project_id=h.project_id
+    AND k.customer_id=h.customer_id AND k.contract_no=h.source_facts->>'contract_no' ORDER BY k.id LIMIT 1) contract_id,nullif(h.source_facts->>'customer','') customer_name,
+   nullif(h.source_facts->>'contract_no','') contract_no,nullif(h.source_facts->>'truck','') vehicle_no,
+   h.source_facts->>'trailer_one' trailer_one,h.source_facts->>'trailer_two' trailer_two,
+   coalesce(nullif(h.source_facts->>'batch_no',''),nullif(h.source_facts->>'lot_no','')) lot_no,count(*)::int units,
+   sum(h.net_kg)::text net_kg,(sum(h.net_kg)/1000)::text net_weight,
+   CASE WHEN count(h.gross_kg)=count(*) THEN sum(h.gross_kg)::text END gross_kg
+  FROM historical_outbound_units h
+  JOIN historical_business_documents d ON d.source_id=h.source_id AND d.kind='LOADING_ORDER'
+  WHERE ${scope('h')} AND h.product_code=$2 AND h.shipping_date BETWEEN $3::date AND $4::date
+   AND ($5::uuid IS NULL OR h.project_id=$5) AND ($6::uuid IS NULL OR h.warehouse_id=$6)
+   AND ($7::uuid IS NULL OR h.customer_id=$7)
+   AND ($8='' OR strpos(lower(h.source_facts->>'contract_no'),lower($8))>0)
+   AND ($9::uuid IS NULL OR EXISTS(SELECT 1 FROM co_sales_contracts k WHERE k.id=$9
+    AND k.customer_id=h.customer_id AND k.contract_no=h.source_facts->>'contract_no'))
+  GROUP BY h.source_id,d.id,h.shipping_date,h.original_receipt_date,h.packing_list_no,h.customer_id,h.project_id,h.product_code,h.source_facts
+  ORDER BY h.shipping_date,h.packing_list_no LIMIT 10001`,
+ [req.user.id,req.productCode,from,to,filters.project_id||null,filters.warehouse_id||null,filters.customer_id||null,
+  filters.contract_no||'',filters.contract_id||null]);
+ if(rows.length>10000)throw bad('HISTORY_REPORT_LIMIT','报表超过10000行，请缩小范围',413);
+ return rows;
+}
+
+async function reportMovements(c,req,filters,from,to){
+ if(['location_id','yard_id','batch_id','allocated_customer_id'].some(key=>filters[key]))return [];
+ const {rows}=await c.query(`SELECT h.unit_id bundle_no,flow.type,flow.weight::text physical_delta,
+  flow.day::text confirmed_at,h.packing_list_no document_code FROM historical_outbound_units h
+  CROSS JOIN LATERAL(VALUES ('历史导入入库',h.original_receipt_date,h.net_kg/1000),
+   ('历史导入出库',h.shipping_date,-h.net_kg/1000)) flow(type,day,weight)
+  WHERE ${scope('h')} AND h.product_code=$2 AND flow.day BETWEEN $3::date AND $4::date
+   AND ($5::uuid IS NULL OR h.project_id=$5) AND ($6::uuid IS NULL OR h.warehouse_id=$6)
+   AND ($7::uuid IS NULL OR h.customer_id=$7) ORDER BY flow.day,h.source_id,h.source_row LIMIT 10001`,
+ [req.user.id,req.productCode,from,to,filters.project_id||null,filters.warehouse_id||null,filters.customer_id||null]);
+ return rows;
+}
+
 function outboundListSql(product,q,bind){
  const conditions=[`m.product_code=${bind(product)}`];
  // The supplied packing list has no status in the live generation workflow.
@@ -280,4 +321,4 @@ function registerRead(app,pool,auth){
  }
 }
 
-module.exports={allowed,docKinds,scope,listSql,outboundListSql,overview,registerBatch,registerRead,related,authorizePage};
+module.exports={allowed,docKinds,scope,listSql,outboundListSql,reportShipments,reportMovements,overview,registerBatch,registerRead,related,authorizePage};

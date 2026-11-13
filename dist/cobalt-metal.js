@@ -33,10 +33,10 @@ window.CobaltMetal={
   const text=String(value),mt=text.endsWith(' MT');
   return '<article class="v34-kpi"><span>'+esc(label)+'</span><strong>'+esc(mt?text.slice(0,-3):text)+(mt?'<small> MT</small>':'')+'</strong></article>';
  },
- overview(data,fulfilment,cards){
-  return data&&cards?this.stockCards(data.inventory,cards,fulfilment,data.period||data.month):'';
+ overview(data,cards){
+  return data&&cards?this.stockCards(data.inventory,cards,data.period||data.month):'';
  },
- stockCards(inventory,cards,fulfilment,period){
+ stockCards(inventory,cards,period){
   const a=OverviewAnalysis,t=this.t,metal=this.format(inventory.estimated_mt);
   return '<div class="oa-kpis oa-kpis-cobalt">'+
    a.batchCard(t('备货作业中吨包','Bags in Preparation'),cards.preparing)+
@@ -44,8 +44,8 @@ window.CobaltMetal={
    a.batchCard(t('装车中库存','Stock in Loading'),cards.loading,true)+
    a.card(t('在库库存预估金属量','Estimated In-Stock Cobalt Metal'),metal,metal==='—'?'':t('金属吨','MT of cobalt'),t('按在库预计钴金属量汇总','Estimated cobalt metal in stock'))+
    a.card(t('ARECOMS确认车数与钴金属量','ARECOMS Confirmed Vehicles and Cobalt'),CountValues.display(period?.completed??0)+' '+t('车','vehicles')+' / '+this.format(period?.confirmed_mt??'0'),t('金属吨','MT of cobalt'),'')+
-   a.batchCard(t('已出库库存','Outbound Stock'),cards.outbound,true)+
-   a.card(t('销售计划履约','Sales Fulfilment'),fulfilment==null?'—':a.number(fulfilment,1),fulfilment==null?'':'%','')+'</div>';
+   a.batchCard(t('已出库重量','Outbound Weight'),cards.outbound,true)+
+   '</div>';
  },
  confirmationCards(period,withTitle=true,shipmentVehicles=period.vehicles){
   const a=OverviewAnalysis,t=this.t,vehicles=t('车','vehicles'),confirmed=this.format(period.confirmed_mt??'0');

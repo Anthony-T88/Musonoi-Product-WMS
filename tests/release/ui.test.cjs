@@ -40,7 +40,13 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await go(planner.page,'/overview',product);
   await planner.page.locator(workPlanNav).click();
   await planner.page.waitForURL(origin+workPlanPath);
-  await planner.page.locator('#preparation-plan-create').click();
+  const createPlan=planner.page.locator('#preparation-plan-create');
+  await createPlan.waitFor().catch(async error=>{
+   const pageState=await planner.page.evaluate(()=>({url:location.pathname,title:document.getElementById('business-title')?.textContent,
+    message:document.querySelector('#page-content .error')?.textContent,navigating:document.body.classList.contains('wms-navigating')}));
+   throw Error(JSON.stringify(pageState),{cause:error});
+  });
+  await createPlan.click();
   const form=planner.page.locator('#preparation-plan-form'),sales=form.locator('[name=sales_plan_id]');
   await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
   await sales.selectOption({index:1});
@@ -146,6 +152,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  if(await planGroup.count())await planGroup.locator('summary').click();
  const initial=page.locator('.s46-r2-matrix input[value="plan:approve"]'),final=page.locator('.s46-r2-matrix input[value="plan:commerce-approve"]');assert(await initial.isEnabled()&&await final.isEnabled());await initial.uncheck();assert(await final.isChecked());await page.locator('#role-reset').click();assert(await initial.isChecked());for(const code of ['users:manage','roles:manage'])assert(await page.locator('.s46-r2-matrix input[value="'+code+'"]').isDisabled());
  for(const language of ['zh-CN','en']){await page.evaluate(l=>I18n.set(l),language);await page.waitForTimeout(150);for(const width of [1440,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'permissions overflow '+language+' '+width);shapes.push({page:'permissions',language,width});}await page.screenshot({path:path.join(E.runtime,'permissions-'+language+'.png'),fullPage:true});}
+ assert.equal(await page.locator('.s46-access').count(),0);
  assert.equal(await page.evaluate(()=>ClientRelease.revision),release.frontendRevision);
  await page.setViewportSize({width:1440,height:1000});
  await go(page,'/reports?section=outbound&view=shipping');
@@ -158,7 +165,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.evaluate(()=>I18n.change('zh-CN'));
  await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
- assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','在库库存预估金属量','ARECOMS确认车数与钴金属量','已出库库存','销售计划履约']);
+ assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','在库库存预估金属量','ARECOMS确认车数与钴金属量','已出库重量']);
  assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),0);
  assert.match(await page.locator('.oa-kpis-cobalt .oa-kpi').nth(4).innerText(),/\d+\.\d{5}\s*金属吨/);
  assert.equal(await page.getByText('查看待确认车辆',{exact:true}).count(),0);
@@ -176,7 +183,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert.deepEqual(await page.locator('#co-stock-filter > label').evaluateAll(labels=>labels.slice(0,4).map(label=>label.querySelector('select').name)),['location_id','stock_state','phase','zone_id']);
  assert.equal(await page.locator('#co-stock-filter details').count(),0);
  await page.locator('.co2-filter').screenshot({path:path.join(E.runtime,'cobalt-inventory-filters.png')});
- const headers=await page.evaluate(()=>I18n.language)==='en'?['Batch No.','Location','Bags','Net Weight (MT)','Stock Status','Workflow Status','Receipt Date','Sampling Status','Remarks','Actions']:
+ const headers=await page.evaluate(()=>I18n.language)==='en'?['Lot Number','Location','Bags','Net Weight (MT)','Stock Status','Workflow Status','Receipt Date','Sampling Status','Remarks','Actions']:
   ['批次号','货位','吨包数','净重（MT）','库存状态','业务状态','入库日期','取样状态','备注','操作'];
  assert.deepEqual(await page.locator('.co2-batches thead th').allTextContents(),headers);
  assert.match(await page.locator('.co2-batches tbody td:nth-child(4)').first().innerText(),/\d+\.\d{4}\b/);

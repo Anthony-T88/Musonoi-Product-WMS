@@ -550,19 +550,7 @@ html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-r
   color: var(--uix-brand);
   text-decoration: underline;
 }
-.map465 #co-map-canvas.co-site-readable-canvas { overflow: auto; overscroll-behavior: contain; }
-.map465 .co-site-readable-canvas #co-map-svg {
-  inline-size: max(100%, var(--co-site-readable-width));
-  block-size: auto;
-  aspect-ratio: var(--co-site-aspect);
-  max-inline-size: none;
-  touch-action: none;
-}
 .map465 .site-plan-svg [data-location-label] { pointer-events: none; }
-.map465 .co-site-readable-canvas.co-site-overview #co-map-svg {
-  inline-size: 100%;
-  block-size: 100%;
-}
 .map-app #stock-map-metrics.v479-copper-metrics {
   grid-template-columns: repeat(auto-fit,minmax(min(100%,10rem),1fr));
 }
@@ -804,3 +792,8 @@ html[data-release-ui="46"] :is(#page-content,#dashboard,#inventory) .s46-state {
 .inventory-archive #c461-bundle-actions{display:inline-flex;gap:var(--uix-gap-sm);flex-wrap:wrap;}
 .inventory-archive #c461-bundle-actions:empty{display:none;}
 [data-document-draft-bound]>.wms-filter-actions:last-child{justify-content:flex-end;margin-block-start:var(--uix-gap);}
+
+/* Reveal the routed page after its layout and language wrappers finish. */
+body.wms-navigating .workspace :is(#business-page,#dashboard,#inventory,#field) { visibility: hidden; }
+.map465 #co-map-canvas.co-site-canvas { overflow:hidden; overscroll-behavior:contain; }
+.map465 .co-site-canvas #co-map-svg { display:block; inline-size:100%; block-size:100%; touch-action:none; }

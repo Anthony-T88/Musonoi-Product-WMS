@@ -40,6 +40,14 @@ async function seed(){
    assert(preview.importable,JSON.stringify(preview.issues));const imported=(await request('admin',product,url+'/confirm',{files:[{...body,preview_token:preview.preview_token}]})).results[0];
    assert.equal(imported.status,'IMPORTED');
   });
+  for(const product of [CU,CO])await check('editable-export-license-'+product,async()=>{
+   const co=product===CO,found=await c.query("SELECT 1 FROM export_licenses WHERE product_code=$1 AND state='APPLYING' LIMIT 1",[product]);
+   if(found.rowCount)return;
+   return request('sales_operator',product,(co?'/cobalt':'')+'/export-permits',{
+    contract_id:f.customers[product].contract,applied_on:day,proforma_no:'UIUX-EDIT-'+unique+'-'+product,
+    quantity:'30',unit_basis:co?'COBALT_MT':'PHYSICAL_MT',unit:co?'Co MT':'MT',currency:'USD'
+   });
+  });
   await check('co-draft-receipt',async()=>{
    if((await c.query("SELECT 1 FROM co_preparations WHERE status='DRAFT' AND project_id=$1 LIMIT 1",[f.project])).rowCount)return;
    const P=require('./preparation-fixture.cjs'),work=await P.approved(request,CO,coPlan.id,P.batch(CO,220));

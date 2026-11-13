@@ -30,7 +30,7 @@ window.SalesReviewUI={
    const route=this.co()?'/receipts/':'/preparation/';
    const rows=(r.preparations||[]).map(row=>'<tr><td><a href="'+route+row.id+'">'+esc(row.batch_no)+'</a></td><td>'+
     esc(this.co()?CobaltUI.status(row.status):I18n.translate(V261.states[row.status]||row.status))+'</td></tr>');
-   sections.push(['preparations','备货批次','Preparation Batches',rows.length?ExportLicenses.table([['备货批次号','Preparation Batch'],['状态','Status']],rows,'sales-related-preparations',true):'<p>'+t('暂无备货批次','No preparation batches')+'</p>']);
+   sections.push(['preparations','备货批次','Preparation Batches',rows.length?ExportLicenses.table([['备货批次号','Preparation Lot Number'],['状态','Status']],rows,'sales-related-preparations',true):'<p>'+t('暂无备货批次','No preparation batches')+'</p>']);
   }
   if(has('loading-plan:read')){
    const rows=(r.loading||[]).map(row=>'<tr><td><a href="/loading-plans/orders/'+row.id+'">'+esc(row.invoice_no||row.code)+'</a></td><td>'+esc(row.batch_no||'—')+'</td><td>'+esc(loadingState(row.status))+'</td></tr>');
