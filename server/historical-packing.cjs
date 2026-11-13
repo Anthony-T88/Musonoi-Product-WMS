@@ -6,6 +6,8 @@ const T=require('../dist/tonnes.js');
 const ole='d0cf11e0a1b11ae1';
 const normalize=value=>String(value??'').trim().replace(/\s+/g,' ').toUpperCase();
 const key=value=>normalize(value).normalize('NFKC');
+const unitKey=value=>key(value).replace(/^MUS-(\d{4})-(\d{1,3})-(\d+)$/,(_,year,lot,serial)=>
+ 'MUS-'+year+'-'+lot.padStart(3,'0')+'-'+(serial.replace(/^0+/,'')||'0'));
 const digest=value=>crypto.createHash('sha256').update(value).digest('hex');
 const problem=message=>B.error(400,message);
 
@@ -23,9 +25,12 @@ function parse(product,file){
  try{book=XLSX.read(file.data,{type:'buffer',cellDates:true,cellFormula:false,bookVBA:true,sheetRows:5100});}
  catch{throw problem('无法读取工作簿');}
  if(book.vbaraw||book.SheetNames.length>16)throw problem('不接受带宏或过多工作表的工作簿');
- const co=product==='CO_HYDROXIDE',sheet=book.Sheets.PL;
+ const sheet=book.Sheets.PL;
  if(!sheet||normalize(sheet.A1?.v)!=='PACKING LIST')throw problem('缺少可识别的 PL 装箱单工作表');
  const cell=address=>sheet[address]?.v;
+ const detected=({'BAG NO':'CO_HYDROXIDE','BUNDLE NO':'CU_CATHODE'})[normalize(cell('C29'))];
+ if(!detected||product&&product!==detected)throw problem('装箱单表头、产品或重量单位与支持模板不符');
+ const co=detected==='CO_HYDROXIDE';
  const rowStart=29;
  const heading=co?'BAG NO':'BUNDLE NO';
  if(!normalize(cell('D3')).startsWith('PACKING LIST NO')||!normalize(cell('D4')).startsWith('LOT NO')||
@@ -43,7 +48,7 @@ function parse(product,file){
  for(let row=rowStart+1;row<=limit;row++){
   if(/^TOTAL\b/.test(normalize(cell('A'+row)))){totalRow=row;break;}
   if(!['A','C','D','E','F','G'].some(column=>cell(column+row)!=null&&cell(column+row)!==''))continue;
-  const unit=text('C'+row),id=key(unit),net=weight(cell('F'+row)),gross=weight(cell('G'+row));
+  const unit=text('C'+row),id=unitKey(unit),net=weight(cell('F'+row)),gross=weight(cell('G'+row));
   const qty=co?null:Number(cell('D'+row));
   const flags=[];
   if(!unit)flags.push('UNIT_MISSING');
@@ -76,8 +81,18 @@ function parse(product,file){
   const day=dateValue(cell('E'+row));
   if(day)actual_dates[type]={day,cell:'PL!E'+row};
  }
- const shipping_date=dateValue(cell('E7'));
- return {template:co?'CO-PL':'CU-PL',document_no,document_key:key(document_no),batch_no,customer,truck,
+ const shippingFields=[];
+ for(let row=3;row<29;row++){
+  if(!/^(SHIPPING DATE|SHIPMENT DATE|发运日期)[:：]?$/.test(normalize(cell('D'+row))))continue;
+  const address='E'+row;
+  shippingFields.push({cell:'PL!'+address,day:dateValue(cell(address)),empty:cell(address)==null||cell(address)===''});
+ }
+ const shipping=shippingFields[0];
+ const shipping_issue=shippingFields.length>1?'SHIPPING_DATE_AMBIGUOUS':
+  !shipping||shipping.empty?'SHIPPING_DATE_MISSING':!shipping.day?'SHIPPING_DATE_INVALID':null;
+ const shipping_date=shipping_issue?null:shipping.day;
+ return {product_code:detected,template:co?'CO-PL':'CU-PL',document_no,document_key:key(document_no),batch_no,customer,truck,
+  shipping_issue,shipping_cell:shipping?.cell||'PL!E7',
   contract_no:text('E5'),trailer_one:text('E23'),trailer_two:text('E24'),shipping_date,actual_dates,source_sheet:'PL',rows,totals,errors:[...new Set(errors)]};
 }
 
@@ -89,4 +104,4 @@ function weight(value){
 function sum(rows,field){
  return rows.length&&rows.every(row=>row[field]!==null)?T.fixed(rows.reduce((sum,row)=>sum+T.scaled(row[field],6),0n),6):null;
 }
-module.exports={source,parse,digest,key};
+module.exports={source,parse,digest,key,unitKey};

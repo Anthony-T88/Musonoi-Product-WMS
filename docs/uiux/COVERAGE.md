@@ -174,6 +174,9 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | 页面 | 场景 |
 | --- | --- |
 | `/stock-map` | 铜钴实际货位定位、空位、占用、暂存、画布缩放、窄屏堆叠详情与长值 |
+| `/workbench/historical-movements` | 管理员上传铜钴混合装箱单、逐张预览、重传、确认及查看记录，普通账号直接访问拒绝 |
+| `/inventory/historical/:id` | 铜捆包与钴备货批次档案、发运日期、逐件重量和关联单据 |
+| `/receipts/historical`、`/loading-plans/historical`、`/outbounds/historical` | 按原模块权限查看历史导入单据与来源 |
 | `/sales-plans` | 两产品履约进度、数值排序及一致列对齐 |
 | `/preparation/new`、`/receipts/new` | 选取可执行备货计划、直接带入计划和权限拒绝 |
 | `/outbounds?view=departures` | 出门证内打印配置与独立打印，历史打印入口转到出厂列表 |

@@ -757,6 +757,10 @@
     {
       "version": "189_v477_historical_movements.sql",
       "checksum": "ff446ebc44999fd4f95d2c14bb994a62ab1baba0b0b69cb0c0af7f29de59cb87"
+    },
+    {
+      "version": "190_v478_historical_backfill.sql",
+      "checksum": "945660f49e236696b1487016923b4c6010ccc71c871d0da1b6ae2736cf12f852"
     }
   ]
 }

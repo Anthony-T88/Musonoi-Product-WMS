@@ -1,0 +1,3225 @@
+{
+  "version": "4.7.8",
+  "baselineCommit": "fbb8d660bc62950e2250eff3cb6bb8670efa64ab",
+  "createdAt": "2026-11-13T09:05:57.625Z",
+  "browser": "157.0.8103.51",
+  "mode": "full",
+  "registeredRoutes": 154,
+  "scenarios": 137,
+  "unmapped": 0,
+  "screenshots": 724,
+  "checks": 1536,
+  "outcomes": {
+    "rendered": 1502,
+    "denied": 34
+  },
+  "englishUiCandidates": {
+    "中文": 8
+  },
+  "routeCoverage": [
+    {
+      "scenario": "login",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "guest"
+      ],
+      "products": [
+        null
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "register-dialog",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "guest"
+      ],
+      "products": [
+        null
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "overview",
+      "checks": 48,
+      "outcomes": {
+        "rendered": 48
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator",
+        "logistics_manager",
+        "logistics_field_operator",
+        "site_supervisor",
+        "production_manager",
+        "production_operator",
+        "customer_admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "todo",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator",
+        "logistics_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440
+      ]
+    },
+    {
+      "scenario": "overview-detail",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "warnings",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "inventory",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 28
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "production_operator",
+        "customer_admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-bag",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-bag-history",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "map",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "map-move",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "customers",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 28
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator",
+        "customer_admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "master",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-customers-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-customers-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-batches-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-batches-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-warehouses-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-warehouses-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-yards-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-yards-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-locations-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "master-locations-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-contract-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-contract-detail",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-contract-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "sales",
+      "checks": 36,
+      "outcomes": {
+        "rendered": 36
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator",
+        "customer_admin",
+        "sales_manager",
+        "commerce_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "export-licenses",
+      "checks": 36,
+      "outcomes": {
+        "rendered": 32,
+        "denied": 4
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator",
+        "logistics_field_operator",
+        "production_operator",
+        "commerce_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "export-licenses-filtered",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "legacy-export-licenses",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "export-license-new",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-export-license",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-export-license-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "sales-new",
+      "checks": 16,
+      "outcomes": {
+        "rendered": 16
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-sales-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-sales-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-dispatch",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-sales-shipping",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "legacy-sales-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "legacy-sales-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "legacy-sales-shipping",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "receipts",
+      "checks": 32,
+      "outcomes": {
+        "rendered": 28,
+        "denied": 4
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_field_operator",
+        "site_supervisor",
+        "production_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "receipt-new",
+      "checks": 24,
+      "outcomes": {
+        "rendered": 22,
+        "denied": 2
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_field_operator"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-receipt",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-receipt-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-receipt-import",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "preparation",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 28
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_field_operator",
+        "site_supervisor"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "preparation-new",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "preparation-plans",
+      "checks": 32,
+      "outcomes": {
+        "rendered": 32
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager",
+        "logistics_field_operator",
+        "export_supervisor"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-work-plan-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-preparation-from-plan",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-lot",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-sampling",
+      "checks": 2,
+      "outcomes": {
+        "denied": 2
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        1366
+      ]
+    },
+    {
+      "scenario": "cu-sampling-detail",
+      "checks": 2,
+      "outcomes": {
+        "denied": 2
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        1366
+      ]
+    },
+    {
+      "scenario": "cu-weighings",
+      "checks": 2,
+      "outcomes": {
+        "denied": 2
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        1366
+      ]
+    },
+    {
+      "scenario": "cu-weigh-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-weigh",
+      "checks": 2,
+      "outcomes": {
+        "denied": 2
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        1366
+      ]
+    },
+    {
+      "scenario": "arrivals",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 28
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager",
+        "logistics_field_operator"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-arrival",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "loading-search",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "loading-new",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-plan-group",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-plan-group-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-plan-group-cancel",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-plan-order-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-loading-plan",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-loading-plan-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-loading-plan-cancel",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "outbounds",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 28
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager",
+        "production_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "outbound-vehicles",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 28
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "sales_operator",
+        "sales_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "templates",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "weight-settings",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-loads",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-load-new",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-load-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-load-matching",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-outbound-detail",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-corrections",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-correction-detail",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-packing-legacy",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "shipping",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "cu-invoice",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "historical-movements",
+      "checks": 24,
+      "outcomes": {
+        "rendered": 20,
+        "denied": 4
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "production_operator"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "historical-former-entry",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "historical-former-record",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-historical-record",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "historical-receipts",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "historical-loading-plans",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "historical-outbounds",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "historical-stock-outbound",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-historical-stock",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-historical-receipt",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "stocktakes",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 24,
+        "denied": 4
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "site_supervisor",
+        "production_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "stocktake-new",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "cu-stocktake",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "adjustment",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "reports",
+      "checks": 24,
+      "outcomes": {
+        "rendered": 24
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "reports-outbound",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "reports-inventory",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "reports-monthly",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "workbench",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "accounts",
+      "checks": 20,
+      "outcomes": {
+        "rendered": 20
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "permissions",
+      "checks": 28,
+      "outcomes": {
+        "rendered": 24,
+        "denied": 4
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "production_operator",
+        "limited_role_manager"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "diagnostics",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "former-design-entry",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "audit",
+      "checks": 24,
+      "outcomes": {
+        "rendered": 20,
+        "denied": 4
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "production_operator"
+      ],
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-stock-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-stock-archive",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-stock-history-alias",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-customer-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-contract-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-export-license",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-export-license-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-sales-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-sales-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-dispatch",
+      "checks": 12,
+      "outcomes": {
+        "rendered": 12
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-prep",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-prep-work",
+      "checks": 14,
+      "outcomes": {
+        "rendered": 14
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_field_operator",
+        "site_supervisor"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-prep-draft",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-prep-alias",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-work-plan-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-preparation-from-plan",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-preparation-alias",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-work-alias",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-arrival",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-loading-plan",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-loading-edit",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-loading-execution",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-outbound-detail",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-packing",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "metal",
+      "checks": 14,
+      "outcomes": {
+        "rendered": 14
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin",
+        "logistics_manager",
+        "production_manager"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "metal-outbound",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "metal-confirmations",
+      "checks": 10,
+      "outcomes": {
+        "rendered": 10
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1366,
+        1440,
+        1920
+      ]
+    },
+    {
+      "scenario": "co-historical-record",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-historical-stock",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-historical-plan",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    },
+    {
+      "scenario": "co-stocktake",
+      "checks": 6,
+      "outcomes": {
+        "rendered": 6
+      },
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "roles": [
+        "admin"
+      ],
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "widths": [
+        390,
+        1280,
+        1440
+      ]
+    }
+  ]
+}

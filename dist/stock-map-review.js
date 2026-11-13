@@ -25,6 +25,23 @@ const StockMapReview={
   refresh.onclick=()=>Router.go(location.pathname+location.search,true);actions.append(refresh);
   for(const selector of cobalt?['.co-stock-page > form','.co-stock-filter','.map465-stats','.map465-actions']:['.map-filter-box','#stock-map-metrics','.v27-map-filter'])move(selector,advanced);
   advanced.append(toolbar);
+  const filters=advanced.querySelector(cobalt?'#co-stock-filter':'#stock-map-filter');
+  if(filters){
+   filters.classList.add('wms-filter-row','wms-map-filter-row');
+   filters.classList.remove('filters','co-stock-filter','ui46-filter','p46-filter');
+   const fields=filters.querySelector('.map-filter-grid')||document.createElement('div');
+   fields.classList.add('wms-map-filter-fields');
+   for(const field of [...filters.querySelectorAll(':scope > label')])fields.append(field);
+   if(!fields.isConnected)filters.prepend(fields);
+   const oldButtons=filters.querySelector('.business-toolbar');
+   const buttons=oldButtons||document.createElement('div');
+   buttons.classList.remove('business-toolbar');
+   buttons.classList.add('wms-filter-actions');
+   const collectButtons=()=>{for(const button of [...filters.querySelectorAll(':scope > button')])buttons.append(button);};
+   collectButtons();
+   if(!buttons.isConnected)filters.append(buttons);
+   new MutationObserver(collectButtons).observe(filters,{childList:true});
+  }
   const regions=cobalt?root.querySelectorAll('[data-site-zone]'):root.querySelectorAll('[data-map-region]');
   const all=document.createElement('button');all.type='button';all.className='button secondary compact';all.textContent=t('全场','Entire Site');
   all.onclick=()=>fit?.click();zones.append(all);

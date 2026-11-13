@@ -56,6 +56,8 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
    [...box.children].forEach((button,index)=>{button.textContent=names[index];});
    if(sharedDocument()){
     if(changed&&!editing())Router.show();
+   }else if(window.HistoricalMovements?.documentRoute(location.pathname)){
+    // HistoricalMovements refreshes its own translated document without calling the live cobalt router.
    }else if(!this.isCopper()&&!this.globalPage(location.pathname)){
     if(location.pathname==='/cobalt-metal'&&this.cobaltPage(location.pathname))Router.show();
     else if(this.cobaltPage(location.pathname))CobaltUI.languageChanged().catch(error=>notify(CobaltUI.error(error)));

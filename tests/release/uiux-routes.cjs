@@ -45,7 +45,11 @@ async function examples(client,fixture){
   coCount:'SELECT id value FROM co_stocktakes ORDER BY created_at DESC LIMIT 1',
   permit:'SELECT id value FROM gate_permits ORDER BY created_at DESC LIMIT 1',
   cuHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CU_CATHODE' AND voided_at IS NULL LIMIT 1",
-  coHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CO_HYDROXIDE' AND voided_at IS NULL LIMIT 1"
+  coHistorical:"SELECT id value FROM historical_movement_documents WHERE product_code='CO_HYDROXIDE' AND voided_at IS NULL LIMIT 1",
+  cuHistoryUnit:"SELECT id value FROM historical_outbound_units WHERE product_code='CU_CATHODE' LIMIT 1",
+  coHistoryBatch:"SELECT source_id value FROM historical_outbound_units WHERE product_code='CO_HYDROXIDE' LIMIT 1",
+  cuHistoryReceipt:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CU_CATHODE' AND d.kind='RECEIPT' AND m.voided_at IS NULL LIMIT 1",
+  coHistoryPlan:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CO_HYDROXIDE' AND d.kind='LOADING_PLAN' AND m.voided_at IS NULL LIMIT 1"
  };
  const ids={coPrep:fixture.preparation,coPrepEditable:fixture.estimatedPreparation,warehouse:fixture.warehouse,project:fixture.project};
  for(const [key,sql] of Object.entries(specs)){
@@ -180,9 +184,17 @@ function pages(ids){
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
- add('historical-movements','/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger and upload'});
- add('cu-historical-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported'});
- add('co-historical-record','/historical-movements/:id',[CO],{example:'coHistorical',state:'imported'});
+ add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger and upload'});
+ add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});
+ add('historical-former-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'redirected'});
+ add('cu-historical-record','/workbench/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported',query:'?product=CU_CATHODE'});
+ add('co-historical-record','/workbench/historical-movements/:id',[CO],{example:'coHistorical',state:'imported',query:'?product=CO_HYDROXIDE'});
+ for(const area of ['receipts','loading-plans','outbounds','stock-outbound'])
+  add('historical-'+area,'/'+area+'/historical',BOTH,{state:'imported list'});
+ add('cu-historical-stock','/inventory/historical/:id',[CU],{example:'cuHistoryUnit',state:'historical outbound'});
+ add('co-historical-stock','/inventory/historical/:id',[CO],{example:'coHistoryBatch',state:'historical outbound'});
+ add('cu-historical-receipt','/receipts/historical/:id',[CU],{example:'cuHistoryReceipt',state:'historical posted receipt'});
+ add('co-historical-plan','/loading-plans/historical/:id',[CO],{example:'coHistoryPlan',state:'historical plan'});
  add('stocktakes','/stocktaking',BOTH,{screenshot:true,roles:['site_supervisor','production_manager']});
  add('stocktake-new','/stocktaking/new',BOTH);
  add('cu-stocktake','/stocktaking/:id',[CU],{example:'cuCount'});

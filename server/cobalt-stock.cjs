@@ -27,8 +27,46 @@ async function plan(c,req,body,locked=false){fields(body,['preparation_id','batc
 function pageSize(value,allowed,fallback){if(value===undefined)return fallback;const size=Number(value);if(!allowed.includes(size))throw fail(400,'CO_STOCK_INPUT');return size;}
 const batchOrder={batch:'preparation_batch_no,preparation_id',date:'received_at DESC NULLS LAST,preparation_batch_no,preparation_id',
  bags:'bags DESC,preparation_batch_no,preparation_id',net:'effective_net_mt::numeric DESC NULLS LAST,preparation_batch_no,preparation_id'};
+function archivedBatches(f,q){
+ const visible=require('./historical-backfill.cjs').scope('h');
+ const enabled=!['IN_STOCK'].includes(q.stock_state)&&
+  (['ALL','OUTBOUND'].includes(q.stock_state)||q.status==='OUTBOUND'||q.phase==='OUTBOUND'||q.history==='1')&&
+  (!q.status||q.status==='OUTBOUND')&&(!q.phase||q.phase==='OUTBOUND')&&
+  !['location_id','zone_id','preparation_id','occupancy','production_batch','unit'].some(key=>q[key]);
+ const values=[...f.values];
+ if(!enabled)return {values,sql:''};
+ const conditions=[visible,"h.product_code='CO_HYDROXIDE'"];
+ for(const [key,column] of [['project_id','h.project_id'],['warehouse_id','h.warehouse_id'],['batch',"h.source_facts->>'batch_no'"],['bag','h.unit_id']]){
+  if(!q[key])continue;
+  values.push(q[key]);
+  conditions.push(key.endsWith('_id')?column+'=$'+values.length:`strpos(lower(${column}),lower($${values.length}))>0`);
+ }
+ const sql=`, archived AS (
+  SELECT h.source_id AS preparation_id,h.source_facts->>'batch_no' AS preparation_batch_no,
+   h.shipping_date::timestamptz AS received_at,h.shipping_date::text AS shipping_date,
+   count(*)::int AS bags,round(sum(h.net_kg)/1000,4)::text AS effective_net_mt
+  FROM historical_outbound_units h WHERE ${conditions.join(' AND ')}
+  GROUP BY h.source_id,h.source_facts->>'batch_no',h.shipping_date
+ ), combined AS (
+  SELECT preparation_id,preparation_batch_no,received_at,bags,effective_net_mt,to_jsonb(grouped) AS row FROM grouped
+  UNION ALL
+  SELECT preparation_id,preparation_batch_no,received_at,bags,effective_net_mt,to_jsonb(archived)||jsonb_build_object(
+    'historical_import',true,'status','OUTBOUND','lifecycle_state','OUTBOUND','batch_sampled_bags',0,'batch_total_bags',bags)
+  FROM archived
+ )`;
+ return {values,sql};
+}
 async function register({app,pool,permitted,csrf}){const read=permitted('co:read');if(await require('./cobalt-map-config.cjs').enabled(pool))await require('./cobalt-map-config.cjs').register({app,pool,permitted,csrf});
- app.get(prefix,{preHandler:read},req=>C.readTransaction(pool,async c=>{const f=await filter(c,req),size=pageSize(req.query.page_size,[5,10,20,50],50),order=req.query.sort||'batch';if(!Object.hasOwn(batchOrder,order))throw fail(400,'CO_STOCK_INPUT');return {items:(await c.query(cte(f)+', grouped AS('+groups+') SELECT * FROM grouped ORDER BY '+batchOrder[order]+' LIMIT '+size+' OFFSET '+((f.page-1)*size),f.values)).rows,total:Number((await c.query(cte(f)+' SELECT count(DISTINCT preparation_id) FROM matched',f.values)).rows[0].count),page:f.page,page_size:size,summary:await summary(c,f),snapshot_at:new Date().toISOString(),metal_scope:'UNIQUE_MATCHING_BATCH; NOT_DISTRIBUTED_TO_BAGS_OR_LOCATIONS'};}));
+ app.get(prefix,{preHandler:read},req=>C.readTransaction(pool,async c=>{
+  const f=await filter(c,req),size=pageSize(req.query.page_size,[5,10,20,50],50),order=req.query.sort||'batch';
+  if(!Object.hasOwn(batchOrder,order))throw fail(400,'CO_STOCK_INPUT');
+  const archive=archivedBatches(f,req.query),base=cte(f)+', grouped AS('+groups+')'+archive.sql;
+  const from=archive.sql?'combined':'grouped',values=archive.values;
+  const total=Number((await c.query(base+' SELECT count(*) FROM '+from,values)).rows[0].count);
+  const rows=(await c.query(base+' SELECT '+(archive.sql?'row':'*')+' FROM '+from+' ORDER BY '+batchOrder[order]+' LIMIT '+size+' OFFSET '+((f.page-1)*size),values)).rows;
+  return {items:archive.sql?rows.map(row=>row.row):rows,total,page:f.page,page_size:size,summary:await summary(c,f),
+   snapshot_at:new Date().toISOString(),metal_scope:'UNIQUE_MATCHING_BATCH; NOT_DISTRIBUTED_TO_BAGS_OR_LOCATIONS'};
+ }));
  app.get(prefix+'/summary',{preHandler:read},req=>C.readTransaction(pool,async c=>summary(c,await filter(c,req))));
  app.get(prefix+'/batches/:id',{preHandler:read},req=>C.readTransaction(pool,async c=>{const f=await filter(c,req,{preparation_id:B.uuid(req.params.id),history:'1'}),size=pageSize(req.query.page_size,[20,50,100,200],200);return {items:(await c.query(cte(f)+' SELECT * FROM matched ORDER BY daily_number,bag_id LIMIT '+size+' OFFSET '+((f.page-1)*size),f.values)).rows,batch:(await c.query(cte(f)+' '+groups,f.values)).rows[0]||null,total:Number((await c.query(cte(f)+' SELECT count(*) FROM matched',f.values)).rows[0].count),page:f.page,page_size:size,work_version:(await c.query('SELECT version FROM co_work_batches WHERE preparation_id=$1',[req.params.id])).rows[0]?.version,work_info:(await c.query('SELECT status,amendment_status FROM co_work_batches WHERE preparation_id=$1',[req.params.id])).rows[0]||null};}));
  app.get(prefix+'/batches/:id/archive',{preHandler:read},req=>C.readTransaction(pool,async c=>{

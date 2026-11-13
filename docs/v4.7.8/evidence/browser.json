@@ -1,0 +1,321 @@
+[
+  {
+    "batchBrowser": true,
+    "replacedOnlyInvalidFile": true
+  },
+  {
+    "product": "CU_CATHODE",
+    "language": "zh-CN",
+    "width": 1440,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        300,
+        1078,
+        1048,
+        330
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "0px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "map-filter-grid wms-map-filter-fields",
+            "DIV",
+            738,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            330,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CU_CATHODE",
+    "language": "zh-CN",
+    "width": 390,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        44,
+        302,
+        44,
+        302
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "0px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "map-filter-grid wms-map-filter-fields",
+            "DIV",
+            302,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            302,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CU_CATHODE",
+    "language": "en",
+    "width": 1440,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        320,
+        1058,
+        958.34375,
+        419.65625
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "0px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "map-filter-grid wms-map-filter-fields",
+            "DIV",
+            628.34375,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            419.65625,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CU_CATHODE",
+    "language": "en",
+    "width": 390,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        44,
+        302,
+        44,
+        302
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "0px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "map-filter-grid wms-map-filter-fields",
+            "DIV",
+            302,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            302,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CO_HYDROXIDE",
+    "language": "zh-CN",
+    "width": 1440,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        262,
+        1154,
+        1202,
+        214
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "0px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "wms-map-filter-fields",
+            "DIV",
+            930,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            214,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CO_HYDROXIDE",
+    "language": "zh-CN",
+    "width": 390,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        14,
+        362,
+        162,
+        214
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "148px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "wms-map-filter-fields",
+            "DIV",
+            362,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            214,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CO_HYDROXIDE",
+    "language": "en",
+    "width": 1440,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        282,
+        1134,
+        1167.859375,
+        248.140625
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "0px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "wms-map-filter-fields",
+            "DIV",
+            875.859375,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            248.140625,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "product": "CO_HYDROXIDE",
+    "language": "en",
+    "width": 390,
+    "filters": {
+      "left": true,
+      "right": true,
+      "overflow": false,
+      "bounds": [
+        14,
+        362,
+        127.859375,
+        248.140625
+      ],
+      "css": [
+        "flex",
+        "space-between",
+        "113.859px",
+        "wms-filter-actions",
+        "0px",
+        "0px",
+        [
+          [
+            "wms-map-filter-fields",
+            "DIV",
+            362,
+            "static"
+          ],
+          [
+            "wms-filter-actions",
+            "DIV",
+            248.140625,
+            "static"
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "cobaltMinimum": true,
+    "codes": 93,
+    "minimumFont": 10.000009534438776,
+    "noOverlap": true,
+    "emptyKeyboardDetail": true,
+    "occupiedClickDetail": true,
+    "occupiedBags": 1,
+    "detailFactsAligned": true,
+    "zoomedPan": true
+  }
+]

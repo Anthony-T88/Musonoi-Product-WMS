@@ -1,0 +1,40 @@
+{
+  "suites": [
+    {
+      "suite": "unit",
+      "status": "PASS",
+      "exitCode": 0,
+      "tests": 30,
+      "passed": 30
+    },
+    {
+      "suite": "integration",
+      "status": "PASS",
+      "exitCode": 0,
+      "tests": 27,
+      "passed": 27
+    },
+    {
+      "suite": "security",
+      "status": "PASS",
+      "exitCode": 0,
+      "tests": 35,
+      "passed": 35
+    },
+    {
+      "suite": "reliability",
+      "status": "PASS",
+      "exitCode": 0,
+      "tests": 46,
+      "passed": 46
+    },
+    {
+      "suite": "ui",
+      "status": "PASS",
+      "exitCode": 0,
+      "tests": 1,
+      "passed": 1
+    }
+  ],
+  "total": 139
+}

@@ -1,0 +1,25 @@
+{
+  "field": [
+    {
+      "product_code": "CU_CATHODE",
+      "units": 19,
+      "shipping_date": "2026-11-11"
+    },
+    {
+      "product_code": "CO_HYDROXIDE",
+      "units": 52,
+      "shipping_date": "2026-10-28"
+    }
+  ],
+  "mixedBatch": true,
+  "missingInvalidAmbiguousDates": true,
+  "inventoryAndDocumentTrace": true,
+  "legacyIdentifierConflict": true,
+  "liveStockConflict": true,
+  "permissionDenial": true,
+  "customerScopeDenial": true,
+  "repeatAndConcurrent": true,
+  "transactionRollbackAndRetry": true,
+  "legacyLedgerReused": true,
+  "liveLedgersUnchanged": true
+}

@@ -31,13 +31,14 @@ async function seed(){
   for(const product of [CU,CO])await check('historical-ledger-'+product,async()=>{
    const XLSX=require('xlsx'),co=product===CO,rows=Array.from({length:29},()=>[]),id='UIUX-HISTORY-'+unique;
    rows[0]=['PACKING LIST'];rows[2][3]='Packing List No:';rows[2][4]=id;rows[3][3]='Lot No:';rows[3][4]='UIUX-LOT';
+   rows[6][3]='Shipping Date:';rows[6][4]='2020-01-02';
    rows[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
    rows.push([1,'Synthetic',id,co?null:48,'UIUX-SEAL',647,650],['Total',null,null,null,null,647,650]);
    const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(rows),'PL');
-   const body={file_name:'synthetic-uiux-history.xlsx',file_base64:XLSX.write(book,{bookType:'xlsx',type:'buffer'}).toString('base64'),
-    movement_type:'OUTBOUND',business_date:'2020-01-02',date_evidence:'Synthetic UI audit ledger evidence'};
-   const url=(co?'/cobalt':'')+'/historical-movements',preview=await request('admin',product,url+'/preview',body);
-   assert(preview.importable);await request('admin',product,url,{...body,preview_token:preview.preview_token});
+   const body={file_name:'synthetic-uiux-history.xlsx',file_base64:XLSX.write(book,{bookType:'xlsx',type:'buffer'}).toString('base64'),warehouse_id:f.warehouse};
+   const url='/historical-movements/batch',preview=(await request('admin',product,url+'/preview',{files:[body]})).results[0];
+   assert(preview.importable,JSON.stringify(preview.issues));const imported=(await request('admin',product,url+'/confirm',{files:[{...body,preview_token:preview.preview_token}]})).results[0];
+   assert.equal(imported.status,'IMPORTED');
   });
   await check('co-draft-receipt',async()=>{
    if((await c.query("SELECT 1 FROM co_preparations WHERE status='DRAFT' AND project_id=$1 LIMIT 1",[f.project])).rowCount)return;

@@ -49,6 +49,14 @@ async function inspect(page,guest=false,checks=[]){
   };
   const title=readable([...document.querySelectorAll('main h1,#login-panel h1')].find(visible))||document.title;
   const notice=[...root?.querySelectorAll('.error,[role=alert],.product-construction,.s46-state[data-sys-code="SYS-14"] h2')||[]].filter(visible).map(readable).filter(Boolean);
+  const languageCandidates=(window.I18n?.language||document.documentElement.lang)==='en'?[...new Set(
+   [...root?.querySelectorAll('h1,h2,h3,button,label,th,dt,legend,summary,[role=alert],[placeholder]')||[]]
+    .filter(visible).map(node=>{
+     const value=node.getAttribute('placeholder')||textName(node)||readable(node);
+     if(window.I18n?.protected?.has(value))return '';
+     return value.replace(/\s+/g,' ').slice(0,130);
+    }).filter(value=>/[\p{Script=Han}]/u.test(value))
+  )].slice(0,40):[];
   const headings=[...root?.querySelectorAll('h2,h3')||[]].filter(visible).map(readable);
   const duplicates=headings.filter((x,i)=>x&&(x===headings[i-1]||x===title));
   const actionable=controls.filter(e=>e.matches('button,a')&&!e.disabled);
@@ -114,7 +122,7 @@ async function inspect(page,guest=false,checks=[]){
   const components=Object.keys(componentSelectors).filter(key=>
    [...document.querySelectorAll(componentSelectors[key])].some(node=>visible(node)&&(root?.contains(node)||node.closest('dialog[open]'))));
   const design={family:root?.dataset.pageFamily||'',components,theme:getComputedStyle(document.documentElement).getPropertyValue('--uix-control').trim()};
-  return {title,notice,design,headings:headings.length,duplicates:[...new Set(duplicates)],repeatedLinks:[...new Set(repeatedLinks)],
+  return {title,notice,design,languageCandidates,headings:headings.length,duplicates:[...new Set(duplicates)],repeatedLinks:[...new Set(repeatedLinks)],
    noName,actionClips,filterClips,overflow,widest,controls:controls.length,tableCount:[...root?.querySelectorAll('table')||[]].filter(visible).length,
    filters:[...root?.querySelectorAll('form.filters,[role=search]')||[]].filter(visible).length,styles,
    contrastCandidates,forbiddenFields,verifiedControls:Object.fromEntries(checks.map(s=>[s,[...document.querySelectorAll(s)].some(visible)])),

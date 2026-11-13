@@ -546,6 +546,66 @@ html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-r
 }
 .wms-map-advanced { margin-block-end: var(--uix-gap); }
 .wms-map-advanced summary { color: var(--uix-brand); cursor: pointer; }
+#page-content [data-historical-page] a:not(.button) {
+  color: var(--uix-brand);
+  text-decoration: underline;
+}
+.map465 #co-map-canvas.co-site-readable-canvas { overflow: auto; overscroll-behavior: contain; }
+.map465 .co-site-readable-canvas #co-map-svg {
+  inline-size: max(100%, var(--co-site-readable-width));
+  block-size: auto;
+  aspect-ratio: var(--co-site-aspect);
+  max-inline-size: none;
+  touch-action: none;
+}
+.map465 .site-plan-svg [data-location-label] { pointer-events: none; }
+html[data-release-ui="46"] #page-content .wms-map-reviewed .wms-map-advanced :is(#stock-map-filter,#co-stock-filter).wms-map-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--uix-gap-sm);
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  justify-content: space-between;
+}
+.wms-map-reviewed .wms-map-filter-row .wms-map-filter-fields {
+  display: flex;
+  flex: 1 1 30rem;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--uix-gap-sm);
+  min-inline-size: 0;
+}
+.wms-map-reviewed .wms-map-filter-fields > label {
+  flex: 0 1 var(--uix-filter-min);
+  min-inline-size: min(100%, 8rem);
+  margin: 0;
+}
+.wms-map-reviewed .wms-map-filter-fields :is(input,select):not([type="checkbox"]) {
+  block-size: var(--uix-control);
+  inline-size: 100%;
+}
+#page-content .wms-map-reviewed .wms-map-filter-row > .wms-filter-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--uix-gap-xs);
+  margin: 0 0 0 auto;
+  margin-inline-start: auto;
+  padding-inline: 0;
+  inline-size: max-content;
+  max-inline-size: 100%;
+  justify-content: flex-end;
+}
+.wms-map-reviewed .wms-map-filter-row > .wms-filter-actions > button {
+  min-block-size: var(--uix-control);
+}
+@media (max-width: 700px) {
+  .wms-map-reviewed .wms-map-filter-row .wms-map-filter-fields { flex-basis: 100%; }
+  .wms-map-reviewed .wms-map-filter-fields > label { flex: 1 1 8rem; }
+}
 .wms-map-reviewed :is(.stock-map-layout,.map465-grid) { position: relative; min-inline-size: 0; }
 .map-app.wms-map-reviewed .stock-map-layout.v27-has-detail:has(>.map-detail:not([hidden])) { grid-template-columns: minmax(0,1fr); }
 .wms-map-reviewed .map465-grid { display: block; }
@@ -568,7 +628,7 @@ html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-r
   fill: var(--uix-info-soft);
   stroke: var(--uix-info);
 }
-.map465.wms-map-reviewed #co-map-detail .map465-detail-body>dl { grid-template-columns: minmax(0,1fr); }
+.map465.wms-map-reviewed #co-map-detail .map465-detail-body>dl { display: grid; grid-template-columns: minmax(0,1fr); }
 .map465.wms-map-reviewed #co-map-detail .map465-detail-body>dl>div {
   display: grid;
   grid-template-columns: minmax(0,1.5fr) minmax(0,1fr);

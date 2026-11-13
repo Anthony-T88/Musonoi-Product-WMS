@@ -59,6 +59,8 @@ function expectedLanding(spec,product,ids){
  const url=localUrl(spec.url);
  const copper=product===R.CU,co=product===R.CO;
  const replacements={
+  'historical-former-entry':'/workbench/historical-movements',
+  'historical-former-record':'/workbench/historical-movements/'+ids.cuHistorical,
   'master-customers-edit':'/customers',
   'legacy-sales-new':'/sales-plans/new',
   'legacy-sales-edit':'/sales-plans/'+ids.cuPlan+'/edit',
