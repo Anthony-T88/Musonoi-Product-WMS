@@ -37,7 +37,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const raw=(await c.query('SELECT arecoms_quantity_mt::text v FROM co_work_batches WHERE preparation_id=$1',[prep.id])).rows[0].v;assert.equal(raw,'1.23456789');assert.equal((await api('/cobalt/stock/batches/'+prep.id)).batch.arecoms_display_mt,'1.23457');
   assert.equal(await trend(prep.id),0.647123);
   const s=await api('/cobalt/stock/summary');assert.equal(s.completed_arecoms_mt,'1.23456789');assert.equal(s.confirmed_arecoms_batches,1);assert(s.unconfirmed_arecoms_batches===0);
-  const report=await api('/cobalt/reports');assert.equal(report.inventorySummary.confirmed_arecoms_mt,'1.23456789');assert(report.inventorySummary.arecoms_unconfirmed_batches>=1);
+  const report=await api('/cobalt/reports');assert.equal(report.inventorySummary.confirmed_arecoms_mt,'1.23456789');assert.equal(report.inventorySummary.arecoms_unconfirmed_batches,0);
   const exported=await request('/cobalt/stock/export');assert.equal(exported.statusCode,200);const book=new(require('exceljs').Workbook)();await book.xlsx.load(exported.rawPayload);const text=JSON.stringify(book.worksheets[0].getSheetValues());assert(text.includes('1.23457'));assert(text.includes('1.23456789'));
  });
  await check('matching requires current versions and a complete independent preparation',async()=>{
