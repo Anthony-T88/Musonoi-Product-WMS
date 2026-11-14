@@ -761,6 +761,10 @@
     {
       "version": "190_v478_historical_backfill.sql",
       "checksum": "945660f49e236696b1487016923b4c6010ccc71c871d0da1b6ae2736cf12f852"
+    },
+    {
+      "version": "191_v481_contract_number_reuse.sql",
+      "checksum": "61c6fb5d24a94d14af336d89959edd9ba31d1b80724a16b2c8562738848d1d2a"
     }
   ]
 }

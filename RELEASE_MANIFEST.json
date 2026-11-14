@@ -39,8 +39,8 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "sha256": "d288f4f5ed6a22c886781c1d1d83a3ce57cea692a0bcfa25216f18efd4d9c08b",
-      "bytes": 29047
+      "sha256": "802ce9bdc417fc01d129e699781a314ba54fea81ef9c2ca2874c0f24124c4ae6",
+      "bytes": 29203
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -1001,6 +1001,11 @@
       "path": "db/migrations/190_v478_historical_backfill.sql",
       "sha256": "945660f49e236696b1487016923b4c6010ccc71c871d0da1b6ae2736cf12f852",
       "bytes": 5579
+    },
+    {
+      "path": "db/migrations/191_v481_contract_number_reuse.sql",
+      "bytes": 295,
+      "sha256": "61c6fb5d24a94d14af336d89959edd9ba31d1b80724a16b2c8562738848d1d2a"
     },
     {
       "path": "db/rollback/139_v38_cobalt_empty_only.sql",
@@ -3524,8 +3529,8 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "e1b0d67363b10430c301b1f320386f72ea38e1c3f94f478c39cc94f659fbb2d6",
-      "bytes": 213
+      "sha256": "e0a25a6ea87603a33e1c0ee0eefa22022c85a3fb186c9b0b86983d07bc130d27",
+      "bytes": 215
     },
     {
       "path": "server/report-center-data.cjs",
@@ -3734,8 +3739,8 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "0aad483b5a169e42d4be66a6500bcdb80fd227ca34c678432ce8567674f4170e",
-      "bytes": 93559
+      "sha256": "873d6ee3dcce5ce130a81ca7b5e2d9a912c226c28dd07d5a29f3f97436d88406",
+      "bytes": 94002
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
@@ -3849,8 +3854,8 @@
     },
     {
       "path": "tests/release/database.test.cjs",
-      "sha256": "352711a2c7ee958682736971f32a6c0abfe4bd38b048dbb529ea5cd0f033eeee",
-      "bytes": 28877
+      "sha256": "2ff7402e1032586dc436abb3596be63cdab50e11916f9f37b8f2bfb2956e7e9c",
+      "bytes": 31198
     },
     {
       "path": "tests/release/deployment.test.cjs",
@@ -3889,8 +3894,8 @@
     },
     {
       "path": "tests/release/migrations.test.cjs",
-      "sha256": "8c5b3793cc36c5ce732052aac7aff319e53aeb7bd3f517cc6abd1d168fc6fce1",
-      "bytes": 3356
+      "sha256": "f41a565144ce0dbee65f83a4e1d8dd5b44276f9e9a11b3479b164906014c8164",
+      "bytes": 3358
     },
     {
       "path": "tests/release/pool-reliability.cjs",
@@ -4073,8 +4078,8 @@
       "bytes": 285
     }
   ],
-  "sourceFiles": 650,
-  "runtimeRequiredMigrations": 190,
+  "sourceFiles": 651,
+  "runtimeRequiredMigrations": 191,
   "format": 2,
   "status": "Local TEST candidate"
 }
