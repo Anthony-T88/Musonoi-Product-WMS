@@ -1505,7 +1505,7 @@
     {
       "path": "dist/index.html",
       "bytes": 15843,
-      "sha256": "2cc678911ccba367d371060d1287b4c330cb814a6498b5c3f460f97f58047115"
+      "sha256": "e361082b1f4795f87cc948c70fc9d97811f4937934390a73acaa8eedf1ec5f38"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1775,7 +1775,7 @@
     {
       "path": "dist/release.js",
       "bytes": 117,
-      "sha256": "fcb0a5e5ac96d9a03a29ce32486223f7ef14f9d1f20704d227485ca0f2cda0ea"
+      "sha256": "49a20abf3a7d87078edc4b03f8796f3e2bb9019ab16bb471516e2df4ab8bb9c2"
     },
     {
       "path": "dist/reports463.js",
@@ -1835,7 +1835,7 @@
     {
       "path": "dist/sw.js",
       "bytes": 2901,
-      "sha256": "094daf6890c059a7913d53bd99533624b622b4ba400135078795cb26adf2fc14"
+      "sha256": "ba328c67932447ca0c0e43936991bc6cc0b548e5d9cf99ef56503d743682bd7d"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1934,8 +1934,8 @@
     },
     {
       "path": "dist/ui468.js",
-      "sha256": "43b8c8bada2ddfd57c0b396b117c4331492aed5fcec7e574428a22dece891594",
-      "bytes": 38054
+      "sha256": "7026becb9398f0e6e48e31f1e82cd8b06f6558b200173dc45ae2b3c207eb0054",
+      "bytes": 38509
     },
     {
       "path": "dist/uiux-governance.css",
@@ -2415,7 +2415,7 @@
     {
       "path": "docs/uiux/COVERAGE.md",
       "bytes": 25357,
-      "sha256": "57863a3e0398855494d92185c3ad18e0540b1ccf6d5b2127cfe4abf278abefb7"
+      "sha256": "64073e6a809a5e5d2f7f798f25b5846474767ab77d80a19dedd13188f5473be0"
     },
     {
       "path": "docs/uiux/DESIGN.md",
@@ -3540,7 +3540,7 @@
     {
       "path": "server/release.cjs",
       "bytes": 215,
-      "sha256": "e3099bea26bd9522a00ab7c679972f4514e96b8fe67007f074005fe5a8cf81ec"
+      "sha256": "47b721e622ca1fa227ebb02ec2158248690d3edb2c711c3837bcd1074da60b51"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -3750,7 +3750,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 94777,
-      "sha256": "0dc50da865be53e2f13baa7189ee07e201366276f789c77f26f1decfea9182d9"
+      "sha256": "8b1de694213580bc6ba4d3b9f9582db884945763ce8cf67d9d2de1cbe8cd9eeb"
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
@@ -3959,8 +3959,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "bytes": 46022,
-      "sha256": "378bb78e3d902653eb5cb4f4cc10f258aadbab1f5c517b953404a4c8fcc689a9"
+      "bytes": 46461,
+      "sha256": "22c53a5375dd691ad29ed6e3e0edaccdd9e8b86f084ed520e8657c126e790a34"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
