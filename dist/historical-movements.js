@@ -25,11 +25,19 @@ window.HistoricalMovements={
    INVALID_SHEETS:['片数无效','Invalid sheet count'],INVALID_WEIGHT:['重量缺失或无效','Missing or invalid weight'],SOURCE_TOTAL_MISMATCH:['原单合计与明细不符','Totals do not match detail rows'],
    TOTAL_ROW_MISSING:['缺少合计行','Totals row is missing'],DOCUMENT_NO_MISSING:['缺少装箱单号','Missing packing list number'],BATCH_NO_MISSING:['缺少备货批次','Missing preparation batch'],
    DETAILS_MISSING:['缺少明细','Missing detail rows'],INVALID_WORKBOOK:['工作簿格式或表头无效','Invalid workbook format or headers'],
+   FILE_TOO_LARGE:['单份文件不能超过 512 KB','Each file must be 512 KB or smaller'],
+   FILE_READ_FAILED:['无法读取文件。若文件仅存于网盘，请先下载或设为离线可用，再重新选择。','Could not read the file. If it is online-only, download it or make it available offline, then select it again.'],
    HISTORY_SCOPE:['仓库不在授权范围内','Warehouse is outside your scope'],REVIEW_REQUIRED:['数据已变化，请重新预览','Data changed. Preview again.'],
    PREVIEW_FAILED:['预览服务暂不可用，请重试','Preview is temporarily unavailable. Retry.'],
    IMPORT_WRITE_FAILED:['整张已回滚，可重试','The entire file was rolled back. Retry.']
   };
   return labels[code]?this.t(...labels[code]):this.t('无法处理文件','File could not be processed');
+ },
+ uploadError(error,confirm=false){
+  if(error.statusCode===413)return this.t('本次上传总大小超过服务器限制。请减少每次选择的文件数后重试。','This upload exceeds the server limit. Select fewer files at a time and retry.');
+  if(error.uncertain)return this.t('连接中断，导入结果待确认。请查看导入记录，再重试尚未导入的文件。','Connection interrupted. Check the import records before retrying any files that were not imported.');
+  if(!confirm&&!error.statusCode)return this.t('未收到预览结果。请检查网络连接后重新预览。','No preview was received. Check your connection and preview again.');
+  return I18n.translate(error.message,true);
  },
  kind(code){
   const labels={RECEIPT:['历史入库单','Historical Receipt'],LOADING_PLAN:['历史装车计划','Historical Loading Plan'],
@@ -104,19 +112,23 @@ window.HistoricalMovements={
   const uploaded=[];
   try{
    for(const file of files){
-    if(file.size>524288){uploaded.push({name:file.name,preview:{code:'INVALID_WORKBOOK',error:t('超过 512 KB','Exceeds 512 KB')}});continue;}
-    const bytes=new Uint8Array(await file.arrayBuffer());let binary='';
+    if(file.size>524288){uploaded.push({name:file.name,preview:{code:'FILE_TOO_LARGE'}});continue;}
+    let buffer;
+    try{buffer=await file.arrayBuffer();}catch{
+     uploaded.push({name:file.name,preview:{code:'FILE_READ_FAILED'}});continue;
+    }
+    const bytes=new Uint8Array(buffer);let binary='';
     for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
     uploaded.push({name:file.name,body:{file_name:file.name,file_base64:btoa(binary),warehouse_id:warehouse}});
    }
    const valid=uploaded.filter(row=>row.body);
    if(valid.length){
-    const result=await API.request('/historical-movements/batch/preview',{method:'POST',body:{files:valid.map(row=>row.body)}});
+    const result=await API.request('/historical-movements/batch/preview',{method:'POST',timeoutMs:120000,body:{files:valid.map(row=>row.body)}});
     for(const row of result.results)valid[row.index].preview=row;
    }
    if(!form.isConnected)return;
    if(replaceIndex===undefined)this.queue=uploaded;else this.queue.splice(replaceIndex,1,uploaded[0]);
-  }catch(e){if(form.isConnected)error.textContent=I18n.translate(e.message,true);}
+  }catch(e){if(form.isConnected)error.textContent=this.uploadError(e);}
   finally{
    this.busy=false;
    if(form.isConnected){form.querySelectorAll('input,select,button').forEach(n=>n.disabled=false);this.showQueue();}
@@ -153,13 +165,14 @@ window.HistoricalMovements={
    button.disabled=true;this.busy=true;
    try{
     if(!await OperationConfirm.ask({title:t('确认导入合格装箱单？','Import validated packing lists?')}))return;
-    const response=await API.request('/historical-movements/batch/confirm',{method:'POST',body:{files:pending.map(row=>({...row.body,preview_token:row.preview.preview_token}))}});
+    $('historical-upload-error').textContent='';
+    const response=await API.request('/historical-movements/batch/confirm',{method:'POST',timeoutMs:120000,body:{files:pending.map(row=>({...row.body,preview_token:row.preview.preview_token}))}});
     for(const result of response.results){pending[result.index].result=result;if(result.id)delete pending[result.index].body;}
     if(box.isConnected){
      const q=new URLSearchParams(location.search),data=await API.request('/historical-movements?'+new URLSearchParams([...q,['all_products','1']]));
      if(box.isConnected)$('historical-ledger').innerHTML=this.ledger(data,q);
     }
-   }catch(e){if(box.isConnected)$('historical-upload-error').textContent=I18n.translate(e.message,true);}
+   }catch(e){if(box.isConnected)$('historical-upload-error').textContent=this.uploadError(e,true);}
    finally{this.busy=false;if(box.isConnected)this.showQueue();}
   };
  },

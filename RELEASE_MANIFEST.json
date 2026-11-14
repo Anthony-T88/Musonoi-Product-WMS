@@ -3,7 +3,7 @@
   "version": "4.8.1",
   "status": "Local TEST verified",
   "runtimeRequiredMigrations": 191,
-  "sourceFiles": 651,
+  "sourceFiles": 652,
   "keyIncluded": false,
   "files": [
     {
@@ -58,8 +58,8 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "bytes": 94004,
-      "sha256": "9ab9b693a70f8371ac9a6bd7c1a209c1658c78c601245fdfb02032ec45b92e7a"
+      "bytes": 94156,
+      "sha256": "ec1abb231deee3c7f41d9ef378e004f9f3a95e57254c727f67308f258bff94e8"
     },
     {
       "path": "VALIDATION.json",
@@ -1143,8 +1143,8 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "bytes": 967,
-      "sha256": "2230257b9cddffb1dd287af44d8268aa37bb19d48950988561c0b78f4b52797f"
+      "bytes": 1244,
+      "sha256": "5a98d0e04c7efcbbe0b0072ff8a44e325f7cf625c417dedacda8351ca3cf080f"
     },
     {
       "path": "deploy/preproduction.settings.example",
@@ -1458,8 +1458,8 @@
     },
     {
       "path": "dist/historical-movements.js",
-      "bytes": 23473,
-      "sha256": "a0a0a1aa1055eb153b717a304ef323639c80f7f3540ebd838544b179cd415bd4"
+      "bytes": 24683,
+      "sha256": "1d6c2e87f9c047995c760c48b7be26297ac138542583cc534c7b477698731385"
     },
     {
       "path": "dist/history-ui.js",
@@ -1519,7 +1519,7 @@
     {
       "path": "dist/index.html",
       "bytes": 15843,
-      "sha256": "0d819dffd70e7b582d8a83c8ee41a2b68701d4b521de789c04364b43659b6a24"
+      "sha256": "c5c9c750656bcdce252eb6532b5dff4b88d46e511729c186e024d3d9aac39120"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1789,7 +1789,7 @@
     {
       "path": "dist/release.js",
       "bytes": 117,
-      "sha256": "162b9c443ce6f3533b7f53434797ad4a39fcb3c87a4ffbdb4153a23a24c22c1d"
+      "sha256": "30c4522339ff9b38db96f6ff3f6954c8108a3974b6d77c182e0037c52ebdc3c3"
     },
     {
       "path": "dist/reports463.js",
@@ -1849,7 +1849,7 @@
     {
       "path": "dist/sw.js",
       "bytes": 2901,
-      "sha256": "996b031f2deee580cf5ac6cc4c4afdf1c51f3a5cc2a86a5330e56adac926856c"
+      "sha256": "1064656be15479a2e0f9546b026c412895fe331d3d42170008d79cd36a1ec06e"
     },
     {
       "path": "dist/system46-pages.js",
@@ -2293,8 +2293,8 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "bytes": 1678,
-      "sha256": "c5635aa2251bc2a1952e1f3d88a4b76624ed5f69dbde2d0f669c993537ad5672"
+      "bytes": 1705,
+      "sha256": "6bf62e08e20fddb3b92d2e922323aca7abed4fa60d0e2c0e409ab54f4cc52b20"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -2789,7 +2789,7 @@
     {
       "path": "server/release.cjs",
       "bytes": 215,
-      "sha256": "e0a25a6ea87603a33e1c0ee0eefa22022c85a3fb186c9b0b86983d07bc130d27"
+      "sha256": "7760dd432bf96cb355449e65993dc128b6e5c4d69fe8a20f83f033c947588992"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -3140,6 +3140,11 @@
       "path": "tests/release/fixtures/rc2-audit-entity-matrix.json",
       "bytes": 12245,
       "sha256": "53f83938e0ad930330396dccf8d7d33b87c59ab1262345aafe065caa70c4dc89"
+    },
+    {
+      "path": "tests/release/historical-upload-ui.cjs",
+      "bytes": 5443,
+      "sha256": "98458b61dd48e1db11c217da5037107c9c6e6358178da82d226acca7f7743a2f"
     },
     {
       "path": "tests/release/lock-order.cjs",
