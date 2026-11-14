@@ -10,7 +10,7 @@ const deps={
  'co:create':['co:read'],'co:submit':['co:read'],'co:site-review':['co:read'],'co:production-review':['co:read'],'co:withdraw':['co:read'],
  'inventory:export':['inventory:read'],'receipt:write':['receipt:read','inventory:read','master:read'],'receipt:review':['receipt:read','master:read'],
  'customer:write':['customer:read','master:read'],'plan:write':['plan:read','customer:read','master:read'],
- 'dispatch:write':['dispatch:read','plan:read','customer:read','master:read'],'dispatch:read':['plan:read'],
+ 'dispatch:month':['dispatch:read'],'dispatch:write':['dispatch:read','plan:read','customer:read','master:read'],'dispatch:read':['plan:read'],
  'allocation:write':['allocation:read','plan:read','customer:read','inventory:read','master:read'],'allocation:review':['allocation:read','plan:read','master:read'],
  'lot:cancel-approve':['allocation:read','master:read'],'lot:revoke':['allocation:read','master:read'],
  'load:write':['load:read','allocation:read','plan:read','customer:read','inventory:read','master:read'],'load:execute':['load:read','master:read'],'load:review':['load:read','master:read'],

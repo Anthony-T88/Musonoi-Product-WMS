@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{Client}=require('pg'),E=require('./environment.cjs');
-test('native copper and cobalt stocktake submissions, independent review and retained histories',async()=>{
+test('native copper and cobalt stocktake submissions, authorized self review and retained histories',async()=>{
  const f=E.fixture(),c=new Client(E.options(f.database));await c.connect();let app;const states=[];
  try{
  app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
@@ -20,12 +20,12 @@ test('native copper and cobalt stocktake submissions, independent review and ret
   assert(!miss.items.some(item=>item.id===task.id));
  }
  const count=await api('/v27/stocktakes','admin',{project_id:f.project,warehouse_id:wh,assigned_to:f.accounts.find(a=>a.role==='admin').id,task_type:'SPECIAL',cutoff_at:new Date(Date.now()+60000).toISOString(),remark:'Synthetic isolated empty count'});
- for(const[action,role]of [['start','admin'],['submit-review','admin'],['review','logistics_manager'],['approve','logistics_manager'],['complete','logistics_manager']]){const d=await api('/v27/stocktakes/'+count.id,'admin'),task=d.task||d.document||d;if(action==='complete'&&task.phase==='COMPLETED')continue;await api('/v27/stocktakes/'+count.id+'/'+action,role,{version:task.version,note:'Synthetic '+action});states.push('Cu '+action);}
+ for(const[action,role]of [['start','admin'],['submit-review','admin'],['review','admin'],['approve','admin'],['complete','admin']]){const d=await api('/v27/stocktakes/'+count.id,'admin'),task=d.task||d.document||d;if(action==='complete'&&task.phase==='COMPLETED')continue;await api('/v27/stocktakes/'+count.id+'/'+action,role,{version:task.version,note:'Synthetic '+action});states.push('Cu '+action);}
  for(const decision of ['reject','approve']){
-  const p=await api('/cobalt/stocktaking','logistics_field_operator',{project_id:f.project,warehouse_id:f.warehouse,title:'Synthetic rc2 '+decision},true),base='/cobalt/stocktaking/'+p.id;
+  const p=await api('/cobalt/stocktaking','admin',{project_id:f.project,warehouse_id:f.warehouse,title:'Synthetic rc2 '+decision},true),base='/cobalt/stocktaking/'+p.id;
   const rows=(await c.query('SELECT snapshot FROM co_stocktake_rounds WHERE task_id=$1 ORDER BY round DESC LIMIT 1',[p.id])).rows[0].snapshot;
-  for(let i=0;i<rows.length;i+=200){const d=await api(base,'admin',null,true);await api(base+'/observe','logistics_field_operator',{version:(d.task||d).version,items:rows.slice(i,i+200).map(r=>({bag_id:r.bag_id||r.id,present:true,actual_location_id:r.location_id||r.expected_location_id||null,actual_gross_kg:null,note:'Synthetic observed'}))},true);}
-  let d=await api(base,'admin',null,true);await api(base+'/submit','logistics_field_operator',{version:(d.task||d).version,note:'Synthetic submit'},true);d=await api(base,'admin',null,true);await api(base+'/'+decision,'logistics_manager',{version:(d.task||d).version,note:'Synthetic independent '+decision},true);d=await api(base,'admin',null,true);assert.equal(d._approval.workflows[0].state,decision==='approve'?'APPROVED':'REJECTED');assert(d._approval.history.items.every(x=>x.role_basis!=='CURRENT_ACCOUNT'));states.push('Co '+decision);
+  for(let i=0;i<rows.length;i+=200){const d=await api(base,'admin',null,true);await api(base+'/observe','admin',{version:(d.task||d).version,items:rows.slice(i,i+200).map(r=>({bag_id:r.bag_id||r.id,present:true,actual_location_id:r.location_id||r.expected_location_id||null,actual_gross_kg:null,note:'Synthetic observed'}))},true);}
+  let d=await api(base,'admin',null,true);await api(base+'/submit','admin',{version:(d.task||d).version,note:'Synthetic submit'},true);d=await api(base,'admin',null,true);await api(base+'/'+decision,'admin',{version:(d.task||d).version,note:'Synthetic self review '+decision},true);d=await api(base,'admin',null,true);assert.equal(d._approval.workflows[0].state,decision==='approve'?'APPROVED':'REJECTED');assert(d._approval.history.items.every(x=>x.role_basis!=='CURRENT_ACCOUNT'));states.push('Co '+decision);
  }
  E.save('rc2-stocktake-results.json',{status:'PASS',states,syntheticOnly:true});
  }finally{await app?.close();await c.end();}

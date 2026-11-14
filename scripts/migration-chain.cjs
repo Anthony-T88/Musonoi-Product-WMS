@@ -29,7 +29,12 @@ async function guard172(client,stage){
    r.body=r.body.replaceAll(expanded,"u.role_code IN('sales_operator','admin')");
   }
  }
- const expected=new Map(spec[stage].map(r=>[r.signature,r]));
+ const approvalPolicy=stage==='after'&&managerSubmission&&(await client.query("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version='194_v481_dispatch_and_approval.sql') applied")).rows[0].applied;
+ const approvalHashes={
+  'ux10_review_sales_plan(text,uuid,uuid,integer,text,text)':'0e7e9f958c1d5dad47fc48ff9394575d5881cd53939b3e61e4cb4bda040f0f69',
+  'v468_review_plan_close(text,uuid,uuid,uuid,integer,text,text)':'076d39dd07f5cfa57f2ecb15f334ce29609224d1fd658225714490abb1315fdc'
+ };
+ const expected=new Map(spec[stage].map(r=>[r.signature,approvalPolicy&&approvalHashes[r.signature]?{...r,bodySha256:approvalHashes[r.signature]}:r]));
  if(actual.length!==expected.size||actual.some(r=>{const e=expected.get(r.signature);return !e||digest(r.body)!==e.bodySha256||r.security_definer!==e.security_definer||JSON.stringify(r.configuration)!==JSON.stringify(e.configuration);}))DB.fail('MIGRATION_172_FUNCTION_BASELINE_MISMATCH');
 }
 async function execute(client,entry){

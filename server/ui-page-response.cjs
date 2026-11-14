@@ -1,6 +1,7 @@
 'use strict';
 // A denied HTML route remains HTTP 403. Only the application shell is sent,
-// allowing SYS-14 to render; every business/API permission remains enforced.
+// allowing SYS-14 to render; expired sessions receive the login shell.
+// Every business/API permission remains enforced.
 const systemPermissions=['users:manage','roles:manage','audit:read','printer:manage','master:write','system:manage'];
 async function serve(req,reply,{auth,permitted,permission,systemHub,authenticatedView}){
  try{
@@ -11,6 +12,6 @@ async function serve(req,reply,{auth,permitted,permission,systemHub,authenticate
    else if(authenticatedView)await auth(req);
   }
   return reply.sendFile('index.html');
- }catch(e){if(e.statusCode===403)return reply.code(403).type('text/html; charset=utf-8').sendFile('index.html');throw e;}
+ }catch(e){if([401,403].includes(e.statusCode))return reply.code(e.statusCode).type('text/html; charset=utf-8').sendFile('index.html');throw e;}
 }
 module.exports={serve,systemPermissions};

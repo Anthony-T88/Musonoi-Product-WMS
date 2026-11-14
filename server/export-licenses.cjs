@@ -233,7 +233,7 @@ async function review(c,req,id,actionId){
  const l=await record(c,req,id,true),b=req.body;
  fields(b,['decision','note']);
  const a=(await c.query('SELECT * FROM export_license_actions WHERE id=$1 AND license_id=$2 FOR UPDATE',[B.uuid(actionId),id])).rows[0];
- if(!a||a.decision!=='PENDING'||a.requested_by===req.user.id||!['APPROVED','REJECTED'].includes(b.decision))throw fail(409,'审核状态无效或需要独立审核人');
+ if(!a||a.decision!=='PENDING'||!['APPROVED','REJECTED'].includes(b.decision))throw fail(409,'审核状态或结果无效');
  let result=null;
  if(b.decision==='APPROVED'){
   result=['SETTLE','CORRECT'].includes(a.action)?await usage(c,l,a):await approvedChange(c,req,l,a,true);
@@ -310,7 +310,7 @@ async function pending(c,req){
  const {rows}=await c.query("SELECT a.id,l.project_id,l.customer_id,a.requested_at created_at,u.display_name initiator_name,l.proforma_no document_no, "+
   "'PENDING' status,'EXPORT_LICENSE_REVIEW' kind,'EXPORT_LICENSE' doc_type,'/export-licenses/'||l.id||'#permit-review-'||a.id href "+
   "FROM export_license_actions a JOIN export_licenses l ON l.id=a.license_id JOIN users u ON u.id=a.requested_by "+
-  "WHERE a.decision='PENDING' AND a.requested_by<>$1 AND l.product_code=$2 AND "+scope()+" ORDER BY a.requested_at,a.id",[req.user.id,req.productCode]);
+  "WHERE a.decision='PENDING' AND l.product_code=$2 AND "+scope()+" ORDER BY a.requested_at,a.id",[req.user.id,req.productCode]);
  return rows;
 }
 

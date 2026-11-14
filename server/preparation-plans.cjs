@@ -34,7 +34,7 @@ function fields(body,keys){
 }
 function actions(req,plan){
  const editable=canCreate(req)&&req.user.id===plan.created_by&&['DRAFT','REJECTED'].includes(plan.state);
- return {edit:editable,submit:editable,review:canReview(req)&&req.user.id!==plan.created_by&&plan.state==='PENDING',
+ return {edit:editable,submit:editable,review:canReview(req)&&plan.state==='PENDING',
   start:canStart(req)&&plan.state==='APPROVED'&&!plan.allocation_id&&!plan.co_preparation_id};
 }
 async function event(c,req,plan,action,reason=''){
@@ -141,7 +141,7 @@ async function pending(c,req){
   " u.display_name initiator_name,latest.occurred_at created_at,'PREPARATION_PLAN' doc_type,'preparation_plans' entity_type,"+
   " 'PREPARATION_PLAN_REVIEW' kind,'/preparation/work-plans/'||p.id::text href FROM preparation_plans p JOIN customers customer ON customer.id=p.customer_id"+
   " JOIN users u ON u.id=p.created_by LEFT JOIN LATERAL(SELECT occurred_at FROM preparation_plan_events e WHERE e.plan_id=p.id AND e.action='SUBMIT' ORDER BY occurred_at DESC LIMIT 1) latest ON true"+
-  " WHERE "+visibility+" AND p.state='PENDING' AND p.created_by<>$1 ORDER BY latest.occurred_at,p.id";
+  " WHERE "+visibility+" AND p.state='PENDING' ORDER BY latest.occurred_at,p.id";
  return (await c.query(sql,params(req))).rows;
 }
 

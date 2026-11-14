@@ -39,8 +39,8 @@ async function documents(c,req,x){const out=[];
 async function tasks(c,req,context=null){const x=context||await M.context(c,req,{}),all=await documents(c,req,x),original=await M.todos(c,x);
  let pending=original.map(t=>{const type=({RECEIPT:'RECEIPT',LOT:'LOT',LOAD:'LOAD',LOGISTICS:'LOAD',FORMAL:'LOAD',COUNT:'COUNT',ADJUST:'ADJUST',PLAN:'LOADING_PLAN',VEHICLE:'VEHICLE',ARRIVAL:'ARRIVAL'})[t.kind.split('_')[0]],d=all.find(d=>d.id===t.id&&d.doc_type===type);return {...d,...t,created_at:t.created_at||d?.created_at||null};});
  for(const d of all.filter(d=>d.doc_type==='SALES')){
-  const sales=d.status==='PENDING'&&['sales_manager','admin'].includes(req.user.role_code)&&can(req,'plan:approve')&&(d.submitted_by||d.created_by)!==req.user.id;
-  const commerce=d.status==='COMMERCE_PENDING'&&['commerce_manager','admin'].includes(req.user.role_code)&&can(req,'plan:commerce-approve')&&(d.submitted_by||d.created_by)!==req.user.id&&d.sales_reviewed_by!==req.user.id;
+  const sales=d.status==='PENDING'&&['sales_manager','admin'].includes(req.user.role_code)&&can(req,'plan:approve');
+  const commerce=d.status==='COMMERCE_PENDING'&&['commerce_manager','admin'].includes(req.user.role_code)&&can(req,'plan:commerce-approve');
   if(sales||commerce)pending.push({...d,kind:sales?'SALES_REVIEW':'COMMERCE_REVIEW'});
   if(d.status==='REJECTED'&&['sales_operator','sales_manager','admin'].includes(req.user.role_code)&&d.submitted_by===req.user.id&&can(req,'plan:write'))pending.push({...d,kind:'SALES_EDIT'});
  }

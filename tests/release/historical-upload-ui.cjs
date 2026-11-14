@@ -35,6 +35,7 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
   const login=await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:admin.username,password:admin.password}});
   assert.equal(login.status(),200);
   const page=await context.newPage();
+  await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.locator('[data-task-dismiss]').click());
   const previewUrl='**/api/v1/historical-movements/batch/preview';
   const confirmUrl='**/api/v1/historical-movements/batch/confirm';
   const proxyError=route=>route.fulfill({status:413,contentType:'text/html',body:'<h1>413 Request Entity Too Large</h1>'});
@@ -64,9 +65,10 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
   const {results}=await reviewed.json();
   assert.deepEqual(results.map(r=>r.product_code),['CU_CATHODE','CO_HYDROXIDE','CU_CATHODE','CO_HYDROXIDE','CU_CATHODE']);
   assert(results.every(r=>r.importable),JSON.stringify(results.map(r=>[r.code,r.issues])));
-  await page.locator('details[data-history-file="5"] summary').click();
+  assert.equal(await page.locator('[data-import-state="ready"]').count(),5);
+  assert.equal(await page.locator('[data-history-file] [data-import-state="correction"]').count(),2);
   await page.getByText(/若文件仅存于网盘/).waitFor();
-  await page.locator('details[data-history-file="6"] summary').click();
+
   await page.getByText('单份文件不能超过 512 KB',{exact:true}).waitFor();
   const confirm=async()=>{
    await page.locator('#historical-confirm').click();
@@ -82,6 +84,8 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
   assert.equal(imported.status(),200);
   const result=await imported.json();
   assert(result.results.every(r=>r.status==='IMPORTED'));
+  await page.locator('[data-history-file] [data-import-state="imported"]').first().waitFor();
+  assert.equal(await page.locator('[data-history-file] [data-import-state="imported"]').count(),5);
   assert.equal(new Set(result.results.map(r=>r.import_batch_id)).size,1);
   await page.locator('#historical-ledger').getByText('UPLOAD-TEST-'+tag+'-0',{exact:true}).waitFor();
   await page.evaluate(()=>I18n.set('en'));
