@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -42,6 +42,12 @@ test('isolated migration, initialization, business permission and concurrency ac
    const insertPlan=()=>c.query("INSERT INTO sales_plans(project_id,customer_id,target_weight,created_by,contract_id,quantity_tolerance,preparation_month,planned_lot_count) VALUES($1,$2,1,$3,$4,0,to_char(current_date,'YYYY-MM'),1) RETURNING id,code",
     [fixture.project,fixture.customers.CU_CATHODE.id,fixture.accounts[0].id,fixture.customers.CU_CATHODE.contract]);
    if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-00000001');
+   if(from===190){
+    await insertPlan();
+    await c.query("UPDATE customer_contracts SET active=false,deleted_at=now(),deleted_by=$2,deletion_reason='Synthetic archived contract',version=version+1 WHERE id=$1",[fixture.customers.CU_CATHODE.contract,fixture.accounts[0].id]);
+    await assert.rejects(()=>c.query(`INSERT INTO customer_contracts(project_id,customer_id,contract_no,effective_date,end_date,created_by)
+      SELECT project_id,customer_id,contract_no,effective_date,end_date,created_by FROM customer_contracts WHERE id=$1`,[fixture.customers.CU_CATHODE.contract]),{code:'23505',constraint:'customer_contracts_contract_no_key'});
+   }
    if(from>=182)await c.query(`INSERT INTO export_licenses(product_code,project_id,customer_id,cu_contract_id,applied_on,proforma_no,quantity,unit_basis,unit,currency,issuing_bank,created_by)
     VALUES('CU_CATHODE',$1,$2,$3,current_date,'SYNTHETIC-LEGACY-BOOK',1,'PHYSICAL_MT','MT','USD','Synthetic legacy bank',$4)`,
     [fixture.project,fixture.customers.CU_CATHODE.id,fixture.customers.CU_CATHODE.contract,fixture.accounts[0].id]);
@@ -62,7 +68,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const catalog=async()=>{
     const {rows}=await c.query(`
      SELECT 'constraint' AS kind, conrelid::regclass::text AS relation, conname AS name, pg_get_constraintdef(oid) AS definition
-     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check')
+     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key')
      UNION ALL
      SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
      FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
@@ -90,7 +96,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert.equal((await c.query("SELECT count(*)::int n FROM role_permission_caps WHERE role_code='sales_manager' AND permission_code='plan:write'")).rows[0].n,1);
    for(const table of ['users','registration_requests'])assert.equal((await c.query('SELECT count(*)::int n FROM '+table+' WHERE contact_phone IS NOT NULL OR contact_email IS NOT NULL')).rows[0].n,0);
    const afterCatalog=await catalog(),priorKeys=new Set(beforeCatalog.map(({kind,relation,name})=>[kind,relation,name].join('/')));
-   const normalizeType=row=>row.name==='stocktakes_task_type_check'?{...row,definition:row.definition.replace("'SEMIANNUAL'::text, ",'')}:row;
+   const normalizeType=row=>from<187&&row.name==='stocktakes_task_type_check'?{...row,definition:row.definition.replace("'SEMIANNUAL'::text, ",'')}:row;
    assert.deepEqual(afterCatalog.filter(({kind,relation,name})=>priorKeys.has([kind,relation,name].join('/'))).map(normalizeType),beforeCatalog);
    assert(afterCatalog.some(row=>row.name==='stocktakes_task_type_check'&&row.definition.includes("'SEMIANNUAL'")));
    assert(afterCatalog.some(t=>t.relation==='audit_logs'&&t.name==='aa_security_r3_audit_scope'));
@@ -112,6 +118,27 @@ test('isolated migration, initialization, business permission and concurrency ac
  const login=async role=>{const a=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.20.0.'+(f.accounts.indexOf(a)+1),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200,'login '+role);return sessions[role]={id:a.id,origin:f.appCfg.origin,cookie:r.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':r.json().csrfToken};};for(const a of f.accounts)await login(a.role);
  const request=(role,product,url,body,method,key=crypto.randomUUID())=>app.inject({method:method||(body?'POST':'GET'),url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':product,'idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(role,product,url,body,expected=200,method)=>{const r=await request(role,product,url,body,method);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,300));return r.json();};
+ await check('archived copper contract number can be reused with the correct customer while current duplicates conflict',async()=>{
+  const product='CU_CATHODE',route='/contracts',contractNo='AUDIT-ARCHIVE-REUSE';
+  const {rows:[{id:correctCustomer}]}=await business.client.query(
+   "INSERT INTO customers(project_id,code,name,product_code) VALUES($1,'CU-AUDIT-CORRECT','Synthetic correct customer',$2) RETURNING id",[f.project,product]);
+  const body={project_id:f.project,customer_id:f.customers[product].id,contract_no:contractNo,effective_date:'2026-01-01',end_date:'2099-01-01',active:false};
+  const original=await api('admin',product,route,body);
+  const corrected={...body,customer_id:correctCustomer,active:true};
+  await api('admin',product,route,corrected,409);
+  await api('admin',product,`${route}/${original.id}`,{version:original.version,reason:'Wrong customer'},200,'DELETE');
+  const responses=await Promise.all([request('admin',product,route,corrected),request('admin',product,route,corrected)]);
+  assert.deepEqual(responses.map(r=>r.statusCode).sort(),[200,409]);
+  const replacement=responses.find(r=>r.statusCode===200).json();
+  assert.notEqual(replacement.id,original.id);
+  assert.equal(replacement.customer_id,correctCustomer);
+  const archived=await api('admin',product,`${route}/${original.id}`);
+  assert.equal(archived.customer_id,original.customer_id);
+  assert.equal(archived.deletion_reason,'Wrong customer');
+  assert(archived.deleted_at);
+  const current=await api('admin',product,`${route}?search=${contractNo}`);
+  assert.deepEqual(current.items.map(r=>r.id),[replacement.id]);
+ });
  await check('retired layout APIs return 404 and prior layout records are retained',async()=>{
   for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
    await api('admin',product,'/page-layout',undefined,404);
