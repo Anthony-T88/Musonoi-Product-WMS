@@ -59,7 +59,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 94156,
-      "sha256": "ec1abb231deee3c7f41d9ef378e004f9f3a95e57254c727f67308f258bff94e8"
+      "sha256": "21b2edd1b2a9d025ef86107c4aa9968e33bc967dd48ad3cd2ec32d27885b7913"
     },
     {
       "path": "VALIDATION.json",
@@ -1143,8 +1143,8 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "bytes": 1244,
-      "sha256": "5a98d0e04c7efcbbe0b0072ff8a44e325f7cf625c417dedacda8351ca3cf080f"
+      "bytes": 1312,
+      "sha256": "39a49e438b92830471bce912937dec066079c6a42d26595bec999652bc4f4a9e"
     },
     {
       "path": "deploy/preproduction.settings.example",

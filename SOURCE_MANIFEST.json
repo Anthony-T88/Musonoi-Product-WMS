@@ -889,7 +889,7 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "sha256": "5a98d0e04c7efcbbe0b0072ff8a44e325f7cf625c417dedacda8351ca3cf080f"
+      "sha256": "39a49e438b92830471bce912937dec066079c6a42d26595bec999652bc4f4a9e"
     },
     {
       "path": "deploy/preproduction.settings.example",
