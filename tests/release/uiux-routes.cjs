@@ -117,7 +117,7 @@ function pages(ids){
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});
   add(prefix+'-sales-edit','/sales-plans/:id/edit',[product],{example:prefix+'Plan'});
-  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager']});
+  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager']});
  }
  add('cu-sales-shipping','/sales-plans/:id/shipping',[CU],{example:'cuPlan'});
  add('legacy-sales-new','/preparation/plans/new',[CU]);

@@ -5,7 +5,7 @@ window.CobaltMetal={
  kg(value){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,1),4);},
  status(value){const states={
   PENDING_OUTBOUND:['待正式出库','Awaiting Formal Outbound'],PENDING_ARECOMS:['待ARECOMS确认','Awaiting ARECOMS Confirmation'],
-  COMPLETED:['已完结','Completed'],SUBMITTED:['待独立审批','Awaiting Independent Approval'],
+  COMPLETED:['已完结','Completed'],SUBMITTED:['待审批','Awaiting Approval'],
   CONFIRMED:['已确认','Confirmed'],REJECTED:['已退回','Returned']
  };return this.t(...(states[value]||[value,value]));},
  missing(){return this.t('待计算','Awaiting Weight');},
@@ -15,7 +15,7 @@ window.CobaltMetal={
   const errors={CO_METAL_AMOUNT:['请输入大于0且最多五位小数的金属量','Enter a positive metal amount with up to five decimal places'],
    CO_METAL_REASON无效:['请填写原因，最多1000字','Enter a reason of up to 1,000 characters'],
    CO_METAL_STALE:['记录已更新，请刷新后重试','The record changed. Refresh and try again'],
-   CO_METAL_PERMISSION:['此操作需要独立审批权限','Independent approval permission is required'],
+   CO_METAL_PERMISSION:['此操作需要当前节点审批权限','Approval permission is required'],
    CO_METAL_PENDING:['已有一笔申请待审核','A request is already awaiting approval'],
    CO_METAL_EXPORT_LIMIT:['请缩小筛选范围后再导出','Narrow the filters before exporting'],
    CO_METAL_FILTER:['筛选条件无效','Invalid filter criteria'],

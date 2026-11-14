@@ -90,7 +90,7 @@ async function detail(c,req,orderId,includeHistory=true){
   FROM co_metal_events e JOIN users u ON u.id=e.actor_id WHERE outbound_id=$1 ORDER BY version DESC`,[row.outbound_id])).rows:undefined;
  return {...row,history,can_submit:req.user.permissions.includes('outbound:logistics-review')&&row.latest_action!=='SUBMITTED',
   can_decide:req.user.permissions.includes('outbound:production-approve')&&['admin','production_manager'].includes(req.user.role_code)&&
-   row.latest_action==='SUBMITTED'&&row.latest_actor_id!==req.user.id};
+   row.latest_action==='SUBMITTED'};
 }
 const inventorySort={date:'received_at',batch:'preparation_batch_no',net:'sum(net_kg)'};
 const outboundSort={date:'m.posted_at',batch:'b.preparation_batch_no',net:'m.net_kg',metal:'m.confirmed_metal_mt'};

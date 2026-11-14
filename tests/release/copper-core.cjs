@@ -13,7 +13,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal((await api('/contracts/'+contract.id)).validity,'VALID');
  const managerPlan=await api('/plans','sales_manager',{project_id:f.project,customer_id:customer.id,contract_id:contract.id,target_weight:'20',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic manager submission'});
  const managerApproval=await api('/sales-workflow/plans/'+managerPlan.id);
- await api('/sales-workflow/plans/'+managerPlan.id+'/review','sales_manager',{version:managerApproval.approval_version,decision:'APPROVED'},409);
+ const ownSalesReview=await api('/sales-workflow/plans/'+managerPlan.id+'/review','sales_manager',{version:managerApproval.approval_version,decision:'APPROVED'});assert.equal(ownSalesReview.approval_state,'COMMERCE_PENDING');
+ await api('/sales-workflow/plans/'+managerPlan.id+'/review','sales_manager',{version:ownSalesReview.approval_version,decision:'APPROVED'},403);
  const plan=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:contract.id,target_weight:'100',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic rc2 copper'});
  for(const role of ['sales_manager','commerce_manager']){const p=await api('/sales-workflow/plans/'+plan.id);await api('/sales-workflow/plans/'+plan.id+'/review',role,{version:p.approval_version,decision:'APPROVED'});}steps.push('sales plan two independent approvals');
  const P=require('./preparation-fixture.cjs'),cu='CU_CATHODE',planApi=(role,product,url,body)=>api(url,role,body);
@@ -128,8 +129,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const expired=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:'2020-01-01',proforma_no:'SYNTH-EXPIRED-'+seq,quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});
  const expiredPath='/export-permits/'+expired.id;
  const expiredIssue=await api(expiredPath+'/actions','sales_manager',{action:'ISSUE',payload:{license_no:'SYNTH-EXPIRED-'+seq,valid_from:'2020-01-01',valid_until:'2020-12-31'},version:expired.version,reason:'Synthetic expired licence'});
- await api(expiredPath+'/actions/'+expiredIssue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic self review attempt'},409);
- assert.equal((await api(expiredPath+'/actions/'+expiredIssue.id,'commerce_manager',{decision:'APPROVED',note:'Synthetic historical verification'})).status,'EXPIRED');
+ assert.equal((await api(expiredPath+'/actions/'+expiredIssue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic historical verification'})).status,'EXPIRED');
  assert((await api('/export-permits?status=EXPIRED')).items.some(x=>x.id===expired.id));
  await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:permit.proforma_no.toLowerCase(),quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'},409);
  await api(permitPath,'production_operator',undefined,403);

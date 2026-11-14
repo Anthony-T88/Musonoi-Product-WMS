@@ -4,6 +4,10 @@ window.HistoricalMovements={
  path:'/workbench/historical-movements',
  kinds:{receipts:'RECEIPT','loading-plans':'LOADING_PLAN',outbounds:'LOADING_ORDER','stock-outbound':'OUTBOUND'},
  queue:[],
+ status(kind){
+  const states={ready:['可导入','Ready to Import'],imported:['导入成功','Imported'],duplicate:['已导入','Already Imported'],correction:['待修正','Needs Correction'],retry:['写入失败，可重试','Write Failed, Retry'],voided:['已作废','Voided'],legacy:['旧版台账','Legacy Ledger']};
+  return '<span class="wms-import-status" data-import-state="'+kind+'">'+this.t(...states[kind])+'</span>';
+ },
  canImport:()=>CurrentUser.role_code==='admin',
  prefix:()=>ProductContext.isCopper()?'':'/cobalt',
  product(code){return this.t(...(code==='CU_CATHODE'?['阴极铜','Copper Cathodes']:code==='CO_HYDROXIDE'?['氢氧化钴','Cobalt Hydroxide']:['—','—']));},
@@ -80,13 +84,14 @@ window.HistoricalMovements={
    '<label>'+label+'<input type="date" name="'+name+'" value="'+esc(q.get(name)||'')+'"></label>').join('')+
    '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" href="'+this.path+'">'+t('重置','Reset')+'</a></div></form>';
   this.page('历史出入库导入','Historical Stock Imports',this.section('上传装箱单','Upload Packing Lists',
-   '<form id="historical-upload" class="user-form" data-wms-validation><div class="form-grid wms-field-grid">'+
+   '<form id="historical-upload" class="user-form wms-import-upload" data-wms-validation><div class="form-grid wms-field-grid">'+
    '<label class="wms-field">'+t('归档仓库','Archive Warehouse')+'<select name="warehouse_id" required>'+
    warehouses.map(w=>'<option value="'+esc(w.id)+'">'+esc(w.project_name+' / '+w.name)+'</option>').join('')+'</select></label>'+
    '<label class="wms-field">'+t('装箱单（XLS 或 XLSX）','Packing Lists (XLS or XLSX)')+
    '<input required multiple type="file" name="source" accept=".xls,.xlsx"></label></div><div class="wms-filter-actions">'+
-   '<button class="button primary" '+(warehouses.length?'':'disabled')+'>'+t('预览','Preview')+'</button></div>'+
-   '<p id="historical-upload-error" class="error" role="alert">'+(warehouses.length?'':t('当前账号没有可用的归档仓库。','No archive warehouse is available.'))+'</p></form>'+
+   '<button class="button primary" '+(warehouses.length?'':'disabled')+'>'+t('预览装箱单','Preview Packing Lists')+'</button></div></form>'+
+   '<p id="historical-progress" class="wms-feedback" role="status"></p>'+
+   '<p id="historical-upload-error" class="error" role="alert">'+(warehouses.length?'':t('当前账号没有可用的归档仓库。','No archive warehouse is available.'))+'</p>'+
    '<div id="historical-preview" aria-live="polite"></div>')+
    this.section('导入记录','Import Records',filter+'<div id="historical-ledger">'+this.ledger(data,q)+'</div>'),true);
   const form=$('historical-upload');
@@ -101,13 +106,15 @@ window.HistoricalMovements={
   const pager=(page,label)=>{const next=new URLSearchParams(q);next.set('page',page);return '<a class="button secondary compact" href="'+this.path+'?'+esc(next)+'">'+label+'</a>';};
   return this.table([t('装箱单号','Packing List No.'),t('产品','Product'),t('业务日期','Business Date'),t('备货批次','Preparation Batch'),t('数量','Quantity'),t('净重（吨）','Net Weight (MT)'),t('状态','Status'),t('操作','Action')],
    data.items.map(r=>[esc(r.document_no),this.product(r.product_code),esc(r.business_date),this.text(r.source_facts.batch_no),CountValues.display(r.quantity),this.weight(r.net_kg),
-    r.voided_at?t('已作废','Voided'):r.import_batch_id?this.badge():t('旧版台账','Legacy Ledger'),this.recordLink(r.id,r.product_code,t('查看','View'))]),[4,5])+
+    this.status(r.voided_at?'voided':r.import_batch_id?'imported':'legacy'),this.recordLink(r.id,r.product_code,t('查看','View'))]),[4,5])+
    '<div class="wms-filter-actions">'+(data.page>1?pager(data.page-1,t('上一页','Previous')):'')+(data.has_next?pager(data.page+1,t('下一页','Next')):'')+'</div>';
  },
  async read(files,warehouse,form,replaceIndex){
   if(this.busy)return;
   const t=this.t,error=$('historical-upload-error');
   if(!files.length||files.length>20){error.textContent=t('请选择 1 至 20 份装箱单。','Select 1 to 20 packing lists.');return;}
+  const progress=$('historical-progress');
+  progress.textContent=t('正在读取并校验装箱单…','Reading and validating packing lists…');
   this.busy=true;this.warehouse=warehouse;form.querySelectorAll('input,select,button').forEach(n=>n.disabled=true);error.textContent='';
   const uploaded=[];
   try{
@@ -131,13 +138,14 @@ window.HistoricalMovements={
   }catch(e){if(form.isConnected)error.textContent=this.uploadError(e);}
   finally{
    this.busy=false;
-   if(form.isConnected){form.querySelectorAll('input,select,button').forEach(n=>n.disabled=false);this.showQueue();}
+   if(form.isConnected){progress.textContent='';form.querySelectorAll('input,select,button').forEach(n=>n.disabled=false);this.showQueue();}
   }
  },
  showQueue(){
   const box=$('historical-preview');if(!box)return;
   const t=this.t,queue=this.queue,form=$('historical-upload');
   if(!queue.length){box.replaceChildren();return;}
+  const pending=queue.filter(row=>row.preview?.importable&&(!row.result||row.result.code==='IMPORT_WRITE_FAILED'));
   box.innerHTML='<h3>'+t('批量导入预览','Batch Import Preview')+'</h3>'+queue.map(({name,preview:p,result},index)=>{
    const id=result?.id||p?.already_imported,product=p?.product_code;
    const review=(result?.issues||p?.issues||[]).map(code=>this.message(code));
@@ -145,27 +153,33 @@ window.HistoricalMovements={
    if(p?.conflicting_documents?.length)review.push(p.conflicting_documents.join(' / '));
    if(result?.code||p?.code)review.push(this.message(result?.code||p.code));
    if(p?.error&&I18n.language!=='en')review.push(p.error);
-   const status=id?(result?.status==='IMPORTED'?t('导入成功','Imported'):t('已导入','Already Imported')):
-    p?.importable&&!result?t('可导入','Ready to Import'):result?.code==='IMPORT_WRITE_FAILED'?t('写入失败，可重试','Write Failed, Retry'):t('待修正','Needs Correction');
-   return '<details class="panel wms-section" data-history-file="'+index+'"'+(queue.length===1?' open':'')+'><summary>'+
-    [name,this.product(product),p?.business_date||'—',p?.document_no,p?.batch_no,
-     p?.totals?CountValues.display(p.totals.quantity)+' '+t('件','units')+' / '+this.weight(p.totals.net_kg)+' MT':null,status].filter(Boolean).map(esc).join(' · ')+'</summary>'+
+   const status=id?(result?.status==='IMPORTED'?'imported':'duplicate'):
+    p?.importable&&!result?'ready':result?.code==='IMPORT_WRITE_FAILED'?'retry':'correction';
+   const facts=[this.product(product),p?.business_date,p?.document_no,p?.batch_no,
+    p?.totals?CountValues.display(p.totals.quantity)+' '+t('件','units')+' / '+this.weight(p.totals.net_kg)+' MT':null]
+    .filter(value=>value&&value!=='—');
+   return '<details class="panel wms-section wms-import-file" data-history-file="'+index+'"'+(queue.length===1||review.length?' open':'')+'><summary>'+
+    '<span class="wms-import-filename">'+esc(name)+'</span>'+this.status(status)+'</summary>'+
+    (facts.length?'<p class="wms-import-facts">'+facts.map(esc).join(' · ')+'</p>':'')+
     (review.length?'<p class="error" role="status">'+esc(review.join(' · '))+'</p>':'')+
     (p?.rows?.length?this.lines(result?.rows?.length?result.rows:p.rows,product):'')+
    (id?'<div class="business-toolbar">'+this.recordLink(id,product,t('查看导入记录','View Import Record'))+
     (product===ProductContext.code&&this.canArea('inventory')&&p?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')+'</div>':
      '<label class="wms-field">'+t('单独重传此文件','Replace This File')+'<input type="file" accept=".xls,.xlsx" data-historical-replace="'+index+'"></label>')+
     '</details>';
-  }).join('')+'<div class="wms-filter-actions"><button type="button" class="button primary" id="historical-confirm">'+t('确认导入合格文件','Import Valid Files')+
-   '</button></div><p id="historical-confirm-error" class="error" role="alert"></p>';
+  }).join('')+'<div class="wms-filter-actions"><button type="button" class="button primary" id="historical-confirm">'+t('确认导入合格文件','Import Valid Files')+' ('+pending.length+')'+
+   '</button></div>';
   for(const input of box.querySelectorAll('[data-historical-replace]'))input.onchange=()=>this.read([...input.files],form.elements.warehouse_id.value,form,Number(input.dataset.historicalReplace));
-  const button=$('historical-confirm'),pending=queue.filter(row=>row.preview?.importable&&(!row.result||row.result.code==='IMPORT_WRITE_FAILED'));
+  const button=$('historical-confirm'),progress=$('historical-progress');
   button.disabled=this.busy||!pending.length;
   button.onclick=async()=>{
    button.disabled=true;this.busy=true;
    try{
     if(!await OperationConfirm.ask({title:t('确认导入合格装箱单？','Import validated packing lists?')}))return;
     $('historical-upload-error').textContent='';
+    progress.textContent=t('正在导入，请等待每份文件的结果…','Importing. Wait for each file’s result…');
+    for(const input of form.elements)input.disabled=true;
+    for(const input of box.querySelectorAll('[data-historical-replace]'))input.disabled=true;
     const response=await API.request('/historical-movements/batch/confirm',{method:'POST',timeoutMs:120000,body:{files:pending.map(row=>({...row.body,preview_token:row.preview.preview_token}))}});
     for(const result of response.results){pending[result.index].result=result;if(result.id)delete pending[result.index].body;}
     if(box.isConnected){
@@ -173,7 +187,7 @@ window.HistoricalMovements={
      if(box.isConnected)$('historical-ledger').innerHTML=this.ledger(data,q);
     }
    }catch(e){if(box.isConnected)$('historical-upload-error').textContent=this.uploadError(e,true);}
-   finally{this.busy=false;if(box.isConnected)this.showQueue();}
+   finally{this.busy=false;if(box.isConnected){progress.textContent='';for(const input of form.elements)input.disabled=false;this.showQueue();}}
   };
  },
  lines(rows,product){

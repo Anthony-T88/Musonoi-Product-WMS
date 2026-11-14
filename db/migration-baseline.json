@@ -773,6 +773,10 @@
     {
       "version": "193_v481_copper_preparation_slots.sql",
       "checksum": "827ffe74fcac48418fa3f35ee45984e41af92f1d21f9e6cc05bec56f5ad27425"
+    },
+    {
+      "version": "194_v481_dispatch_and_approval.sql",
+      "checksum": "ede367aed3b5cb630171dd8589ab0b5e7a5cd6081ad1aa15583d289810bf28c2"
     }
   ]
 }

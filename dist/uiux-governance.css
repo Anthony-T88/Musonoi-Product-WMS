@@ -804,3 +804,55 @@ html[data-release-ui="46"] :is(#page-content,#dashboard,#inventory) .s46-state {
 body.wms-navigating .workspace :is(#business-page,#dashboard,#inventory,#field) { visibility: hidden; }
 .map465 #co-map-canvas.co-site-canvas { overflow:hidden; overscroll-behavior:contain; }
 .map465 .co-site-canvas #co-map-svg { display:block; inline-size:100%; block-size:100%; touch-action:none; }
+/* Shared boot feedback and historical packing-list states. */
+.wms-boot-state {
+  box-sizing: border-box;
+  width: min(calc(100% - 2 * var(--uix-panel-gap)), 29rem);
+  padding: calc(2 * var(--uix-panel-gap));
+  background: var(--uix-surface);
+  border: var(--uix-border-width) solid var(--uix-border);
+  border-radius: var(--uix-radius);
+  color: var(--uix-text);
+  line-height: var(--uix-line);
+}
+.wms-boot-state h1 { margin: 0; font-size: var(--uix-title); line-height: var(--uix-title-line); }
+.wms-boot-state p { margin-block: var(--uix-gap) var(--uix-panel-gap); color: var(--uix-muted); }
+#login-panel.login46[data-login-layout="reference"] #login-error.wms-session-notice {
+  display: grid;
+  gap: var(--uix-gap-xs);
+  margin: 0;
+  padding: var(--uix-gap-sm);
+  border: var(--uix-border-width) solid var(--uix-warning);
+  border-radius: var(--uix-radius);
+  background: var(--uix-warning-soft);
+  color: var(--uix-warning);
+}
+.wms-import-upload { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: var(--uix-gap); }
+.wms-import-upload .wms-field-grid { margin: 0; }
+.wms-import-file summary { cursor: pointer; }
+.wms-import-file summary .wms-import-filename { overflow-wrap: anywhere; margin-inline-end: var(--uix-gap-sm); font-weight: var(--uix-weight-emphasis); }
+.wms-import-facts { color: var(--uix-muted); overflow-wrap: anywhere; }
+.wms-import-status {
+  display: inline-flex;
+  padding: .18em .65em;
+  border-radius: var(--uix-pill);
+  font-size: var(--uix-caption);
+  font-weight: var(--uix-weight-emphasis);
+  color: var(--uix-info);
+  background: var(--uix-info-soft);
+}
+.wms-import-status[data-import-state="imported"] { color: var(--uix-success); background: var(--uix-success-soft); }
+.wms-import-status:is([data-import-state="correction"],[data-import-state="retry"]) { color: var(--uix-warning); background: var(--uix-warning-soft); }
+.wms-import-status[data-import-state="voided"] { color: var(--uix-danger); background: var(--uix-danger-soft); }
+@media (max-width: 700px) {
+  .wms-import-upload { grid-template-columns: minmax(0,1fr); }
+}
+
+html[data-release-ui="46"] #page-content .wms-route-error {
+  display: grid; justify-items: start; text-align: start; align-content: center;
+  padding: clamp(var(--uix-panel-gap), 4vw, 3rem);
+  min-height: 14rem; background: var(--uix-surface);
+  border: var(--uix-border-width) solid var(--uix-border);
+  border-radius: var(--uix-radius);
+}
+html[data-release-ui="46"] #page-content .wms-route-error :is(p, small) { color: var(--uix-muted); }
