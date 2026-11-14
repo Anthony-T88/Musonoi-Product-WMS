@@ -20,8 +20,10 @@ module.exports={enabled,detail,planning,register:async({app,pool,permitted,csrf}
  app.get('/api/v1/v261/lots/:id',{preHandler:permitted('allocation:read')},req=>I.transaction(pool,c=>detail(c,req,B.uuid(req.params.id))));
  app.get('/api/v1/v261/lots/suggestion',{preHandler:permitted('allocation:write')},async()=>{const row=(await pool.query(`
   WITH prefix AS(SELECT 'RMM-CU-'||to_char(now() AT TIME ZONE 'Africa/Lubumbashi','YYYY')||'-' code),
-  used AS(SELECT max(right(a.lot_no,2)::int) last_no FROM allocations a,prefix WHERE a.lot_no LIKE prefix.code||'__')
-  SELECT CASE WHEN coalesce(last_no,0)<99 THEN prefix.code||lpad((coalesce(last_no,0)+1)::text,2,'0') END lot_no FROM prefix,used`)).rows[0];return row;});
+  numbers AS(SELECT lot_no AS number FROM allocations UNION ALL SELECT batch_no FROM preparation_plans WHERE product_code='CU_CATHODE'),
+  next AS(SELECT (coalesce(max(substring(number FROM length(prefix.code)+1)::numeric),0)+1)::text AS seq
+   FROM numbers,prefix WHERE number LIKE prefix.code||'%')
+  SELECT CASE WHEN length(next.seq)<=36 THEN prefix.code||lpad(next.seq,greatest(2,length(next.seq)),'0') END lot_no FROM prefix,next`)).rows[0];return row;});
  app.post('/api/v1/v261/lots',{preHandler:[permitted('allocation:write'),csrf]},req=>B.mutate(pool,req,async c=>{
   const plans=require('./preparation-plans.cjs'),body=req.body||{},plan=await plans.claim(c,req,body.preparation_plan_id);
   if(body.plan_id&&B.uuid(body.plan_id).toLowerCase()!==plan.sales_plan_id||body.lot_no&&body.lot_no!==plan.batch_no)throw B.error(400,'作业批次或销售计划与已审批计划不一致');

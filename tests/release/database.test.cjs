@@ -96,7 +96,13 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert.equal((await c.query("SELECT count(*)::int n FROM role_permission_caps WHERE role_code='sales_manager' AND permission_code='plan:write'")).rows[0].n,1);
    for(const table of ['users','registration_requests'])assert.equal((await c.query('SELECT count(*)::int n FROM '+table+' WHERE contact_phone IS NOT NULL OR contact_email IS NOT NULL')).rows[0].n,0);
    const afterCatalog=await catalog(),priorKeys=new Set(beforeCatalog.map(({kind,relation,name})=>[kind,relation,name].join('/')));
-   const normalizeType=row=>from<187&&row.name==='stocktakes_task_type_check'?{...row,definition:row.definition.replace("'SEMIANNUAL'::text, ",'')}:row;
+   const normalizeType=row=>{
+    let definition=row.definition;
+    if(from<187&&row.name==='stocktakes_task_type_check')definition=definition.replace("'SEMIANNUAL'::text, ",'');
+    if(['allocations','preparation_plans'].includes(row.relation)&&definition.includes('^RMM-CU-'))
+     definition=definition.replace('[1-9][0-9]{1,35}','[1-9][0-9]');
+    return {...row,definition};
+   };
    assert.deepEqual(afterCatalog.filter(({kind,relation,name})=>priorKeys.has([kind,relation,name].join('/'))).map(normalizeType),beforeCatalog);
    assert(afterCatalog.some(row=>row.name==='stocktakes_task_type_check'&&row.definition.includes("'SEMIANNUAL'")));
    assert(afterCatalog.some(t=>t.relation==='audit_logs'&&t.name==='aa_security_r3_audit_scope'));
@@ -118,6 +124,28 @@ test('isolated migration, initialization, business permission and concurrency ac
  const login=async role=>{const a=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.20.0.'+(f.accounts.indexOf(a)+1),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200,'login '+role);return sessions[role]={id:a.id,origin:f.appCfg.origin,cookie:r.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':r.json().csrfToken};};for(const a of f.accounts)await login(a.role);
  const request=(role,product,url,body,method,key=crypto.randomUUID())=>app.inject({method:method||(body?'POST':'GET'),url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':product,'idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(role,product,url,body,expected=200,method)=>{const r=await request(role,product,url,body,method);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,300));return r.json();};
+ await check('known copper warehouses gain formal slots while shared locations and existing IDs are preserved',async()=>{
+  const db=await connect(),c=db.client;
+  await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
+  for(const entry of chain.slice(0,-1))await Chain.execute(c,entry);
+  await c.query("INSERT INTO system_info VALUES(true,'test')");
+  const {rows:[{id:project}]}=await c.query("INSERT INTO projects(code,name) VALUES('WMS-TEST','Fixture') RETURNING id");
+  const {rows:[{id:warehouse}]}=await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'MUS','Fixture') RETURNING id",[project]);
+  const {rows:areas}=await c.query("INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage) VALUES($1,$2,'SHARED-PRODUCTION','P5','TEMPORARY'),($1,$2,'SHARED-LEFTOVERS','P3','LEFTOVER') RETURNING id",[project,warehouse]);
+  const {rows:[local]}=await c.query("INSERT INTO projects(code,name) VALUES('AUDIT','Fixture') RETURNING id");
+  const {rows:[localWarehouse]}=await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'MUSONOI','Fixture') RETURNING id",[local.id]);
+  const {rows:[oldWarehouse]}=await c.query("INSERT INTO warehouses(project_id,code,name,active) VALUES($1,'AUDIT-WH','Fixture',false) RETURNING id",[local.id]);
+  const {rows:[oldSlot]}=await c.query("INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage) VALUES($1,$2,'P1-01','P1-01','FORMAL') RETURNING id",[local.id,oldWarehouse.id]);
+  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,1);
+  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,0);
+  const {rows}=await c.query("SELECT cell.region_code,count(*)::int n FROM locations l JOIN stock_map_cells cell ON cell.code=l.map_cell_code WHERE l.warehouse_id=$1 AND l.map_usage='FORMAL' GROUP BY 1 ORDER BY 1",[warehouse]);
+  assert.deepEqual(rows,[{region_code:'P1',n:46},{region_code:'P2',n:29},{region_code:'P4',n:22}]);
+  assert.equal((await c.query("SELECT count(*)::int n FROM locations WHERE id=ANY($1::uuid[])",[areas.map(a=>a.id)])).rows[0].n,2);
+  const {rows:[{n}]}=await c.query("SELECT count(*)::int n FROM locations WHERE warehouse_id=$1 AND map_usage='FORMAL'",[localWarehouse.id]);
+  assert.equal(n,97);
+  assert.equal((await c.query("SELECT warehouse_id FROM locations WHERE id=$1",[oldSlot.id])).rows[0].warehouse_id,oldWarehouse.id);
+  assert.equal((await c.query("SELECT code FROM locations WHERE warehouse_id=$1 AND map_cell_code='P1-01'",[localWarehouse.id])).rows[0].code,'MUSONOI-P1-01');
+ });
  await check('license records, pricing, pending reviews and late historical quota match for both products',async()=>{
   const XLSX=require('xlsx');
   for(const product of ['CU_CATHODE','CO_HYDROXIDE']){

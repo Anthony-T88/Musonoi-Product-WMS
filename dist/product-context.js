@@ -71,12 +71,12 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
  async switchTo(code){
   if(this.switching||code===this.code)return;this.switching=true;
   try{
-   if([...API.operations.values()].some(o=>o.user_id===CurrentUser.id&&['SUBMITTING','UNKNOWN'].includes(o.state))){alert(this.text('存在提交中或结果未知的操作，请先确认操作结果再切换产品。','Resolve pending or unknown submissions before switching products.'));return;}
+   if([...API.operations.values()].some(o=>o.user_id===CurrentUser.id&&o.product_code===this.code&&(o.state==='SUBMITTING'||o.state==='UNKNOWN'&&!o.dismissed))){alert(this.text('存在提交中或结果未知的操作，请先确认操作结果再切换产品。','Resolve pending or unknown submissions before switching products.'));return;}
    if(this.dirty||document.querySelector('#dialog[open] form')){
     const accepted=await OperationConfirm.ask({title:this.text('切换产品','Switch Product'),note:this.text('存在未保存的数据，切换将放弃当前修改。是否继续？','Unsaved changes will be discarded. Continue switching products?')});if(!accepted)return;
    }
    // A submission may have started while the confirmation dialog was open.
-   if([...API.operations.values()].some(o=>o.user_id===CurrentUser.id&&['SUBMITTING','UNKNOWN'].includes(o.state))){alert(this.text('存在提交中或结果未知的操作，请先确认操作结果再切换产品。','Resolve pending or unknown submissions before switching products.'));return;}
+   if([...API.operations.values()].some(o=>o.user_id===CurrentUser.id&&o.product_code===this.code&&(o.state==='SUBMITTING'||o.state==='UNKNOWN'&&!o.dismissed))){alert(this.text('存在提交中或结果未知的操作，请先确认操作结果再切换产品。','Resolve pending or unknown submissions before switching products.'));return;}
    await API.request('/product-context',{method:'POST',body:{productCode:code}});
    try{localStorage.setItem(this.key,code);}catch{}
    // Full reload destroys records, forms, selected IDs, closures and in-flight callbacks.

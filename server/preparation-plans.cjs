@@ -69,7 +69,7 @@ async function save(c,req,id=null){
  if(body.customer_id&&B.uuid(body.customer_id).toLowerCase()!==plan.customer_id)throw B.error(400,'客户与销售计划不一致');
  if(typeof month!=='string'||!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(month))throw B.error(400,'发运月无效');
  const batch=B.text(body.batch_no,'备货批次号',48).toUpperCase();
- const pattern=co?/^RMM-CO-[0-9]{4}-[0-9]{3,}$/:/^RMM-CU-[0-9]{4}-(0[1-9]|[1-9][0-9])$/;
+ const pattern=co?/^RMM-CO-[0-9]{4}-[0-9]{3,}$/:/^RMM-CU-[0-9]{4}-(0[1-9]|[1-9][0-9]{1,35})$/;
  if(!pattern.test(batch)||!/[1-9]/.test(batch.split('-').at(-1)))throw B.error(400,'备货批次号格式无效');
  const used=await c.query(co?'SELECT 1 FROM co_preparations WHERE preparation_batch_no=$1':'SELECT 1 FROM allocations WHERE lot_no=$1',[batch]);
  if(used.rowCount)throw B.error(409,'备货批次号已被作业使用');

@@ -433,6 +433,13 @@ html[data-release-ui="46"] :is(#page-content,dialog) dl.wms-facts {
   padding: 0;
 }
 .wms-facts > div {display: grid; align-content: start; min-inline-size: 0;}
+.permit-processing-details{display:grid;gap:var(--uix-panel-gap)}
+html[data-release-ui="46"] #page-content .permit-processing-details dl.wms-facts {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+@media (max-width:700px){
+  html[data-release-ui="46"] #page-content .permit-processing-details dl.wms-facts {grid-template-columns:minmax(0,1fr)}
+}
 html[data-release-ui="46"] :is(#page-content,dialog) .wms-facts :is(dt,dd) {
   margin: 0;
   padding: 0;
