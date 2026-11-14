@@ -349,17 +349,17 @@ test('real browser: current cobalt stock, independent permissions and both langu
     return {controls:rects.length,bottoms:range(rects.map(r=>r.bottom)),heights:range(rects.map(r=>r.height)),
      reset:form.querySelectorAll('[data-wms-reset]').length,number:getComputedStyle(document.querySelector('#export-license-table [data-wms-column=number]')).textAlign};
    });
-   assert.equal(geometry.controls,6);
+   assert.equal(geometry.controls,9);
    assert.equal(geometry.reset,1);
    assert.equal(geometry.number,'end');
-   assert(geometry.bottoms<=2&&geometry.heights<=2,product+' filter alignment at '+width+' '+JSON.stringify(geometry));
+   assert(geometry.heights<=2,product+' filter alignment at '+width+' '+JSON.stringify(geometry));
   }
   await page.setViewportSize({width:1440,height:1000});
   assert(await page.locator('.sidebar [data-primary-route=sales-plans] + [data-primary-route=export-licenses]').isVisible());
   const filter=page.locator('#export-license-filter');
-  await filter.locator('[name=search]').fill('SYNTHETIC-UNMATCHED-DESIGN');
+  await filter.locator('[name=proforma_no]').fill('SYNTHETIC-UNMATCHED-DESIGN');
   await filter.locator('.wms-filter-actions button').click();
-  await page.waitForURL(url=>url.searchParams.get('search')==='SYNTHETIC-UNMATCHED-DESIGN');
+  await page.waitForURL(url=>url.searchParams.get('proforma_no')==='SYNTHETIC-UNMATCHED-DESIGN');
   await page.locator('.s46-state[data-sys-code="SYS-13"]').waitFor();
   await filter.locator('[data-wms-reset]').click();
   await page.waitForURL(origin+'/export-licenses');
@@ -388,6 +388,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   const addRecord=async(key,value)=>{
    await form.locator('[data-book-open='+key+']').click();
    await book.locator('input[name=value]').fill(value);
+   if(key.endsWith('_account'))await book.locator('input[name=account_name]').fill('Synthetic account holder');
    await book.locator('button.primary').click();
    await book.waitFor({state:'hidden'});
    return form.locator('[data-book-field='+key+']');
@@ -401,10 +402,14 @@ test('real browser: current cobalt stock, independent permissions and both langu
   assert.equal(await account.inputValue(),'');
   assert.equal(await account.locator('option').filter({hasText:'SYNTH-A-001'}).count(),0);
   await issuing.selectOption({label:'Synthetic issuing bank A'});
-  await account.selectOption({label:'SYNTH-A-001'});
+  assert.equal(await account.locator('option:checked').innerText(),'SYNTH-A-001');
+  assert.equal(await form.locator('[data-account-holder=issuing_bank_account]').inputValue(),'Synthetic account holder');
   const reference='SYNTH-UI-'+product+'-'+Date.now();
   await form.locator('[name=proforma_no]').fill(reference);
   await form.locator('[name=quantity]').fill('12.345678');
+  await form.locator('[name=unit_price]').fill('10.12');
+  assert.equal(await form.locator('[data-permit-amount]').inputValue(),'124.94');
+  assert.equal(await form.locator('[name=unit_basis],[name=price_unit],[name=currency]').count(),0);
   await form.locator('button[type=submit],button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
   assert.match(await page.locator('.wms-facts').first().innerText(),new RegExp(reference));

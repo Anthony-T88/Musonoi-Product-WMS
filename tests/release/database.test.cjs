@@ -59,7 +59,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     const result={};
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
-     const projected=table==='stocktakes'?"(to_jsonb(t)-'period_month')":table==='co_stocktakes'?"(to_jsonb(t)-'task_type'-'period_month')":table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":table==='export_licenses'?"(to_jsonb(t)-'issuing_bank_account'-'offshore_bank'-'offshore_bank_account'-'processing_records')":"to_jsonb(t)";
+     const projected=table==='stocktakes'?"(to_jsonb(t)-'period_month')":table==='co_stocktakes'?"(to_jsonb(t)-'task_type'-'period_month')":table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":table==='export_license_record_books'?"(to_jsonb(t)-'archived_at'-'version'-'account_name')":table==='export_license_actions'?"(to_jsonb(t)-'processing_snapshot')":table==='export_licenses'?"(to_jsonb(t)-'issuing_bank_account'-'offshore_bank'-'offshore_bank_account'-'processing_records'-'issuing_bank_account_name'-'offshore_bank_account_name'-'standard_amount')":"to_jsonb(t)";
      const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%'":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%'":table==='permissions'?"WHERE code NOT LIKE 'export-license:%'":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
@@ -68,7 +68,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const catalog=async()=>{
     const {rows}=await c.query(`
      SELECT 'constraint' AS kind, conrelid::regclass::text AS relation, conname AS name, pg_get_constraintdef(oid) AS definition
-     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key')
+     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND NOT (conrelid=to_regclass('export_license_record_books') AND confrelid=conrelid AND cardinality(conkey)=5) AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key')
      UNION ALL
      SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
      FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
@@ -118,6 +118,66 @@ test('isolated migration, initialization, business permission and concurrency ac
  const login=async role=>{const a=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.20.0.'+(f.accounts.indexOf(a)+1),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200,'login '+role);return sessions[role]={id:a.id,origin:f.appCfg.origin,cookie:r.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':r.json().csrfToken};};for(const a of f.accounts)await login(a.role);
  const request=(role,product,url,body,method,key=crypto.randomUUID())=>app.inject({method:method||(body?'POST':'GET'),url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':product,'idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(role,product,url,body,expected=200,method)=>{const r=await request(role,product,url,body,method);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,300));return r.json();};
+ await check('license records, pricing, pending reviews and late historical quota match for both products',async()=>{
+  const XLSX=require('xlsx');
+  for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+   const co=product==='CO_HYDROXIDE',base=(co?'/cobalt':'')+'/export-permits',books=base+'/record-books';
+   const buyer=f.customers[product],tag='LICENSE-AUDIT-'+product,license=tag+'-NUMBER';
+   const actor=f.accounts[0].id;
+   const {rows:[second]}=await business.client.query('INSERT INTO customers(project_id,code,name,product_code) VALUES($1,$2,$2,$3) RETURNING id',[f.project,tag,product]);
+   if(co)await business.client.query('INSERT INTO co_customer_profiles(id,project_id,code,name,created_by,updated_by) VALUES($1,$2,$3,$3,$4,$4)',[second.id,f.project,tag,actor]);
+   const {rows:[otherContract]}=await business.client.query('INSERT INTO '+(co?'co_sales_contracts':'customer_contracts')+
+    '(project_id,customer_id,contract_no,effective_date,end_date,created_by'+(co?',updated_by':'')+") VALUES($1,$2,$3,'2019-01-01','2099-01-01',$4"+(co?',$4':'')+') RETURNING id',[f.project,second.id,tag,actor]);
+   const create=body=>api('sales_operator',product,books,{project_id:f.project,...body});
+   const bank=await create({kind:'issuing_bank',value:tag+' bank'});
+   const another=await create({kind:'issuing_bank',value:tag+' other bank'});
+   const account=await create({kind:'issuing_bank_account',value:'1001',account_name:'Account holder',bank_id:bank.id});
+   const offshore=await create({kind:'offshore_bank',value:tag+' offshore'});
+   const offAccount=await create({kind:'offshore_bank_account',value:'2001',account_name:'Offshore holder',bank_id:offshore.id});
+   assert((await api('sales_operator',product,books+'?contract_id='+otherContract.id)).items.some(row=>row.id===account.id));
+   const common={contract_id:buyer.contract,applied_on:'2019-12-01',proforma_no:tag,quantity:'12.345',unit_price:'10.005',amount:'1000',currency:'EUR',unit_basis:'CUSTOM',unit:'kg'};
+   const selected={issuing_bank:bank.id,issuing_bank_account:account.id,offshore_bank:offshore.id,offshore_bank_account:offAccount.id};
+   await api('sales_operator',product,base,{...common,processing_records:{...selected,issuing_bank:another.id}},400);
+   const draft=await api('sales_operator',product,base,{...common,processing_records:selected});
+   assert.deepEqual([draft.unit,draft.currency,draft.amount,draft.issuing_bank_account_name,draft.offshore_bank_account_name],['MT','USD','123.51','Account holder','Offshore holder']);
+   const modified=await api('sales_operator',product,books+'/'+account.id,{project_id:f.project,version:account.version,value:'1002',account_name:'New holder'},200,'PATCH');
+   await api('sales_operator',product,books+'/'+bank.id,{project_id:f.project,version:bank.version},409,'DELETE');
+   await api('commerce_manager',product,books+'/'+account.id,{project_id:f.project,version:modified.version},403,'DELETE');
+   await api('sales_operator',product,books+'/'+account.id,{project_id:f.project,version:modified.version},200,'DELETE');
+   assert(!(await api('sales_operator',product,books+'?contract_id='+buyer.contract)).items.some(row=>row.id===account.id));
+   assert.equal((await api('sales_operator',product,base+'/'+draft.id)).issuing_bank_account,'1001');
+   const rows=Array.from({length:29},()=>[]);
+   rows[0]=['PACKING LIST'];rows[2]=['','','','Packing List No:',tag+'-PL'];rows[3]=['','','','Lot No:',tag+'-LOT'];
+   rows[5]=['','','','EB License No:',license];rows[6]=['','','','Shipping Date:','2020-03-05'];
+   rows[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
+   rows.push([1,'Synthetic',tag+'-UNIT',co?null:48,tag+'-SEAL',647.123456,650.123456],['Total',null,null,null,null,647.123456,650.123456]);
+   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'PL');
+   const file={file_name:tag+'.xlsx',file_base64:XLSX.write(wb,{type:'buffer',bookType:'xlsx'}).toString('base64'),warehouse_id:f.warehouse};
+   const queue='/historical-movements/batch';
+   const preview=(await api('admin',product,queue+'/preview',{files:[file]})).results[0];
+   assert(preview.importable,JSON.stringify(preview.issues));
+   const imported=(await api('admin',product,queue+'/confirm',{files:[{...file,preview_token:preview.preview_token}]})).results[0];
+   assert.equal(imported.status,'IMPORTED');
+   assert.equal(Number((await api('sales_operator',product,base+'/'+draft.id)).used),0);
+   const issue=await api('sales_operator',product,base+'/'+draft.id+'/actions',{action:'ISSUE',reason:'Synthetic license',version:draft.version,payload:{license_no:license,valid_from:'2020-01-01',valid_until:'2099-01-01'}});
+   assert.equal((await api('sales_operator',product,base+'/'+draft.id)).status,'PENDING');
+   assert((await api('commerce_manager',product,base+'?status=PENDING&proforma_no='+tag)).items.some(l=>l.id===draft.id));
+   const todos=co?'/cobalt/ui461/tasks':'/v34/todos';
+   const readTasks=async role=>{const r=await api(role,product,todos);return r.pending||r.items;};
+   assert((await readTasks('commerce_manager')).some(t=>t.id===issue.id&&t.kind==='EXPORT_LICENSE_REVIEW'));
+   assert(!(await readTasks('sales_operator')).some(t=>t.id===issue.id));
+   const reviewUrl=base+'/'+draft.id+'/actions/'+issue.id;
+   await api('sales_operator',product,reviewUrl,{decision:'APPROVED',note:'Not allowed'},403);
+   const issued=await api('commerce_manager',product,reviewUrl,{decision:'APPROVED',note:'Verified'});
+   assert.equal(issued.status,'ACTIVE');
+   assert.equal(Number(issued.used),0.647123456);
+   assert.equal(issued.historical_usage[0].source_id,imported.id);
+   assert(!(await readTasks('commerce_manager')).some(t=>t.id===issue.id));
+   const again=(await api('admin',product,queue+'/confirm',{files:[{...file,preview_token:preview.preview_token}]})).results[0];
+   assert.equal(again.status,'ALREADY_IMPORTED');
+   assert.equal((await api('sales_operator',product,base+'/'+draft.id)).historical_usage.length,1);
+  }
+ });
  await check('archived copper contract number can be reused with the correct customer while current duplicates conflict',async()=>{
   const product='CU_CATHODE',route='/contracts',contractNo='AUDIT-ARCHIVE-REUSE';
   const {rows:[{id:correctCustomer}]}=await business.client.query(

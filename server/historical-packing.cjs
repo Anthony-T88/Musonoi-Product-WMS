@@ -20,6 +20,21 @@ function source(input){
  return {name,data,sha256:digest(data)};
 }
 
+function licenseReferences(book){
+ const rows=['PL','INV'].map(name=>book.Sheets[name]).filter(Boolean);
+ const entries=new Map();
+ for(const sheet of rows){
+  for(let row=3;row<29;row++){
+   if(!/^(?:(?:EB|EXPORT) )?(?:LICEN[CS]E|PERMIT) (?:NO\.?|NUMBER)[:：]?$|^(?:出口)?许可证号[:：]?$/.test(normalize(sheet['D'+row]?.v)))continue;
+   const value=String(sheet['E'+row]?.v??'').trim();
+   if(value&&value.length<=160&&!/[\x00-\x1f]/.test(value))entries.set(key(value),value);
+  }
+ }
+ const invoice=book.Sheets.INV,raw=String(invoice?.E3?.v??'').trim();
+ const invoice_no=/^INVOICE (?:NO\.?|NUMBER)[:：]?$/.test(normalize(invoice?.D3?.v))&&raw.length<=160&&!/[\x00-\x1f]/.test(raw)?raw||null:null;
+ return {license_no:entries.size===1?[...entries.values()][0]:null,invoice_no};
+}
+
 function parse(product,file){
  let book;
  try{book=XLSX.read(file.data,{type:'buffer',cellDates:true,cellFormula:false,bookVBA:true,sheetRows:5100});}
@@ -93,7 +108,7 @@ function parse(product,file){
  const shipping_date=shipping_issue?null:shipping.day;
  return {product_code:detected,template:co?'CO-PL':'CU-PL',document_no,document_key:key(document_no),batch_no,customer,truck,
   shipping_issue,shipping_cell:shipping?.cell||'PL!E7',
-  contract_no:text('E5'),trailer_one:text('E23'),trailer_two:text('E24'),shipping_date,actual_dates,source_sheet:'PL',rows,totals,errors:[...new Set(errors)]};
+  contract_no:text('E5'),...licenseReferences(book),trailer_one:text('E23'),trailer_two:text('E24'),shipping_date,actual_dates,source_sheet:'PL',rows,totals,errors:[...new Set(errors)]};
 }
 
 function weight(value){

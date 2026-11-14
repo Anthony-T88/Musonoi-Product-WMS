@@ -765,6 +765,10 @@
     {
       "version": "191_v481_contract_number_reuse.sql",
       "checksum": "61c6fb5d24a94d14af336d89959edd9ba31d1b80724a16b2c8562738848d1d2a"
+    },
+    {
+      "version": "192_v481_license_register.sql",
+      "checksum": "600ce49587c7ae116b1f4556850784de93238d12a201055ec2af469974d7e244"
     }
   ]
 }

@@ -91,6 +91,11 @@ async function reference(c,req,table,id){
  if(!data||data.product_code&&data.product_code!==req.productCode)throw B.error(404,'草稿关联对象不存在或超出授权');
  const project=table==='projects'?id:data.project_id;
  if(!project)throw B.error(400,'草稿关联对象缺少项目');
+ if(table==='export_license_record_books'){
+  if(data.archived_at)throw B.error(404,'草稿关联的记录簿选项已删除');
+  await require('./export-license-books.cjs').project(c,req,project);
+  return data;
+ }
  const customer=['copper_customers','co_customer_profiles'].includes(table)?id:data.customer_id||null;
  const warehouse=table==='warehouses'?id:data.warehouse_id||null;
  await B.scope(c,req,project,warehouse,customer);

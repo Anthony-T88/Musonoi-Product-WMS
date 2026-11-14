@@ -124,6 +124,7 @@ async function confirm(c,req,body,batch){
   AS x(source_row integer,unit_id text,unit_key text,seal_no text,sheets_count integer,net_kg numeric,gross_kg numeric)`,[id,JSON.stringify(facts.rows)]);
  await c.query('INSERT INTO historical_backfills(source_id,import_batch_id,project_id,warehouse_id,customer_id,original_receipt_date,receipt_source_id,backfilled_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
   [id,batch,site.project_id,site.id,site.customer_id,originalDate,receiptId,req.user.id]);
+ await recordLicenseSource(c,id,facts);
  await c.query(`INSERT INTO historical_business_documents(source_id,kind,document_no,business_date)
   VALUES ($1,'RECEIPT',$2,$3),($1,'LOADING_PLAN',$4,$5),($1,'LOADING_ORDER',$6,$5),($1,'OUTBOUND',$7,$5)`,
  [id,'HIST-IN-'+facts.document_no,originalDate||day,'HIST-LP-'+facts.document_no,day,'HIST-LOAD-'+facts.document_no,'HIST-OUT-'+facts.document_no]);
@@ -133,6 +134,31 @@ async function confirm(c,req,body,batch){
   {product_code:product,project_id:site.project_id,warehouse_id:site.id,customer_id:site.customer_id,import_batch_id:batch,
    shipping_date:day,original_receipt_date:originalDate,quantity:facts.rows.length,source_sha256:file.sha256});
  return {status:'IMPORTED',id,import_batch_id:batch};
+}
+
+async function recordLicenseSource(c,id,facts){
+ if(!facts.license_no)return;
+ await c.query(`SELECT l.id FROM export_licenses l JOIN historical_backfills b ON b.source_id=$1
+  WHERE l.product_code=$2 AND l.project_id=b.project_id AND historical_unit_key(l.license_no)=historical_unit_key($3)
+  ORDER BY l.id FOR UPDATE OF l`,[id,facts.product_code,facts.license_no]);
+ await c.query('INSERT INTO export_license_historical_sources(source_id,license_key,invoice_no) VALUES($1,historical_unit_key($2),$3) ON CONFLICT(source_id) DO NOTHING',[id,facts.license_no,facts.invoice_no]);
+}
+
+async function indexExistingLicenseSources(c){
+ let cursor=null;
+ for(;;){
+  const {rows}=await c.query(`SELECT m.id,m.product_code,m.source_name,m.source_data FROM historical_movement_documents m
+   JOIN historical_backfills b ON b.source_id=m.id WHERE ($1::uuid IS NULL OR m.id>$1) AND m.voided_at IS NULL AND m.movement_type='OUTBOUND'
+   ORDER BY m.id LIMIT 40`,[cursor]);
+  if(!rows.length)return;
+  for(const row of rows){
+   let facts;
+   try{facts=Packing.parse(row.product_code,Packing.source({file_name:row.source_name,file_base64:row.source_data.toString('base64')}));}
+   catch(e){if(e.statusCode===400)continue;throw e;}
+   await recordLicenseSource(c,row.id,facts);
+  }
+  cursor=rows.at(-1).id;
+ }
 }
 
 function registerBatch(app,pool,admin,csrf,transaction){
@@ -321,4 +347,4 @@ function registerRead(app,pool,auth){
  }
 }
 
-module.exports={allowed,docKinds,scope,listSql,outboundListSql,reportShipments,reportMovements,overview,registerBatch,registerRead,related,authorizePage};
+module.exports={allowed,docKinds,scope,listSql,outboundListSql,reportShipments,reportMovements,overview,registerBatch,registerRead,related,authorizePage,indexExistingLicenseSources};

@@ -361,8 +361,8 @@ html[data-release-ui="46"] :is(#page-content,dialog) .user-form .form-grid.wms-f
   .oa467 .oa-permit-kpis {grid-template-columns:minmax(0,1fr)}
 }
 
-#page-content .wms-filter-row > .permit-advanced-filters {flex:0 0 100%;min-width:0}
-.permit-advanced-filters > .form-grid {margin-top:var(--uix-gap-sm)}
+#page-content .permit-register-filter > label {flex:1 1 var(--uix-filter-min)}
+#page-content .permit-book-dialog [data-book-entries] > li {margin-block:var(--uix-gap-sm)}
 html[data-release-ui="46"] body:not([data-ui46-page="stock-map"],[data-ui46-page="copper-map"]) dialog .user-form .form-grid {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--uix-field-min)),1fr));
