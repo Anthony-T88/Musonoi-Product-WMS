@@ -36,6 +36,7 @@ async function execute(client,entry){
  const guarded=entry.version==='172_v469_configurable_admin_business_permissions.sql';
  if(guarded)await guard172(client,'before');
  await client.query(entry.sql);
+ if(entry.version==='192_v481_license_register.sql')await require('../server/historical-backfill.cjs').indexExistingLicenseSources(client);
  if(guarded)await guard172(client,'after');
  await client.query('INSERT INTO schema_migrations(version,checksum) VALUES($1,$2)',[entry.version,entry.checksum]);
 }

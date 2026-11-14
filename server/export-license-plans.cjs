@@ -34,7 +34,9 @@ async function lockInvoice(c,invoice){
  await c.query('SELECT pg_advisory_xact_lock(472,hashtext(lower($1)))',[invoice]);
 }
 const invoices=`SELECT invoice_no FROM export_license_allocations UNION ALL SELECT invoice_no FROM loading_plan_documents
- UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans`;
+ UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans
+ UNION ALL SELECT coalesce(s.invoice_no,m.document_no) FROM export_license_historical_sources s
+ JOIN historical_movement_documents m ON m.id=s.source_id AND m.voided_at IS NULL`;
 async function invoiceCandidate(c,l){
  const {rows:[row]}=await c.query(`WITH suffixes AS (
   SELECT substr(invoice_no,length($1)+2) suffix FROM (${invoices}) invoices
