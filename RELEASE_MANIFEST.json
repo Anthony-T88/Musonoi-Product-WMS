@@ -1119,8 +1119,8 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "bytes": 1244,
-      "sha256": "5a98d0e04c7efcbbe0b0072ff8a44e325f7cf625c417dedacda8351ca3cf080f"
+      "bytes": 1312,
+      "sha256": "39a49e438b92830471bce912937dec066079c6a42d26595bec999652bc4f4a9e"
     },
     {
       "path": "deploy/preproduction.settings.example",
@@ -3740,7 +3740,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 94154,
-      "sha256": "dd536ffe94fcd46561ab0d0468279cd54f9f44742709bb1e18a6e9077505fd01"
+      "sha256": "c8d581403aa8ae8680b8d1930c98639c193584fc2660713049d72cff4f76d20c"
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
