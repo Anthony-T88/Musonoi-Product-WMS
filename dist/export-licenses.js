@@ -29,6 +29,11 @@ window.ExportLicenses={
  page(title,html){Router.page(title,'<div class="export-license-page wms-page" data-page-composed data-no-i18n>'+html+'</div>');},
  facts(keys,data){return UI46Pages.factList(keys.map(k=>[this.label(k),k==='status'?UI.status(data[k],'permit',this.state(data[k])):
   this.value(k==='utilization'?data[k]+'%':['quantity','used','reserved','remaining','pending','available'].includes(k)&&data[k]!=null?data[k]+' '+data.unit:data[k])]));},
+ processingDetails(data){
+  const top=this.facts(['clearing_agent','destination','note'],data);
+  const rows=['issuing_bank','offshore_bank'].map(bank=>this.facts([bank,bank+'_account',bank+'_account_name'],data)).join('');
+  return '<div class="permit-processing-details">'+top+rows+'</div>';
+ },
  input(key,data={},type='text',required=false){return '<label>'+this.label(key)+'<input name="'+key+'" type="'+type+'" '+(required?'required ':'')+'maxlength="'+(key==='note'?1000:320)+'" value="'+esc(data[key]??'')+'"></label>';},
  moneyFields(d){
   const t=this.t,numeric=(key,label,required=false)=>'<label class="wms-field">'+label+'<input name="'+key+'" inputmode="decimal" pattern="[0-9]{1,18}([.][0-9]{1,12})?" maxlength="31" '+(required?'required ':'')+'value="'+esc(d[key]??'')+'"></label>';
@@ -252,7 +257,7 @@ window.ExportLicenses={
    this.section(t('许可证资料','License Information'),this.facts(['license_no','proforma_no','status'],d))+
    this.section(t('许可证额度','License Quota'),quota)+
    this.section(t('基础资料','Basic Information'),'<p>'+product+'</p>'+this.facts(['buyer','contract_no','applied_on'],d))+
-   this.section(t('办证资料','Processing Details'),this.facts(Object.keys(this.bookFields).flatMap(key=>this.bookParents[key]?[key,key+'_name']:[key]),d))+
+   this.section(t('办证资料','Processing Details'),this.processingDetails(d))+
    this.section(t('金额','Amount'),this.facts(d.standard_amount?['unit_price','price_unit','amount','currency']:['unit_price','price_unit','amount','reference_amount','currency'],d))+
    this.section(t('有效期与关证','Validity and Closure'),this.facts(['valid_from','valid_until','extension_on','extended_until','effective_until','closed_on'],d))+
    this.extensionPanel(d,pending,extensions)+
@@ -342,7 +347,7 @@ window.ExportLicenses={
    const section=document.createElement('section');
    section.className='oa-kpis oa-permit-kpis';
    section.setAttribute('aria-label',this.title());
-   const amount=units.map(row=>row.remaining+' '+row.unit).join(' / ')||'0';
+   const amount=units.map(row=>Tonnes.format(row.remaining)+' '+row.unit).join(' / ')||'0.0000';
    const cards=[
     ['ACTIVE',t('有效出口许可证','Active Export Licenses'),indicators.active],
     ['ACTIVE',t('许可证剩余额度','Remaining License Quota'),amount],
