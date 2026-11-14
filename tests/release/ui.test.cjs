@@ -32,6 +32,12 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await guest.screenshot({path:path.join(E.runtime,'registration-network-en-390.png'),fullPage:true});
  await guest.close();
  const admin=await open('admin'),viewer=await open('production_operator'),page=admin.page;
+ await go(page,'/sales-plans','CU_CATHODE');
+ const productFilter=page.locator('#sales-product-filter');
+ assert.equal(await productFilter.inputValue(),'CU_CATHODE');
+ await productFilter.selectOption('CO_HYDROXIDE');
+ await page.waitForFunction(()=>window.ProductContext?.code==='CO_HYDROXIDE'&&document.getElementById('sales-product-filter')?.value==='CO_HYDROXIDE');
+ assert(await page.locator('#ux10-sales-table').isVisible());
  const planner=await open('export_supervisor'),reviewer=await open('logistics_manager');
  const workPlanNav='.sidebar [data-primary-route="preparation/work-plans"]';
  const workPlanPath='/preparation/work-plans';

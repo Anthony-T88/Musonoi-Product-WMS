@@ -1197,7 +1197,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "2cc678911ccba367d371060d1287b4c330cb814a6498b5c3f460f97f58047115"
+      "sha256": "e361082b1f4795f87cc948c70fc9d97811f4937934390a73acaa8eedf1ec5f38"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1413,7 +1413,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "fcb0a5e5ac96d9a03a29ce32486223f7ef14f9d1f20704d227485ca0f2cda0ea"
+      "sha256": "49a20abf3a7d87078edc4b03f8796f3e2bb9019ab16bb471516e2df4ab8bb9c2"
     },
     {
       "path": "dist/reports463.js",
@@ -1461,7 +1461,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "094daf6890c059a7913d53bd99533624b622b4ba400135078795cb26adf2fc14"
+      "sha256": "ba328c67932447ca0c0e43936991bc6cc0b548e5d9cf99ef56503d743682bd7d"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1541,7 +1541,7 @@
     },
     {
       "path": "dist/ui468.js",
-      "sha256": "43b8c8bada2ddfd57c0b396b117c4331492aed5fcec7e574428a22dece891594"
+      "sha256": "7026becb9398f0e6e48e31f1e82cd8b06f6558b200173dc45ae2b3c207eb0054"
     },
     {
       "path": "dist/uiux-governance.css",
@@ -2185,7 +2185,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "e3099bea26bd9522a00ab7c679972f4514e96b8fe67007f074005fe5a8cf81ec"
+      "sha256": "47b721e622ca1fa227ebb02ec2158248690d3edb2c711c3837bcd1074da60b51"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2517,7 +2517,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "378bb78e3d902653eb5cb4f4cc10f258aadbab1f5c517b953404a4c8fcc689a9"
+      "sha256": "c46ff5b3ecdbf0ae371ff7c2fb3c2521fa695219e77eb404c887dc88e2410362"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

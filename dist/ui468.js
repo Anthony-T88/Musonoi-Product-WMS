@@ -67,7 +67,10 @@ window.Sales468={generation:0,t:(z,e)=>UI468.t(z,e),
    .replace('<th scope="col" data-wms-column="center">'+t(...headings[5])+'</th>',
     '<th scope="col" data-wms-column="center" aria-sort="'+(sorting?(ascending?'ascending':'descending'):'none')+'"><a href="/sales-plans?'+esc(sortQuery)+'">'+t(...headings[5])+(sorting?(ascending?' ↑':' ↓'):'')+'</a></th>');
   const filter='<form id="s468-filter" class="filters sales-list-filter wms-filter-row" data-v34-reset="true">'+field('search','计划编号','Plan No.','search')+field('buyer_contract','客户 / 合同','Customer / Contract','search')+
-   ExportLicenses.productFilter()+field('shipment_month','发运月份','Shipment Month','month')+'<label>'+t('执行状态','Execution Status')+'<select name="status"><option value="">'+t('全部','All')+'</option>'+
+   '<label>'+t('产品','Product')+'<select id="sales-product-filter" data-product-switch>'+
+   [['CU_CATHODE','阴极铜','Copper Cathodes'],['CO_HYDROXIDE','氢氧化钴','Cobalt Hydroxide']].map(([code,zh,en])=>
+    '<option value="'+code+'"'+(code===ProductContext.code?' selected':'')+'>'+t(zh,en)+'</option>').join('')+'</select></label>'+
+   field('shipment_month','发运月份','Shipment Month','month')+'<label>'+t('执行状态','Execution Status')+'<select name="status"><option value="">'+t('全部','All')+'</option>'+
    statuses.map(([key,z,e])=>'<option value="'+key+'"'+(status===key?' selected':'')+'>'+t(z,e)+'</option>').join('')+'</select></label>'+
    '<div class="s468-filter-actions wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="/sales-plans">'+t('重置','Reset')+'</a></div></form>';
   Router.page(t('销售计划管理','Sales Plan Management'),'<section class="s468 sales-redesign" data-page-composed data-ui468-owned="sales" data-no-i18n>'+
@@ -76,7 +79,8 @@ window.Sales468={generation:0,t:(z,e)=>UI468.t(z,e),
    '<div class="s468-pager"><span>'+t('共 ','Total ')+d.total+' · '+d.page+' / '+Math.max(1,Math.ceil(d.total/d.page_size))+'</span><div class="s468-toolbar">'+
    (d.page>1?'<a class="button secondary" href="'+this.pageUrl(q,d.page-1)+'">'+t('上一页','Previous')+'</a>':'')+
    (d.page*d.page_size<d.total?'<a class="button secondary" href="'+this.pageUrl(q,d.page+1)+'">'+t('下一页','Next')+'</a>':'')+'</div></div></section>');
-  ExportLicenses.bindProductFilter();
+  const productFilter=$('sales-product-filter');
+  productFilter.onchange=async()=>{await ProductContext.switchTo(productFilter.value);productFilter.value=ProductContext.code;};
   $('s468-filter').onsubmit=e=>{e.preventDefault();const filters=new URLSearchParams([...new FormData(e.target)].filter(([,value])=>value));Router.go('/sales-plans'+(filters.size?'?'+filters:''));};
   for(const b of document.querySelectorAll('[data-s468-close]'))b.onclick=async()=>{
    b.disabled=true;try{const p=await API.request(base+'/plans/'+b.dataset.s468Close);this.requestClose(p);}catch(e){notify(this.error(e));}finally{if(b.isConnected)b.disabled=false;}
