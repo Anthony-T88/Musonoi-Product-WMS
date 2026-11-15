@@ -372,7 +372,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.locator('#export-license-table a').first().waitFor();
   const expiring=product==='CU_CATHODE'?'SYNTH-EXPIRED':'RC2-LICENSE';
   await page.locator('#export-license-table tbody tr').filter({hasText:expiring}).first().locator('a').first().click();
-  await page.locator('a[href="#permit-extension"]').click();
+  await page.locator('[data-permit-action="extend"]').click();
   const extension=page.locator('#permit-extension-form'),expiry=extension.locator('input[name=until]');
   await expiry.fill('2020-01-01');
   await extension.locator('input[name=reason]').fill('Synthetic browser extension check');
@@ -380,6 +380,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   assert.equal(await expiry.getAttribute('aria-invalid'),'true');
   assert(await page.locator('#permit-extension-date-error').isVisible());
   await page.locator('#permit-extension').screenshot({path:path.join(E.runtime,'license-extension-'+product+'.png')});
+  await page.locator('#dialog').evaluate(box=>box.close());
   await go(page,'/export-licenses',product);
   await page.locator('a[href="/export-licenses/new"]').click();
   const form=page.locator('#export-license-application');
@@ -425,7 +426,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.locator('#export-license-application button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
   await page.getByText('Synthetic browser edit',{exact:true}).waitFor();
-  assert.match(await page.locator('.export-license-page').innerText(),/Synthetic browser edit/);
+  await page.locator('#permit-tab-processing').click();
+  assert.match(await page.locator('#permit-panel-processing').innerText(),/Synthetic browser edit/);
   await page.screenshot({path:path.join(E.runtime,'export-license-'+product+'.png'),fullPage:true});
   await go(page,'/export-licenses/new',product);
   await form.locator('[name=contract_id]').selectOption({index:1});

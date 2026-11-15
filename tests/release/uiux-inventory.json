@@ -460,7 +460,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "quota and linked loading plans",
       "template": "/export-licenses/:id"
     },
     {
@@ -468,7 +468,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "quota and linked loading plans",
       "template": "/export-licenses/:id"
     },
     {

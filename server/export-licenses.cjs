@@ -1,13 +1,12 @@
 'use strict';
 
-const {createHash}=require('node:crypto'),B=require('./business-common.cjs'),C=require('./cobalt.cjs'),Books=require('./export-license-books.cjs');
+const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),Books=require('./export-license-books.cjs');
 const CU='CU_CATHODE',CO='CO_HYDROXIDE',today="(statement_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date";
 const read='export-license:read',write='export-license:write',approve='export-license:approve';
 const actions=['ISSUE','AMEND','EXTEND','CANCEL','CLOSE','CLOSE_EXCEPTION','SETTLE','CORRECT'];
-const categories=['LICENSE','PROFORMA','EXTENSION','CLOSURE','USAGE','OTHER'];
 const allowed=(path,method)=>{
  if(/^\/api\/v1\/cobalt\/export-permits\/record-books\/[0-9a-f-]{36}$/i.test(path))return ['PATCH','DELETE'].includes(method);
- const m=/^\/api\/v1\/cobalt\/export-permits(?:\/operations\/status|\/(options|contracts|preferences|record-books|[0-9a-f-]{36})(?:\/(actions|attachments)(?:\/([0-9a-f-]{36}))?)?)?$/i.exec(path);
+ const m=/^\/api\/v1\/cobalt\/export-permits(?:\/operations\/status|\/(options|contracts|preferences|record-books|[0-9a-f-]{36})(?:\/actions(?:\/[0-9a-f-]{36})?)?)?$/i.exec(path);
  return !!m&&['GET','POST','PATCH'].includes(method);
 };
 const fail=(status,message)=>B.error(status,message);
@@ -60,11 +59,10 @@ async function detail(c,req,id){
  const data=(await c.query(projection+' WHERE l.id=$1',[id])).rows[0];
  const history=(await c.query(`SELECT a.*,u.display_name requester,v.display_name reviewer,coalesce(a.processing_snapshot - 'processing_records',a.result - 'processing_records',(SELECT jsonb_object_agg(s.key,b.value) FROM jsonb_each_text(coalesce(a.payload->'processing_records','{}')) s LEFT JOIN export_license_record_books b ON b.id::text=s.value AND b.product_code=$2 AND b.project_id=$3 AND b.kind=s.key)) processing_changes FROM export_license_actions a JOIN users u ON u.id=a.requested_by LEFT JOIN users v ON v.id=a.reviewed_by WHERE a.license_id=$1 ORDER BY a.requested_at DESC,a.id`,[id,license.product_code,license.project_id])).rows;
  const allocations=(await c.query("SELECT a.id,a.plan_id,a.batch_id,a.invoice_no,a.reserved_quantity::text,a.used_quantity::text,a.state,a.closed_at,p.loading_id,p.posted_at,p.net_mt::text,p.estimated_metal_mt::text,p.confirmed_metal_mt::text,coalesce(d.code,cp.code) plan_no FROM export_license_allocations a LEFT JOIN export_license_postings p ON p.allocation_id=a.id LEFT JOIN loading_plan_documents d ON d.id=a.cu_plan_id LEFT JOIN co_loading_plans cp ON cp.id=a.co_plan_id WHERE a.license_id=$1 ORDER BY a.created_at,a.id",[id])).rows;
- const attachments=(await c.query('SELECT a.id,a.category,a.filename,a.mime,a.sha256,a.created_at,u.display_name uploader FROM export_license_attachments a JOIN users u ON u.id=a.created_by WHERE a.license_id=$1 ORDER BY a.created_at DESC,a.id',[id])).rows;
  const {issuing_bank_account,issuing_bank_account_name,offshore_bank,offshore_bank_account,offshore_bank_account_name,processing_records}=license;
  const {rows:historical_usage}=await c.query('SELECT source_id,document_no,invoice_no,business_date::text,used_quantity::text FROM export_license_historical_usage WHERE license_id=$1 ORDER BY business_date DESC,document_no',[id]);
  const {local_day}=(await c.query('SELECT '+today+'::text local_day')).rows[0];
- return {...data,issuing_bank_account,issuing_bank_account_name,offshore_bank,offshore_bank_account,offshore_bank_account_name,processing_records,history,allocations,historical_usage,attachments,local_day};
+ return {...data,license_status:license.status,issuing_bank_account,issuing_bank_account_name,offshore_bank,offshore_bank_account,offshore_bank_account_name,processing_records,history,allocations,historical_usage,local_day};
 }
 async function list(c,req,eligible){
  const q=req.query||{},page=Number(q.page||1),filter=String(q.search||'').trim().slice(0,160);
@@ -244,14 +242,6 @@ async function review(c,req,id,actionId){
  await B.audit(c,req,'export_license_action_reviewed','export_licenses',id,{id:a.id,state:l.state},{action:a.action,decision:b.decision,result:Books.auditSnapshot(result)});
  return detail(c,req,id);
 }
-function fileData(b){
- fields(b,['category','filename','base64']);
- if(!categories.includes(b.category)||typeof b.base64!=='string'||b.base64.length>349528||!/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(b.base64))throw fail(400,'附件须为不超过256KiB的PDF、PNG或JPEG');
- const content=Buffer.from(b.base64,'base64'),filename=B.text(b.filename,'附件名',120).replace(/[^\p{L}\p{N}._ -]/gu,'_');
- const mime=content.subarray(0,5).toString()==='%PDF-'?'application/pdf':content.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':content[0]===255&&content[1]===216&&content[2]===255?'image/jpeg':null;
- if(!mime||content.length>262144)throw fail(400,'附件格式或大小无效');
- return {content,filename,mime,sha256:createHash('sha256').update(content).digest('hex')};
-}
 function register({app,pool,permitted,csrf}){
  for(const prefix of ['/api/v1/export-permits','/api/v1/cobalt/export-permits']){
   const mutation=(permission,fn,check)=>({preHandler:[permitted(read),permitted(permission),csrf,async req=>{
@@ -262,7 +252,7 @@ function register({app,pool,permitted,csrf}){
   app.get(prefix+'/options',{preHandler:permitted('loading-plan:read')},req=>C.readTransaction(pool,c=>list(c,req,true)));
   app.get(prefix+'/operations/status',{preHandler:permitted(read)},req=>C.readTransaction(pool,async c=>{
    const {method,path,key}=req.query,base=prefix.slice('/api/v1'.length),target=typeof path==='string'&&path.startsWith(base)?path.slice(base.length):null;
-   const matched=target!==null&&/^\/([0-9a-f-]{36})(?:\/(?:actions(?:\/[0-9a-f-]{36})?|attachments))?$/i.exec(target);
+   const matched=target!==null&&/^\/([0-9a-f-]{36})(?:\/actions(?:\/[0-9a-f-]{36})?)?$/i.exec(target);
    const book=target==='/record-books'||/^\/record-books\/[0-9a-f-]{36}$/i.test(target||'');
    const accepted=book&&['POST','PATCH','DELETE'].includes(method)||method==='POST'&&(target===''||target==='/preferences'||matched&&target.includes('/',1))||method==='PATCH'&&matched&&!target.includes('/',1);
    if(!accepted||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw fail(400,'操作查询参数无效');
@@ -289,19 +279,6 @@ function register({app,pool,permitted,csrf}){
    const n=req.body?.expiry_days;if(!Number.isInteger(n)||n<1||n>365)throw fail(400,'到期提醒范围为1至365天');
    await c.query('UPDATE export_license_preferences SET expiry_days=$2,updated_by=$3 WHERE product_code=$1',[req.productCode,n,req.user.id]);return {expiry_days:n};
   })});
-  app.route({method:'POST',url:prefix+'/:id/attachments',...mutation(write,async(c,req)=>{
-   const l=await record(c,req,req.params.id,true),b=req.body,f=fileData(b);
-   if(['CLOSED','CANCELLED'].includes(l.state)&&!req.user.permissions.includes(approve))throw fail(409,'已结束许可证附件须由审核人员补录');
-   const {rows:[r]}=await c.query('INSERT INTO export_license_attachments(license_id,category,filename,mime,content,sha256,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,category,filename,sha256,created_at',[l.id,b.category,f.filename,f.mime,f.content,f.sha256,req.user.id]);
-   await B.audit(c,req,'export_license_attachment_added','export_licenses',l.id,null,r);return r;
-  })});
-  app.get(prefix+'/:id/attachments/:file',{preHandler:permitted(read)},async(req,reply)=>{
-   await record(pool,req,req.params.id);
-   const {rows:[file]}=await pool.query('SELECT filename,content,sha256 FROM export_license_attachments WHERE id=$1 AND license_id=$2',[B.uuid(req.params.file),req.params.id]);
-   if(!file)throw fail(404,'附件不存在');
-   if(createHash('sha256').update(file.content).digest('hex')!==file.sha256)throw fail(409,'附件完整性校验失败');
-   return reply.header('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(file.filename)).type('application/octet-stream').send(file.content);
-  });
  }
 }
 

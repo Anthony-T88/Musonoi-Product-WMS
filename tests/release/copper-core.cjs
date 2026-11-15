@@ -134,9 +134,15 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:permit.proforma_no.toLowerCase(),quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'},409);
  await api(permitPath,'production_operator',undefined,403);
  await api('/export-permits','limited_viewer',undefined,403);
- const file=await api(permitPath+'/attachments','sales_operator',{category:'PROFORMA',filename:'Synthetic proforma.pdf',base64:Buffer.from('%PDF-1.7\n% Synthetic attachment\n%%EOF\n').toString('base64')});
- assert.match(file.sha256,/^[0-9a-f]{64}$/);
- assert.equal((await request(permitPath+'/attachments/'+file.id,'sales_operator')).statusCode,200);
+ const content=Buffer.from('%PDF-1.7\n% Synthetic archived attachment\n%%EOF\n');
+ const digest=crypto.createHash('sha256').update(content).digest('hex');
+ const {rows:[archivedAttachment]}=await c.query(
+  "INSERT INTO export_license_attachments(license_id,category,filename,mime,content,sha256,created_by) VALUES($1,'PROFORMA','Synthetic proforma.pdf','application/pdf',$2,$3,$4) RETURNING id",
+  [permit.id,content,digest,f.accounts.find(a=>a.role==='admin').id]);
+ assert.equal((await api(permitPath)).attachments,undefined);
+ assert.equal((await request(permitPath+'/attachments','sales_operator',{category:'PROFORMA',filename:'New.pdf',base64:content.toString('base64')})).statusCode,404);
+ assert.equal((await request(permitPath+'/attachments/'+archivedAttachment.id,'sales_operator')).statusCode,404);
+ assert.deepEqual((await c.query('SELECT content FROM export_license_attachments WHERE id=$1',[archivedAttachment.id])).rows[0].content,content);
  const planBody={sales_plan_id:plan.id,arrival_id:arrivals[0].id,license_id:permit.id,transporter:'Synthetic Transport',destination:'Synthetic Destination',planned_load_date:today,allocation_ids:[lot.id]};
  await api('/loading-plans/unified','admin',{...planBody,license_id:expired.id},409);
  const sameDay=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:'SYNTH-SAME-DAY-'+seq,quantity:'25',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});

@@ -76,6 +76,9 @@ window.UI46Pages={
  factList(entries){
   return '<dl class="wms-facts">'+entries.map(([label,value])=>'<div><dt>'+esc(label)+'</dt><dd>'+value+'</dd></div>').join('')+'</dl>';
  },
+ help(label,text){
+  return '<details class="wms-help"><summary aria-label="'+esc(label)+'"><span aria-hidden="true">!</span></summary><span>'+esc(text)+'</span></details>';
+ },
  identity(title,status,actions,summary,classes=''){
   return '<section class="panel wms-identity wms-section '+classes+'" data-no-i18n><header><div><h2>'+esc(title)+'</h2>'+status+'</div>'+
    (actions?'<div class="business-toolbar wms-document-actions">'+actions+'</div>':'')+'</header>'+summary+'</section>';

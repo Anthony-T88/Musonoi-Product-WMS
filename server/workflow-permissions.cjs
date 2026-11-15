@@ -44,7 +44,7 @@ const definitions={
  'vehicle-arrival:read':['铜钴到厂车辆及运输资料查看','View Copper and Cobalt Vehicle Arrivals'],
  'vehicle-arrival:write':['铜钴到厂登记及运输资料维护','Register Arrivals and Maintain Transport Details'],
  'export-license:read':['铜钴出口许可证与关联历史查看','View Copper and Cobalt Export Licenses and History'],
- 'export-license:write':['出口许可证草稿、申请、附件和审核申请','Draft and Register Export Licenses, Attach Evidence and Request Review'],
+ 'export-license:write':['出口许可证草稿、登记和审核申请','Draft and Register Export Licenses and Request Review'],
  'export-license:approve':['出口许可证审核和核销确认','Review Export Licenses and Reconciliation'],
  'loading-plan:read':['铜钴装车计划及单证查看','View Copper and Cobalt Loading Plans'],
  'loading-plan:write':['铜钴装车计划草稿及单证维护','Draft and Maintain Loading Plans and Documents'],

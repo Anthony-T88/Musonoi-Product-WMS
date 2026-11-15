@@ -14,7 +14,6 @@ window.ExportLicenses={
  },
  statuses:{APPLYING:['申请中','Applying'],ACTIVE:['有效','Active'],SCHEDULED:['未到生效日','Scheduled'],EXPIRED:['已失效','Expired'],CLOSED:['已关证','Closed'],CANCELLED:['已撤销','Cancelled'],EXPIRING:['即将到期','Expiring'],PENDING:['待审批','Pending Approval'],APPROVED:['已通过','Approved'],REJECTED:['已驳回','Rejected'],RESERVED:['已预占','Reserved'],SETTLED:['已核销','Reconciled'],RELEASED:['已释放','Released'],VOID:['编号作废','Number Voided']},
  actions:{ISSUE:['签发','Issue'],AMEND:['正式资料修改','Amend'],EXTEND:['延期','Extend'],CANCEL:['撤销','Revoke'],CLOSE:['正常关证','Close'],CLOSE_EXCEPTION:['异常关证','Exceptional Closure'],SETTLE:['核销','Reconcile'],CORRECT:['核销更正','Correct Reconciliation']},
- types:{LICENSE:['许可证','License'],PROFORMA:['形式发票','Proforma Invoice'],EXTENSION:['延期文件','Extension File'],CLOSURE:['关证文件','Closure File'],USAGE:['核销凭证','Reconciliation Evidence'],OTHER:['其他附件','Other']},
  bases:{PHYSICAL_MT:['实物净重吨','Physical Net MT'],COBALT_MT:['钴金属吨','Cobalt Metal MT'],CUSTOM:['许可证指定单位','License-specific Unit']},
  title(){return this.t('出口许可证管理','Export License Management');},
  label(key){return this.t(...(this.labels[key]||[key,key]));},
@@ -198,10 +197,10 @@ window.ExportLicenses={
   const headings=[['形式发票号','Proforma Invoice No.'],['许可证号','License No.'],['买家','Buyer'],['合同号','Contract No.'],
    ['许可证数量','Licensed Quantity'],['已用量 / 使用率','Used / Usage Rate'],['剩余量','Remaining'],['生效日期','Valid From'],['失效日期','Expiry Date'],['状态','Status'],['操作','Actions']];
   const rows=d.items.map(r=>{
-   const url=base+'/'+r.id,amount=key=>this.value(r[key])+' '+esc(r.unit);
-   const cells=['<a href="'+url+'">'+this.value(r.proforma_no)+'</a>',this.value(r.license_no),this.value(r.buyer),this.value(r.contract_no),
+   const url=base+'/'+r.id+(q.size?'?'+new URLSearchParams({list:q.toString()}):''),amount=key=>this.value(r[key])+' '+esc(r.unit);
+   const cells=['<a href="'+esc(url)+'">'+this.value(r.proforma_no)+'</a>',this.value(r.license_no),this.value(r.buyer),this.value(r.contract_no),
     amount('quantity'),amount('used')+' / '+this.value(r.utilization)+'%',amount('remaining'),this.value(r.valid_from),this.value(r.effective_until),
-    UI.status(r.status,'permit',this.state(r.status)),'<a class="button secondary compact" href="'+url+'">'+t('查看','View')+'</a>'];
+    UI.status(r.status,'permit',this.state(r.status)),'<a class="button secondary compact" href="'+esc(url)+'">'+t('查看','View')+'</a>'];
    return '<tr>'+cells.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>';
   });
   const settings=CurrentUser.permissions.includes('system:manage')?'<details><summary>'+t('到期提醒设置','Expiry Reminder Settings')+'</summary><form id="export-license-settings" class="user-form"><div class="form-grid"><label>'+t('提前提醒天数','Reminder Days')+'<input type="number" name="expiry_days" min="1" max="365" required value="'+d.expiry_days+'"></label></div><div class="business-toolbar"><button class="button secondary">'+t('保存提醒设置','Save Reminder')+'</button></div></form></details>':'';
@@ -232,60 +231,160 @@ window.ExportLicenses={
    await Router.go(this.route+'/'+saved.id);
   });
  },
- async detail(id){
-  const t=this.t,api=this.api()+'/'+id,d=await API.request(api),write=this.can('write'),pending=d.history.some(a=>a.decision==='PENDING');
-  const attached=d.attachments.length?this.table([['类别','Category'],['文件','File'],['上传人','Uploader'],['时间','Time']],d.attachments.map(f=>'<tr><td>'+esc(t(...this.types[f.category]))+'</td><td><button type="button" class="button secondary compact" data-permit-download="'+f.id+'">'+esc(f.filename)+'</button></td><td>'+esc(f.uploader)+'</td><td>'+esc(BusinessTime.display(f.created_at))+'</td></tr>'),'permit-attachments'):'<p class="quiet-note" role="status">'+t('暂无附件','No attachments')+'</p>';
-  const upload=write?'<form id="permit-upload" class="user-form"><div class="form-grid"><label>'+t('附件类别','Attachment Category')+'<select name="category">'+this.options(this.types)+'</select></label><label>'+t('附件（PDF、PNG、JPEG，最多256 KiB）','Attachment (PDF, PNG, JPEG, 256 KiB max)')+'<input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required></label></div><div class="business-toolbar"><button class="button secondary">'+t('上传','Upload')+'</button></div><p class="error" role="alert"></p></form>':'';
-  const bindings=d.allocations.length?this.table([['装车计划','Loading Plan'],['发票号','Invoice'],['预占数量','Reserved'],['正式核销量','Reconciled'],['状态','Status'],['正式出库','Formal Outbound']],d.allocations.map(a=>'<tr><td><a href="/loading-plans/orders/'+a.plan_id+'">'+esc(a.plan_no)+'</a></td><td>'+esc(a.invoice_no)+'</td><td>'+this.value(a.reserved_quantity)+'</td><td>'+this.value(a.used_quantity)+'</td><td>'+esc(a.state==='RESERVED'&&a.posted_at?t('待核销','Pending Reconciliation'):this.state(a.state))+'</td><td>'+esc(a.posted_at?BusinessTime.display(a.posted_at):'—')+'</td></tr>'),'permit-allocations'):'<p class="quiet-note" role="status">'+t('暂无关联装车','No linked loading plans')+'</p>';
-  const history=a=>{
-   const can=this.can('approve')&&a.decision==='PENDING';
-   const evidence=Object.entries({...a.payload,processing_records:undefined,...a.processing_changes}).filter(([k,v])=>k!=='allocation_id'&&v!==undefined).map(([k,v])=>this.label(k)+' '+(v??t('清空','Clear'))).join(' · ');
-   const review=can?'<form data-permit-review="'+a.id+'" id="permit-review-'+a.id+'"><label>'+t('审核意见','Review Note')+'<input name="note" required maxlength="1000"></label><button class="button primary" name="decision" value="APPROVED">'+t('通过','Approve')+'</button> <button class="button secondary" name="decision" value="REJECTED">'+t('驳回','Reject')+'</button><p class="error" role="alert"></p></form>':'';
-   const change=a.action==='EXTEND'&&a.result?.previous_effective_until?'<p>'+t('失效日期变更','Expiry Date Changed')+' '+this.value(a.result.previous_effective_until)+' → '+this.value(a.result.extended_until)+'</p>':'';
-   return '<article><strong>'+t(...this.actions[a.action])+' · '+this.state(a.decision)+'</strong><p>'+esc(a.requester+' · '+BusinessTime.display(a.requested_at)+' · '+a.reason)+'</p><p>'+esc(evidence)+'</p>'+(a.reviewer?'<p>'+esc(a.reviewer+' · '+BusinessTime.display(a.reviewed_at)+' · '+a.review_note)+'</p>':'')+change+review+'</article>';
-  };
-  const extensions=d.history.filter(a=>a.action==='EXTEND').map(history).join('');
-  const reviews=d.history.filter(a=>a.action!=='EXTEND').map(history).join('');
-  const request=write&&!pending?this.actionForm(d):'';
-  const product=ProductContext.isCopper()?t('阴极铜','Copper Cathodes'):t('氢氧化钴','Cobalt Hydroxide');
-  const actionLink=write&&d.state==='ISSUED'&&!pending?'<a class="button primary" href="#permit-extension">'+t('申请延期','Request Extension')+'</a>':'';
-  const historical=d.historical_usage?.length?this.table([['历史装箱单','Historical Packing List'],['发票号','Invoice'],['发运日期','Shipping Date'],['已用量（吨）','Used (MT)']],
-   d.historical_usage.map(a=>'<tr><td>'+(CurrentUser.role_code==='admin'?'<a href="/workbench/historical-movements/'+a.source_id+'?product='+d.product_code+'">'+this.value(a.document_no)+'</a>':this.value(a.document_no))+'</td><td>'+this.value(a.invoice_no)+'</td><td>'+this.value(a.business_date)+'</td><td>'+this.value(a.used_quantity)+'</td></tr>'),
-   'permit-historical-usage',true,{numeric:[3]}):'';
-  const quota=this.facts(['quantity','used','utilization','reserved','remaining'],d);
-  this.page(t('出口许可证详情','Export License Details'),'<div class="business-toolbar">'+actionLink+'<a class="button secondary" href="'+this.route+'">'+t('返回许可证列表','Back to Licenses')+'</a>'+(write&&!pending&&d.state==='APPLYING'?'<a class="button secondary" href="'+this.route+'/'+id+'/edit">'+t('编辑申请','Edit Application')+'</a>':'')+'</div>'+
-   this.section(t('许可证资料','License Information'),this.facts(['license_no','proforma_no','status'],d))+
-   this.section(t('许可证额度','License Quota'),quota)+
-   this.section(t('基础资料','Basic Information'),'<p>'+product+'</p>'+this.facts(['buyer','contract_no','applied_on'],d))+
-   this.section(t('办证资料','Processing Details'),this.processingDetails(d))+
-   this.section(t('金额','Amount'),this.facts(d.standard_amount?['unit_price','price_unit','amount','currency']:['unit_price','price_unit','amount','reference_amount','currency'],d))+
-   this.section(t('有效期与关证','Validity and Closure'),this.facts(['valid_from','valid_until','extension_on','extended_until','effective_until','closed_on'],d))+
-   this.extensionPanel(d,pending,extensions)+
-   this.section(t('装车及额度记录','Loading and Quota Records'),this.facts(['pending','available'],d)+bindings+historical)+
-   this.section(t('审核与历史','Review and History'),request+'<div class="export-license-history">'+(reviews||'<p>'+t('暂无审核记录','No review records')+'</p>')+'</div>')+
-   this.section(t('许可证附件','License Attachments'),attached+upload)+(request?this.bookDialog():''));
-  this.bindExtension(d);
-  if($('permit-action'))this.bindAction(d);
-  for(const f of document.querySelectorAll('[data-permit-review]'))f.onsubmit=e=>this.submit(e,async()=>{await API.request(api+'/actions/'+f.dataset.permitReview,{method:'POST',body:{decision:e.submitter.value,note:f.elements.note.value}});await this.detail(id);});
-  if($('permit-upload'))$('permit-upload').onsubmit=e=>this.submit(e,async()=>{
-   const f=e.target,file=f.elements.file.files[0];
-   if(file.size>262144)throw Error(t('附件超过256 KiB','Attachment exceeds 256 KiB'));
-   const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=reject;r.readAsDataURL(file);});
-   await API.request(api+'/attachments',{method:'POST',body:{category:f.elements.category.value,filename:file.name,base64:data}});await this.detail(id);
-  });
-  for(const b of document.querySelectorAll('[data-permit-download]'))b.onclick=async()=>{try{
-   const file=await API.request(api+'/attachments/'+b.dataset.permitDownload,{binary:true}),url=URL.createObjectURL(file.blob),a=document.createElement('a');
-   a.href=url;a.download=file.filename||b.textContent;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  }catch(e){notify(e.message);}};
+ quantity(value,d){
+  if(value==null)return '—';
+  const precision=d.unit_basis==='COBALT_MT'?5:d.unit_basis==='PHYSICAL_MT'?4:null;
+  if(precision===null)return this.value(value);
+  const [whole,fraction]=Tonnes.fixed(Tonnes.scaled(value,precision),precision).split('.');
+  return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+'.'+fraction;
  },
- extensionPanel(d,pending,history){
-  const t=this.t,allowed=this.can('write')&&d.state==='ISSUED'&&!pending;
-  const form=allowed?'<form id="permit-extension-form" class="user-form"><div class="form-grid">'+
-   '<label>'+t('拟延期至','Proposed Expiry')+'<input name="until" type="date" required aria-describedby="permit-extension-date-error"><small id="permit-extension-date-error" class="error"></small></label>'+
-   '<label>'+t('延期原因','Extension Reason')+'<input name="reason" maxlength="200" required></label></div>'+
-   '<div class="business-toolbar"><button class="button primary">'+t('提交延期审批','Submit Extension for Review')+'</button></div><p class="error" role="alert"></p></form>':'';
-  return '<section id="permit-extension" class="panel export-license-section"><h2>'+t('许可证延期','License Extension')+'</h2>'+
-   this.facts(['effective_until'],d)+form+'<div class="export-license-history">'+(history||'<p>'+t('暂无延期记录','No extension records')+'</p>')+'</div></section>';
+ quota(d){
+  const t=this.t,qty=key=>this.quantity(d[key],d),unit=d.unit_basis==='PHYSICAL_MT'?t('吨','MT'):d.unit_basis==='COBALT_MT'?t('金属吨','Metal MT'):esc(d.unit);
+  const usable=d.license_status==='ACTIVE',rawRate=Number(d.utilization)||0;
+  const amount=key=>qty(key)+' <small>'+unit+'</small>';
+  const remaining=t('剩余额度','Remaining Quota')+' '+qty('remaining')+' '+unit;
+  const help=UI46Pages.help(t('额度说明','Quota Help'),t('剩余额度为批准数量减去已使用额度。可分配额度在此基础上再扣除有效预占。','Remaining quota deducts used quantity. Allocatable quota also deducts active reservations.'));
+  const cards=[
+   [t('批准数量','Approved Quantity'),amount('quantity'),this.bases[d.unit_basis]?t(...this.bases[d.unit_basis]):'',''],
+   [t('已使用','Used'),amount('used'),t('使用率','Usage Rate')+' '+this.value(d.utilization)+'%','<progress max="100" value="'+Math.min(100,Math.max(0,rawRate))+'" aria-label="'+t('额度使用率','Quota Usage')+'"></progress>'],
+   [t('有效预占','Active Reservations'),amount('reserved'),t('含待核销','Includes Pending Reconciliation')+' '+qty('pending')+' '+unit,''],
+   [t('可分配额度','Allocatable Quota')+help,usable?amount('available'):t('暂不可分配','Unavailable'),remaining,'']
+  ];
+  return '<div class="v34-kpi-grid permit-quota" aria-label="'+t('许可证额度','License Quota')+'">'+
+   cards.map(([label,value,context,progress],i)=>'<div class="v34-kpi'+(i===3?' permit-available':'')+'"><div class="permit-quota-label">'+label+'</div><strong>'+value+'</strong><div class="permit-context">'+context+'</div>'+progress+'</div>').join('')+'</div>';
+ },
+ allocationRecords(d){
+  const t=this.t,qty=key=>this.quantity(key,d),canOpen=CurrentUser.permissions.includes('loading-plan:read');
+  const rows=d.allocations.map(a=>{
+   const plan=this.value(a.plan_no);
+   const link=canOpen&&a.plan_id?'<a href="/loading-plans/orders/'+esc(a.plan_id)+'">'+plan+'</a>':plan;
+   const state=a.state==='RESERVED'&&a.posted_at?'PENDING_RECONCILIATION':a.state;
+   const label=state==='PENDING_RECONCILIATION'?t('待核销','Pending Reconciliation'):this.state(state);
+   return '<tr><td>'+link+'</td><td>'+this.value(a.invoice_no)+'</td><td>'+qty(a.reserved_quantity)+'</td><td>'+qty(a.used_quantity)+'</td><td>'+
+    UI.status(state==='PENDING_RECONCILIATION'?'PENDING':state,'permit',label)+'</td><td>'+esc(a.posted_at?BusinessTime.display(a.posted_at):'—')+'</td></tr>';
+  });
+  const headings=[['装车计划','Loading Plan'],['发票号','Invoice'],['预占数量','Reserved'],['正式核销量','Reconciled'],['状态','Status'],['正式出库','Formal Outbound']];
+  const table=rows.length?this.detailTable(headings,rows,'permit-allocations'):'<p role="status">'+t('暂无关联装车','No linked loading plans')+'</p>';
+  const history=d.historical_usage||[],historical=headings.slice(0,2);
+  historical[0]=['历史装箱单','Historical Packing List'];
+  historical.push(['发运日期','Shipping Date'],['已用量','Used']);
+  const historyRows=history.map(a=>{
+   const document=this.value(a.document_no);
+   const link=CurrentUser.role_code==='admin'?'<a href="/workbench/historical-movements/'+esc(a.source_id)+'?product='+esc(d.product_code)+'">'+document+'</a>':document;
+   return '<tr><td>'+link+'</td><td>'+this.value(a.invoice_no)+'</td><td>'+this.value(a.business_date)+'</td><td>'+qty(a.used_quantity)+'</td></tr>';
+  });
+  return '<div class="permit-table-heading"><h3>'+t('关联装车计划','Linked Loading Plans')+'</h3><span>'+esc(d.unit)+'</span></div>'+table+
+   (historyRows.length?'<details class="permit-historical"><summary>'+t('历史装箱单用量','Historical Packing List Usage')+' <span>· '+historyRows.length+' '+t('条','records')+'</span></summary>'+
+    this.detailTable(historical,historyRows,'permit-historical-usage')+'</details>':'');
+ },
+ detailTable(headings,rows,id){
+  return '<div class="permit-table-scroll" role="region" tabindex="0" aria-label="'+esc(this.t(...headings[0]))+'">'+
+   this.table(headings,rows,id,false,{center:headings.map((_,index)=>index)})+'</div>';
+ },
+ historyRecord(a){
+  const t=this.t,date=a.payload?.extended_until;
+  const evidence=Object.entries({...a.payload,processing_records:undefined,...a.processing_changes})
+   .filter(([key,value])=>key!=='allocation_id'&&value!==undefined)
+   .map(([key,value])=>this.label(key)+' '+(value??t('清空','Clear'))).join(' · ');
+  const change=a.result?.previous_effective_until?this.value(a.result.previous_effective_until)+' → '+this.value(a.result.extended_until):
+   t('拟延期至','Proposed Expiry')+' '+this.value(date);
+  return '<article id="permit-review-'+esc(a.id)+'"><header><strong>'+t(...this.actions[a.action])+'</strong>'+
+   UI.status(a.decision,'permit',this.state(a.decision))+'</header>'+
+   (a.action==='EXTEND'?'<p>'+change+'</p>':evidence?'<p>'+esc(evidence)+'</p>':'')+
+   '<p>'+esc([a.requester,BusinessTime.display(a.requested_at),a.reason].filter(Boolean).join(' · '))+'</p>'+
+   (a.reviewer?'<p>'+esc([a.reviewer,BusinessTime.display(a.reviewed_at),a.review_note].filter(Boolean).join(' · '))+'</p>':'')+'</article>';
+ },
+ async detail(id,view){
+  const t=this.t,api=this.api()+'/'+id,d=await API.request(api),write=this.can('write');
+  const pending=d.history.find(a=>a.decision==='PENDING'),review=pending&&this.can('approve');
+  const extend=write&&!pending&&d.state==='ISSUED',edit=write&&!pending&&d.state==='APPLYING';
+  const request=write&&!pending?this.actionForm(d):'';
+  const status=UI.status(d.license_status,'permit',this.state(d.license_status))+
+   (pending?UI.status('PENDING','permit',pending.action==='EXTEND'?t('延期待审批','Extension Pending Review'):t('待审批','Pending Approval')):'');
+  const actions=(request?'<button type="button" class="button secondary" data-permit-action="more" aria-controls="permit-more-actions">'+t('更多办理','More Actions')+'</button>':'')+
+   (review?'<button type="button" class="button primary" data-permit-action="review">'+t('办理审核','Review Request')+'</button>':
+    extend?'<button type="button" class="button primary" data-permit-action="extend">'+t('申请延期','Request Extension')+'</button>':
+    edit?'<a class="button primary" href="'+this.route+'/'+esc(id)+'/edit">'+t('编辑申请','Edit Application')+'</a>':'');
+  const references=UI46Pages.factList([[this.label(d.license_no?'proforma_no':'license_no'),this.value(d.license_no?d.proforma_no:null)],[this.label('contract_no'),this.value(d.contract_no)]]);
+  const basic=d.standard_amount
+   ?UI46Pages.factList([
+     [this.label('buyer'),this.value(d.buyer)],[this.label('applied_on'),this.value(d.applied_on)],
+     [this.label('amount'),d.amount==null?'—':this.value(d.currency)+' '+this.value(d.amount)],
+     [this.label('unit_price'),d.unit_price==null?'—':this.value(d.unit_price)+' '+this.value(d.price_unit)]])
+   :this.facts(['buyer','applied_on','amount','unit_price','currency','price_unit','reference_amount'],d);
+  const dates=['valid_from','valid_until','effective_until','closed_on',...(d.extension_on?['extension_on']:[])];
+  const tabs=[
+   ['quota',t('装车及额度记录','Loading and Quota Records'),this.allocationRecords(d)],
+   ['processing',t('办证资料','Processing Details'),this.processingDetails(d)],
+   ['history',t('审核与延期','Review and Extensions'),(request?'<div id="permit-more-actions" hidden>'+request+'</div>':'')+
+    '<div class="export-license-history">'+(d.history.length?d.history.map(a=>this.historyRecord(a)).join(''):'<p role="status">'+t('暂无审核记录','No review records')+'</p>')+'</div>']
+  ];
+  const selected=view||(location.hash.startsWith('#permit-review-')?'history':'quota');
+  const tabMarkup='<div class="permit-record-tabs" role="tablist" aria-label="'+t('许可证明细','License Details')+'">'+tabs.map(([key,label])=>
+   '<button class="button secondary" type="button" role="tab" id="permit-tab-'+key+'" aria-controls="permit-panel-'+key+'" aria-selected="'+(key===selected)+'" tabindex="'+(key===selected?'0':'-1')+'">'+label+'</button>').join('')+'</div>'+
+   tabs.map(([key,,content])=>'<div role="tabpanel" id="permit-panel-'+key+'" aria-labelledby="permit-tab-'+key+'"'+(key===selected?'':' hidden')+'>'+content+'</div>').join('');
+  const notice=pending?.action==='EXTEND'?'<div class="permit-notice" role="status">'+t('拟延期至','Proposed Expiry')+' '+this.value(pending.payload?.extended_until)+'</div>':'';
+  const back=new URLSearchParams(location.search).get('list');
+  this.page(t('出口许可证详情','Export License Details'),
+   '<div class="permit-detail"><a class="permit-back" href="'+this.route+(back?'?'+esc(new URLSearchParams(back).toString()):'')+'">'+t('← 返回许可证列表','← Back to Licenses')+'</a>'+
+   UI46Pages.identity(d.license_no||d.proforma_no,status,actions,references,'permit-identity')+notice+this.quota(d)+
+   '<div class="permit-fact-grid">'+this.section(t('基础资料','Basic Information'),basic)+
+   this.section(t('有效期与关证','Validity and Closure'),this.facts(dates,d))+'</div>'+
+   '<section class="panel wms-section permit-records">'+tabMarkup+'</section>'+(request?this.bookDialog():'')+'</div>');
+  this.bindDetail(d,api,pending);
+ },
+ selectDetailTab(name){
+  for(const tab of document.querySelectorAll('.permit-record-tabs [role="tab"]')){
+   const selected=tab.id==='permit-tab-'+name;
+   tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;
+   $(tab.getAttribute('aria-controls')).hidden=!selected;
+  }
+ },
+ bindDetail(d,api,pending){
+  const tabs=[...document.querySelectorAll('.permit-record-tabs [role="tab"]')];
+  for(const [index,tab] of tabs.entries()){
+   tab.onclick=()=>this.selectDetailTab(tab.id.slice('permit-tab-'.length));
+   tab.onkeydown=e=>{
+    const next={ArrowLeft:(index+tabs.length-1)%tabs.length,ArrowRight:(index+1)%tabs.length,Home:0,End:tabs.length-1}[e.key];
+    if(next===undefined)return;
+    e.preventDefault();tabs[next].click();tabs[next].focus();
+   };
+  }
+  const root=document.querySelector('.permit-detail');
+  const action=name=>root.querySelector('[data-permit-action="'+name+'"]');
+  if(action('more')){
+   this.bindAction(d);
+   action('more').onclick=()=>{
+    this.selectDetailTab('history');
+    $('permit-more-actions').hidden=false;
+    $('permit-action').elements.action.focus();
+   };
+  }
+  if(action('extend'))action('extend').onclick=()=>this.openExtension(d);
+  if(action('review'))action('review').onclick=()=>this.openReview(d,api,pending);
+ },
+ openReview(d,api,pending){
+  const t=this.t;
+  this.selectDetailTab('history');
+  dialog(t('办理审核','Review Request')+' · '+t(...this.actions[pending.action]),
+   '<div data-no-i18n>'+this.historyRecord(pending).replace(/ id="permit-review-[^"]+"/,'')+
+   '<form id="permit-review-form" class="user-form" data-wms-validation><label class="wms-field">'+t('审核意见','Review Note')+
+   '<textarea name="note" required maxlength="1000" rows="2"></textarea></label><p class="error" role="alert"></p>'+
+   '<div class="business-toolbar"><button class="button primary" name="decision" value="APPROVED">'+t('通过','Approve')+'</button>'+
+   '<button class="button secondary" name="decision" value="REJECTED">'+t('驳回','Reject')+'</button></div></form></div>',{protectForm:'#permit-review-form'});
+  $('permit-review-form').onsubmit=e=>this.submit(e,async()=>{
+   await API.request(api+'/actions/'+pending.id,{method:'POST',body:{decision:e.submitter.value,note:e.target.elements.note.value}});
+   await this.detail(d.id,'history');
+  });
+ },
+ openExtension(d){
+  const t=this.t;
+  dialog(t('申请延期','Request Extension'),'<div id="permit-extension" data-no-i18n>'+
+   this.facts(['effective_until'],d)+'<form id="permit-extension-form" class="user-form"><div class="form-grid wms-field-grid">'+
+   '<label class="wms-field">'+t('拟延期至','Proposed Expiry')+'<input name="until" type="date" required aria-describedby="permit-extension-date-error"><small id="permit-extension-date-error" class="error"></small></label>'+
+   '<label class="wms-field">'+t('延期原因','Extension Reason')+'<input name="reason" maxlength="200" required></label></div>'+
+   '<p class="error" role="alert"></p><div class="business-toolbar"><button class="button primary">'+t('提交延期审批','Submit Extension for Review')+'</button></div></form></div>',{protectForm:'#permit-extension-form'});
+  this.bindExtension(d);
  },
  bindExtension(d){
   const form=$('permit-extension-form');
