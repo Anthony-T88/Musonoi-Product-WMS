@@ -9,10 +9,53 @@ window.UI46Pages={
   if(typeof PageTables!=='undefined'){const enhance=PageTables.enhance.bind(PageTables);PageTables.enhance=()=>{if(UI46.enabled()&&!UI46.copperMap()){const table=document.getElementById('ux10-sales-table');if(table&&!table.dataset.v34Server){table.dataset.v34Server='true';table.dataset.p46Server='';}}enhance();if(UI46.state?.composition)this.normalize(UI46.state);};}
  },
  signature(){return (window.ProductContext?.code||'')+'|'+location.pathname+location.search;},
- chrome(enabled){const top=document.querySelector('.top-actions');if(!top)return;if(!enabled){if(this.chromeState){for(const {node,marker}of this.chromeState.moves.reverse())if(marker.isConnected)marker.replaceWith(node);document.removeEventListener('click',this.chromeState.outside);this.chromeState.menu.remove();this.chromeState=null;}return;}if(this.chromeState)return;
+ chrome(enabled){const top=document.querySelector('.top-actions');if(!top)return;if(!enabled){if(this.chromeState){for(const {node,marker}of this.chromeState.moves.reverse())if(marker.isConnected)marker.replaceWith(node);document.removeEventListener('click',this.chromeState.outside);this.chromeState.menu.remove();this.chromeState=null;}return;}if(this.chromeState){this.chromeState.password.textContent=this.t('修改密码','Change Password');return;}
   const menu=document.createElement('details');menu.className='p46-account-menu';const summary=document.createElement('summary'),items=document.createElement('div');items.className='p46-account-items';menu.append(summary,items);top.append(menu);const moves=[];
   for(const [selector,target]of [['.avatar',summary],['#signed-user',summary],['#logout',items]]){const node=top.querySelector(selector);if(!node)continue;const marker=document.createComment('v46-header-position');node.before(marker);target.append(node);moves.push({node,marker});}
-  menu.addEventListener('click',e=>{if(e.target.closest('button'))menu.open=false;});const outside=e=>{if(!menu.contains(e.target))menu.open=false;};document.addEventListener('click',outside);this.chromeState={menu,moves,outside};
+  const password=document.createElement('button');
+  password.type='button';password.id='change-password';password.className='text-button';password.dataset.noI18n='';
+  password.textContent=this.t('修改密码','Change Password');
+  password.onclick=()=>{menu.open=false;summary.focus();this.changePassword();};
+  items.prepend(password);
+  menu.addEventListener('click',e=>{if(e.target.closest('button'))menu.open=false;});const outside=e=>{if(!menu.contains(e.target))menu.open=false;};document.addEventListener('click',outside);this.chromeState={menu,moves,outside,password};
+ },
+ changePassword(){
+  const t=this.t;
+  const field=(name,zh,en,autocomplete,min=1)=>'<label class="wms-field">'+t(zh,en)+
+   '<input name="'+name+'" type="password" autocomplete="'+autocomplete+'" required minlength="'+min+'" maxlength="128"></label>';
+  dialog(t('修改密码','Change Password'),'<form id="change-password-form" class="user-form" data-no-i18n data-wms-validation>'+
+   field('current_password','当前密码','Current Password','current-password')+
+   field('new_password','新密码（12–128 字符）','New Password (12–128 characters)','new-password',12)+
+   field('confirm_password','确认新密码','Confirm New Password','new-password',12)+
+   '<p class="error" role="alert"></p><div class="business-toolbar">'+
+   '<button type="button" id="change-password-cancel" class="button secondary">'+t('取消','Cancel')+'</button>'+
+   '<button type="submit" class="button primary">'+t('保存新密码','Save New Password')+'</button></div></form>');
+  const form=$('change-password-form'),box=$('dialog'),confirmation=form.elements.confirm_password;
+  box.addEventListener('close',()=>{form.reset();form.remove();},{once:true});
+  $('change-password-cancel').onclick=()=>box.close();
+  form.oninput=()=>confirmation.setCustomValidity('');
+  form.onsubmit=event=>this.submit(event,async()=>{
+   const body=Object.fromEntries(new FormData(form));
+   if(body.new_password!==body.confirm_password){
+    confirmation.setCustomValidity(t('两次输入的新密码不一致。','The new passwords do not match.'));
+    confirmation.reportValidity();
+    return;
+   }
+   try{await API.request('/auth/change-password',{method:'POST',body});}
+   catch(error){
+    const messages={
+     CURRENT_PASSWORD_INCORRECT:t('当前密码不正确。','The current password is incorrect.'),
+     PASSWORD_CHANGE_THROTTLED:t('尝试次数过多，请稍后再试。','Too many attempts. Try again later.'),
+     PASSWORD_UNCHANGED:t('新密码须与当前密码不同。','Choose a password different from your current password.')
+    };
+    throw Error(messages[error.code]||(error.statusCode?error.message:t('连接中断，请重新登录确认密码是否已修改。','Connection lost. Sign in again to check whether the password changed.')));
+   }
+   form.reset();
+   window.AppSignedIn=false;
+   try{sessionStorage.setItem('musonoi-password-changed',I18n.language);}catch{}
+   location.replace('/');
+  });
+  form.elements.current_password.focus();
  },
  family(root){const p=location.pathname,q=new URLSearchParams(location.search);
   if(root.id==='dashboard-content'||p==='/overview'&&!q.has('management'))return 'overview';
@@ -123,7 +166,7 @@ window.UI46Pages={
     feedback.set(control,message);
    }
    event.preventDefault();
-   message.textContent=control.validity.valueMissing
+   message.textContent=control.validity.customError?control.validationMessage:control.validity.valueMissing
     ?control.matches('select')?this.t('请选择此项。','Select a value.'):this.t('请填写此项。','Enter a value.')
     :this.t('请核对输入格式和允许范围。','Check the input format and allowed range.');
    message.hidden=false;

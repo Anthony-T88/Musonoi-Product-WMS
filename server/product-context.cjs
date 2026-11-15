@@ -6,7 +6,7 @@ const products=Object.freeze([
  Object.freeze({code:'CO_HYDROXIDE',name:'氢氧化钴',name_en:'Cobalt Hydroxide',businessEnabled:false})
 ]);
 const valid=code=>products.some(p=>p.code===code);
-const globalPath=p=>/^\/api\/v1\/(?:config|health|page-layout|me|me\/language|auth\/(?:login|logout|csrf|registration-token|registration-requests)|product-context)$/.test(p)||/^\/api\/v1\/(?:users|security\/(?:roles|policy))(?:\/|$)/.test(p)||/^\/api\/v1\/(?:audit|v27\/(?:audit|backups))(?:\/|$)/.test(p);
+const globalPath=p=>/^\/api\/v1\/(?:config|health|page-layout|me|me\/language|auth\/(?:login|logout|csrf|change-password|registration-token|registration-requests)|product-context)$/.test(p)||/^\/api\/v1\/(?:users|security\/(?:roles|policy))(?:\/|$)/.test(p)||/^\/api\/v1\/(?:audit|v27\/(?:audit|backups))(?:\/|$)/.test(p);
 const failure=(statusCode,message)=>Object.assign(Error(message),{statusCode});
 function install({app,auth,csrf,secure,cobaltEnabled=false,cobaltWorkEnabled=false,cobaltStockEnabled=false,cobaltSalesEnabled=false,cobaltLoadingEnabled=false,cobaltExecutionEnabled=false,cobaltPackingEnabled=false,cobaltMetalEnabled=false}){
  app.addHook('preHandler',async req=>{

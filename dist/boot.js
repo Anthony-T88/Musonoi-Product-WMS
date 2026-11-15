@@ -31,7 +31,7 @@
  try{
  const cfg=await API.request('/config');window.AppConfig=cfg;assetRevision=cfg.frontendRevision||assetRevision;if(cfg.version!==ClientRelease.version||cfg.frontendRevision!==ClientRelease.revision)throw Error('页面资源与服务版本不一致，请刷新页面后重试 / Page and server versions differ. Refresh to continue.');
  el('login-safety-note').textContent='';el('login-environment').textContent='';
- el('login-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;el('login-error').textContent='';el('login-error').classList.remove('wms-session-notice');delete el('login-error').dataset.noI18n;try{const r=await API.request('/auth/login',{method:'POST',body:{username:el('login-username').value,password:el('login-password').value,language:I18n.language}});API.csrfToken=r.csrfToken;sessionStorage.setItem('musonoi-login-notice',crypto.randomUUID());el('login-password').value='';await enter(r.user);}catch(err){if(!document.body.classList.contains('ui-resource-blocked')){window.AppSignedIn=false;el('session-restore').hidden=true;el('login-panel').hidden=false;el('login-error').textContent=err.message;}}finally{b.disabled=false;}};
+ el('login-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;el('login-error').textContent='';el('login-error').classList.remove('wms-session-notice','wms-password-changed');el('login-error').setAttribute('role','alert');delete el('login-error').dataset.noI18n;try{const r=await API.request('/auth/login',{method:'POST',body:{username:el('login-username').value,password:el('login-password').value,language:I18n.language}});API.csrfToken=r.csrfToken;sessionStorage.setItem('musonoi-login-notice',crypto.randomUUID());el('login-password').value='';await enter(r.user);}catch(err){if(!document.body.classList.contains('ui-resource-blocked')){window.AppSignedIn=false;el('session-restore').hidden=true;el('login-panel').hidden=false;el('login-error').textContent=err.message;}}finally{b.disabled=false;}};
  async function enter(user){window.CurrentUser=user||await API.request('/me');if(!API.csrfToken)API.csrfToken=(await API.request('/auth/csrf',{method:'POST',body:{}})).csrfToken;
  if(window.I18n){I18n.protected.add(CurrentUser.display_name);I18n.set(CurrentUser.language_code||'zh-CN');}
  el('allocation-filter').hidden=false;window.AppSignedIn=true;el('login-panel').hidden=true;el('session-restore').hidden=false;
@@ -55,7 +55,14 @@
  try{await enter();}catch(err){
   if(err.statusCode!==401){unavailable();return;}
   el('login-panel').hidden=false;el('session-restore').hidden=true;
-  if(err.code==='SESSION_REPLACED'||/已在其他设备登录/.test(err.message)||sessionStorage.getItem('musonoi-session-replaced')==='1'){
+  const changedLanguage=sessionStorage.getItem('musonoi-password-changed');
+  if(changedLanguage){
+   sessionStorage.removeItem('musonoi-password-changed');
+   I18n.set(changedLanguage==='en'?'en':'zh-CN');
+   const notice=el('login-error');notice.classList.add('wms-password-changed');notice.setAttribute('role','status');
+   notice.dataset.noI18n='';notice.textContent=t('密码已修改，请使用新密码重新登录。','Password changed. Sign in again with your new password.');
+   el('login-username').focus();
+  }else if(err.code==='SESSION_REPLACED'||/已在其他设备登录/.test(err.message)||sessionStorage.getItem('musonoi-session-replaced')==='1'){
    sessionStorage.removeItem('musonoi-session-replaced');replacedSession();
   }
  }

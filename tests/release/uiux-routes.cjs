@@ -82,6 +82,7 @@ function pages(ids){
  add('login','/',[],{screenshot:true});
  add('register-dialog','/',[],{state:'registration dialog'});
  add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles});
+ add('password-dialog','/overview',BOTH,{state:'self-service password dialog',screenshot:true,roles:['production_operator']});
  add('todo','/overview',BOTH,{query:'?management=todos',roles:['sales_operator','logistics_manager']});
  add('overview-detail','/overview/details',BOTH,{query:'?metric=physical'});
  add('warnings','/overview/warning-settings',[CU]);

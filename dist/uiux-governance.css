@@ -872,6 +872,13 @@ body.wms-navigating .workspace :is(#business-page,#dashboard,#inventory,#field) 
   background: var(--uix-warning-soft);
   color: var(--uix-warning);
 }
+#login-panel.login46[data-login-layout="reference"] #login-error.wms-password-changed {
+  margin:0;
+  padding:var(--uix-gap-sm);
+  border-radius:var(--uix-radius);
+  background:var(--uix-success-soft);
+  color:var(--uix-success);
+}
 .wms-import-upload { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: var(--uix-gap); }
 .wms-import-upload .wms-field-grid { margin: 0; }
 .wms-import-file summary { cursor: pointer; }

@@ -182,6 +182,15 @@
       "template": "/overview"
     },
     {
+      "key": "password-dialog",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "self-service password dialog",
+      "template": "/overview"
+    },
+    {
       "key": "todo",
       "products": [
         "CU_CATHODE",

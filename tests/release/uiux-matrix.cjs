@@ -7,8 +7,8 @@ const desktop={width:1366,height:768},large={width:1440,height:900},wide={width:
 const compact={width:1280,height:800};
 const fullSizes=[desktop,compact,large,wide],allSizes=[...fullSizes,phone];
 const standardSizes=[compact,large,phone];
-const narrowKeys=new Set(['overview','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
-const quickKeys=new Set(['overview','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
+const narrowKeys=new Set(['overview','password-dialog','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
+const quickKeys=new Set(['overview','password-dialog','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
 const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator']};
 const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
@@ -95,6 +95,7 @@ function selectors(key,product,landing){
  const checks={
   login:['#login-username','#login-password'],
   'register-dialog':['#registration-modal[open] input[name="username"]'],
+  'password-dialog':['#change-password-form input[name="current_password"]','#change-password-form input[name="new_password"]','#change-password-form input[name="confirm_password"]','#change-password-form button[type="submit"]'],
   overview:['#overview-range, .oa-panel, .co-metal-section'],
   inventory:[co?'.co2-panel':'#inventory input, #page-content input'],
   'cu-bag':['.inventory-archive .archive-identity','.inventory-archive .wms-facts'],
@@ -133,7 +134,7 @@ function selectors(key,product,landing){
   'cu-plan-group-edit':[landing?.endsWith('/edit')?'#single-plan-form input[name="invoice_no"]':'.loading-plan-facts'],
   'cu-plan-order-new':[landing?.endsWith('/edit')?'#single-plan-form input[name="invoice_no"]':'.loading-plan-facts']
  };
- return [...(!['login','register-dialog'].includes(key)?[main]:[]),...(checks[key]||[])];
+ return [...(!['login','register-dialog','password-dialog'].includes(key)?[main]:[]),...(checks[key]||[])];
 }
 
 module.exports={matrix,inventory,expectedLanding,selectors,rowId,imageName,comparable,languages,desktop,phone,missingExceptions,protectedEndpoint};

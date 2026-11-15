@@ -4,4 +4,5 @@ function hashPassword(password){const salt=randomBytes(16).toString('hex');retur
 function verifyPassword(password,stored){const [salt,key]=stored.split(':');const actual=scryptSync(password,salt,64);const expected=Buffer.from(key,'hex');return expected.length===actual.length&&timingSafeEqual(actual,expected);}
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const token=()=>randomBytes(32).toString('hex');
-module.exports={hashPassword,verifyPassword,digest,token};
+const validPassword=value=>typeof value==='string'&&value.length>=12&&value.length<=128;
+module.exports={hashPassword,verifyPassword,digest,token,validPassword};

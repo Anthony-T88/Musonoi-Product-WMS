@@ -17,6 +17,51 @@ test('first batch management security regressions',async t=>{
  const {Client}=require('pg'),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  const blocked=async(mode,relation=null)=>{const end=Date.now()+5000;while(Date.now()<end){const q=await c.query("SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE a.datname=$1 AND NOT l.granted AND (($3::text IS NULL AND l.locktype='advisory' AND l.objid=21002 AND l.mode=$2) OR ($3::text IS NOT NULL AND l.locktype='relation' AND l.relation=to_regclass($3))) LIMIT 1",[d.name,mode,relation]);if(q.rowCount)return;await wait(15);}throw Error('Expected isolated lock waiter was not observed');};
  let root=await login(admin),manager=await login(am),roles=await login(rm),audit=await login(auditor),ordinary=await login(f.accounts.find(a=>a.role==='production_operator'));
+ await check('ordinary account changes only its own password and revokes every old session',async()=>{
+  const user=await account('self_password',viewerRole,scope),prior=await login(user),current=await login(user);
+  const endpoint='/api/v1/auth/change-password',newPassword=crypto.randomBytes(20).toString('base64url');
+  const form={current_password:user.password,new_password:newPassword,confirm_password:newPassword};
+  const submit=(session,payload,product='CO_HYDROXIDE')=>app.inject({method:'POST',url:endpoint,headers:{...session,'x-product-code':product},payload});
+  assert.equal((await submit({},form)).statusCode,401);
+  assert.equal((await submit({...current,'x-csrf-token':'invalid'},form)).statusCode,403);
+  assert.equal((await submit({...current,origin:'https://invalid.example'},form)).statusCode,403);
+  assert.equal((await submit(current,{...form,user_id:admin.id})).statusCode,400);
+  assert.equal((await submit(current,{...form,new_password:'too short',confirm_password:'too short'})).json().code,'NEW_PASSWORD_LENGTH');
+  assert.equal((await submit(current,{...form,confirm_password:user.password})).json().code,'PASSWORD_CONFIRMATION_MISMATCH');
+  const wrong=await submit(current,{...form,current_password:newPassword});
+  assert.equal(wrong.statusCode,400);
+  assert.equal(wrong.json().code,'CURRENT_PASSWORD_INCORRECT');
+  assert.equal((await api(current,'GET','/me')).statusCode,200);
+  assert.equal((await submit(prior,form)).statusCode,401);
+  const results=await Promise.all([submit(current,form),submit(current,form)]);
+  const changed=results.find(r=>r.statusCode===200);
+  assert.deepEqual(results.map(r=>r.statusCode).sort(),[200,401]);
+  assert.equal(changed.cookies.find(c=>c.name==='musonoi_session')?.value,'');
+  assert.equal((await c.query('SELECT count(*)::int n FROM sessions WHERE user_id=$1',[user.id])).rows[0].n,0);
+  for(const session of [prior,current])assert.equal((await api(session,'GET','/me')).statusCode,401);
+  const oldLogin=await app.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:f.appCfg.origin},payload:{username:user.username,password:user.password}});
+  assert.equal(oldLogin.statusCode,401);
+  const live=await login({...user,password:newPassword});
+  assert.equal((await api(live,'GET','/me')).json().role_code,viewerRole);
+  const events=(await c.query("SELECT action,outcome,after_data FROM audit_logs WHERE actor_id=$1 AND action IN ('password_changed','password_change_failed') ORDER BY id",[user.id])).rows;
+  assert.deepEqual(events.map(e=>[e.action,e.outcome]),[['password_change_failed','FAILED'],['password_changed','COMMITTED']]);
+  assert.equal(events[1].after_data.sessions_revoked,true);
+  for(const secret of [user.password,newPassword])assert(!JSON.stringify(events).includes(secret));
+  const reset=crypto.randomBytes(20).toString('base64url');
+  assert.equal((await api(root,'POST','/users/'+user.id+'/reset-password',{password:reset})).statusCode,200);
+  assert.equal((await api(live,'GET','/me')).statusCode,401);
+  assert.equal((await api(await login({...user,password:reset}),'GET','/me')).json().id,user.id);
+ });
+ await check('per-account throttling blocks repeated failures and disabled sessions cannot change passwords',async()=>{
+  const user=await account('password_throttle',viewerRole,scope),session=await login(user);
+  const newPassword=crypto.randomBytes(20).toString('base64url');
+  const endpoint='/auth/change-password',body={current_password:newPassword,new_password:newPassword,confirm_password:newPassword};
+  for(let i=0;i<5;i++)assert.equal((await api(session,'POST',endpoint,body,'127.42.0.'+(i+1))).json().code,'CURRENT_PASSWORD_INCORRECT');
+  assert.equal((await api(session,'POST',endpoint,{...body,current_password:user.password})).statusCode,429);
+  assert.equal((await api(session,'GET','/me')).statusCode,200);
+  assert.equal((await api(root,'PATCH','/users/'+user.id,{active:false})).statusCode,200);
+  assert.equal((await api(session,'POST',endpoint,body)).statusCode,401);
+ });
  await check('restricted role manager cannot add account management to its own role',async()=>{const v=(await c.query('SELECT version FROM roles WHERE code=$1',[rm.role])).rows[0].version;assert.equal((await api(roles,'PUT','/security/roles/'+rm.role,{version:v,permissions:['roles:manage','users:manage','inventory:read','master:read']})).statusCode,403);});
  await check('restricted account listing excludes outside administrators and multi-project targets',async()=>{const r=await api(manager,'GET','/users');assert.equal(r.statusCode,200);assert(!r.json().items.some(u=>u.id===outsideAdmin.id||u.id===multiViewer.id));assert(r.json().items.some(u=>u.id===ownViewer.id));});
  await check('restricted account manager cannot reset an outside administrator password',async()=>{assert([403,404].includes((await api(manager,'POST','/users/'+outsideAdmin.id+'/reset-password',{password:crypto.randomBytes(20).toString('base64url')})).statusCode));});
@@ -138,9 +183,13 @@ test('first batch management security regressions',async t=>{
    assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,Chain.load().length-appliedCount);
    const after=await snapshot();
    for(const table of ['users','roles','user_scopes','audit_logs'])assert.deepEqual(after[table],before[table],table);
-   const priorGrants=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg(to_jsonb(t)::text,'' ORDER BY to_jsonb(t)::text),'')) digest FROM role_permissions t WHERE permission_code NOT LIKE 'export-license:%'`)).rows[0];
+   const dispatchGrants=['admin/dispatch:month','sales_manager/dispatch:month','sales_manager/dispatch:read','sales_operator/dispatch:month','sales_operator/dispatch:read'];
+   const grantKey="role_code||'/'||permission_code";
+   const {rows:addedDispatch}=await old.client.query('SELECT '+grantKey+' AS key FROM role_permissions WHERE '+grantKey+'=ANY($1::text[])',[dispatchGrants]);
+   assert.deepEqual(addedDispatch.map(row=>row.key).sort(),dispatchGrants);
+   const priorGrants=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg(to_jsonb(t)::text,'' ORDER BY to_jsonb(t)::text),'')) digest FROM role_permissions t WHERE permission_code NOT LIKE 'export-license:%' AND NOT (${grantKey}=ANY($1::text[]))`,[dispatchGrants])).rows[0];
    assert.deepEqual(priorGrants,before.role_permissions);
-   assert.equal(after.role_permissions.n,before.role_permissions.n+12);
+   assert.equal(after.role_permissions.n,before.role_permissions.n+12+dispatchGrants.length);
    assert.equal(after.sessions.n,before.sessions.n-1);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
    const oldApp=await require('../../server/app.cjs').build({config:fixture.appCfg});try{const r=await oldApp.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:fixture.appCfg.origin},payload:{username:who.username,password:who.password}});assert.equal(r.statusCode,200);const cookie=r.cookies.map(x=>x.name+'='+x.value).join('; ');assert.equal((await oldApp.inject({url:'/api/v1/v27/audit/'+event,headers:{cookie,origin:fixture.appCfg.origin}})).statusCode,200);}finally{await oldApp.close();}
   }finally{await old.client.end();}

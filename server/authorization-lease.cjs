@@ -1,5 +1,5 @@
 'use strict';
-function requiresLease(req){return !['GET','HEAD','OPTIONS'].includes(req.method)&&!/^\/api\/v1\/(?:users(?:\/|$)|security\/(?:roles|policy)(?:\/|$)|me\/language(?:\/|$))/.test(req.url.split('?')[0]);}
+function requiresLease(req){return !['GET','HEAD','OPTIONS'].includes(req.method)&&!/^\/api\/v1\/(?:users(?:\/|$)|security\/(?:roles|policy)(?:\/|$)|me\/language(?:\/|$)|auth\/change-password$)/.test(req.url.split('?')[0]);}
 function cancelled(req){if(req.authorizationCancelled||req.raw?.aborted)throw Object.assign(Error('Request cancelled'),{statusCode:408,code:'AUTHORIZATION_CANCELLED'});}
 function healthy(req){if(req.authorizationLeaseError)throw Object.assign(Error('Authorization connection lost'),{statusCode:503,code:'AUTHORIZATION_CONNECTION_LOST'});}
 async function lockBusiness(c,req){healthy(req);if(!req.authorizationLease)await c.query('SELECT pg_advisory_xact_lock_shared(21002)');}

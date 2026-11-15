@@ -26,9 +26,9 @@ function sourceInventory(root){
  return {source,css};
 }
 
-async function inspect(page,guest=false,checks=[]){
- return page.evaluate(({guest,checks})=>{
-  const root=guest?document.querySelector('#login-panel'):['#page-content','#dashboard','#inventory','#field'].map(s=>document.querySelector(s)).find(n=>n?.getBoundingClientRect().height);
+async function inspect(page,guest=false,checks=[],dialog=''){
+ return page.evaluate(({guest,checks,dialog})=>{
+  const root=dialog?document.querySelector(dialog):guest?document.querySelector('#login-panel'):['#page-content','#dashboard','#inventory','#field'].map(s=>document.querySelector(s)).find(n=>n?.getBoundingClientRect().height);
   const visible=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return !!r.width&&!!r.height&&s.visibility!=='hidden'&&s.display!=='none';};
   const readable=e=>String(e?.innerText||e?.getAttribute('aria-label')||e?.getAttribute('title')||'').trim().replace(/\s+/g,' ');
   const controls=[...root?.querySelectorAll('button,a[href],input,select,textarea')||[]].filter(visible);
@@ -127,7 +127,7 @@ async function inspect(page,guest=false,checks=[]){
    filters:[...root?.querySelectorAll('form.filters,[role=search]')||[]].filter(visible).length,styles,
    contrastCandidates,forbiddenFields,verifiedControls:Object.fromEntries(checks.map(s=>[s,[...document.querySelectorAll(s)].some(visible)])),
    empty:!root||(!readable(root)&&!controls.length),hasContent:!!root&&readable(root).length>20};
- },{guest,checks});
+ },{guest,checks,dialog});
 }
 
 function outcome(metrics,errors,status){
@@ -175,7 +175,7 @@ async function scan({out,phase='current',mode='full'}){
    const {screenshot,...row}=entry;
    const checks=M.selectors(row.key,row.product,M.expectedLanding(spec,row.product,ids));
    row.renderedUrl=M.comparable(page.url());
-   row.metrics=failure?{}:await inspect(page,row.role==='guest',checks);
+   row.metrics=failure?{}:await inspect(page,row.role==='guest',checks,row.key==='password-dialog'?'#dialog[open]':'');
    row.outcome=failure?'failed':outcome(row.metrics,errors,httpStatus);
    row.httpStatus=httpStatus;row.errors=[...errors];
   if(entry.apiDenial){
@@ -257,11 +257,19 @@ async function scan({out,phase='current',mode='full'}){
        await bounded(page.evaluate(url=>Router.go(url),spec.url));
        await ready(page);
        await page.evaluate(()=>document.querySelector('#task-notice[open] [data-task-dismiss]')?.click());
+       if(key==='password-dialog'){
+        await page.locator('.p46-account-menu > summary').click();
+        await page.locator('#change-password').click();
+       }
       }catch(e){failure=String(e.message).split('\n')[0];}
       for(const entry of viewports){
        await page.setViewportSize(entry.size);
        await settle(page);
        await record(page,spec,entry,httpStatus,errors,failure);
+      }
+      if(key==='password-dialog'&&!failure){
+       await page.locator('#change-password-cancel').click();
+       await page.locator('#dialog[open]').waitFor({state:'hidden'});
       }
       if(failure){await page.goto(origin+'/overview',{timeout:10000});await ready(page);}
       if(evidence.cases.length%10===0||failure)report();

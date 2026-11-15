@@ -71,6 +71,12 @@ async function build(options={}){
  return {csrfToken:session.csrfToken,user:session.user};
  });
  app.get('/api/v1/me',{preHandler:auth},async req=>{const {csrf_hash,...u}=req.user;return u;});
+ app.post('/api/v1/auth/change-password',{preHandler:[auth,csrf]},async(req,reply)=>{
+  const {status,code,error}=await LoginSession.changePassword(pool,req,AccountPolicy.allowed);
+  if(status!==200)return reply.code(status).send({code,error});
+  reply.clearCookie('musonoi_session',{path:'/',httpOnly:true,sameSite:'strict',secure:cfg.secure});
+  return {ok:true};
+ });
  app.post('/api/v1/auth/csrf',{preHandler:auth},async req=>{
   if(req.headers.origin!==cfg.origin)throw problem(403,'请求来源不受信任');
   const sid=req.cookies.musonoi_session,value=LoginSession.csrf(sid),hash=digest(value);

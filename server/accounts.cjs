@@ -1,5 +1,5 @@
 'use strict';
-const B=require('./business-common.cjs'),transaction=require('./account-transaction.cjs'),{hashPassword}=require('./security.cjs');
+const B=require('./business-common.cjs'),transaction=require('./account-transaction.cjs'),{hashPassword,validPassword}=require('./security.cjs');
 const roles=['admin','export_supervisor','logistics_manager','site_supervisor','logistics_office_operator','logistics_field_operator','production_operator','production_manager'];
 const S=require('./management-security.cjs');
 const publicUser=u=>Object.fromEntries(Object.entries(u).filter(([k])=>!['password_hash','contact_phone','contact_email'].includes(k)));
@@ -19,7 +19,7 @@ function contacts(b){
  return result;
 }
 function body(b,keys){if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!keys.includes(k)))throw B.error(400,'账号参数无效');}
-function password(p){if(typeof p!=='string'||p.length<12||p.length>128)throw B.error(400,'密码须为12—128字符');return hashPassword(p);}
+function password(p){if(!validPassword(p))throw B.error(400,'密码须为12—128字符');return hashPassword(p);}
 async function role(c,r){if(!await require('./role-catalog.cjs').valid(c,r))throw B.error(400,'请选择有效角色');return r;}
 function name(v){if(typeof v!=='string'||!v.trim()||v.trim().length>80)throw B.error(400,'请输入有效显示名称');return v.trim();}
 async function pending(c,id){return (await c.query(`SELECT

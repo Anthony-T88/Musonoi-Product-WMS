@@ -1,7 +1,7 @@
 {
   "version": "4.8.2",
   "auditRevision": "v482-local",
-  "revision": "4.8.2-ui1",
+  "revision": "4.8.2-ui2",
   "files": [
     {
       "path": ".dockerignore",
@@ -949,7 +949,7 @@
     },
     {
       "path": "dist/audit-labels.js",
-      "sha256": "8153c5aa85f53c57da7e37c5aa2fa5f79d205a1a970d65e8ff06da90ec17dd87"
+      "sha256": "48fb01493fbe2563f7f6dd0742efea773764b4a1c2acb3da2e1488c7478d29ea"
     },
     {
       "path": "dist/audit468r6.css",
@@ -961,7 +961,7 @@
     },
     {
       "path": "dist/boot.js",
-      "sha256": "b87940c8e9907143c51b7cc4ae409a4bfd0ffe154cbe1eb810921a541d5fd7c0"
+      "sha256": "1eeb7371a8985714a875583419027f88f886346c9e9169d1b52b04cd7672cfcd"
     },
     {
       "path": "dist/bundle-number.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "b7438d97b431c358c3766709d18c4a4b2af133248b3eb92a44a274e11eaedee2"
+      "sha256": "246775fad95b61bf0b3e829a27436b1c43aa98f775bac921bd034caafe2d84ce"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "07d0250456ab545de778981bad8b49db6e5a5df2ca7c527d56b6b054605b73f6"
+      "sha256": "580f8b3bb7d4a719f14a557a89e33834eac32351762bb6c14f26a6ea3646acd2"
     },
     {
       "path": "dist/reports463.js",
@@ -1449,7 +1449,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "45e3ffd69a2562f81cf1e37a92752bd1539fe1f4865f9951e27e1be7eaeb9c8b"
+      "sha256": "758bc68d2d99d02779c3367a6d4ad5b10ca297b0be65ddbf9f19088ad7750eba"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1497,7 +1497,7 @@
     },
     {
       "path": "dist/ui46-pages.js",
-      "sha256": "0655bdb8f917ffc7e7cc618225e4c7df3f9bb763a5bd3010945d572e46aa0001"
+      "sha256": "d44b5c0b5ef9145c0ee97687c7b453e32e2a0fd0f140d75cae5cbac02b97bbc7"
     },
     {
       "path": "dist/ui46.css",
@@ -1533,7 +1533,7 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "sha256": "bb63cfecac04df418e86c9315daca69b9b9a8fe2f2554f36bc4fc629d74d7d3e"
+      "sha256": "148d2a1e837706cb32cff331bb80e482bd3317f20fa05a4be4946a8506cda122"
     },
     {
       "path": "dist/ux-r4.css",
@@ -1809,7 +1809,7 @@
     },
     {
       "path": "server/accounts.cjs",
-      "sha256": "5c7759d5bd5be880ab6c8f73631683f7b215b66bbec817df278dbd1585cbdf87"
+      "sha256": "a2a64259299718353784b0a6b502760812446b9df1a3edcab6c9daa4ae289b5c"
     },
     {
       "path": "server/activity-people.cjs",
@@ -1825,7 +1825,7 @@
     },
     {
       "path": "server/app.cjs",
-      "sha256": "1fc11925d1dadf87bd5e8ec8db83496a3b41c04a3523c1ecc25047ab890dba34"
+      "sha256": "1ebfe76838da54c8ad3c66b8e6dad39095f3cbbedbfbcf7d759823f0905bf5a0"
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -1845,7 +1845,7 @@
     },
     {
       "path": "server/authorization-lease.cjs",
-      "sha256": "60a37d05add80a8baf500cc239f1895566e88d3075690c91a5837fa61972875d"
+      "sha256": "e0fefceefc62faf6da4623972a960c5d7d19e37739fdb1cba3446d507a99757c"
     },
     {
       "path": "server/bundle-archive-documents.cjs",
@@ -2069,7 +2069,7 @@
     },
     {
       "path": "server/login-session.cjs",
-      "sha256": "5848c0d3941c234192942825d879cfc3c3ff6f279fa78b3ec7027f223c224fc9"
+      "sha256": "a0fba0d8e41322367b03c559c328d377b78d86851509f555e6bd907fbfd670ef"
     },
     {
       "path": "server/management-labels.cjs",
@@ -2149,7 +2149,7 @@
     },
     {
       "path": "server/product-context.cjs",
-      "sha256": "b5452b62e5d0a68493e4be8d20b22e48e016632ec94c549641cd97e920010f87"
+      "sha256": "8e70fc371a93f9c3772004c28dac92aa7281fbc58e0d32cd330cd632fc7a6a08"
     },
     {
       "path": "server/production-receipt-reader.cjs",
@@ -2185,7 +2185,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "ec6d34a0747e71b0e208387314f6edd41092e4ddc49ce543eb5ce0b5a7ff4d97"
+      "sha256": "f93a7a7709d2a5f6459ff4b5d1e76f08ff6bf363aaa6efb32acfd6e87dd713ae"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2241,7 +2241,7 @@
     },
     {
       "path": "server/security.cjs",
-      "sha256": "48b9e3f9180643589f9bfcba5ea2224022a39048cfd604388e31e2c7dac97519"
+      "sha256": "7a0bc0edbd038b6a5f196f2539ae5527d919368092dd71185500d8964785fd43"
     },
     {
       "path": "server/service-errors.cjs",
@@ -2501,7 +2501,7 @@
     },
     {
       "path": "tests/release/security.test.cjs",
-      "sha256": "1007b53e0eb974e95ded00610350d6b8d6864a6972493ee959063d50ded913f2"
+      "sha256": "94370c11037055655cc5b090c8313e7c7d3d6092202af1ed44d9fefb3901ba9c"
     },
     {
       "path": "tests/release/shipment-reports.cjs",
@@ -2525,7 +2525,7 @@
     },
     {
       "path": "tests/release/uiux-audit.cjs",
-      "sha256": "d419e5cfbce75cf02571f640b5dfc29b393aa369e1f3dde3e49ee2b53101267f"
+      "sha256": "83e54d2649c2cece8d1f33b7b4fc8c54708eefe7634aa60aede2762227688cae"
     },
     {
       "path": "tests/release/uiux-baselines/inventory_CU_CATHODE_zh-CN_admin_390.png",
@@ -2569,11 +2569,11 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "cc327506e499d62194a38be56c541a9e7c9865f46c55a60d152dbe252d44dfd3"
+      "sha256": "244ae7b5b848ce23d3466774ea2d39c8a12ba18c59e6913d6e62085cdfd77d71"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
-      "sha256": "428f3805f01f3c5d7ab8f1bc5ce503caf392eff8a7e342ebb9e39e42d0ede711"
+      "sha256": "9578cff38a37d24c4ddc8c51277cda5fdca48108a50d7d0d48d39ab75a78af22"
     },
     {
       "path": "tests/release/uiux-quality.cjs",
@@ -2581,7 +2581,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "fcd818619f6bcad8d25c4f594bbb06886c0e4f9d62b1bc4986257c3900ab42fa"
+      "sha256": "add5190d3c99c4fcd1bfa7ad57808b5637d8a61b3d06415a80a2a9650fcd80c9"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
