@@ -58,6 +58,7 @@
       "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
       "^\\/preparation\\/work-plans$",
       "^\\/preparation\\/work-plans\\/([0-9a-f-]{36})$",
+      "^\\/preparation\\/work-plans\\/new$",
       "^\\/receipts$",
       "^\\/receipts\\/([0-9a-f-]{36})$",
       "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
@@ -137,6 +138,7 @@
       "^\\/preparation\\/plans\\/([0-9a-f-]{36})\\/shipping$",
       "^\\/preparation\\/work-plans$",
       "^\\/preparation\\/work-plans\\/([0-9a-f-]{36})$",
+      "^\\/preparation\\/work-plans\\/new$",
       "^\\/receipts$",
       "^\\/receipts\\/([0-9a-f-]{36})$",
       "^\\/receipts\\/(new|[0-9a-f-]{36}\\/edit)$",
@@ -685,6 +687,15 @@
       ],
       "state": "standard",
       "template": "/preparation/work-plans"
+    },
+    {
+      "key": "preparation-batch",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "batch draft entry",
+      "template": "/preparation/work-plans/new"
     },
     {
       "key": "cu-work-plan-detail",

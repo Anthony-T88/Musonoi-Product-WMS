@@ -176,6 +176,10 @@ async function build(options={}){
    app.get('/'+area+'/historical'+suffix,(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{permission:Backfill.authorizePage(auth,area)}));
   }
  }
+ app.get('/preparation/work-plans/new',(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{permission:async request=>{
+  await auth(request);
+  require('./preparation-plans.cjs').assertCreate(request.user);
+ }}));
  for(const route of ['/preparation/work-plans','/preparation/work-plans/:id'])app.get(route,(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{permission:async request=>{
   await auth(request);
   require('./preparation-plans.cjs').assertRead(request.user,request.cookies.musonoi_product);

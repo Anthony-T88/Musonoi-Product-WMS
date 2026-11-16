@@ -43,9 +43,11 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false){
  const v31=await LP.enabled(c),selected=v31?' AND NOT i.plan_removed':'';const q=req.query||{},page=Number(q.page||1);if(!Number.isInteger(page)||page<1||page>100000)throw C.error(400,'页码无效');
  const values=[req.user.id],parts=[scope];if(formal)parts.push(includeApproved?packingEligible:posted);
  const bind=v=>{values.push(v);return '$'+values.length;};
- for(const key of ['search','document_status','contract_no','customer','outbound_no','vehicle_no','status','plan_id','start','end'])if(q[key]!==undefined&&(typeof q[key]!=='string'||q[key].length>160))throw C.error(400,'筛选参数无效');
- if(q.search){const p=bind('%'+q.search.trim()+'%');parts.push(`(l.code ILIKE ${p} OR l.vehicle_no ILIKE ${p} OR cu.name ILIKE ${p} OR d.document_no ILIKE ${p} OR EXISTS(SELECT 1 FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id AND (x.packing_list_no ILIKE ${p} OR x.invoice_no ILIKE ${p} OR x.shipment_batch_no ILIKE ${p})) OR EXISTS(SELECT 1 FROM loading_items z JOIN reservations rr ON rr.id=z.reservation_id JOIN allocations aa ON aa.id=rr.allocation_id JOIN sales_plans pp ON pp.id=aa.plan_id LEFT JOIN customer_contracts kk ON kk.id=pp.contract_id WHERE z.loading_id=l.id AND(aa.lot_no ILIKE ${p} OR kk.contract_no ILIKE ${p})))`);}
+ for(const key of ['search','document_status','contract_no','customer','outbound_no','vehicle_no','status','plan_id','start','end','customer_id','created_date'])if(q[key]!==undefined&&(typeof q[key]!=='string'||q[key].length>160))throw C.error(400,'筛选参数无效');
+ if(q.search){const p=bind('%'+q.search.trim()+'%');parts.push(`(l.code ILIKE ${p} OR l.vehicle_no ILIKE ${p} OR t.fields->>'vehicle_no' ILIKE ${p} OR EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' AND cr.proposed_data->>'vehicle_no' ILIKE ${p}) OR cu.name ILIKE ${p} OR d.document_no ILIKE ${p} OR EXISTS(SELECT 1 FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id AND (x.packing_list_no ILIKE ${p} OR x.invoice_no ILIKE ${p} OR x.shipment_batch_no ILIKE ${p})) OR EXISTS(SELECT 1 FROM loading_items z JOIN reservations rr ON rr.id=z.reservation_id JOIN allocations aa ON aa.id=rr.allocation_id JOIN sales_plans pp ON pp.id=aa.plan_id LEFT JOIN customer_contracts kk ON kk.id=pp.contract_id WHERE z.loading_id=l.id AND(aa.lot_no ILIKE ${p} OR kk.contract_no ILIKE ${p})))`);}
  if(q.document_status){if(!['GENERATED','MISSING'].includes(q.document_status))throw C.error(400,'单证筛选无效');parts.push(q.document_status==='GENERATED'?'d.loading_id IS NOT NULL':'d.loading_id IS NULL');}
+ if(q.customer_id)parts.push('l.customer_id='+bind(C.uuid(q.customer_id)));
+ if(q.created_date)parts.push("(l.created_at AT TIME ZONE 'Africa/Lubumbashi')::date="+bind(C.date(q.created_date)));
  if(q.customer)parts.push('cu.name ILIKE '+bind('%'+q.customer.trim()+'%'));
  if(q.vehicle_no){const p=bind('%'+q.vehicle_no.trim()+'%');parts.push(`(l.vehicle_no ILIKE ${p} OR t.fields->>'vehicle_no' ILIKE ${p} OR EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' AND cr.proposed_data->>'vehicle_no' ILIKE ${p}))`);}
  if(q.outbound_no){const p=bind('%'+q.outbound_no.trim()+'%');parts.push(`(l.code ILIKE ${p} OR EXISTS(SELECT 1 FROM outbound_orders oo WHERE oo.loading_id=l.id AND oo.code ILIKE ${p}) ${v31?`OR EXISTS(SELECT 1 FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id AND x.packing_list_no ILIKE ${p})`:""})`);}
@@ -84,7 +86,10 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false){
  }
  const {rows}=await c.query(`SELECT data FROM (SELECT live.id,live.created_at,to_jsonb(live) data FROM (${live}) live${archive}) records
   ORDER BY created_at DESC,id LIMIT 30 OFFSET ${bind((page-1)*30)}`,values);
- return {items:rows.map(({data:r})=>({...r,internal_loading_no:r.code,outbound_no:r.historical_import?r.outbound_no:r.packing_list_no||r.document_no||r.outbound_no})),total,page,page_size:30,state_counts,scope_total:visibleTotal};
+ const customer_options=includeHistory?(await c.query(`SELECT DISTINCT cu.id,cu.name FROM copper_customers cu WHERE EXISTS(
+  SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=cu.project_id AND(s.customer_id IS NULL OR s.customer_id=cu.id))
+  ORDER BY cu.name,cu.id`,[req.user.id])).rows:undefined;
+ return {customer_options,items:rows.map(({data:r})=>({...r,internal_loading_no:r.code,outbound_no:r.historical_import?r.outbound_no:r.packing_list_no||r.document_no||r.outbound_no})),total,page,page_size:30,state_counts,scope_total:visibleTotal};
 }
 async function progress(c,req,id){
  const p=await A.planAccess(c,req,id),values=[req.user.id,p.id];

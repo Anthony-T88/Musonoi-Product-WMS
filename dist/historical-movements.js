@@ -45,7 +45,7 @@ window.HistoricalMovements={
  },
  kind(code){
   const labels={RECEIPT:['历史入库单','Historical Receipt'],LOADING_PLAN:['历史装车计划','Historical Loading Plan'],
-   LOADING_ORDER:['历史装车单','Historical Loading Order'],OUTBOUND:['历史出库库存记录','Historical Outbound Stock Record']};
+   LOADING_ORDER:['历史装车单','Historical Loading Order'],OUTBOUND:['历史出库单','Historical Outbound Order']};
   return this.t(...labels[code]);
  },
  documentRoute(path){return /^\/(receipts|loading-plans|outbounds|stock-outbound|inventory)\/historical(?:\/[0-9a-f-]{36})?$/.test(path);},
@@ -64,12 +64,39 @@ window.HistoricalMovements={
   const query=product?'?'+new URLSearchParams({product}):'';
   return '<a class="button secondary compact" href="'+this.path+'/'+esc(id)+query+'">'+label+'</a>';
  },
- links(documents){
-  return documents.map(doc=>{
+ links(documents,{current,stock,source}={}){
+  const t=this.t,entries=documents.filter(doc=>doc.id!==current).map(doc=>{
    const area=Object.keys(this.kinds).find(key=>this.kinds[key]===doc.kind);
-   return '<li>'+this.kind(doc.kind)+' · '+(this.canArea(area)?'<a href="/'+area+'/historical/'+esc(doc.id)+'">'+esc(doc.document_no)+'</a>':esc(doc.document_no))+
-    ' · '+esc(doc.business_date)+'</li>';
-  }).join('');
+   return {label:this.kind(doc.kind),code:doc.document_no,href:this.canArea(area)?'/'+area+'/historical/'+doc.id:null};
+  });
+  if(stock&&this.canArea('inventory'))entries.push(stock);
+  if(source&&this.canImport())entries.push(source);
+  if(!entries.length)return '';
+  return '<ul class="wms-historical-links">'+entries.map(({label,code,href})=>{
+   const data='<span>'+esc(label)+'</span><small>'+this.text(code)+'</small>';
+   return '<li>'+(href?'<a href="'+esc(href)+'">'+data+'<span class="wms-history-arrow" aria-hidden="true">→</span></a>':'<span>'+data+'</span>')+'</li>';
+  }).join('')+'</ul>';
+ },
+ navigationState(target,replace){
+  if(!this.documentRoute(target.pathname)&&!target.pathname.startsWith(this.path+'/'))return {};
+  if(target.pathname===location.pathname)return {historicalReturn:history.state?.historicalReturn||null};
+  if(replace)return {};
+  return {historicalReturn:{url:location.pathname+location.search+location.hash,product:ProductContext.code}};
+ },
+ back(fallback,zh='返回列表',en='Back to List'){
+  const entry=history.state?.historicalReturn,back=entry?.product===ProductContext.code&&entry.url;
+  return '<a class="button secondary" data-wms-back '+(back?'data-historical-back ':'')+'href="'+esc(back||fallback)+'">'+
+   (back?this.t('返回上一页','Back'):this.t(zh,en))+'</a>';
+ },
+ followReturn(){
+  const link=document.querySelector('[data-historical-back]');
+  if(link)link.onclick=event=>{if(event.button===0&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();event.stopPropagation();history.back();}};
+ },
+ archiveLink(row){
+  const cu=row.product_code==='CU_CATHODE',unit=cu?row.rows?.[0]:null;
+  if(cu&&!unit||!this.canArea('inventory'))return null;
+  return {label:this.t(cu?'捆包详情档案':'批次详情档案',cu?'Bundle Detail Archive':'Lot Detail Archive'),
+   code:cu?unit.unit_id:row.source_facts?.batch_no,href:'/inventory/historical/'+(cu?unit.id:row.source_id)};
  },
  page(zh,en,body,admin=false){
   const title=this.t(zh,en);
@@ -190,6 +217,34 @@ window.HistoricalMovements={
    finally{this.busy=false;if(box.isConnected){progress.textContent='';for(const input of form.elements)input.disabled=false;this.showQueue();}}
   };
  },
+ unitLines(rows,product,linkUnits){
+  const t=this.t,cu=product==='CU_CATHODE',link=cu&&linkUnits&&this.canArea('inventory');
+  return this.table([t(cu?'捆包号':'袋号',cu?'Bundle No.':'Bag No.'),t('铅封号','Seal No.'),
+   ...(cu?[t('捆包片数','Sheets')]:[]),t('毛重（吨）','Gross (MT)'),t('净重（吨）','Net (MT)')],
+   rows.map(r=>[link?'<a href="/inventory/historical/'+esc(r.id)+'">'+this.text(r.unit_id)+'</a>':this.text(r.unit_id),
+    this.text(r.seal_no),...(cu?[CountValues.display(r.sheets_count)]:[]),this.weight(r.gross_kg),this.weight(r.net_kg)]),
+   cu?[2,3,4]:[2,3]);
+ },
+ summary(row,area){
+  const t=this.t,cu=row.product_code==='CU_CATHODE',f=row.source_facts||{},stock=area==='inventory',unit=stock&&cu?row.rows[0]:null;
+  const field=(zh,en,value)=>[t(zh,en),this.text(value)];
+  const lot=field('备货批次号','Preparation Lot Number',f.batch_no);
+  const shipment=field('发运日期','Shipping Date',row.shipping_date);
+  const party=[field('客户','Customer',f.customer),field('合同号','Contract No.',f.contract_no),lot];
+  const totals=[field(cu?'捆包数':'吨包袋数',cu?'Bundles':'Bulk Bags',CountValues.display(row.quantity)),
+   [t('净重（吨）','Net Weight (MT)'),this.weight(row.net_kg)]];
+  const truck=field('车牌','Truck Plate',f.truck),trailer=field('挂车','Trailers',[f.trailer_one,f.trailer_two].filter(Boolean).join(' / '));
+  const packing=field('装箱单号','Packing List No.',row.packing_list_no);
+  if(area==='receipts')return [field('仓库','Warehouse',row.warehouse_name),field('原入库日期','Original Receipt Date',row.original_receipt_date),
+   ...(row.original_receipt_date?[]:[field('历史补录记账日','Historical Posting Date',row.business_date)]),lot,...totals];
+  if(area==='loading-plans')return [packing,field('计划发运日期','Planned Shipping Date',row.shipping_date),...party,truck];
+  if(area==='outbounds')return [packing,shipment,...party,truck,trailer,field('运输商','Transporter',f.transporter),...totals];
+  if(!stock)return [shipment,packing,...party,truck,...totals];
+  if(!cu)return [...party,...totals,field('预计钴金属量（MT）','Estimated Cobalt (MT)',row.estimated_mt),
+   field('ARECOMS 实际确认量（MT）','ARECOMS Confirmed (MT)',null)];
+  return [field('捆包号','Bundle No.',unit?.unit_id),...party,field('捆包片数','Sheets',CountValues.display(unit?.sheets_count)),
+   field('铅封号','Seal No.',unit?.seal_no),[t('净重（吨）','Net Weight (MT)'),this.weight(unit?.net_kg)]];
+ },
  lines(rows,product){
   const t=this.t,cu=product==='CU_CATHODE';
   return this.table([t('原表行','Source Row'),t(cu?'捆包号':'袋号',cu?'Bundle No.':'Bag No.'),t('铅封号','Seal No.'),
@@ -202,7 +257,7 @@ window.HistoricalMovements={
   const t=this.t,f=row.source_facts||row;
   return UI46Pages.factList([
    [t('产品','Product'),this.product(row.product_code)],[t('装箱单号','Packing List No.'),row.packing_list_no||row.document_no],
-   [t('备货批次','Preparation Batch'),f.batch_no],[t('发运日期','Shipping Date'),row.shipping_date||f.shipping_date],
+   [t('备货批次号','Preparation Lot Number'),f.batch_no],[t('发运日期','Shipping Date'),row.shipping_date||f.shipping_date],
    [t('原始入库日期','Original Receipt Date'),row.original_receipt_date],[t('客户','Customer'),f.customer],[t('合同号','Contract No.'),f.contract_no],
    [t('车头号','Truck'),f.truck],[t('挂车','Trailers'),[f.trailer_one,f.trailer_two].filter(Boolean).join(' / ')],
    [t('净重（吨）','Net Weight (MT)'),this.weight(row.net_kg)],[t('原文件','Source File'),row.source_name],
@@ -215,16 +270,20 @@ window.HistoricalMovements={
   // Administrator records may be opened directly from a mixed-product import.
   const api='/historical-movements/'+id,options={headers:requested?{'X-Historical-Product':requested}:{}};
   const r=await API.request(api,options);
-  this.page('历史导入记录','Historical Import Record','<div class="business-toolbar"><a class="button secondary" href="'+this.path+'">'+t('返回导入记录','Back to Imports')+
-   '</a><button type="button" class="button secondary" id="historical-source">'+t('下载原文件','Download Source')+'</button></div>'+
-   this.section('导入资料','Import Information',this.badge()+this.facts(r))+
+  this.page('装箱单来源','Packing List Source',UI46Pages.identity(r.document_no,this.badge()+this.status(r.voided_at?'voided':'imported'),
+   this.back(this.path,'返回导入记录','Back to Imports')+
+   '<button type="button" class="button secondary" id="historical-source">'+t('下载原文件','Download Source')+'</button>','')+
+   this.section('导入资料','Import Information',this.facts(r))+
     (r.documents?.length?this.section('关联单据','Related Documents',r.product_code!==ProductContext.code?
-    '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':'<ol>'+this.links(r.documents)+'</ol>'+
-    (!r.voided_at&&r.product_code===ProductContext.code&&this.canArea('inventory')?'<a class="button secondary" href="'+esc(this.stockPath({packing_list_no:r.document_no,batch_no:r.source_facts.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')):'')+
+    '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':this.links(r.documents,{
+    stock:!r.voided_at?{label:t('查看已出库库存','View Outbound Stock'),code:r.source_facts?.batch_no,
+     href:this.stockPath({packing_list_no:r.document_no,batch_no:r.source_facts?.batch_no})}:null
+   })):'')+
    this.section('原表明细','Source Lines',this.lines(r.rows,r.product_code))+
    (!r.voided_at?this.section('导入纠错','Import Correction','<form id="historical-void" class="user-form"><label>'+t('作废原因','Void Reason')+
     '<textarea name="reason" required minlength="5" maxlength="500"></textarea></label><button class="button danger-outline">'+t('作废该条历史单据','Void Historical Record')+'</button></form>'):
     this.section('作废记录','Void Record',this.text(r.void_reason)))+'<p id="historical-detail-error" class="error" role="alert"></p>',true);
+  this.followReturn();
   $('historical-source').onclick=async()=>{
    try{const file=await API.request(api+'/source',{...options,binary:true}),url=URL.createObjectURL(file.blob),a=document.createElement('a');a.href=url;a.download=r.source_name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
    catch(e){$('historical-detail-error').textContent=I18n.translate(e.message,true);}
@@ -242,19 +301,23 @@ window.HistoricalMovements={
   const api=this.prefix()+'/historical-backfill';
   const row=await API.request(stock?api+'/stock/batch/'+id+'?'+new URLSearchParams({unit:q.get('unit')||''}):api+'/documents/'+id+'?kind='+kind);
   const title=stock?t(cu?'捆包详情档案':'批次详情档案',cu?'Bundle Detail Archive':'Batch Detail Archive'):this.kind(kind);
-  const back=stock?this.stockPath():this.listPath(area);
-  this.page(title,title,'<div class="inventory-archive"><div class="business-toolbar"><a class="button secondary" href="'+back+'">'+t('返回列表','Back to List')+'</a></div>'+
-   this.section(stock?(cu?'捆包资料':'备货批次'):'单据资料',stock?(cu?'Bundle Information':'Preparation Batch'):'Document Information',
-    '<h3>'+esc(stock?(cu?row.rows[0]?.unit_id:row.source_facts.batch_no):row.document_no)+'</h3>'+this.badge()+
-    '<span class="s46-badge">'+(stock?t('已出库','Outbound'):t('历史归档','Archived'))+'</span>'+this.facts(row)+
-    (kind==='RECEIPT'&&!row.original_receipt_date?'<p class="wms-feedback">'+t('历史补录记账日','Historical Posting Date')+' · '+esc(row.business_date)+'</p>':''))+
-   this.section('关联单据','Related Documents','<ol>'+this.links(row.documents)+'</ol>'+
-    (this.canImport()?this.recordLink(row.source_id,row.product_code,t('查看装箱单来源','View Source Packing List')):''))+
+  const code=stock?(cu?row.rows[0]?.unit_id:row.source_facts?.batch_no):row.document_no;
+  const back=stock?this.stockPath():this.listPath(area),outbound=stock||area==='stock-outbound';
+  const summaries={receipts:['入库资料','Receipt Information'],'loading-plans':['计划资料','Plan Information'],
+   outbounds:['车辆与装载','Vehicle and Load'],'stock-outbound':['出库资料','Outbound Information'],inventory:['库存资料','Stock Information']};
+  const related=this.links(row.documents,{current:stock?null:row.id,stock:stock?null:this.archiveLink(row),
+   source:{label:t('装箱单来源','Packing List Source'),code:row.source_name,
+    href:this.path+'/'+row.source_id+'?'+new URLSearchParams({product:row.product_code})}});
+  this.page(title,title,'<div class="inventory-archive wms-historical-detail">'+
+   UI46Pages.identity(code||'—',this.badge()+(outbound?UI.status('OUTBOUND','stock',t('已出库','Outbound')):''),this.back(back),'')+
+   this.section(...summaries[area],UI46Pages.factList(this.summary(row,area)))+
+   (related?this.section('关联单据','Related Documents',related):'')+
    this.section(cu?'逐捆明细':'逐袋明细',cu?'Bundle Details':'Bag Details',
     (stock&&!cu?'<form id="historical-unit-search" class="filters wms-filter-row"><label>'+t('袋号或铅封号','Bag or Seal No.')+
-     '<input type="search" name="unit" maxlength="160" value="'+esc(q.get('unit')||'')+'"></label><button class="button primary">'+t('查询','Search')+'</button></form>':'')+
-    this.lines(row.rows,row.product_code))+'</div>');
-  if($('historical-unit-search'))$('historical-unit-search').onsubmit=e=>{e.preventDefault();Router.go(location.pathname+'?'+new URLSearchParams(new FormData(e.target)));};
+     '<input type="search" name="unit" maxlength="160" value="'+esc(q.get('unit')||'')+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button></div></form>':'')+
+    this.unitLines(row.rows,row.product_code,!stock))+'</div>');
+  this.followReturn();
+  if($('historical-unit-search'))$('historical-unit-search').onsubmit=e=>{e.preventDefault();Router.go(location.pathname+'?'+new URLSearchParams(new FormData(e.target)),true);};
  },
  install(){
   RoutePermissions.register('historical-movements',path=>/^\/(?:workbench\/)?historical-movements(?:\/|$)/.test(path),()=>this.canImport()?undefined:'__historical_admin_only');

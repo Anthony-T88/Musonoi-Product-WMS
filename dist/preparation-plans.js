@@ -42,6 +42,198 @@ window.PreparationPlans={
   $('executable-preparation-filter').onsubmit=e=>{e.preventDefault();Router.go(path+'?'+new URLSearchParams(new FormData(e.target)));};
   CobaltStockUI.bindPager(d);ProductContext.dirty=false;
  },
+ async batch(){
+  const t=this.t,state=this.state.bind(this),co=!ProductContext.isCopper(),api=this.api(),base=(co?'/cobalt':'')+'/sales-workflow/plans';
+  if(!['admin','export_supervisor'].includes(CurrentUser.role_code)||!CurrentUser.permissions.includes('plan:read'))
+   throw Object.assign(Error(t('当前岗位无权创建备货计划','This role cannot create preparation plans')),{statusCode:403});
+  const title=t('新建备货计划','New Preparation Plan'),formId='preparation-plan-batch';
+  const heads=[t('备货批次号','Preparation Lot Number'),t('销售计划','Sales Plan'),t('客户','Customer'),
+   t('发运月份','Shipment Month'),t('校验结果','Validation'),t('操作','Actions')];
+  const back='<a class="button secondary" data-wms-back href="'+this.route+'">'+t('返回备货计划','Back to Plans')+'</a>';
+  const grid='<div class="business-table"><table id="preparation-batch-table" class="wms-table" data-v34-server="true"><thead><tr>'+
+   heads.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody></tbody></table></div>';
+  Router.page(title,'<section class="wms-page" data-page-composed data-no-i18n>'+
+   '<form id="'+formId+'" class="user-form" novalidate><div class="business-toolbar wms-batch-toolbar">'+back+
+   '<button class="button primary">'+t('保存草稿','Save Drafts')+'</button></div>'+
+   '<section class="panel wms-section"><div class="wms-batch-toolbar"><div><h2>'+t('批量录入','Batch Entry')+
+   '</h2><p id="preparation-batch-summary" class="wms-feedback" role="status"></p></div><div class="business-toolbar">'+
+   '<button id="preparation-batch-add" type="button" class="button secondary">'+t('添加一行','Add Row')+'</button>'+
+   '<button id="preparation-batch-paste" type="button" class="button secondary" aria-expanded="false" aria-controls="preparation-paste-panel">'+
+   t('粘贴批次号','Paste Lot Numbers')+'</button></div></div>'+
+   '<label class="wms-field">'+t('查找可选销售计划','Find Available Sales Plans')+'<input type="search" id="preparation-batch-sales-search" maxlength="160"></label>'+
+   '<div id="preparation-paste-panel" class="wms-field" hidden><label for="preparation-paste-text">'+t('批次号（每行一个）','Lot Numbers (one per line)')+'</label>'+
+   '<textarea id="preparation-paste-text" rows="3" spellcheck="false"></textarea><div class="business-toolbar">'+
+   '<button type="button" class="button secondary" id="preparation-paste-insert">'+t('加入录入表','Add to Table')+'</button>'+
+   '<button type="button" class="button secondary" id="preparation-paste-cancel">'+t('取消','Cancel')+'</button></div></div>'+
+   grid+'<p class="error wms-feedback" role="alert"></p></section></form>'+
+   '<details class="panel wms-section" id="preparation-occupied" open><summary>'+t('已占用批次','Occupied Lots')+'</summary>'+
+   '<form class="wms-filter-row filters" id="preparation-occupied-filter" data-v34-reset="true"><label>'+t('查找批次或客户','Find Lot or Customer')+
+   '<input name="search" type="search" maxlength="160"></label><div class="wms-filter-actions"><button type="submit" class="button secondary">'+t('查询','Search')+
+   '</button><button type="button" class="button secondary" id="preparation-occupied-reset">'+t('重置','Reset')+
+   '</button></div></form><div id="preparation-occupied-results" aria-live="polite"></div></details></section>');
+  const form=$(formId),tbody=$('preparation-batch-table').tBodies[0],summary=$('preparation-batch-summary');
+  const alert=form.querySelector('[role=alert]'),lookup=$('preparation-occupied-filter'),lookupResults=$('preparation-occupied-results');
+  const paste=$('preparation-paste-text'),pastePanel=$('preparation-paste-panel'),pasteButton=$('preparation-batch-paste');
+  const salesOptions=new Map();
+  const data=[],newRow=(batch_no='',defaults={})=>({batch_no,sales_plan_id:defaults.sales_plan_id||'',shipment_month:defaults.shipment_month||''});
+  data.push(newRow());
+  let shown=[],saleSequence=0,lookupSequence=0,validationSequence=0,timer;
+  const messages={
+   '发运月无效':t('发运月份无效','Invalid shipment month'),'标识格式无效':t('请选择销售计划','Choose a sales plan'),
+   '备货批次号无效':t('填写批次号','Enter a lot number'),'备货批次号格式无效':t('批次号格式无效','Invalid lot number format'),
+   '录入表内重复':t('录入表内重复','Duplicate in the entry table'),'备货批次号已占用':t('批次已占用','Lot already occupied'),
+   '请选择授权范围内已获批且执行中的销售计划':t('请选择授权范围内已获批且执行中的销售计划','Choose an authorized, approved and open sales plan')
+  };
+  const translate=message=>messages[message]||I18n.translate(message,true);
+  function renderOptions(select,row){
+   const ids=[...new Set([row.sales_plan_id,...shown])].filter(id=>salesOptions.has(id));
+   select.replaceChildren(new Option(t('请选择','Select'),''));
+   for(const id of ids){const p=salesOptions.get(id);select.add(new Option(p.code+' · '+p.customer_name,id));}
+   select.value=row.sales_plan_id;
+  }
+  function render(){
+   tbody.innerHTML=data.map((r,i)=>'<tr data-preparation-row="'+i+'">'+
+    '<td><input type="text" name="batch_no" data-field="batch_no" aria-label="'+t('第 '+(i+1)+' 行备货批次号','Row '+(i+1)+' preparation lot number')+
+    '" aria-describedby="preparation-row-error-'+i+'" maxlength="48" placeholder="'+(co?'RMM-CO-2611-001':'RMM-CU-2611-01')+'" value="'+esc(r.batch_no)+'"></td>'+
+    '<td><select name="sales_plan_id" data-field="sales_plan_id" aria-label="'+t('第 '+(i+1)+' 行销售计划','Row '+(i+1)+' sales plan')+'"></select></td>'+
+    '<td><input name="customer" readonly aria-label="'+t('客户','Customer')+'" value="'+esc(salesOptions.get(r.sales_plan_id)?.customer_name||'')+'"></td>'+
+    '<td><input name="shipment_month" type="month" data-field="shipment_month" aria-label="'+t('第 '+(i+1)+' 行发运月份','Row '+(i+1)+' shipment month')+
+    '" value="'+esc(r.shipment_month)+'"></td><td id="preparation-row-error-'+i+'" data-batch-validation></td>'+
+    '<td><button type="button" data-remove-batch-row class="button secondary compact" aria-label="'+t('移除第 '+(i+1)+' 行','Remove row '+(i+1))+'"'+
+    (data.length===1?' disabled':'')+'>'+t('移除','Remove')+'</button></td></tr>').join('');
+   [...tbody.rows].forEach((tr,i)=>{
+    renderOptions(tr.querySelector('select'),data[i]);
+    [...tr.cells].forEach((cell,j)=>{cell.dataset.label=heads[j];});
+   });
+   $('preparation-batch-add').disabled=data.length>=100;
+   schedule();
+  }
+  function feedback(results){
+   let ready=0;
+   [...tbody.rows].forEach((tr,i)=>{
+    const result=results[i],target=tr.querySelector('[data-batch-validation]');
+    target.textContent=result?.message||t('待校验','Awaiting validation');
+    target.classList.toggle('error',!!result?.invalid);
+    for(const input of tr.querySelectorAll('[data-field]')){
+     if(result?.field===input.name)input.setAttribute('aria-invalid','true');else input.removeAttribute('aria-invalid');
+    }
+    if(result?.ready)ready++;
+   });
+   summary.textContent=t(data.length+' 行 · '+ready+' 行可保存',data.length+' rows · '+ready+' ready');
+  }
+  function localResults(){
+   const counts=new Map();
+   for(const r of data){const key=r.batch_no.trim().toUpperCase();if(key)counts.set(key,(counts.get(key)||0)+1);}
+   return data.map(r=>{
+    const lot=r.batch_no.trim().toUpperCase();
+    if(!lot)return {message:t('填写批次号','Enter a lot number'),field:'batch_no',invalid:true};
+    if(counts.get(lot)>1)return {message:t('录入表内重复','Duplicate in the entry table'),field:'batch_no',invalid:true};
+    if(!r.sales_plan_id)return {message:t('选择销售计划','Choose a sales plan'),field:'sales_plan_id',invalid:true};
+    if(!r.shipment_month)return {message:t('选择发运月份','Choose a shipment month'),field:'shipment_month',invalid:true};
+    return null;
+   });
+  }
+  async function validate(){
+   const sequence=++validationSequence,results=localResults(),check=[];
+   feedback(results);
+   for(const [index,row] of data.entries())if(!results[index])check.push({index,row:{...row}});
+   if(!check.length)return results;
+   const answer=await API.request(api+'/batch/preview',{method:'POST',body:{items:check.map(x=>x.row)}});
+   if(!form.isConnected||sequence!==validationSequence)return null;
+   answer.items.forEach(x=>{
+    const error=x.error,field=error&&(/批次|重复/.test(error)?'batch_no':/销售计划|客户/.test(error)?'sales_plan_id':null);
+    results[check[x.index].index]=error?{message:translate(error),invalid:true,field}:{message:t('可保存','Ready'),ready:true};
+   });
+   feedback(results);return results;
+  }
+  function schedule(){
+   ++validationSequence;
+   clearTimeout(timer);
+   feedback(localResults());
+   timer=setTimeout(()=>{if(form.isConnected&&form.getAttribute('aria-busy')!=='true')validate().catch(error=>{if(form.isConnected)alert.textContent=translate(error.message);});},300);
+  }
+  async function loadSales(){
+   const n=++saleSequence,search=$('preparation-batch-sales-search').value.trim();
+   try{
+    const result=await API.request(base+'?'+new URLSearchParams({status:'OPEN',search}));
+    if(!form.isConnected||n!==saleSequence)return;
+    shown=result.items.map(p=>p.id);
+    for(const p of result.items)salesOptions.set(p.id,p);
+    [...tbody.rows].forEach((tr,i)=>renderOptions(tr.querySelector('select'),data[i]));
+   }catch(e){if(form.isConnected&&n===saleSequence)alert.textContent=translate(e.message);}
+  }
+  async function loadOccupied(page=1){
+   const n=++lookupSequence,q=new URLSearchParams({search:lookup.elements.search.value.trim(),page:String(page)});
+   lookupResults.setAttribute('aria-busy','true');
+   try{
+    const result=await API.request(api+'/occupied?'+q);
+    if(!lookup.isConnected||n!==lookupSequence)return;
+    const source={PLAN:t('备货计划','Preparation Plan'),WORK:t('备货作业','Preparation Work'),HISTORICAL_WORK:t('历史备货作业','Historical Work')};
+    const rows=result.items.map(r=>'<tr><td>'+esc(r.batch_no)+'</td><td>'+esc(r.customer_name||'—')+'</td><td>'+esc(r.shipment_month||'—')+
+     '</td><td>'+esc(r.source==='PLAN'?state(r.state):co?(window.CobaltUI?.states?.[r.state]?CobaltUI.status(r.state):CobaltWorkUI.status(r.state)):I18n.translate(Flow.names[r.state]||r.state,true))+
+     '</td><td>'+source[r.source]+'</td></tr>');
+    lookupResults.innerHTML=(rows.length?ExportLicenses.table([['备货批次号','Preparation Lot Number'],['客户','Customer'],['发运月份','Shipment Month'],['状态','Status'],['来源','Source']],rows,'preparation-occupied-table',true):
+     '<p class="wms-feedback" role="status">'+t('没有符合条件的批次','No matching lots')+'</p>')+
+     '<div class="business-toolbar">'+(page>1?'<button type="button" class="button secondary" data-occupied-page="'+(page-1)+'">'+t('上一页','Previous')+'</button>':'')+
+     (result.has_next?'<button type="button" class="button secondary" data-occupied-page="'+(page+1)+'">'+t('下一页','Next')+'</button>':'')+'</div>';
+   }catch(e){if(lookup.isConnected&&n===lookupSequence)lookupResults.textContent=translate(e.message);}
+   finally{if(lookup.isConnected&&n===lookupSequence)lookupResults.removeAttribute('aria-busy');}
+  }
+  tbody.oninput=e=>{
+   const field=e.target.dataset.field,idx=Number(e.target.closest('tr').dataset.preparationRow);
+   if(!field)return;
+   const r=data[idx];r[field]=e.target.value;
+   if(field==='sales_plan_id'){
+    const p=salesOptions.get(r.sales_plan_id);r.shipment_month=p?.shipment_month||'';
+    const tr=tbody.rows[idx];tr.querySelector('[name=customer]').value=p?.customer_name||'';
+    tr.querySelector('[name=shipment_month]').value=r.shipment_month;
+   }
+   alert.textContent='';ProductContext.dirty=true;schedule();
+  };
+  tbody.onclick=e=>{
+   if(!e.target.matches('[data-remove-batch-row]')||data.length<2)return;
+   const idx=Number(e.target.closest('tr').dataset.preparationRow);
+   data.splice(idx,1);ProductContext.dirty=true;render();
+   tbody.rows[Math.min(idx,data.length-1)].querySelector('[name=batch_no]').focus();
+  };
+  $('preparation-batch-add').onclick=()=>{
+   data.push(newRow('',data[0]));ProductContext.dirty=true;render();tbody.lastElementChild.querySelector('[name=batch_no]').focus();
+  };
+  function closePaste(){pastePanel.hidden=true;pasteButton.setAttribute('aria-expanded','false');paste.value='';pasteButton.focus();}
+  pasteButton.onclick=()=>{if(!pastePanel.hidden)return closePaste();pastePanel.hidden=false;pasteButton.setAttribute('aria-expanded','true');paste.focus();};
+  $('preparation-paste-cancel').onclick=closePaste;
+  $('preparation-paste-insert').onclick=()=>{
+   const lots=paste.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+   if(!lots.length||lots.some(x=>x.length>48)||lots.length+data.filter(r=>r.batch_no.trim()).length>100){
+    alert.textContent=t('每行输入一个批次号，最多 48 字符，每批最多 100 行。','Enter one lot per line, up to 48 characters and 100 rows per batch.');return;
+   }
+   const defaults=data[0],blank=data.filter(r=>!r.batch_no.trim());
+   for(const lot of lots){const row=blank.shift();if(row)row.batch_no=lot;else data.push(newRow(lot,defaults));}
+   alert.textContent='';ProductContext.dirty=true;closePaste();render();
+  };
+  let searchTimer;
+  $('preparation-batch-sales-search').oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(form.isConnected)loadSales();},250);};
+  lookup.onsubmit=e=>{e.preventDefault();loadOccupied();};
+  $('preparation-occupied-reset').onclick=()=>{lookup.reset();loadOccupied();};
+  lookupResults.onclick=e=>{if(e.target.dataset.occupiedPage)loadOccupied(Number(e.target.dataset.occupiedPage));};
+  form.onsubmit=e=>UI46Pages.submit(e,async()=>{
+   clearTimeout(timer);
+   const rows=await validate();
+   if(!rows)return;
+   const bad=rows.findIndex(r=>r.invalid);
+   if(bad>=0){const r=rows[bad];tbody.rows[bad].querySelector('[name="'+(r.field||'batch_no')+'"]').focus();
+    throw Error(t('请修正标记的行后再保存整批草稿。','Correct the marked rows before saving the batch.'));}
+   try{
+    const saved=await API.request(api+'/batch',{method:'POST',body:{items:data.map(r=>({...r}))}});
+    this.recent={product:ProductContext.code,ids:saved.items.map(r=>r.id)};
+    ProductContext.dirty=false;
+    await Router.go(this.route+'?state=DRAFT');
+    notify(t('已保存 '+saved.items.length+' 条备货草稿','Saved '+saved.items.length+' preparation drafts'));
+   }catch(error){if(error.statusCode===409)await validate();throw error;}
+  });
+  ProductContext.dirty=false;
+  render();await Promise.all([loadSales(),loadOccupied()]);
+ },
  fields(p,includeBatch=true){
   const t=this.t,rows=[['销售计划','Sales Plan',p.sales_plan_no],['发运月','Shipment Month',p.shipment_month],['客户','Customer',p.customer_name]];
   if(includeBatch)rows.unshift(['备货批次号','Preparation Lot Number',p.batch_no]);
@@ -51,7 +243,7 @@ window.PreparationPlans={
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q);
   const status=['DRAFT','PENDING','APPROVED','REJECTED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
   const headings=[['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
-  const rows=d.items.map(p=>'<tr><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
+  const recent=this.recent?.product===ProductContext.code?this.recent.ids:[],rows=d.items.map(p=>'<tr'+(recent.includes(p.id)?' class="wms-batch-created"':'')+'><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
    (p.allocation_id||p.co_preparation_id?'<a href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':p.actions.start?'<a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'—')+'</td></tr>');
   Router.page(t('备货计划','Preparation Plans'),'<section class="wms-page" data-page-composed data-no-i18n>'+
    '<div class="business-toolbar">'+(d.can_create?'<button type="button" id="preparation-plan-create" class="button primary">'+t('新建备货计划','New Preparation Plan')+'</button>':'')+
@@ -62,7 +254,7 @@ window.PreparationPlans={
    '<button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+this.route+'">'+t('重置','Reset')+'</a></div></form>'+
    ExportLicenses.table(headings,rows,'preparation-plans-table',true)+CobaltStockUI.pager(d.page,d.total,d.page_size)+'</section>');
   $('preparation-plan-filter').onsubmit=e=>{e.preventDefault();Router.go(this.route+'?'+new URLSearchParams(new FormData(e.target)));};
-  if($('preparation-plan-create'))$('preparation-plan-create').onclick=()=>this.form();
+  if($('preparation-plan-create'))$('preparation-plan-create').onclick=()=>Router.go(this.route+'/new');
   CobaltStockUI.bindPager(d);ProductContext.dirty=false;
  },
  async detail(id){
@@ -132,8 +324,9 @@ window.PreparationPlans={
   load();
  }
 };
-RoutePermissions.register('preparation-plans',path=>/^\/preparation\/work-plans(?:\/[0-9a-f-]{36})?$/.test(path),()=>PreparationPlans.readPermission()||'plan:read');
+RoutePermissions.register('preparation-plans',path=>/^\/preparation\/work-plans(?:\/(?:new|[0-9a-f-]{36}))?$/.test(path),()=>PreparationPlans.readPermission()||'plan:read');
 Router.add(/^\/preparation\/work-plans$/,()=>PreparationPlans.list());
+Router.add(/^\/preparation\/work-plans\/new$/,()=>PreparationPlans.batch());
 Router.add(/^\/preparation\/work-plans\/([0-9a-f-]{36})$/,id=>PreparationPlans.detail(id));
 Object.assign(ManagementLabels.names,{PREPARATION_PLAN_REVIEW:'备货计划审批'});
 Object.assign(ManagementLabels.en,{'备货计划审批':'Preparation Plan Review'});

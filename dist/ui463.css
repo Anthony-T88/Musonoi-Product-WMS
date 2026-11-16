@@ -78,7 +78,7 @@ html[data-release-ui="46"] .p46-root .r463-page form.r463-filter{padding:0!impor
 .r481-report .r481-toolbar select{min-height:var(--uix-control)}
 .r481-report .r481-scope{background:var(--uix-info-soft);color:var(--uix-info);padding:var(--uix-gap-sm);margin:0 0 var(--uix-gap-sm)}
 .r481-report .r481-scope button{margin-inline-start:var(--uix-gap-sm)}
-#page-content .r481-report .r463-table .r481-number{text-align:end!important;font-variant-numeric:tabular-nums;white-space:nowrap}
+#page-content .r481-report .r463-table .r481-number{text-align:center!important;font-variant-numeric:tabular-nums;white-space:nowrap}
 .r481-report .r481-progress{display:inline-flex;align-items:center;gap:var(--uix-gap-xs)}
 .r481-report .r481-progress progress{width:4rem;accent-color:var(--uix-brand)}
 @media(max-width:700px){

@@ -122,7 +122,26 @@ async function inspect(page,guest=false,checks=[],dialog=''){
   const components=Object.keys(componentSelectors).filter(key=>
    [...document.querySelectorAll(componentSelectors[key])].some(node=>visible(node)&&(root?.contains(node)||node.closest('dialog[open]'))));
   const design={family:root?.dataset.pageFamily||'',components,theme:getComputedStyle(document.documentElement).getPropertyValue('--uix-control').trim()};
-  return {title,notice,design,languageCandidates,headings:headings.length,duplicates:[...new Set(duplicates)],repeatedLinks:[...new Set(repeatedLinks)],
+  let centeredColumns=0;
+  const columnAlignment=[];
+  for(const table of root?.querySelectorAll('table')||[]){
+   if(!visible(table)||table.closest('.packing-sheet,.print-page,.shipping-preview,.r10-history.compact'))continue;
+   const titles=table.tHead?.rows;
+   if(titles?.length!==1||titles[0].getBoundingClientRect().height<=1)continue;
+   const head=[...titles[0].cells];
+   if(!head.length||head.some(cell=>cell.colSpan!==1||!visible(cell)))continue;
+   const rows=[...table.tBodies].flatMap(body=>[...body.rows]).filter(row=>row.cells.length===head.length&&
+    [...row.cells].every(cell=>cell.colSpan===1&&visible(cell)&&getComputedStyle(cell).display==='table-cell'));
+   head.forEach((title,index)=>{
+    const center=el=>{const r=el.getBoundingClientRect();return r.left+r.width/2;};
+    if(getComputedStyle(title).textAlign==='center'&&rows.every(row=>{
+     const cell=row.cells[index];
+     return getComputedStyle(cell).textAlign==='center'&&Math.abs(center(cell)-center(title))<=2;
+    }))centeredColumns++;
+    else columnAlignment.push({table:signature(table),heading:readable(title)});
+   });
+  }
+  return {title,notice,design,languageCandidates,centeredColumns,columnAlignment,headings:headings.length,duplicates:[...new Set(duplicates)],repeatedLinks:[...new Set(repeatedLinks)],
    noName,actionClips,filterClips,overflow,widest,controls:controls.length,tableCount:[...root?.querySelectorAll('table')||[]].filter(visible).length,
    filters:[...root?.querySelectorAll('form.filters,[role=search]')||[]].filter(visible).length,styles,
    contrastCandidates,forbiddenFields,verifiedControls:Object.fromEntries(checks.map(s=>[s,[...document.querySelectorAll(s)].some(visible)])),

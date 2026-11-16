@@ -294,7 +294,72 @@ html[data-release-ui="46"] #business-page:has([data-wms-back]) #page-back {displ
   }
 }
 
+/* Preparation batch entry and historical document links. */
+#preparation-plan-batch{max-width:none;padding:0;background:transparent;border:0;box-shadow:none}
+.wms-batch-toolbar{display:flex;justify-content:space-between;align-items:center;gap:var(--uix-gap);flex-wrap:wrap}
+#preparation-plan-batch :is(.business-toolbar,.wms-field){margin-block:var(--uix-gap-sm)}
+#preparation-batch-table{min-width:45rem;table-layout:fixed}
+#preparation-batch-table :is(input,select){width:100%;min-width:0;text-align:center}
+#preparation-batch-table th:nth-child(1){width:24%}
+#preparation-batch-table th:nth-child(2){width:22%}
+#preparation-batch-table th:nth-child(3){width:16%}
+#preparation-batch-table th:nth-child(4){width:16%}
+#preparation-batch-table th:nth-child(5){width:14%}
+#preparation-occupied summary{font-weight:var(--uix-weight-emphasis);padding-block:var(--uix-gap-sm)}
+#preparation-occupied-filter{margin-block-end:var(--uix-gap)}
+.wms-batch-created td{background:var(--uix-success-soft)}
+.wms-historical-links{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));gap:0 var(--uix-gap)}
+.wms-historical-links li{min-width:0;border-block-start:var(--uix-border-width) solid var(--uix-border)}
+.wms-historical-links li > :is(a,span){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px var(--uix-gap-sm);min-height:var(--uix-touch);padding:var(--uix-gap-sm);align-items:center;overflow-wrap:anywhere}
+.wms-historical-links small{grid-column:1;color:var(--uix-muted);font-variant-numeric:tabular-nums}
+.wms-history-arrow{grid-column:2;grid-row:1/3}
+.wms-historical-detail .wms-section + .wms-section{margin-block-start:var(--uix-gap)}
+@media(max-width:640px){
+  #preparation-batch-table{min-width:0;table-layout:auto}
+  #preparation-batch-table thead{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+  #preparation-batch-table :is(tbody,tr){display:block}
+  html[data-release-ui="46"] #page-content #preparation-batch-table td{display:grid;grid-template-columns:minmax(5.5rem,35%) minmax(0,1fr);align-items:center;gap:var(--uix-gap-sm);text-align:start}
+  #preparation-batch-table td::before{content:attr(data-label);color:var(--uix-muted)}
+  #preparation-batch-table td :is(input,select){text-align:start}
+  #preparation-batch-table td button{justify-self:start}
+}
+
 /* Shared field and filter alignment, outside the stock-map pages. */
+html[data-release-ui="46"] #page-content form.wms-compact-filters {
+  column-gap:var(--uix-gap-sm);
+}
+html[data-release-ui="46"] #page-content form.wms-compact-filters > label {
+  flex:1 1 5rem;
+  min-inline-size:4.5rem;
+}
+html[data-release-ui="46"] #page-content form.wms-compact-filters > :is(.outbound-search,.outbound-date) {
+  flex-basis:8.25rem;
+}
+html[data-release-ui="46"] #page-content form.outbound-list-filter > .outbound-date {
+  min-inline-size:8rem;
+}
+html[data-release-ui="46"] #page-content form.wms-compact-filters > .wms-filter-actions {
+  flex:0 0 auto;
+  flex-wrap:nowrap;
+}
+html[data-release-ui="46"] #page-content form.wms-compact-filters > label > :is(input,select) {
+  inline-size:100%;
+}
+html[data-release-ui="46"] #page-content .wms-dispatch-row-actions {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:var(--uix-gap-sm);
+}
+
+@media(min-width:1100px) {
+  html[data-release-ui="46"] #page-content form.wms-filter-row.wms-compact-filters {flex-wrap:nowrap}
+}
+@media(max-width:640px) {
+  html[data-release-ui="46"] #page-content form.wms-compact-filters > label {flex-basis:8rem}
+  html[data-release-ui="46"] #page-content form.wms-compact-filters > .wms-filter-actions {flex-basis:100%}
+}
+
 html[data-release-ui="46"] #page-content form.wms-filter-row {
   display:flex;
   flex-wrap:wrap;
@@ -518,17 +583,18 @@ html[data-release-ui="46"] .wms-table .button.compact {
   min-block-size: var(--uix-compact);
   max-inline-size: 100%;
 }
-html[data-release-ui="46"] :is(#page-content,#dashboard-content,#inventory) :where(table:not(.packing-sheet table,.print-page table,.shipping-preview table) :is(th,td)) {
-  text-align: start;
-}
 html[data-release-ui="46"] #page-content .wms-table :is(th,td) {
-  text-align: start;
   line-height: var(--uix-line);
   overflow-wrap: anywhere;
 }
 html[data-release-ui="46"] :is(#page-content,#dashboard-content,#inventory) :is(.wms-table,.business-table,.table-scroll,.s46-table-wrap,.v34-table-wrap,.oa-table-scroll) :is([data-wms-column="number"],.numeric,.sales-weight,.oa-numeric) {
-  text-align: end;
   font-variant-numeric: tabular-nums;
+}
+@media screen {
+  html[data-release-ui="46"] :is(#page-content,#dashboard-content,#inventory,dialog) table:not(:is(.packing-sheet,.print-page,.shipping-preview) table) > :is(thead,tbody,tfoot) > tr > :is(th,td) {
+    text-align:center;
+    vertical-align:middle;
+  }
 }
 html[data-release-ui="46"] .wms-table :is(th,td)[data-wms-column="actions"] {
   white-space: normal;

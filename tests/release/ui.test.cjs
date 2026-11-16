@@ -33,10 +33,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await guest.close();
  const admin=await open('admin'),viewer=await open('production_operator'),page=admin.page;
  await go(page,'/sales-plans','CU_CATHODE');
- const productFilter=page.locator('#sales-product-filter');
- assert.equal(await productFilter.inputValue(),'CU_CATHODE');
- await productFilter.selectOption('CO_HYDROXIDE');
- await page.waitForFunction(()=>window.ProductContext?.code==='CO_HYDROXIDE'&&document.getElementById('sales-product-filter')?.value==='CO_HYDROXIDE');
+ assert.deepEqual(await page.locator('#s468-filter :is(input,select)').evaluateAll(controls=>controls.map(control=>control.name)),
+  ['plan_no','contract_no','customer_id','shipment_month','status']);
+ await go(page,'/sales-plans','CO_HYDROXIDE');
  await page.locator('#ux10-sales-table').waitFor({state:'visible'});
  const planner=await open('export_supervisor'),reviewer=await open('logistics_manager');
  const workPlanNav='.sidebar [data-primary-route="preparation/work-plans"]';
@@ -53,7 +52,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
    throw Error(JSON.stringify(pageState),{cause:error});
   });
   await createPlan.click();
-  const form=planner.page.locator('#preparation-plan-form'),sales=form.locator('[name=sales_plan_id]');
+  const form=planner.page.locator('#preparation-plan-batch'),sales=form.locator('[name=sales_plan_id]');
   await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
   await sales.selectOption({index:1});
   assert(await form.locator('[name=customer]').inputValue());
@@ -61,12 +60,12 @@ test('real browser: current cobalt stock, independent permissions and both langu
   const batch=P.batch(product,suffix),batchField=form.locator('[name=batch_no]');
   await form.locator('button.primary').click();
   assert.equal(await batchField.getAttribute('aria-invalid'),'true');
-  assert(await form.locator('.wms-field-error:not([hidden])').first().isVisible());
-  await planner.page.locator('#dialog').screenshot({path:path.join(E.runtime,'wms-preparation-validation-'+product+'.png')});
+  assert.match(await form.locator('[data-batch-validation]').innerText(),/填写批次号|Enter a lot number/);
+  await form.screenshot({path:path.join(E.runtime,'wms-preparation-validation-'+product+'.png')});
   await batchField.fill(batch);
   assert.equal(await batchField.getAttribute('aria-invalid'),null);
   await form.locator('[name=shipment_month]').fill(new Date().toISOString().slice(0,7));
-  const saved=planner.page.waitForResponse(response=>response.request().method()==='POST'&&response.url().endsWith('/preparation-plans'),{timeout:6000});
+  const saved=planner.page.waitForResponse(response=>response.request().method()==='POST'&&response.url().endsWith('/preparation-plans/batch'),{timeout:6000});
   await form.locator('button.primary').click();
   const saveResponse=await saved.catch(async error=>{
    const invalid=await form.locator(':invalid').evaluateAll(fields=>fields.map(field=>field.name));
@@ -76,6 +75,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
   const operationKey=saveResponse.request().headers()['idempotency-key'];
   assert(operationKey);
   assert.deepEqual(await planner.page.evaluate(key=>API.check(key),operationKey),{committed:true});
+  await planner.page.waitForURL('**/preparation/work-plans?state=DRAFT');
+  await planner.page.locator('#preparation-plans-table').getByRole('link',{name:batch,exact:true}).click();
   const detailPattern=/\/preparation\/work-plans\/[0-9a-f-]{36}$/;
   await planner.page.waitForURL(detailPattern);
   const detail=new URL(planner.page.url()).pathname;
@@ -148,8 +149,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await ready(page);assert.equal(await page.locator('[data-primary-route=cobalt-metal]').count(),0);
  await go(page,'/inventory/'+f.preparation);
  await go(viewer.page,'/inventory/'+f.preparation);assert.equal(await viewer.page.locator('[data-co2-select],#co2-place').count(),0);
- await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===69);
- assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),69);
+ await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===70);
+ assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),70);
  assert.equal(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').count(),26);
  assert(await page.locator('.s46-r2-matrix thead').isVisible());
  const cobalt=page.locator('.s46-permission-items').filter({has:page.locator('input[value="co:create"]')});
@@ -546,6 +547,78 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('#co469-location').isVisible());
  const limited=await open('limited_account_manager');await limited.page.goto(origin+'/workbench/accounts');await ready(limited.page);await limited.page.locator('#account-filter').waitFor();assert.equal(await limited.page.locator('#account-registration-requests').count(),0);assert.equal(await limited.page.locator('#account-create').count(),1);const options=await limited.context.request.get(origin+'/api/v1/users/options');assert(options.ok());assert(!(await options.json()).roles.some(r=>r.code==='admin'));
  const roleManager=await open('limited_role_manager');await roleManager.page.goto(origin+'/workbench/permissions');await ready(roleManager.page);await roleManager.page.locator('[data-role]').first().waitFor();assert.equal(await roleManager.page.locator('[data-role=admin]').count(),0);const own=await roleManager.page.evaluate(()=>CurrentUser.role_code);assert.equal(await roleManager.page.locator('[data-role="'+own+'"]').count(),0);await roleManager.page.locator('[data-role]').first().click();await roleManager.page.locator('.s46-r2-matrix').waitFor();const prohibited=roleManager.page.locator('.s46-r2-matrix input[value="users:manage"]');assert(await prohibited.count()===0||await prohibited.isDisabled());await limited.page.screenshot({path:path.join(E.runtime,'limited-accounts.png'),fullPage:true});await roleManager.page.screenshot({path:path.join(E.runtime,'limited-roles.png'),fullPage:true});
- assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:69,permissionModules:26,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
+ assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:70,permissionModules:26,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
+ }finally{await browser?.close();await app.close();}
+});
+
+test('dispatch and list layouts: both products, responsive filters and one-vehicle month save',async()=>{
+ const f=E.fixture(),port=4397,origin='http://127.0.0.1:'+port,app=await require('../../server/app.cjs').build({config:{...f.appCfg,port,origin}});let browser;
+ try{
+  await app.listen({host:'127.0.0.1',port});
+  browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
+  const ctx=await browser.newContext({viewport:{width:1440,height:900}}),account=f.accounts.find(a=>a.role==='admin');
+  const login=await ctx.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:account.username,password:account.password}});
+  assert(login.ok());
+  const page=await ctx.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(12000);
+  await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));
+  const ready=()=>page.waitForFunction(()=>window.AppSignedIn&&window.V469R2?.installed&&!Router.rendering&&document.getElementById('session-restore').hidden);
+  const go=async(p,url,product)=>{
+   await p.goto(origin+'/overview');await ready();
+   await p.evaluate(code=>localStorage.setItem(ProductContext.key,code),product);
+   await p.goto(origin+url);await ready();
+  };
+ const assertFilter=async(id,names,width)=>{
+  const form=page.locator(id);await form.waitFor();
+  const layout=await form.evaluate(el=>[...el.querySelectorAll(':is(input,select),.wms-filter-actions .button')]
+   .map(node=>({name:node.name||'',bottom:Math.round(node.getBoundingClientRect().bottom),left:node.getBoundingClientRect().left})));
+  assert.deepEqual(layout.slice(0,5).map(row=>row.name),names);
+  if(width>=1280)assert(Math.max(...layout.map(x=>x.bottom))-Math.min(...layout.map(x=>x.bottom))<=2,JSON.stringify(layout));
+  assert(layout.at(-1).left>layout.at(-2).left,'Keep query and reset in one group');
+ };
+ for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+  for(const width of [1440,1280,390]){
+   await page.setViewportSize({width,height:900});
+   await go(page,'/sales-plans',product);
+   await assertFilter('#s468-filter',['plan_no','contract_no','customer_id','shipment_month','status'],width);
+   await go(page,'/outbounds',product);
+   await assertFilter('#op-filter',['search','customer_id','state','document_status','created_date'],width);
+   const visibleRowCapacity=await page.locator('.op-table-scroll').evaluate(el=>{
+    const header=el.querySelector('thead').getBoundingClientRect().height;
+    const row=el.querySelector('tbody tr').getBoundingClientRect().height;
+    return (parseFloat(getComputedStyle(el).maxHeight)-header)/row;
+   });
+   assert(visibleRowCapacity>4,`Visible row capacity ${visibleRowCapacity} at ${width}px`);
+   const alignments=await page.locator('#op-table :is(th,td)').evaluateAll(cells=>cells.map(cell=>getComputedStyle(cell).textAlign));
+   assert(alignments.length&&alignments.every(value=>value==='center'),alignments.join(','));
+   if(width===1440||width===390)await page.screenshot({path:path.join(E.runtime,'v482-outbound-'+product+'-'+width+'.png'),fullPage:true});
+  }
+ }
+ await page.setViewportSize({width:1440,height:1000});
+ for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+  const fixture=f.dispatchMonthPlans[product];
+  await go(page,'/sales-plans/'+fixture.id+'/dispatch',product);
+  const plate=product==='CU_CATHODE'?'CU1235':'CO1235',target=page.locator('tr').filter({hasText:plate});
+  const group=page.locator('details').filter({has:target});
+  if(product==='CU_CATHODE')await group.evaluate(node=>node.open=true);
+  const action=target.locator('[data-dispatch-vehicle-month]');
+  await action.waitFor();
+  assert.match(await action.evaluate(node=>node.previousElementSibling?.dataset.cancelVehicle||node.previousElementSibling?.dataset.dispatchRemove||''),/^[0-9a-f-]{36}$/);
+  await action.click();
+  const form=page.locator('#dispatch-vehicle-month-form');await form.waitFor();
+  assert.equal(await form.locator('input[readonly]').inputValue(),plate);
+  const previous=await form.locator('input[type=month]').inputValue(),next=previous==='2088-11'?'2088-12':'2088-11';
+  await form.locator('input[type=month]').fill(next);
+  await form.locator('button[type=submit],button.primary').click();
+  await form.waitFor({state:'hidden'});
+  const newMonth=target.getByText(next,{exact:true});
+  await newMonth.waitFor({state:'attached'});
+  if(product==='CU_CATHODE')await group.evaluate(node=>node.open=true);
+  await newMonth.waitFor();
+  const another=page.locator('tr').filter({hasText:product==='CU_CATHODE'?'CU1234':'CO1234'});
+  assert((await another.allTextContents()).some(text=>text.includes(fixture.month)));
+ }
+
+  assert.deepEqual(errors,[]);
  }finally{await browser?.close();await app.close();}
 });

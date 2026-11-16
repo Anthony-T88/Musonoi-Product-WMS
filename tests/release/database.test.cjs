@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -68,7 +68,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const catalog=async()=>{
     const {rows}=await c.query(`
      SELECT 'constraint' AS kind, conrelid::regclass::text AS relation, conname AS name, pg_get_constraintdef(oid) AS definition
-     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND NOT (conrelid=to_regclass('export_license_record_books') AND confrelid=conrelid AND cardinality(conkey)=5) AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key','sales_plan_approvals_check1','sales_plan_approvals_check3','sales_plan_close_requests_check1','sales_plan_close_requests_check2','export_license_actions_check1','co_preparations_check1','co_preparations_check2','stock_adjustments_check')
+     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND NOT (conrelid=to_regclass('export_license_record_books') AND confrelid=conrelid AND cardinality(conkey)=5) AND NOT (conrelid=to_regclass('co_dispatch_vehicles') AND confrelid=to_regclass('co_dispatch_imports') AND cardinality(conkey)=3) AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key','sales_plan_approvals_check1','sales_plan_approvals_check3','sales_plan_close_requests_check1','sales_plan_close_requests_check2','export_license_actions_check1','co_preparations_check1','co_preparations_check2','stock_adjustments_check')
      UNION ALL
      SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
      FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
@@ -104,6 +104,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     return {...row,definition};
    };
    assert.deepEqual(afterCatalog.filter(({kind,relation,name})=>priorKeys.has([kind,relation,name].join('/'))).map(normalizeType),beforeCatalog);
+   assert(afterCatalog.some(row=>row.name==='co_dispatch_vehicle_import_plan_fk'&&row.definition.includes('FOREIGN KEY (import_id, sales_plan_id)')));
    assert(afterCatalog.some(row=>row.name==='stocktakes_task_type_check'&&row.definition.includes("'SEMIANNUAL'")));
    assert(afterCatalog.some(t=>t.relation==='audit_logs'&&t.name==='aa_security_r3_audit_scope'));
    const rights=(await c.query("SELECT has_table_privilege('musonoi_app','security_schema_status','SELECT') can_read, has_function_privilege('musonoi_app','security_r3_entity_scopes(text,text)','EXECUTE') can_forge")).rows[0];
@@ -136,7 +137,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {rows:[localWarehouse]}=await c.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'MUSONOI','Fixture') RETURNING id",[local.id]);
   const {rows:[oldWarehouse]}=await c.query("INSERT INTO warehouses(project_id,code,name,active) VALUES($1,'AUDIT-WH','Fixture',false) RETURNING id",[local.id]);
   const {rows:[oldSlot]}=await c.query("INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage) VALUES($1,$2,'P1-01','P1-01','FORMAL') RETURNING id",[local.id,oldWarehouse.id]);
-  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,2);
+  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,3);
   assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,0);
   const {rows}=await c.query("SELECT cell.region_code,count(*)::int n FROM locations l JOIN stock_map_cells cell ON cell.code=l.map_cell_code WHERE l.warehouse_id=$1 AND l.map_usage='FORMAL' GROUP BY 1 ORDER BY 1",[warehouse]);
   assert.deepEqual(rows,[{region_code:'P1',n:46},{region_code:'P2',n:29},{region_code:'P4',n:22}]);
@@ -150,23 +151,47 @@ test('isolated migration, initialization, business permission and concurrency ac
   const XLSX=require('xlsx'),Excel=require('exceljs');
   for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
    const co=product==='CO_HYDROXIDE',plan=await require('./preparation-fixture.cjs').salesPlan(api,f,product);
-   const path=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch',monthPath=path+'/month',operator=co?'sales_operator':'sales_manager';
+   const path=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch',operator=co?'sales_operator':'sales_manager';
    const original=await api(operator,product,path);
    assert(original.dispatch_month.can_change);
+   (f.dispatchMonthPlans??={})[product]={id:plan,month:original.dispatch_month.month};
+   const sales=(co?'/cobalt':'')+'/sales-workflow/plans';
+   const salesFilters={plan_no:original.plan.code,contract_no:co?original.plan.contract_no:
+    (await api(operator,product,sales+'/'+plan)).contract_no,customer_id:f.customers[product].id,
+    shipment_month:original.dispatch_month.month,status:'OPEN'};
+   const matching=await api(operator,product,sales+'?'+new URLSearchParams(salesFilters));
+   assert(matching.items.some(row=>row.id===plan));
+   assert(matching.customer_options.some(row=>row.id===salesFilters.customer_id));
+   assert.equal((await api(operator,product,sales+'?'+new URLSearchParams({...salesFilters,contract_no:'NO-TEST-MATCH'}))).total,0);
    const workbook=XLSX.utils.book_new();
-   XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([['HORSE','TON'],[co?'CO1234':'CU1234',12.3456]]),'Dispatch');
+   XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([['HORSE','TON'],[co?'CO1234':'CU1234',12.3456],[co?'CO1235':'CU1235',23.4567]]),'Dispatch');
    const file={file_name:'dispatch.xlsx',mapping:{sheet:'Dispatch',header_row:1,truck_column:1,capacity_column:2,capacity_kg:false},file_base64:XLSX.write(workbook,{type:'base64',bookType:'xlsx'}),...(co?{plan_version:original.plan.version}:{})};
    const preview=await api('admin',product,path+'/import-preview',file);
    await api('admin',product,path+(co?'/import':''),{...file,shipment_month:preview.shipment_month,preview_sha256:preview.file_sha256});
-   const shift={shipment_month:'2088-10',version:0};
+   const saved=await api(operator,product,path),plate=co?'CO1234':'CU1234',vehicle=saved.vehicles.find(v=>v.truck_no===plate);
+   const monthPath=path+'/vehicles/'+vehicle.id+'/month',shift={shipment_month:'2088-10',previous_month:original.dispatch_month.month};
    await api('production_operator',product,monthPath,shift,403);
-   const changed=await api(operator,product,monthPath,shift);assert.equal(changed.month,'2088-10');
+   const key=crypto.randomUUID(),changed=await request(operator,product,monthPath,shift,'POST',key);
+   assert.equal(changed.statusCode,200,changed.body);
+   assert.equal(changed.json().id,vehicle.id);assert.equal(changed.json().shipment_month,'2088-10');
+   const replay=await request(operator,product,monthPath,shift,'POST',key);
+   assert.deepEqual(replay.json(),changed.json());assert.equal(replay.statusCode,200);
+   const auditSql=co?"SELECT before_data,after_data FROM co_sales_events WHERE entity_id=$1 AND before_data->>'shipment_month' IS NOT NULL":
+    "SELECT before_data,after_data FROM audit_logs WHERE entity_id=$1 AND action='dispatch_vehicle_month_changed'";
+   const audit=(await business.client.query(auditSql,[vehicle.id])).rows;
+   assert.equal(audit.length,1);assert.equal(audit[0].before_data.shipment_month,shift.previous_month);
+   assert.equal(audit[0].after_data.shipment_month,shift.shipment_month);
    await api(operator,product,monthPath,{...shift,shipment_month:'2088-11'},409);
-   await api('admin',product,path+'/import-preview',{...file,shipment_month:original.dispatch_month.month},409);
-   const after=await api(operator,product,path);assert.equal(after.dispatch_month.scheduled,original.dispatch_month.scheduled);
-   assert.equal(after.vehicles.find(v=>v.truck_no===(co?'CO1234':'CU1234')).shipment_month,original.dispatch_month.month);
-   const later=await api('admin',product,path+'/import-preview',file);assert.equal(later.shipment_month,'2088-10');
+   const after=await api(operator,product,path);
+   assert.equal(after.dispatch_month.month,original.dispatch_month.month);
+   assert.equal(after.vehicles.find(v=>v.id===vehicle.id).shipment_month,'2088-10');
+   assert.equal(after.vehicles.find(v=>v.id!==vehicle.id).shipment_month,original.dispatch_month.month);
+   assert.equal((await api(operator,product,path+'?shipment_month=2088-10')).vehicles.length,1);
+   const later=await api('admin',product,path+'/import-preview',file);
+   assert.equal(later.shipment_month,original.dispatch_month.month);
    await api('admin',product,path+(co?'/import':''),{...file,shipment_month:later.shipment_month,preview_sha256:later.file_sha256});
+   const fresh=(await api(operator,product,path)).vehicles.find(v=>v.truck_no===plate&&v.id!==vehicle.id);
+   await api(operator,product,path+'/vehicles/'+fresh.id+'/month',shift,409);
    const endpoint=(co?'/cobalt/sales':'/loading-plans')+'/arrivals',filters={sales_plan_id:plan,shipment_month:'2088-10'};
    const listing=await api('admin',product,endpoint+'?'+new URLSearchParams(filters));assert.equal(listing.items.length,1);
    const book=new Excel.Workbook(),exported=await request('admin',product,endpoint+'/export',filters);
@@ -175,7 +200,10 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert.equal(sheet.getCell('E7').value,co?'CO1234':'CU1234');assert.equal(sheet.getCell('F7').value,12.3456);
    assert.equal(sheet.getCell('F7').numFmt,'#,##0.0000');
    await api('production_operator',product,endpoint+'/export',filters,403);
-   assert.equal((await api(operator,product,path)).dispatch_month.version,1);
+   const arrival={trailer_one:co?'COTRLR42':'CUTRLR42',driver_name:co?'TEST Co Driver':'TEST Cu Driver',passport_no:co?'COFICT42':'CUFICT42',transporter:'TEST Carrier',
+    arrived_at:new Date(Date.now()-120000).toISOString(),...(co?{dispatch_version:after.vehicles.find(v=>v.id===vehicle.id).version}:{})};
+   await api('admin',product,endpoint+'/'+vehicle.id,arrival);
+   await api(operator,product,monthPath,{previous_month:'2088-10',shipment_month:'2088-11'},409);
   }
  });
  await check('license records, pricing, pending reviews and late historical quota match for both products',async()=>{
@@ -209,6 +237,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const rows=Array.from({length:29},()=>[]);
    rows[0]=['PACKING LIST'];rows[2]=['','','','Packing List No:',tag+'-PL'];rows[3]=['','','','Lot No:',tag+'-LOT'];
    rows[5]=['','','','EB License No:',license];rows[6]=['','','','Shipping Date:','2020-03-05'];
+   rows[21]=['Synthetic '+(co?'CO-AUDIT':'CU-AUDIT'),'','','',co?'TEST-HIST-CO':'TEST-HIST-CU'];
    rows[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
    rows.push([1,'Synthetic',tag+'-UNIT',co?null:48,tag+'-SEAL',647.123456,650.123456],['Total',null,null,null,null,647.123456,650.123456]);
    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'PL');
@@ -218,6 +247,17 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert(preview.importable,JSON.stringify(preview.issues));
    const imported=(await api('admin',product,queue+'/confirm',{files:[{...file,preview_token:preview.preview_token}]})).results[0];
    assert.equal(imported.status,'IMPORTED');
+   const outbound=(co?'/cobalt':'')+'/outbound-workspace',statusFilter={[co?'state':'status']:'OUTBOUND'};
+   const archived=(await api('admin',product,outbound+'?'+new URLSearchParams({...statusFilter,search:tag+'-PL'}))).items
+    .find(row=>row.historical_import);
+   assert(archived);
+   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(archived.created_at));
+   const outboundFilters={...statusFilter,customer_id:f.customers[product].id,created_date:day};
+   for(const search of [tag+'-LOT',tag+'-PL',co?'TEST-HIST-CO':'TEST-HIST-CU']){
+    const result=await api('admin',product,outbound+'?'+new URLSearchParams({...outboundFilters,search}));
+    assert(result.items.some(row=>(row.order_id||row.id)===(archived.order_id||archived.id)));
+   }
+   assert.equal((await api('admin',product,outbound+'?'+new URLSearchParams({...outboundFilters,created_date:'2000-01-01',search:tag+'-PL'}))).total,0);
    assert.equal(Number((await api('sales_operator',product,base+'/'+draft.id)).used),0);
    const issue=await api('sales_operator',product,base+'/'+draft.id+'/actions',{action:'ISSUE',reason:'Synthetic license',version:draft.version,payload:{license_no:license,valid_from:'2020-01-01',valid_until:'2099-01-01'}});
    assert.equal((await api('sales_operator',product,base+'/'+draft.id)).status,'PENDING');

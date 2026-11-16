@@ -14,7 +14,7 @@ const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
  'site_supervisor/CU_CATHODE/receipts',...R.BOTH.flatMap(p=>[
   'production_manager/'+p+'/stocktakes','production_operator/'+p+'/permissions','production_operator/'+p+'/audit','production_operator/'+p+'/export-licenses',
-  'production_operator/'+p+'/historical-movements'
+  'production_operator/'+p+'/historical-movements','production_operator/'+p+'/preparation-batch'
  ])
 ]);
 // Each exception is scoped to one role, product, state and scenario. Expired entries fail the gate.
@@ -104,6 +104,7 @@ function selectors(key,product,landing){
   'loading-search':['.r9-document-filter input','.r9-document-filter select','.r9-document-filter button'],
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],
   'metal-confirmations':['#co-metal-filter','#page-content table'],
+  'preparation-batch':['#preparation-plan-batch','#preparation-batch-paste','#preparation-occupied-filter'],
   'historical-movements':['#historical-upload','#historical-filter'],
   'cu-historical-record':['#historical-source','#historical-void'],
   'co-historical-record':['#historical-source','#historical-void'],

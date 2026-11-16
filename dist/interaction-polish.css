@@ -3,7 +3,7 @@
 #contract-filter input,#contract-filter select,#dispatch-month-filter input,#v262-summary+.business-toolbar select,#v261-create>.business-toolbar input{height:42px;box-sizing:border-box}
 #contract-filter>.button,#dispatch-month-filter>.button,#v262-refresh,#v261-create>.business-toolbar>button{height:42px;margin:0;box-sizing:border-box;align-self:flex-end}
 #page-content input[type=checkbox]{width:18px;height:18px;min-width:18px;min-height:18px;max-width:18px;padding:0;margin:0;flex:0 0 18px;accent-color:#18796e;vertical-align:middle}
-#v261-picker table{table-layout:fixed;min-width:990px}#v261-picker th,#v261-picker td{padding:13px 15px!important;vertical-align:middle!important;text-align:left!important}
+#v261-picker table{table-layout:fixed;min-width:990px}#v261-picker th,#v261-picker td{padding:13px 15px!important;vertical-align:middle!important;text-align:center!important}
 #v261-picker th:first-child{width:170px}#v261-picker th:nth-child(2){width:220px}#v261-picker th:nth-child(3){width:180px}#v261-picker th:nth-child(4){width:70px}#v261-picker th:nth-child(4),#v261-picker td:nth-child(4){text-align:center!important}
 #v261-picker th>label{display:flex!important;flex-direction:row!important;align-items:center;gap:9px;margin:0;line-height:1.5;font:inherit;white-space:nowrap}
 #v261-detail-items td label{display:inline-flex;flex-direction:row;align-items:center;gap:7px;margin:7px 0 0}#v261-detail-items td:last-child{min-width:125px}#v261-detail-items button{min-height:36px}

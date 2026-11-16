@@ -35,6 +35,8 @@ async function register({app,pool,permitted,csrf}){
    const q=req.query||{},v=[req.user.id],where=[scope(co)],add=(sql,value)=>{v.push(value);where.push(sql.replace('?', '$'+v.length));},page=Number(q.page||1);
    if(!Number.isInteger(page)||page<1||page>100000)throw B.error(400,'SALES_FILTER_INPUT');
    if(q.search)add("strpos(lower(concat_ws(' ',p.code,c.name,k.contract_no)),lower(?))>0",B.text(q.search,'计划/客户/合同',160));
+   if(q.plan_no)add('strpos(lower(p.code),lower(?))>0',B.text(q.plan_no,'计划编号',160));
+   if(q.contract_no)add('strpos(lower(k.contract_no),lower(?))>0',B.text(q.contract_no,'合同号',160));
    if(q.buyer_contract)add("strpos(lower(concat_ws(' ',c.name,k.contract_no)),lower(?))>0",B.text(q.buyer_contract,'客户/合同',160));
    if(q.shipment_month){if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(q.shipment_month))throw B.error(400,'SALES_FILTER_INPUT');add('p.'+(co?'shipment_month':'preparation_month')+'=?',q.shipment_month);}
    if(q.customer_id)add('p.customer_id=?',B.uuid(q.customer_id));
@@ -57,7 +59,9 @@ async function register({app,pool,permitted,csrf}){
     const param='$'+(v.length+1)+'::uuid[]';
     items=(await c.query(filtered+' AND p.id=ANY('+param+') ORDER BY array_position('+param+',p.id)',[...v,ids])).rows;
    }else items=(await c.query(filtered+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET '+offset,v)).rows;
-   return {items:(await Close.enrich(c,req,items)).map(row=>({...row,execution:byId.get(row.id)})),total:byId.size,page,page_size:50,summary,execution};
+   const customer_options=(await c.query(`SELECT DISTINCT c.id,c.name FROM ${t.plans} p JOIN ${t.customers} c ON c.id=p.customer_id
+    WHERE ${scope(co)} ORDER BY c.name,c.id`,[req.user.id])).rows;
+   return {customer_options,items:(await Close.enrich(c,req,items)).map(row=>({...row,execution:byId.get(row.id)})),total:byId.size,page,page_size:50,summary,execution};
   }));
   app.get(prefix+'/plans/:id',{preHandler:permitted('plan:read')},req=>C.readTransaction(pool,async c=>{const plan=await access(c,req,req.params.id);const invoices=require('./sales-invoices.cjs');const {summary:execution}=await invoices.execution(c,req,'SELECT p.id,p.target_weight FROM '+t.plans+' p WHERE $1::uuid IS NOT NULL AND p.id=$2',[req.user.id,plan.id]);return {...await Close.detail(c,req,plan),execution,related:await invoices.related(c,req,plan),posted_batches:await invoices.shipments(c,req,plan.id),can_confirm_invoice:invoices.canConfirm(req),history:(await c.query("SELECT a.action,a.after_data,a.occurred_at,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.entity_id=$1 AND a.entity_type='sales_plan_review' AND a.after_data->>'product_code'=$2 ORDER BY a.id",[plan.id,req.productCode])).rows};}));
   app.post(prefix+'/plans/:id/review',{preHandler:[permitted('plan:read'),csrf,async req=>{const plan=await access(pool,req,req.params.id);const commerce=plan.approval_state==='COMMERCE_PENDING',role=commerce?'commerce_manager':'sales_manager',permission=commerce?'plan:commerce-approve':'plan:approve';if(!['admin',role].includes(req.user.role_code)||!req.user.permissions.includes(permission))throw B.error(403,commerce?'COMMERCE_MANAGER_REQUIRED':'SALES_MANAGER_REQUIRED');}]},req=>B.mutate(pool,req,async c=>{

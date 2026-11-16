@@ -28,4 +28,4 @@ async function approved(api,product,plan,batch){
 function batch(product,suffix){
  return 'RMM-'+(product===C?'CO':'CU')+'-'+localMonth().slice(0,4)+'-'+String(suffix).padStart(product===C?3:2,'0');
 }
-module.exports={salesPlan,draft,approved,batch};
+module.exports={salesPlan,draft,approved,batch,localMonth};

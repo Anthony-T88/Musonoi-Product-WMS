@@ -86,4 +86,13 @@ html[data-ui=modern] .op-filter :is(input,select){width:100%;height:34px;border:
 @media(max-width:1050px){.op-preview{max-height:none;display:block}.op-preview-content{overflow:visible}.op-preview-footer{padding:0 15px}.op-list-pane{max-height:none;display:block}}
 @media(max-width:600px){.op-stats,.op-stats-5{grid-template-columns:repeat(2,minmax(0,1fr))}}
 }
+@media screen {
+ [data-operation-workspace$="-outbound"] .op-list-pane {max-height:none}
+ [data-operation-workspace$="-outbound"] .op-table-scroll,
+ .ux11-outbound .business-table:has(#ux11-outbound-table) {
+  min-block-size:min(14rem,30dvh);
+  max-block-size:clamp(24rem,60dvh,39rem);
+  overflow:auto;
+ }
+}
 @media print{.op-workspace{display:block!important}.op-actions,.op-filter,.op-stats,.op-preview,.op-list-toolbar,.op-pagination{display:none!important}.op-split,.op-list-pane{display:block!important;max-height:none!important;border:0}.op-table-scroll{overflow:visible!important;max-height:none!important;min-height:0!important}.op-table{width:100%;border-collapse:collapse;font-size:10px}.op-table th,.op-table td{padding:6px;border-bottom:1px solid #ddd;text-align:left}.op-table small{display:block}}

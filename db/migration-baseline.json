@@ -777,6 +777,10 @@
     {
       "version": "194_v481_dispatch_and_approval.sql",
       "checksum": "ede367aed3b5cb630171dd8589ab0b5e7a5cd6081ad1aa15583d289810bf28c2"
+    },
+    {
+      "version": "195_v482_dispatch_vehicle_month.sql",
+      "checksum": "090266c2bec7e0714395a2f48fe3c3ea16cc9ad79d6b4e56c156b7de716e1b3a"
     }
   ]
 }

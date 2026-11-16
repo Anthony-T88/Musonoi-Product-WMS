@@ -266,6 +266,8 @@ function outboundListSql(product,q,bind){
   if(q[key])conditions.push(`strpos(lower(${field}),lower(${bind(q[key].trim())}))>0`);
  }
  if(q.search)conditions.push(`strpos(lower(concat_ws(' ',d.document_no,m.document_no,m.source_facts->>'batch_no',m.source_facts->>'customer',m.source_facts->>'contract_no',m.source_facts->>'truck')),lower(${bind(q.search.trim())}))>0`);
+ if(q.customer_id)conditions.push(`b.customer_id=${bind(B.uuid(q.customer_id))}`);
+ if(q.created_date)conditions.push(`(b.backfilled_at AT TIME ZONE 'Africa/Lubumbashi')::date=${bind(B.date(q.created_date))}`);
  if(q.start)conditions.push(`m.business_date>=${bind(B.date(q.start))}::date`);
  if(q.end)conditions.push(`m.business_date<=${bind(B.date(q.end))}::date`);
  return listSql('LOADING_ORDER')+' AND '+conditions.join(' AND ');
@@ -341,8 +343,10 @@ function registerRead(app,pool,auth){
     AND (m.id=$3 OR EXISTS(SELECT 1 FROM historical_stock_units x WHERE x.source_id=m.id AND x.id=$3 AND x.active))`,
     [req.user.id,req.productCode,id]);
    if(!row)throw bad('HISTORY_NOT_FOUND','历史库存不存在或超出授权范围',404);
-   const [units,documents]=await Promise.all([lines(pool,row.source_id,unit,row.source_id===id?null:id),related(pool,row.source_id)]);
-   return {...row,rows:units,documents};
+   const [units,documents,metal]=await Promise.all([lines(pool,row.source_id,unit,row.source_id===id?null:id),related(pool,row.source_id),
+    req.productCode==='CO_HYDROXIDE'&&row.net_kg!==null?
+     pool.query('SELECT round(co_estimated_metal_mt($1::numeric),5)::text estimated_mt',[row.net_kg]).then(r=>r.rows[0]):null]);
+   return {...row,rows:units,documents,...metal};
   });
  }
 }

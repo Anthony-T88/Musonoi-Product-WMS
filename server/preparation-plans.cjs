@@ -12,7 +12,10 @@ function assertRead(user,product){
  if(!user.permissions.includes('plan:read')&&!user.permissions.includes(startPermission)&&!canReview({user}))throw B.error(403,'备货计划超出授权');
 }
 const read=async req=>assertRead(req.user,req.productCode);
-const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/preparation-plans/operations/status'||
+function assertCreate(user){if(!canCreate({user}))throw B.error(403,'当前岗位无权创建备货计划');}
+const cobaltBase='/api/v1/cobalt/preparation-plans';
+const allowed=(path,method)=>method==='GET'&&['/operations/status','/occupied'].some(s=>path===cobaltBase+s)||
+ method==='POST'&&['/batch','/batch/preview'].some(s=>path===cobaltBase+s)||
  /^\/api\/v1\/cobalt\/preparation-plans(?:\/[0-9a-f-]{36}(?:\/(?:submit|approve|reject))?)?$/i.test(path)&&['GET','POST','PATCH'].includes(method);
 
 const visibility="p.product_code=$2 AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND (s.customer_id IS NULL OR s.customer_id=p.customer_id) AND (p.warehouse_id IS NULL OR s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id))";
@@ -59,26 +62,102 @@ async function list(c,req){
  const {rows:[total]}=await c.query('SELECT count(*)::int n FROM ('+projection+where+') results',values);
  return {items:rows.map(plan=>({...plan,actions:actions(req,plan)})),can_create:canCreate(req),page,total:total.n,page_size:50};
 }
-async function save(c,req,id=null){
+const batchLimit=100;
+async function occupied(c,req){
+ const query=req.query||{},search=query.search?B.text(query.search,'查找批次或客户',160):'',page=Number(query.page||1);
+ if(!Number.isSafeInteger(page)||page<1||page>100000)throw B.error(400,'备货计划筛选条件无效');
+ const work=cobalt(req)?`
+  SELECT w.preparation_batch_no batch_no,coalesce(p.customer_id,sale.customer_id) customer_id,
+   w.project_id,w.warehouse_id,coalesce(p.shipment_month,sale.shipment_month) shipment_month,
+   coalesce(work.status,w.status) state,CASE WHEN p.id IS NULL THEN 'HISTORICAL_WORK' ELSE 'WORK' END source
+  FROM co_preparations w LEFT JOIN preparation_plans p ON p.co_preparation_id=w.id
+  LEFT JOIN co_work_batches work ON work.preparation_id=w.id
+  LEFT JOIN LATERAL (SELECT s.customer_id,s.shipment_month FROM co_loading_orders l
+   JOIN co_sales_plans s ON s.id=l.sales_plan_id WHERE l.preparation_id=w.id AND l.status<>'CANCELLED'
+   ORDER BY l.created_at DESC,l.id LIMIT 1) sale ON true`:`
+  SELECT w.lot_no batch_no,sale.customer_id,sale.project_id,location.warehouse_id,
+   coalesce(p.shipment_month,sale.preparation_month) shipment_month,
+   coalesce(w.workflow_state,w.status) state,CASE WHEN p.id IS NULL THEN 'HISTORICAL_WORK' ELSE 'WORK' END source
+  FROM allocations w JOIN sales_plans sale ON sale.id=w.plan_id
+  LEFT JOIN preparation_plans p ON p.allocation_id=w.id LEFT JOIN locations location ON location.id=w.planned_location_id
+  WHERE w.lot_no IS NOT NULL`;
+ const {rows}=await c.query(`WITH lots AS (
+   SELECT batch_no,customer_id,project_id,warehouse_id,shipment_month,state,'PLAN' source
+   FROM preparation_plans WHERE product_code=$2 AND allocation_id IS NULL AND co_preparation_id IS NULL
+   UNION ALL ${work}
+  ), visible AS (
+   SELECT DISTINCT ON (x.batch_no) x.batch_no,x.shipment_month,x.state,x.source,customer.name customer_name
+   FROM lots x LEFT JOIN customers customer ON customer.id=x.customer_id
+   WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=x.project_id
+    AND (s.customer_id IS NULL OR s.customer_id=x.customer_id)
+    AND (s.warehouse_id IS NULL OR s.warehouse_id=x.warehouse_id OR ($2='CU_CATHODE' AND x.source='PLAN')))
+   ORDER BY x.batch_no,(x.source='PLAN'),x.customer_id
+  ) SELECT * FROM visible WHERE $3='' OR strpos(lower(concat_ws(' ',batch_no,customer_name)),lower($3))>0
+  ORDER BY batch_no LIMIT 26 OFFSET $4`,[...params(req),search,(page-1)*25]);
+ return {items:rows.slice(0,25),page,has_next:rows.length>25};
+}
+function batchItems(req){
+ fields(req.body,['items']);
+ if(!Array.isArray(req.body.items)||!req.body.items.length||req.body.items.length>batchLimit)throw B.error(400,'每批须有 1 至 100 行备货计划');
+ return req.body.items;
+}
+async function evaluateBatch(c,req){
+ const items=batchItems(req),counts=new Map();
+ for(const item of items){
+  const lot=typeof item?.batch_no==='string'?item.batch_no.trim().toUpperCase():'';
+  if(lot)counts.set(lot,(counts.get(lot)||0)+1);
+ }
+ const results=[];
+ for(const [index,item] of items.entries()){
+  try{
+   if(typeof item?.batch_no==='string'&&counts.get(item.batch_no.trim().toUpperCase())>1)
+    throw B.error(400,'录入表内重复');
+   await save(c,req,null,item,{preview:true});
+   results.push({index,error:null});
+  }catch(e){
+   if(!e.statusCode||e.statusCode>=500)throw e;
+   results.push({index,error:e.message,status:e.statusCode});
+  }
+ }
+ return results;
+}
+async function saveBatch(c,req){
+ const items=batchItems(req),blocked=(await evaluateBatch(c,req)).find(row=>row.error);
+ if(blocked)throw B.error(blocked.status,'第 '+(blocked.index+1)+' 行：'+blocked.error);
+ for(const id of [...new Set(items.map(item=>item.sales_plan_id.toLowerCase()))].sort())await sales(c,req,id,true);
+ const ordered=items.map((item,index)=>({item,index})).sort((a,b)=>
+  a.item.batch_no.trim().toUpperCase().localeCompare(b.item.batch_no.trim().toUpperCase()));
+ const saved=[];
+ for(const {item,index} of ordered){
+  try{
+   const draft=await save(c,req,null,item,{bulk:true});
+   saved[index]={id:draft.id,batch_no:draft.batch_no,state:draft.state};
+  }catch(e){if(e.statusCode&&e.statusCode<500)throw B.error(e.statusCode,'第 '+(index+1)+' 行：'+e.message);throw e;}
+ }
+ return {items:saved};
+}
+async function save(c,req,id=null,body=req.body,{preview=false,bulk=false}={}){
  if(!canCreate(req))throw B.error(403,'由出口主管创建和修改备货计划');
- const body=req.body;
- fields(body,['sales_plan_id','customer_id','batch_no','shipment_month','version']);
+ fields(body,id?['sales_plan_id','customer_id','batch_no','shipment_month','version']:['sales_plan_id','customer_id','batch_no','shipment_month']);
  const prior=id?await access(c,req,id,true):null;
  if(prior&&(!actions(req,prior).edit||prior.version!==B.version(body.version)))throw B.error(409,'备货计划状态或版本已变化');
- const plan=await sales(c,req,B.uuid(body.sales_plan_id),true),co=cobalt(req),month=body.shipment_month;
+ const plan=await sales(c,req,B.uuid(body.sales_plan_id),!preview),co=cobalt(req),month=body.shipment_month;
  if(body.customer_id&&B.uuid(body.customer_id).toLowerCase()!==plan.customer_id)throw B.error(400,'客户与销售计划不一致');
  if(typeof month!=='string'||!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(month))throw B.error(400,'发运月无效');
  const batch=B.text(body.batch_no,'备货批次号',48).toUpperCase();
  const pattern=co?/^RMM-CO-[0-9]{4}-[0-9]{3,}$/:/^RMM-CU-[0-9]{4}-(0[1-9]|[1-9][0-9]{1,35})$/;
  if(!pattern.test(batch)||!/[1-9]/.test(batch.split('-').at(-1)))throw B.error(400,'备货批次号格式无效');
  const used=await c.query(co?'SELECT 1 FROM co_preparations WHERE preparation_batch_no=$1':'SELECT 1 FROM allocations WHERE lot_no=$1',[batch]);
- if(used.rowCount)throw B.error(409,'备货批次号已被作业使用');
+ if(used.rowCount||(await c.query('SELECT 1 FROM preparation_plans WHERE product_code=$1 AND batch_no=$2 AND id IS DISTINCT FROM $3',[req.productCode,batch,id])).rowCount)
+  throw B.error(409,'备货批次号已占用');
+ if(preview)return;
  const values=[req.productCode,plan.project_id,plan.customer_id,co?plan.warehouse_id:null,co?null:plan.id,co?plan.id:null,batch,month];
  const result=prior?await c.query('UPDATE preparation_plans SET product_code=$1,project_id=$2,customer_id=$3,warehouse_id=$4,cu_sales_plan_id=$5,co_sales_plan_id=$6,batch_no=$7,shipment_month=$8,version=version+1 WHERE id=$9 RETURNING *',[...values,id]):
-  await c.query('INSERT INTO preparation_plans(product_code,project_id,customer_id,warehouse_id,cu_sales_plan_id,co_sales_plan_id,batch_no,shipment_month,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',[...values,req.user.id]);
+  await c.query('INSERT INTO preparation_plans(product_code,project_id,customer_id,warehouse_id,cu_sales_plan_id,co_sales_plan_id,batch_no,shipment_month,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(product_code,batch_no) DO NOTHING RETURNING *',[...values,req.user.id]);
  const saved=result.rows[0];
+ if(!saved)throw B.error(409,'备货批次号已占用');
  await event(c,req,saved,prior?'EDIT':'CREATE');
- return detail(c,req,saved.id);
+ return bulk?saved:detail(c,req,saved.id);
 }
 async function transition(c,req,id,operation){
  const body=req.body;
@@ -112,16 +191,20 @@ async function bind(c,req,plan,workId){
 }
 function register({app,pool,auth,csrf}){
  for(const prefix of ['/api/v1/preparation-plans','/api/v1/cobalt/preparation-plans']){
+  const create=async req=>assertCreate(req.user);
   app.get(prefix,{preHandler:[auth,read]},req=>C.readTransaction(pool,c=>list(c,req)));
+  app.get(prefix+'/occupied',{preHandler:[auth,create]},req=>C.readTransaction(pool,c=>occupied(c,req)));
+  app.post(prefix+'/batch/preview',{preHandler:[auth,create,csrf]},req=>C.readTransaction(pool,async c=>({items:await evaluateBatch(c,req)})));
   app.get(prefix+'/operations/status',{preHandler:[auth,read]},req=>C.readTransaction(pool,async c=>{
    const {method,path,key}=req.query,base=prefix.slice('/api/v1'.length);
    const target=typeof path==='string'&&path.startsWith(base)?path.slice(base.length):null;
    const match=target!==null&&/^\/([0-9a-f-]{36})(?:\/(submit|approve|reject))?$/i.exec(target);
-   const valid=method==='POST'&&(target===''||match?.[2])||method==='PATCH'&&match&&!match[2];
+   const valid=method==='POST'&&(target===''||target==='/batch'||match?.[2])||method==='PATCH'&&match&&!match[2];
    if(!valid||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw B.error(400,'操作查询参数无效');
    const {rows:[receipt]}=await c.query('SELECT response FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,method+' /api/v1'+path,key]);
    const id=match?.[1]||receipt?.response.id;
    if(id)await access(c,req,id);
+   if(target==='/batch'&&receipt)for(const row of receipt.response.items)await access(c,req,row.id);
    return {committed:!!receipt};
   }));
   app.get(prefix+'/:id',{preHandler:[auth,read]},req=>C.readTransaction(pool,c=>detail(c,req,req.params.id)));
@@ -130,6 +213,7 @@ function register({app,pool,auth,csrf}){
    if(req.params?.id)await access(pool,req,req.params.id);
   }],handler:req=>B.mutate(pool,req,c=>handler(c,req))});
   mutate('POST',prefix,canCreate,(c,req)=>save(c,req));
+  mutate('POST',prefix+'/batch',canCreate,saveBatch);
   mutate('PATCH',prefix+'/:id',canCreate,(c,req)=>save(c,req,req.params.id));
   for(const operation of ['submit','approve','reject'])mutate('POST',prefix+'/:id/'+operation,operation==='submit'?canCreate:canReview,(c,req)=>transition(c,req,req.params.id,operation));
  }
@@ -145,4 +229,4 @@ async function pending(c,req){
  return (await c.query(sql,params(req))).rows;
 }
 
-module.exports={allowed,register,claim,bind,pending,assertRead};
+module.exports={allowed,register,claim,bind,pending,assertRead,assertCreate};

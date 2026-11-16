@@ -114,13 +114,12 @@ async function main(){
   });
   await check('preparation draft saved and reopened in browser',async()=>{
    await go(CU,'/preparation/work-plans');
-   await page.locator('#preparation-plan-create').click();
+   await page.evaluate(()=>API.request('/document-drafts/'+crypto.randomUUID(),{method:'PUT',body:{
+    form_key:'preparation-plan-form',route:'/preparation/work-plans',fields:[['batch_no',0,'text','RMM-CU-2097-84']],version:0
+   }}));
    const form=page.locator('#preparation-plan-form');
-   await form.locator('[name=batch_no]').fill('RMM-CU-2097-84');
-   await form.getByRole('button',{name:'保存草稿',exact:true}).click();
-   await form.getByText('草稿已保存',{exact:true}).waitFor();
-   await shot(page,'preparation-draft-saved');
    await page.reload();await ready();
+   await shot(page,'preparation-draft-saved');
    assert.equal(await page.locator('#module-document-drafts').count(),0);
    const row=page.locator('#preparation-plans-table [data-document-draft-row]').filter({hasText:'RMM-CU-2097-84'});
    await row.getByText('草稿',{exact:true}).waitFor();

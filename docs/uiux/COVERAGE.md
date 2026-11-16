@@ -195,6 +195,8 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | `/overview`、`/inventory`、`/receipts`、`/loading-plans/query`、`/outbounds` | V4.7.8-ui3 铜钴历史数据进入现有图表、指标和单据表格。列表沿用原筛选、排序、分页和只读详情。 |
 | `/sales-plans` | 两产品履约进度、数值排序及一致列对齐 |
 | `/preparation/new`、`/receipts/new` | 选取可执行备货计划、直接带入计划和权限拒绝 |
+| `/preparation/work-plans/new` | 铜钴的按客户或批次查询、批量录入、冲突校验、整批草稿和权限 |
+| `/:area/historical/:id`、`/workbench/historical-movements/:id` | 历史入库、装车计划、装车、出库、库存档案和原件来源相互跳转，恢复上一页上下文 |
 | `/outbounds?view=departures` | 出门证内打印配置与独立打印，历史打印入口转到出厂列表 |
 | `/workbench/accounts?registrations=pending` | 注册申请审批待办、单角标和审批后刷新 |
 | `/stocktaking` | 两产品编号、类型、时期、创建日期与状态组合筛选 |
