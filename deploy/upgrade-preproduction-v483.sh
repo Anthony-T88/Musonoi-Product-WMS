@@ -8,6 +8,18 @@ target=musonoi_preproduction_test
 envfile=/etc/musonoi/preproduction.env
 repo=/opt/musonoi-wms-release-v4.8.3
 override=/etc/musonoi/preproduction-v483-build.override.yaml
+source_revision=4.8.1-ui6
+target_revision=4.8.3
+case "${2:-base}" in
+  base) ;;
+  ui1)
+    repo+=-ui1
+    override=/etc/musonoi/preproduction-v483-ui1-build.override.yaml
+    source_revision=4.8.3
+    target_revision=4.8.3-ui1
+    ;;
+  *) printf 'Unrecognized release mode\n'; exit 1 ;;
+esac
 migration=195_v482_dispatch_vehicle_month.sql
 stage=$(mktemp -d /root/musonoi-v483.XXXXXXXX)
 mapfile -t running < <(docker ps -q --filter "label=com.docker.compose.project=$project" --filter 'label=com.docker.compose.service=app')
@@ -27,11 +39,11 @@ json_is(){ python3 -c 'import json,sys; d=json.load(sys.stdin); assert d[sys.arg
 query(){ "${old[@]}" exec -T database psql -X -qAt -v ON_ERROR_STOP=1 -U musonoi_owner "$@"; }
 mounts(){ docker inspect --format '{{range .Mounts}}{{println .Name .Destination .Source}}{{end}}' "$1" | sort; }
 status health | json_is database ok
-status config | json_is frontendRevision 4.8.1-ui6
+status config | json_is frontendRevision "$source_revision"
 [[ $(query -d "$target" -c 'SELECT environment FROM system_info WHERE singleton') == test ]]
 before=$(query -d "$target" -c 'SELECT version FROM security_schema_status')
 case "$before" in
-  194_v481_dispatch_and_approval.sql) added=1 ;;
+  194_v481_dispatch_and_approval.sql) [[ $source_revision == 4.8.1-ui6 ]]; added=1 ;;
   "$migration") added=0 ;;
   *) printf 'Unexpected migration version %s\n' "$before"; exit 1 ;;
 esac
@@ -76,8 +88,9 @@ docker image tag "$old_image" "musonoi-wms:rollback-before-v483-$(date +%s)"
 for service in app migrate; do
   "${new[@]}" run --rm --no-deps "$service" node -e '
     const a=require("node:assert/strict"),r=require("./server/release.cjs");
-    a.equal(r.version,"4.8.3"); a.equal(r.requiredMigration,"195_v482_dispatch_vehicle_month.sql");
-  '
+    a.equal(r.version,"4.8.3"); a.equal(r.frontendRevision,process.argv[1]);
+    a.equal(r.requiredMigration,"195_v482_dispatch_vehicle_month.sql");
+  ' "$target_revision"
 done
 check_migration(){
   python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["status"],d["migrations"],d["added"])==(sys.argv[1],195,int(sys.argv[2])); print(d)' "$1" "$added"
@@ -121,11 +134,12 @@ query -d "$target" < "$stage/reconcile.sql" > "$stage/after"
 cmp "$stage/before" "$stage/after"
 "${new[@]}" up -d --no-deps app
 for attempt in $(seq 1 30); do
-  if status health | json_is database ok; then break; fi
+  if status health 2>/dev/null | json_is database ok 2>/dev/null; then break; fi
   sleep 2
 done
 status health | json_is database ok
 status config | json_is version 4.8.3
+status config | json_is frontendRevision "$target_revision"
 [[ $("${new[@]}" ps -q database) == "$old_db" ]]
 mounts "$old_db" | cmp "$stage/db-mounts"
 mounts "$("${new[@]}" ps -q app)" | cmp "$stage/app-mounts"

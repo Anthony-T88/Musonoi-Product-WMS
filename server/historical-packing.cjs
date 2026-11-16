@@ -75,6 +75,12 @@ function parse(product,file){
  }
  if(!totalRow)errors.push('TOTAL_ROW_MISSING');
  if(!rows.length)errors.push('DETAILS_MISSING');
+ const seals=new Map();
+ for(const row of rows){
+  const seal=key(row.seal_no);
+  if(seal)seals.set(seal,(seals.get(seal)||0)+1);
+ }
+ for(const row of rows)if(seals.get(key(row.seal_no))>1)row.flags.push('DUPLICATE_SEAL');
  const document_no=text('E3'),batch_no=text('E4'),customer=text('A22'),truck=text('E22');
  if(!document_no)errors.push('DOCUMENT_NO_MISSING');
  if(!batch_no)errors.push('BATCH_NO_MISSING');

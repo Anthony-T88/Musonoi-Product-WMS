@@ -16,6 +16,7 @@ const scope=(a='b')=>`EXISTS (SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND
 const bad=(code,message,status=400)=>Object.assign(B.error(status,message),{code});
 const allowed=(path,method)=>method==='GET'&&/^\/api\/v1\/cobalt\/historical-backfill\/(?:documents(?:\/[0-9a-f-]{36})?|stock\/batch\/[0-9a-f-]{36})$/.test(path);
 const factsOf=({rows,document_no,document_key,errors,...facts})=>facts;
+const reviewableFlags=new Set(['DUPLICATE_UNIT','UNIT_CONFLICT','DUPLICATE_SEAL','SEAL_CONFLICT']);
 
 async function destinations(c,req){
  return (await c.query(`SELECT w.id,w.name,w.code,p.name project_name FROM warehouses w JOIN projects p ON p.id=w.project_id
@@ -46,22 +47,25 @@ async function review(c,req,body){
  const site=await destination(c,req,body.warehouse_id,facts);
  const product=facts.product_code,day=facts.shipping_date,issues=[...facts.errors];
  const keys=facts.rows.map(row=>row.unit_key).filter(Boolean);
+ const seals=[...new Set(facts.rows.map(row=>Packing.key(row.seal_no)).filter(Boolean))];
  if(facts.shipping_issue)issues.push(facts.shipping_issue);
  if(day&&day>today())issues.push('SHIPPING_DATE_INVALID');
  const original=facts.actual_dates.INBOUND?.day||null;
  if(original&&day&&original>day)issues.push('RECEIPT_AFTER_SHIPPING');
  const {rows:ledger}=await c.query(`SELECT m.id,m.document_key,m.document_no,m.source_facts,m.movement_type,m.business_date::text,m.source_sha256,
   b.source_id backfill,b.warehouse_id,
-  ARRAY(SELECT historical_stock_key(l.unit_id) FROM historical_movement_lines l WHERE l.document_id=m.id AND historical_stock_key(l.unit_id)=ANY($3::text[])) matching_units
+  ARRAY(SELECT historical_stock_key(l.unit_id) FROM historical_movement_lines l WHERE l.document_id=m.id AND historical_stock_key(l.unit_id)=ANY($3::text[])) matching_units,
+  ARRAY(SELECT historical_unit_key(l.seal_no) FROM historical_movement_lines l WHERE l.document_id=m.id AND historical_unit_key(l.seal_no)=ANY($4::text[])) matching_seals
   FROM historical_movement_documents m LEFT JOIN historical_backfills b ON b.source_id=m.id
   WHERE m.product_code=$1 AND m.voided_at IS NULL AND (m.document_key=$2 OR EXISTS
-   (SELECT 1 FROM historical_movement_lines l WHERE l.document_id=m.id AND historical_stock_key(l.unit_id)=ANY($3::text[]))) ORDER BY m.id`,[product,facts.document_key,keys]);
+   (SELECT 1 FROM historical_movement_lines l WHERE l.document_id=m.id AND
+    (historical_stock_key(l.unit_id)=ANY($3::text[]) OR historical_unit_key(l.seal_no)=ANY($4::text[])))) ORDER BY m.id`,[product,facts.document_key,keys,seals]);
  const legacyOutbound=ledger.find(row=>row.movement_type==='OUTBOUND'&&row.document_key===facts.document_key);
  const priorLines=id=>c.query('SELECT * FROM historical_movement_lines WHERE document_id=$1 ORDER BY source_row',[id]).then(result=>result.rows);
  let already=null,reuse=null,receipt=null;
  if(legacyOutbound){
   const same=legacyOutbound.source_sha256===file.sha256&&Packing.key(legacyOutbound.source_facts.batch_no)===Packing.key(facts.batch_no)&&
-   compareLines(await priorLines(legacyOutbound.id),facts.rows);
+   (legacyOutbound.backfill||compareLines(await priorLines(legacyOutbound.id),facts.rows));
   if(same&&legacyOutbound.business_date===day&&(!legacyOutbound.backfill||legacyOutbound.warehouse_id===site.id)){
    if(legacyOutbound.backfill)already=legacyOutbound.id;else reuse=legacyOutbound.id;
   }else issues.push('DOCUMENT_CONFLICT');
@@ -80,33 +84,48 @@ async function review(c,req,body){
    UNION SELECT k.unit_key,r.number_key FROM unnest($1::text[]) k(unit_key)
     JOIN bundle_number_registry r ON r.number_key=v265_bundle_key(k.unit_key)`;
  const {rows:online}=await c.query(onlineQuery,[keys]);
+ const {rows:onlineSeals}=seals.length?await c.query(product==='CO_HYDROXIDE'?
+  `SELECT historical_unit_key(w.seal_no) seal_key,p.document_no reference FROM co_bag_work w
+   JOIN co_preparations p ON p.id=w.preparation_id WHERE historical_unit_key(w.seal_no)=ANY($1::text[])`:
+  `SELECT historical_unit_key(s.seal_key) seal_key,coalesce(b.bundle_no,s.seal_key) reference FROM seal_number_registry s
+   LEFT JOIN bundles b ON b.id=s.bundle_id WHERE historical_unit_key(s.seal_key)=ANY($1::text[])`,[seals]):{rows:[]};
  const {rows:existingDocs}=await c.query(product==='CO_HYDROXIDE'?
   `SELECT document_no reference FROM co_packing_documents WHERE historical_unit_key(document_no)=$1
    UNION SELECT code FROM co_loading_plans WHERE historical_unit_key(packing_list_no)=$1 AND status<>'CANCELLED'`:
   `SELECT document_no reference FROM packing_list_documents WHERE historical_unit_key(document_no)=$1
    UNION SELECT code FROM loading_plan_documents WHERE historical_unit_key(packing_list_no)=$1 AND cancelled_at IS NULL`,[facts.document_key]);
  if(existingDocs.length)issues.push('FORMAL_DOCUMENT_CONFLICT');
- const references=new Map();
- const addReference=(key,reference)=>{
-  if(!references.has(key))references.set(key,new Set());
-  references.get(key).add(reference);
+ const references=new Map(),sealReferences=new Map();
+ const addReference=(index,key,reference)=>{
+  if(!index.has(key))index.set(key,new Set());
+  index.get(key).add(reference);
  };
- for(const match of online)addReference(match.unit_key,match.reference);
+ for(const match of online)addReference(references,match.unit_key,match.reference);
+ for(const match of onlineSeals)addReference(sealReferences,match.seal_key,match.reference);
  for(const other of ledger){
   if([already,reuse,receipt?.id].includes(other.id))continue;
-  for(const key of other.matching_units)addReference(key,other.document_no);
+  for(const key of other.matching_units)addReference(references,key,other.document_no);
+  for(const key of other.matching_seals)addReference(sealReferences,key,other.document_no);
  }
  const rows=facts.rows.map(row=>{
   const conflicts=[...(references.get(row.unit_key)||[])].sort();
-  return {...row,conflicts,flags:row.flags.concat(conflicts.length?'UNIT_CONFLICT':[])};
+  const seal_conflicts=[...(sealReferences.get(Packing.key(row.seal_no))||[])].sort();
+  const flags=[...row.flags];
+  if(conflicts.length)flags.push('UNIT_CONFLICT');
+  if(seal_conflicts.length)flags.push('SEAL_CONFLICT');
+  return {...row,conflicts,seal_conflicts,flags,
+   excluded:!reuse&&(flags.includes('UNIT_CONFLICT')||flags.includes('DUPLICATE_UNIT'))};
  });
  const originalDate=original||receipt?.business_date||null;
  const receiptId=receipt?.id||null;
- const token=Packing.digest(JSON.stringify([file.sha256,product,day,site.id,site.customer_id,issues,existingDocs.map(row=>row.reference).sort(),
-  already,reuse,originalDate,receiptId,rows.map(row=>[row.unit_key,row.flags,row.conflicts])]));
+ const flags=rows.flatMap(row=>row.flags),eligible=!already&&!issues.length;
+ const token=Packing.digest(JSON.stringify([req.user.id,file.sha256,product,day,site.id,site.customer_id,issues,existingDocs.map(row=>row.reference).sort(),
+  already,reuse,originalDate,receiptId,rows.map(row=>[row.source_row,row.flags,row.conflicts,row.seal_conflicts,row.excluded])]));
  return {file,facts,site,reuse,receiptId,originalDate,preview:{...facts,rows,issues,conflicting_documents:existingDocs.map(row=>row.reference),
   business_date:day,original_receipt_date:originalDate,already_imported:already,
-  importable:!already&&!issues.length&&rows.every(row=>!row.flags.length),preview_token:token}};
+  importable:eligible&&!flags.length,reviewable:eligible&&flags.length>0&&flags.every(flag=>reviewableFlags.has(flag))&&
+   (!reuse||rows.every(row=>!row.flags.includes('UNIT_CONFLICT'))),
+  accepted_quantity:rows.filter(row=>!row.excluded).length,preview_token:token}};
 }
 
 async function confirm(c,req,body,batch){
@@ -114,14 +133,23 @@ async function confirm(c,req,body,batch){
  await c.query('SELECT pg_advisory_xact_lock(477189)');
  const {file,facts,site,reuse,receiptId,originalDate,preview}=await review(c,req,body);
  if(preview.already_imported)return {status:'ALREADY_IMPORTED',id:preview.already_imported};
- if(!preview.importable||preview.preview_token!==body.preview_token)return {status:'FAILED',code:'REVIEW_REQUIRED',issues:preview.issues,rows:preview.rows.filter(row=>row.flags.length)};
+ const flagged=preview.rows.filter(row=>row.flags.length);
+ if(preview.preview_token!==body.preview_token||(!preview.importable&&!preview.reviewable))
+  return {status:'FAILED',code:'REVIEW_REQUIRED',issues:preview.issues,rows:flagged};
+ let exception=null;
+ if(preview.reviewable){
+  const reason=typeof body.exception_reason==='string'?body.exception_reason.trim():'';
+  if(reason.length<5||reason.length>500)return {status:'FAILED',code:'EXCEPTION_REASON_REQUIRED',rows:flagged};
+  exception={reason,rows:flagged,accepted_quantity:preview.accepted_quantity};
+ }
  const day=preview.business_date,product=facts.product_code;
  const id=reuse||(await c.query(`INSERT INTO historical_movement_documents(product_code,movement_type,document_no,document_key,business_date,
   date_evidence,source_name,source_sha256,source_data,source_facts,imported_by) VALUES($1,'OUTBOUND',$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
  [product,facts.document_no,facts.document_key,day,'Shipping date from '+facts.shipping_cell,file.name,file.sha256,file.data,factsOf(facts),req.user.id])).rows[0].id;
  if(!reuse)await c.query(`INSERT INTO historical_movement_lines(document_id,source_row,unit_id,unit_key,seal_no,sheets_count,net_kg,gross_kg)
   SELECT $1,source_row,unit_id,unit_key,seal_no,sheets_count,net_kg,gross_kg FROM jsonb_to_recordset($2)
-  AS x(source_row integer,unit_id text,unit_key text,seal_no text,sheets_count integer,net_kg numeric,gross_kg numeric)`,[id,JSON.stringify(facts.rows)]);
+  AS x(source_row integer,unit_id text,unit_key text,seal_no text,sheets_count integer,net_kg numeric,gross_kg numeric)`,
+ [id,JSON.stringify(preview.rows.filter(row=>!row.excluded))]);
  await c.query('INSERT INTO historical_backfills(source_id,import_batch_id,project_id,warehouse_id,customer_id,original_receipt_date,receipt_source_id,backfilled_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
   [id,batch,site.project_id,site.id,site.customer_id,originalDate,receiptId,req.user.id]);
  await recordLicenseSource(c,id,facts);
@@ -132,7 +160,8 @@ async function confirm(c,req,body,batch){
   SELECT document_id,source_row,$2,historical_stock_key(unit_id) FROM historical_movement_lines WHERE document_id=$1`,[id,product]);
  await B.audit(c,req,'historical_backfill_imported','historical_movement_documents',id,null,
   {product_code:product,project_id:site.project_id,warehouse_id:site.id,customer_id:site.customer_id,import_batch_id:batch,
-   shipping_date:day,original_receipt_date:originalDate,quantity:facts.rows.length,source_sha256:file.sha256});
+   shipping_date:day,original_receipt_date:originalDate,quantity:preview.accepted_quantity,source_sha256:file.sha256,
+   ...(exception?{exception_review:exception}:{})});
  return {status:'IMPORTED',id,import_batch_id:batch};
 }
 

@@ -960,7 +960,7 @@ body.wms-navigating .workspace :is(#business-page,#dashboard,#inventory,#field) 
   background: var(--uix-info-soft);
 }
 .wms-import-status[data-import-state="imported"] { color: var(--uix-success); background: var(--uix-success-soft); }
-.wms-import-status:is([data-import-state="correction"],[data-import-state="retry"]) { color: var(--uix-warning); background: var(--uix-warning-soft); }
+.wms-import-status:is([data-import-state="correction"],[data-import-state="retry"],[data-import-state="review"]) { color: var(--uix-warning); background: var(--uix-warning-soft); }
 .wms-import-status[data-import-state="voided"] { color: var(--uix-danger); background: var(--uix-danger-soft); }
 @media (max-width: 700px) {
   .wms-import-upload { grid-template-columns: minmax(0,1fr); }

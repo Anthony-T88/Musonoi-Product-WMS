@@ -1,0 +1,117 @@
+'use strict';
+const assert=require('node:assert/strict');
+const test=require('node:test');
+const {randomUUID}=require('node:crypto');
+const {chromium}=require('playwright');
+const XLSX=require('xlsx');
+const E=require('./environment.cjs');
+const {migrate}=require('../../scripts/production-db.cjs');
+const CU='CU_CATHODE',CO='CO_HYDROXIDE',imports='/historical-movements/batch';
+
+function packing(product,warehouse,number,rows,day='2020-03-05'){
+ const co=product===CO,values=Array.from({length:29},()=>[]);
+ values[0]=['PACKING LIST'];values[2]=['','','','Packing List No:',number];values[3]=['','','','Lot No:',number+'-LOT'];
+ values[6]=['','','','Shipping Date:',day];
+ values[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
+ values.push(...rows.map(([unit,seal],idx)=>[idx+1,'Synthetic',unit,co?null:48,seal,647,650]),['Total',null,null,null,null,647*rows.length,650*rows.length]);
+ const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(values),'PL');
+ return {file_name:number+'.xlsx',file_base64:XLSX.write(book,{bookType:'xlsx',type:'base64'}),warehouse_id:warehouse};
+}
+
+test('historical administrator reviews and cobalt map recovery in isolated TEST',async t=>{
+ const {name,client}=await E.database();let app,browser;
+ try{
+  await migrate(client,{apply:true,appPassword:process.env.WMS_TEST_APP_PASSWORD,environment:'test'});
+  const f=await E.seed(client,name),port=4398,origin='http://127.0.0.1:'+port;
+  app=await require('../../server/app.cjs').build({config:{...f.appCfg,port,origin}});
+  const sessions=new Map(),account=role=>f.accounts.find(a=>a.role===role);
+  async function request(role,product,path,payload,expected=200){
+   if(!sessions.has(role)){
+    const a=account(role),response=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.73.0.'+(f.accounts.indexOf(a)+1),
+     headers:{origin},payload:{username:a.username,password:a.password}});
+    assert.equal(response.statusCode,200);
+    sessions.set(role,{cookie:response.cookies.map(c=>c.name+'='+c.value).join('; '),'x-csrf-token':response.json().csrfToken});
+   }
+   const response=await app.inject({method:payload?'POST':'GET',url:'/api/v1'+path,payload,
+    headers:{origin,...sessions.get(role),'x-product-code':product,'idempotency-key':randomUUID()}});
+   assert.equal(response.statusCode,expected,path+' '+response.body.slice(0,260));
+   return response.json();
+  }
+  async function batch(product,action,file,role='admin'){
+   return (await request(role,product,imports+'/'+action,{files:[file]})).results[0];
+  }
+  const reason='Matched historical packing list and original seal record';
+  for(const product of [CU,CO])await t.test(product+' duplicate reviews, source rows, totals and replay',async()=>{
+   const p=product===CU?'CU':'CO',file=(suffix,rows)=>packing(product,f.warehouse,p+'-'+suffix,rows);
+   const first=file('FIRST',[[p+'-1',p+'-S1'],[p+'-2',p+'-S1']]),preview=await batch(product,'preview',first);
+   assert.equal(preview.importable,false);assert.equal(preview.reviewable,true);
+   assert.equal(preview.accepted_quantity,2);assert(preview.rows.every(row=>row.flags.includes('DUPLICATE_SEAL')));
+   const input={...first,preview_token:preview.preview_token};
+   assert.equal((await batch(product,'confirm',input)).code,'EXCEPTION_REASON_REQUIRED');
+   await request('production_operator',product,imports+'/confirm',{files:[{...input,exception_reason:reason}]},403);
+   const imported=await batch(product,'confirm',{...input,exception_reason:reason});
+   assert.equal(imported.status,'IMPORTED');
+   const next=file('SECOND',[[p+'-1',p+'-S1'],[p+'-3',p+'-S2'],[p+'-3',p+'-S3']]),review=await batch(product,'preview',next);
+   assert.deepEqual(review.rows.map(row=>row.flags),[['UNIT_CONFLICT','SEAL_CONFLICT'],[],['DUPLICATE_UNIT']]);
+   assert.equal(review.accepted_quantity,1);
+   assert.equal((await batch(product,'confirm',{...next,preview_token:preview.preview_token,exception_reason:reason})).code,'REVIEW_REQUIRED');
+   const candidate={...next,preview_token:review.preview_token,exception_reason:reason};
+   const attempts=await Promise.all([batch(product,'confirm',candidate),batch(product,'confirm',candidate)]);
+   assert.deepEqual(attempts.map(a=>a.status).sort(),['ALREADY_IMPORTED','IMPORTED']);
+   const record=await request('admin',product,'/historical-movements/'+attempts[0].id);
+   assert.equal(record.exception_review.reason,reason);
+   assert.equal(record.rows.length,3);
+   assert.deepEqual(record.rows.map(row=>Boolean(row.excluded)),[true,false,true]);
+   assert.equal(record.documents.length,4);
+   assert.equal(record.quantity,1);assert.equal(Number(record.net_kg),647);
+   const stock=(await client.query('SELECT unit_id FROM historical_outbound_units WHERE source_id=$1',[record.id])).rows;
+   assert.deepEqual(stock,[{unit_id:p+'-3'}]);
+   const invalid=packing(product,f.warehouse,p+'-INVALID',[[p+'-1',p+'-S1']],'not a date'),bad=await batch(product,'preview',invalid);
+   assert.equal(bad.reviewable,false);
+   assert.equal((await batch(product,'confirm',{...invalid,preview_token:bad.preview_token,exception_reason:reason})).code,'REVIEW_REQUIRED');
+  });
+  const layout=require('../../server/data/cobalt-site-plan-r2.json');
+  await request('admin',CO,'/cobalt/stock/site-plan',{project_id:f.project,warehouse_id:f.warehouse,layout_key:layout.key,reason:'Synthetic map recovery verification'});
+  await request('admin',CO,'/cobalt/stock/map?warehouse_id='+randomUUID(),null,403);
+  await app.listen({port,host:'127.0.0.1'});
+  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined});
+  const context=await browser.newContext({viewport:{width:1440,height:900}}),admin=account('admin');
+  const login=await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:admin.username,password:admin.password}});
+  assert.equal(login.status(),200);
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.addInitScript(({id,product})=>localStorage.setItem('musonoi-product:'+id,product),{id:admin.id,product:CO});
+  await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.locator('[data-task-dismiss]').click());
+  await t.test('cobalt scoped map restores stale warehouse and malformed locations',async()=>{
+   for(const query of ['', '?warehouse_id='+randomUUID(), '?zone_id=obsolete', '?location_id='+randomUUID()]){
+    await page.goto(origin+'/stock-map'+query);
+    await page.locator('#co-map-svg.site-plan-svg').waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('warehouse_id'),f.warehouse);
+    assert(await page.locator('[data-co-location]').count()>=93);
+   }
+   await page.locator('#co-map-in').click();
+   await page.waitForFunction(()=>document.getElementById('co-map-svg').getAttribute('viewBox')!==CobaltMap465.data.site_plan.bounds.join(' '));
+   await page.locator('#co-map-fit').click();
+   await page.waitForFunction(()=>document.getElementById('co-map-svg').getAttribute('viewBox')===CobaltMap465.data.site_plan.bounds.join(' '));
+   const input=page.locator('input[name=location_query]');await input.fill('CO-A-01');await input.press('Enter');
+   await page.locator('#co-map-detail').getByText('CO-A-01',{exact:true}).first().waitFor();
+  });
+  await t.test('administrator review dialog and historical source details',async()=>{
+   await page.goto(origin+'/workbench/historical-movements');
+   const form=page.locator('#historical-upload');await form.locator('select').selectOption(f.warehouse);
+   const file=packing(CO,f.warehouse,'CO-BROWSER',[['CO-3','CO-S2'],['CO-4','CO-S4']]);
+   await form.locator('input[type=file]').setInputFiles({name:file.file_name,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(file.file_base64,'base64')});
+   await form.locator('button').click();
+   await page.locator('[data-import-state="review"]').waitFor();
+   assert(await page.locator('#historical-confirm').isDisabled());
+   await page.locator('[data-history-review]').click();
+   await page.locator('#operation-confirm-comment').fill(reason);
+   await page.locator('#operation-confirm-accept').click();
+   await page.locator('[data-history-file] [data-import-state="imported"]').waitFor();
+   await page.locator('[data-history-file] a').first().click();
+   await page.getByText(reason,{exact:true}).waitFor();
+   await page.getByText(/仅保留原表记录/).waitFor();
+  });
+  assert.deepEqual(errors,[]);
+ }finally{if(browser)await browser.close();if(app)await app.close();await client.end();}
+});

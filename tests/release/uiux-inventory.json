@@ -277,6 +277,14 @@
       "template": "/stock-map"
     },
     {
+      "key": "co-map-expired-filter",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "recovers expired map filter",
+      "template": "/stock-map"
+    },
+    {
       "key": "map-move",
       "products": [
         "CU_CATHODE"

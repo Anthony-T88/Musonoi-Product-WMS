@@ -93,6 +93,7 @@ function pages(ids){
  add('co-stock-archive','/inventory/:id/archive',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-history-alias','/inventory/:id/history',[CO],{example:'coPrep'});
  add('map','/stock-map',BOTH,{screenshot:true});
+ add('co-map-expired-filter','/stock-map',[CO],{query:'?zone_id=obsolete',state:'recovers expired map filter'});
  add('map-move','/stock-map/relocate',[CU]);
  add('customers','/customers',BOTH,{screenshot:true,roles:['sales_operator','customer_admin']});
  add('co-customer-edit','/customers',[CO],{query:'?editor=customer'});

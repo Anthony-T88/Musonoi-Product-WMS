@@ -5,7 +5,7 @@ window.HistoricalMovements={
  kinds:{receipts:'RECEIPT','loading-plans':'LOADING_PLAN',outbounds:'LOADING_ORDER','stock-outbound':'OUTBOUND'},
  queue:[],
  status(kind){
-  const states={ready:['可导入','Ready to Import'],imported:['导入成功','Imported'],duplicate:['已导入','Already Imported'],correction:['待修正','Needs Correction'],retry:['写入失败，可重试','Write Failed, Retry'],voided:['已作废','Voided'],legacy:['旧版台账','Legacy Ledger']};
+  const states={ready:['可导入','Ready to Import'],review:['待管理员复核','Admin Review Required'],imported:['导入成功','Imported'],duplicate:['已导入','Already Imported'],correction:['待修正','Needs Correction'],retry:['写入失败，可重试','Write Failed, Retry'],voided:['已作废','Voided'],legacy:['旧版台账','Legacy Ledger']};
   return '<span class="wms-import-status" data-import-state="'+kind+'">'+this.t(...states[kind])+'</span>';
  },
  canImport:()=>CurrentUser.role_code==='admin',
@@ -26,6 +26,8 @@ window.HistoricalMovements={
    SHIPPING_DATE_AMBIGUOUS:['发运日期字段重复','More than one shipping date field'],RECEIPT_AFTER_SHIPPING:['原始入库日期晚于发运日期','Original receipt is later than shipping'],
    FORMAL_DOCUMENT_CONFLICT:['与现有正式单据冲突','Conflicts with a formal document'],DOCUMENT_CONFLICT:['同号单据内容、日期或仓库冲突','Same number with different content, date or warehouse'],
    UNIT_CONFLICT:['编号已关联其他单据','Identifier already linked to another document'],UNIT_MISSING:['缺少编号','Missing identifier'],DUPLICATE_UNIT:['单内编号重复','Duplicate identifier'],
+   DUPLICATE_SEAL:['单内铅封号重复','Duplicate seal in the file'],SEAL_CONFLICT:['铅封号已关联其他单据','Seal already linked to another document'],
+   EXCEPTION_REASON_REQUIRED:['请填写 5 至 500 字的复核原因','Enter a review reason of 5 to 500 characters'],
    INVALID_SHEETS:['片数无效','Invalid sheet count'],INVALID_WEIGHT:['重量缺失或无效','Missing or invalid weight'],SOURCE_TOTAL_MISMATCH:['原单合计与明细不符','Totals do not match detail rows'],
    TOTAL_ROW_MISSING:['缺少合计行','Totals row is missing'],DOCUMENT_NO_MISSING:['缺少装箱单号','Missing packing list number'],BATCH_NO_MISSING:['缺少备货批次','Missing preparation batch'],
    DETAILS_MISSING:['缺少明细','Missing detail rows'],INVALID_WORKBOOK:['工作簿格式或表头无效','Invalid workbook format or headers'],
@@ -94,7 +96,7 @@ window.HistoricalMovements={
  },
  archiveLink(row){
   const cu=row.product_code==='CU_CATHODE',unit=cu?row.rows?.[0]:null;
-  if(cu&&!unit||!this.canArea('inventory'))return null;
+  if(!row.quantity||cu&&!unit||!this.canArea('inventory'))return null;
   return {label:this.t(cu?'捆包详情档案':'批次详情档案',cu?'Bundle Detail Archive':'Lot Detail Archive'),
    code:cu?unit.unit_id:row.source_facts?.batch_no,href:'/inventory/historical/'+(cu?unit.id:row.source_id)};
  },
@@ -173,7 +175,9 @@ window.HistoricalMovements={
   const t=this.t,queue=this.queue,form=$('historical-upload');
   if(!queue.length){box.replaceChildren();return;}
   const pending=queue.filter(row=>row.preview?.importable&&(!row.result||row.result.code==='IMPORT_WRITE_FAILED'));
-  box.innerHTML='<h3>'+t('批量导入预览','Batch Import Preview')+'</h3>'+queue.map(({name,preview:p,result},index)=>{
+  const canReview=row=>row.preview?.reviewable&&(!row.result||['IMPORT_WRITE_FAILED','EXCEPTION_REASON_REQUIRED'].includes(row.result.code));
+  box.innerHTML='<h3>'+t('批量导入预览','Batch Import Preview')+'</h3>'+queue.map((row,index)=>{
+   const {name,preview:p,result}=row;
    const id=result?.id||p?.already_imported,product=p?.product_code;
    const review=(result?.issues||p?.issues||[]).map(code=>this.message(code));
    if(p?.shipping_issue)review.push(p.shipping_cell||'PL!E7');
@@ -181,17 +185,18 @@ window.HistoricalMovements={
    if(result?.code||p?.code)review.push(this.message(result?.code||p.code));
    if(p?.error&&I18n.language!=='en')review.push(p.error);
    const status=id?(result?.status==='IMPORTED'?'imported':'duplicate'):
-    p?.importable&&!result?'ready':result?.code==='IMPORT_WRITE_FAILED'?'retry':'correction';
+    p?.importable&&!result?'ready':canReview(row)?'review':result?.code==='IMPORT_WRITE_FAILED'?'retry':'correction';
    const facts=[this.product(product),p?.business_date,p?.document_no,p?.batch_no,
     p?.totals?CountValues.display(p.totals.quantity)+' '+t('件','units')+' / '+this.weight(p.totals.net_kg)+' MT':null]
     .filter(value=>value&&value!=='—');
-   return '<details class="panel wms-section wms-import-file" data-history-file="'+index+'"'+(queue.length===1||review.length?' open':'')+'><summary>'+
+   return '<details class="panel wms-section wms-import-file" data-history-file="'+index+'"'+(queue.length===1||review.length||canReview(row)?' open':'')+'><summary>'+
     '<span class="wms-import-filename">'+esc(name)+'</span>'+this.status(status)+'</summary>'+
     (facts.length?'<p class="wms-import-facts">'+facts.map(esc).join(' · ')+'</p>':'')+
     (review.length?'<p class="error" role="status">'+esc(review.join(' · '))+'</p>':'')+
     (p?.rows?.length?this.lines(result?.rows?.length?result.rows:p.rows,product):'')+
+    (canReview(row)?'<div class="business-toolbar"><button type="button" class="button secondary" data-history-review="'+index+'" '+(this.busy?'disabled':'')+'>'+t('复核并导入','Review and Import')+'</button></div>':'')+
    (id?'<div class="business-toolbar">'+this.recordLink(id,product,t('查看导入记录','View Import Record'))+
-    (product===ProductContext.code&&this.canArea('inventory')&&p?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')+'</div>':
+    (product===ProductContext.code&&this.canArea('inventory')&&p?.accepted_quantity?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')+'</div>':
      '<label class="wms-field">'+t('单独重传此文件','Replace This File')+'<input type="file" accept=".xls,.xlsx" data-historical-replace="'+index+'"></label>')+
     '</details>';
   }).join('')+'<div class="wms-filter-actions"><button type="button" class="button primary" id="historical-confirm">'+t('确认导入合格文件','Import Valid Files')+' ('+pending.length+')'+
@@ -199,16 +204,26 @@ window.HistoricalMovements={
   for(const input of box.querySelectorAll('[data-historical-replace]'))input.onchange=()=>this.read([...input.files],form.elements.warehouse_id.value,form,Number(input.dataset.historicalReplace));
   const button=$('historical-confirm'),progress=$('historical-progress');
   button.disabled=this.busy||!pending.length;
-  button.onclick=async()=>{
+  const submit=async(files,review)=>{
+   if(this.busy)return;
    button.disabled=true;this.busy=true;
+   let reason='';
    try{
-    if(!await OperationConfirm.ask({title:t('确认导入合格装箱单？','Import validated packing lists?')}))return;
+    const options=review?{title:t('确认复核后导入？','Import after review?'),
+     rows:[[t('装箱单号','Packing List No.'),files[0].preview.document_no],
+      [t('计入库存追溯的明细','Lines included in stock history'),CountValues.display(files[0].preview.accepted_quantity)],
+      [t('仅保留原表记录的明细','Lines kept in the source record only'),CountValues.display(files[0].preview.totals.quantity-files[0].preview.accepted_quantity)]],
+     comment:true,commentRequired:true,commentMax:500,commentValue:files[0].exceptionReason,
+     commentLabel:t('复核原因','Review Reason'),onComment:value=>{reason=value.trim();files[0].exceptionReason=reason;}}
+     :{title:t('确认导入合格装箱单？','Import validated packing lists?')};
+    if(!await OperationConfirm.ask(options))return;
+    if(review&&(reason.length<5||reason.length>500)){$('historical-upload-error').textContent=this.message('EXCEPTION_REASON_REQUIRED');return;}
     $('historical-upload-error').textContent='';
     progress.textContent=t('正在导入，请等待每份文件的结果…','Importing. Wait for each file’s result…');
     for(const input of form.elements)input.disabled=true;
-    for(const input of box.querySelectorAll('[data-historical-replace]'))input.disabled=true;
-    const response=await API.request('/historical-movements/batch/confirm',{method:'POST',timeoutMs:120000,body:{files:pending.map(row=>({...row.body,preview_token:row.preview.preview_token}))}});
-    for(const result of response.results){pending[result.index].result=result;if(result.id)delete pending[result.index].body;}
+    for(const input of box.querySelectorAll('[data-historical-replace],[data-history-review]'))input.disabled=true;
+    const response=await API.request('/historical-movements/batch/confirm',{method:'POST',timeoutMs:120000,body:{files:files.map(row=>({...row.body,preview_token:row.preview.preview_token,...(review?{exception_reason:reason}:{})}))}});
+    for(const result of response.results){files[result.index].result=result;if(result.id)delete files[result.index].body;}
     if(box.isConnected){
      const q=new URLSearchParams(location.search),data=await API.request('/historical-movements?'+new URLSearchParams([...q,['all_products','1']]));
      if(box.isConnected)$('historical-ledger').innerHTML=this.ledger(data,q);
@@ -216,6 +231,8 @@ window.HistoricalMovements={
    }catch(e){if(box.isConnected)$('historical-upload-error').textContent=this.uploadError(e,true);}
    finally{this.busy=false;if(box.isConnected){progress.textContent='';for(const input of form.elements)input.disabled=false;this.showQueue();}}
   };
+  button.onclick=()=>submit(pending,false);
+  for(const review of box.querySelectorAll('[data-history-review]'))review.onclick=()=>submit([queue[Number(review.dataset.historyReview)]],true);
  },
  unitLines(rows,product,linkUnits){
   const t=this.t,cu=product==='CU_CATHODE',link=cu&&linkUnits&&this.canArea('inventory');
@@ -250,7 +267,8 @@ window.HistoricalMovements={
   return this.table([t('原表行','Source Row'),t(cu?'捆包号':'袋号',cu?'Bundle No.':'Bag No.'),t('铅封号','Seal No.'),
    ...(cu?[t('片数','Sheets')]:[]),t('毛重（吨）','Gross (MT)'),t('净重（吨）','Net (MT)'),t('校验','Validation')],
    rows.map(r=>[r.source_row,this.text(r.unit_id),this.text(r.seal_no),...(cu?[CountValues.display(r.sheets_count)]:[]),
-    this.weight(r.gross_kg),this.weight(r.net_kg),this.text([...(r.flags||[]).map(code=>this.message(code)),...(r.conflicts||[])].join(' · '))]),
+    this.weight(r.gross_kg),this.weight(r.net_kg),this.text([...(r.flags||[]).map(code=>this.message(code)),
+     ...(r.conflicts||[]),...(r.seal_conflicts||[]),...(r.excluded?[t('仅保留原表记录','Source record only')]:[])].join(' · '))]),
    cu?[0,3,4,5]:[0,3,4]);
  },
  facts(row){
@@ -276,9 +294,12 @@ window.HistoricalMovements={
    this.section('导入资料','Import Information',this.facts(r))+
     (r.documents?.length?this.section('关联单据','Related Documents',r.product_code!==ProductContext.code?
     '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':this.links(r.documents,{
-    stock:!r.voided_at?{label:t('查看已出库库存','View Outbound Stock'),code:r.source_facts?.batch_no,
+    stock:!r.voided_at&&r.quantity?{label:t('查看已出库库存','View Outbound Stock'),code:r.source_facts?.batch_no,
      href:this.stockPath({packing_list_no:r.document_no,batch_no:r.source_facts?.batch_no})}:null
    })):'')+
+   (r.exception_review?this.section('管理员复核','Administrator Review',UI46Pages.factList([
+    [t('复核原因','Review Reason'),this.text(r.exception_review.reason)],
+    [t('计入库存追溯的明细','Lines included in stock history'),CountValues.display(r.exception_review.accepted_quantity)]])):'')+
    this.section('原表明细','Source Lines',this.lines(r.rows,r.product_code))+
    (!r.voided_at?this.section('导入纠错','Import Correction','<form id="historical-void" class="user-form"><label>'+t('作废原因','Void Reason')+
     '<textarea name="reason" required minlength="5" maxlength="500"></textarea></label><button class="button danger-outline">'+t('作废该条历史单据','Void Historical Record')+'</button></form>'):

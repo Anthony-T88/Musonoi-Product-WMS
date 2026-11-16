@@ -58,7 +58,14 @@ function register({app,pool,auth,csrf}){
    const row=await access(req);
    const {rows}=await pool.query(`SELECT source_row,unit_id,seal_no,sheets_count,net_kg::text,gross_kg::text
     FROM historical_movement_lines WHERE document_id=$1 ORDER BY source_row`,[row.id]);
-   return {...row,rows,documents:row.import_batch_id?await Backfill.related(pool,row.id):[]};
+   const {rows:[review]}=await pool.query(`SELECT after_data->'exception_review' exception_review
+    FROM audit_logs WHERE entity_type='historical_movement_documents' AND entity_id=$1 AND action='historical_backfill_imported'
+    ORDER BY id DESC LIMIT 1`,[row.id]);
+   const exception_review=review?.exception_review??null;
+   const sourceRows=new Map(rows.map(line=>[line.source_row,line]));
+   for(const line of exception_review?.rows||[])sourceRows.set(line.source_row,line);
+   return {...row,rows:[...sourceRows.values()].sort((a,b)=>a.source_row-b.source_row),exception_review,
+    documents:row.import_batch_id?await Backfill.related(pool,row.id):[]};
   });
   app.get(prefix+'/:id/source',read,async(req,reply)=>{
    const row=await access(req);
