@@ -19,10 +19,18 @@ window.CobaltMap465={
   return API.request('/cobalt/stock/map?'+q);
  },
  async open(){
-  const seq=++this.sequence,q=new URLSearchParams(location.search),scope=['project_id','warehouse_id','zone_id','location_id','preparation_id'];
+  const seq=++this.sequence,input=new URLSearchParams(location.search),q=new URLSearchParams();
+  const scope=['project_id','warehouse_id','zone_id','location_id','preparation_id'];
   const current=()=>seq===this.sequence&&!ProductContext.isCopper()&&location.pathname==='/stock-map';
-  for(const key of ['status','phase'])q.delete(key);
-  for(const key of scope)if(q.has(key)&&!/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i.test(q.get(key)))q.delete(key);
+  for(const key of scope){
+   const value=input.get(key);
+   if(value&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value))q.set(key,value.toLowerCase());
+  }
+  for(const key of ['batch','bag']){
+   const value=input.get(key)?.trim();
+   if(value&&value.length<=80)q.set(key,value);
+  }
+  if(input.get('unlocated')==='1')q.set('unlocated','1');
   const scoped=scope.some(key=>q.has(key));
   let d;
   try{d=await this.loadMap(q);}
@@ -36,10 +44,13 @@ window.CobaltMap465={
   if(!current())return;
   const target='/stock-map'+(q.size?'?'+q:'');
   if(target!==location.pathname+location.search)history.replaceState(history.state,'',target);
-  const filters=await CobaltStockUI.filters({workStatus:false,lifecycle:false});
+  let filters='',filterUnavailable=false;
+  try{filters=await CobaltStockUI.filters({workStatus:false,layout:d});}
+  catch(error){if(error.statusCode===401)throw error;filterUnavailable=true;}
   if(!current())return;
   this.data=d;CobaltStockUI.mapData=d;const t=this.t,counts={all:d.locations.length,occupied:d.locations.filter(l=>l.bags>0).length};
   Router.page(t('氢氧化钴库存地图','Cobalt Stock Map'),'<div class="co-page co-stock-page map465" data-page-composed data-no-i18n>'+filters+'<section class="map465-stats">'+[[t('已配置货位','Configured Locations'),counts.all],[t('有实物货位','Occupied Locations'),counts.occupied],[t('当前库存袋数','Stock Bags'),d.summary.bags],[t('未定位袋数','Unlocated Bags'),d.summary.unlocated_bags]].map(([label,n])=>'<article><span>'+label+'</span><strong>'+n+'</strong></article>').join('')+'</section><div class="map465-actions"><div><a class="button secondary" href="'+esc(this.link('/inventory'))+'">'+t('查询库存明细','View Stock')+'</a>'+'</div><span>'+t('读取时点：','Snapshot: ')+BusinessTime.display(d.snapshot_at)+'</span></div><div class="map465-grid"><section id="co-map-stage" class="map465-stage"><div class="co-map-toolbar" data-work-view>'+(CobaltStockUI.can('co:locate')||CobaltStockUI.can('co:temp-locate')?'<button id="co-map-adjust" type="button" class="button primary" disabled>'+t('货位调整','Relocate Stock')+'</button>':'')+'<button id="co-map-fullscreen" type="button" class="button secondary">'+t('全屏查看','Fullscreen')+'</button><button id="co-map-in" type="button" class="button secondary" aria-label="'+t('放大','Zoom In')+'">＋</button><button id="co-map-out" type="button" class="button secondary" aria-label="'+t('缩小','Zoom Out')+'">−</button><button id="co-map-fit" type="button" class="button secondary">'+t('完整地图','Fit Map')+'</button><label>'+t('缩放','Zoom')+'<input id="co-map-zoom" type="range" min="1" max="8" step=".01" value="1"></label><span id="co-map-scale">100%</span></div><div class="map465-legend">'+this.states.filter(s=>s!=='VERIFY').map(k=>'<span class="map465-key map465-tone-'+k.toLowerCase()+'"><i></i>'+this.stateText(k)+'</span>').join('')+'</div><div id="co-map-canvas" tabindex="0"></div><div id="co-map-labels" class="co-map-labels"></div></section><section id="co-map-detail" class="map465-detail" role="region" aria-label="'+t('货位详情','Location Preview')+'" hidden aria-live="polite"><div class="map465-prompt"><span aria-hidden="true">⌖</span><h3>'+t('货位详情','Location Preview')+'</h3><p>'+t('选择地图货位或下方货位卡片，查看在位批次、袋数与重量。','Select a location or its card to see its current batch, bags and weights.')+'</p></div></section></div><section class="map465-locations v47-map-temporary"><header><h3>'+t('临时堆存区','Temporary Storage Area')+'</h3></header><div id="map465-temporary-list" class="map465-location-grid"></div></section><section class="map465-locations"><header><h3>'+t('货位明细','Location Directory')+'</h3><label>'+t('状态','State')+'<select id="map465-state" data-work-view><option value="">'+t('全部','All')+'</option>'+this.states.map(k=>'<option value="'+k+'">'+this.stateText(k)+'</option>').join('')+'</select></label></header><div id="map465-location-list" class="map465-location-grid"></div></section>'+'<p id="co-stock-error" class="error" role="alert"></p></div>');
+  if(filterUnavailable)document.getElementById('co-stock-error').textContent=t('地图筛选项加载失败，刷新可重试。','Map filters could not load. Refresh to retry.');
   CobaltStockUI.bindFilters();if(!window.CobaltMapSite?.draw(d))CobaltStockUI.draw(d);document.getElementById('co-map-labels').hidden=true;for(const l of d.locations){const g=document.querySelector('[data-co-location="'+l.id+'"]');if(g){g.dataset.stockState=this.state(l);const count=g.querySelector('text:last-child');if(count&&!d.site_plan)count.textContent=l.bags+' '+t('袋','Bags')+' · '+t('匹配','Matched')+' '+l.matched_bags;if(g.querySelector('title'))g.querySelector('title').textContent=l.code+' · '+(l.preparation_batch_no||this.stateText(this.state(l)))+' · '+this.stateText(this.state(l));g.classList.toggle('map465-selected',this.selected===l.id);}}
   if(!d.locations.length&&!d.site_plan)document.getElementById('co-map-canvas').innerHTML='<div class="map465-empty"><span aria-hidden="true">⌖</span><h3>'+t('尚未配置现场货位','Site Locations Are Not Configured')+'</h3><p>'+t('当前库存和未定位数量如实显示。配置库区与固定货位后，地图将自动关联真实库存；历史图纸批次不会导入为当前库存。','Current stock and unlocated quantities are shown as recorded. Configure confirmed zones and fixed locations to connect the map to live stock. Historical diagram batches are not imported as current stock.')+'</p></div>';
   document.getElementById('co-map-fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.querySelector('.map465-grid').requestFullscreen();}catch(e){document.getElementById('co-stock-error').textContent=CobaltStockUI.error(e);}};document.getElementById('map465-state').onchange=()=>this.cards();this.cards();this.adjust();if(q.get('location_id')&&d.locations.some(l=>l.id===q.get('location_id')))this.selected=q.get('location_id');else if(q.get('preparation_id'))this.selected=d.locations.find(l=>l.occupied_by===q.get('preparation_id'))?.id;ProductContext.dirty=false;StockMapReview.bind(document.querySelector('.map465'),true);if(this.selected&&d.locations.some(l=>l.id===this.selected))await this.select(this.selected);

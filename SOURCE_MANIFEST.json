@@ -1,7 +1,7 @@
 {
-  "version": "4.8.3",
-  "auditRevision": "v483-ui1-local",
-  "revision": "4.8.3-ui1",
+  "version": "4.8.4",
+  "auditRevision": "v484-local",
+  "revision": "4.8.4",
   "files": [
     {
       "path": ".dockerignore",
@@ -1005,7 +1005,7 @@
     },
     {
       "path": "dist/cobalt-map465.js",
-      "sha256": "3ef25b287b1b4379a5ed14ef6b2c38cd8bc3d50884a8f031f480631613e96fd7"
+      "sha256": "6ca2af1098176374c3875318329559504ece1b40b3c838ca669ae9f819733e93"
     },
     {
       "path": "dist/cobalt-metal.css",
@@ -1041,7 +1041,7 @@
     },
     {
       "path": "dist/cobalt-stock-ui.js",
-      "sha256": "53be05b80531961257d8f0f8a05ba227fd2d60caea70fd5e95e7c931edd65a5e"
+      "sha256": "0f7bf0ffe052c5cebd2e2db034d39a1b3113f4cce71c84310f48249e6f83fbe7"
     },
     {
       "path": "dist/cobalt-stock469r2.css",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "b4fa572b4a7da7d8d65e015da97665d4b2a68543ed142c276ab798a255d1d22f"
+      "sha256": "897593d05bf33aed3a60e71ec9b6be11b7729f0d3e702bfc8c3038685a741d8a"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "d67f32a768071c67e2b44e01cdefd94673a20cc367f77109c897609afa6e7fe4"
+      "sha256": "caf385f5f7f626db431212e408b6e31b2b189195d8eb85f114a0d026cbaa6f61"
     },
     {
       "path": "dist/reports463.js",
@@ -1449,7 +1449,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "257bcde517da8cbdc44b5ab632d99ac341d22a335d184e6e14f7cb2432e3cc58"
+      "sha256": "e9968c5d92667ffcb019fdbd8f49846358fb10ce9c2a03c65277d2883d8a0174"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1749,7 +1749,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "d76f723a0f7248779bcedcade869e36e2e7f1a7074d3912a3b0aa0ac20fb7084"
+      "sha256": "da7dbe8d7aa9f795301fe9f8ac636988c6ae5c96901bb33855d0b2bda4bb0e28"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -2185,7 +2185,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "6f726d6cb2dd71722ef0e42ad006780182ee522432e493f2f7301fc8bbbd7e69"
+      "sha256": "ae868b8166d8a6536b075895b41b412540c88307db2025b7b285e58ea97af551"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2581,7 +2581,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "6b5b5c4d6efccd349c7b39ba337d588ad19445eb66146578e8fe155421eb3d0d"
+      "sha256": "7037d32557d1c8e6662dd38de4597718d656085bca8781fa1b1c5e7f7c13d487"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -2633,7 +2633,7 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "b3add9fc4a3e5420068c9f50e702b810a5f9f2aaf24cc1ab7682142d925cf257"
+      "sha256": "1985f3ef7f70826eaa8835d16c89bb9b510c41b5cd598f20ffe3557a60a12fd5"
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
@@ -2645,7 +2645,15 @@
     },
     {
       "path": "tests/release/v483-hotfix.cjs",
-      "sha256": "68c82938d30d46d1e091463f1fadd8434b951a6fbb553a23f03340363442925f"
+      "sha256": "4d4aeaaed930a25fd7824022e108089a1b314a5e984791d42325888baf19b37a"
+    },
+    {
+      "path": "deploy/remove-copper-test-chain.sql",
+      "sha256": "aba2ff4abb0dd50d6d908ad808481ea24ed86408aa0bb69ed8ae527b26499987"
+    },
+    {
+      "path": "tests/release/v484-receipt-cleanup.cjs",
+      "sha256": "e74b4cc04e28ed119cc6a18395237fc66b909e593e5d36a9f986c494bc4f37a6"
     }
   ]
 }

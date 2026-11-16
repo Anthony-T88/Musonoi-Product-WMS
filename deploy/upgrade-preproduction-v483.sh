@@ -10,6 +10,8 @@ repo=/opt/musonoi-wms-release-v4.8.3
 override=/etc/musonoi/preproduction-v483-build.override.yaml
 source_revision=4.8.1-ui6
 target_revision=4.8.3
+target_version=4.8.3
+release_branch=release/v4.8.3
 case "${2:-base}" in
   base) ;;
   ui1)
@@ -18,10 +20,19 @@ case "${2:-base}" in
     source_revision=4.8.3
     target_revision=4.8.3-ui1
     ;;
+  v484)
+    repo=/opt/musonoi-wms-release-v4.8.4
+    override=/etc/musonoi/preproduction-v484-build.override.yaml
+    source_revision=4.8.3-ui1
+    target_revision=4.8.4
+    target_version=4.8.4
+    release_branch=release/v4.8.4
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 migration=195_v482_dispatch_vehicle_month.sql
-stage=$(mktemp -d /root/musonoi-v483.XXXXXXXX)
+release_id=${target_version//./}
+stage=$(mktemp -d "/root/musonoi-v${release_id}.XXXXXXXX")
 mapfile -t running < <(docker ps -q --filter "label=com.docker.compose.project=$project" --filter 'label=com.docker.compose.service=app')
 [[ ${#running[@]} == 1 ]]
 old_app=$(docker inspect --format '{{.Id}}' "${running[0]}")
@@ -53,7 +64,7 @@ mounts "$old_app" > "$stage/app-mounts"
 mounts "$old_db" > "$stage/db-mounts"
 
 if [[ ! -d "$repo/.git" ]]; then
-  (umask 022; git clone --quiet --single-branch --branch release/v4.8.3 \
+  (umask 022; git clone --quiet --single-branch --branch "$release_branch" \
     https://github.com/Anthony-T88/Musonoi-Product-WMS.git "$repo")
 fi
 [[ $(git -C "$repo" rev-parse HEAD) == "$commit" && -z $(git -C "$repo" status --porcelain) ]]
@@ -83,14 +94,14 @@ assert old["services"]["app"]["environment"]["DB_EXPECTED_NAME"]=="musonoi_prepr
 (stage / "compose-after.json").unlink()
 PY
 
-docker image tag "$old_image" "musonoi-wms:rollback-before-v483-$(date +%s)"
+docker image tag "$old_image" "musonoi-wms:rollback-before-v${release_id}-$(date +%s)"
 "${new[@]}" --profile maintenance build app migrate
 for service in app migrate; do
   "${new[@]}" run --rm --no-deps "$service" node -e '
     const a=require("node:assert/strict"),r=require("./server/release.cjs");
-    a.equal(r.version,"4.8.3"); a.equal(r.frontendRevision,process.argv[1]);
+    a.equal(r.version,process.argv[2]); a.equal(r.frontendRevision,process.argv[1]);
     a.equal(r.requiredMigration,"195_v482_dispatch_vehicle_month.sql");
-  ' "$target_revision"
+  ' "$target_revision" "$target_version"
 done
 check_migration(){
   python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["status"],d["migrations"],d["added"])==(sys.argv[1],195,int(sys.argv[2])); print(d)' "$1" "$added"
@@ -119,7 +130,7 @@ query -d "$target" < "$stage/reconcile.sql" > "$stage/before"
 docker run --rm --network none --volumes-from "$old_app":ro --entrypoint tar "$old_image" -czf - -C /app uploads > "$stage/uploads.tgz"
 tar -tzf "$stage/uploads.tgz" >/dev/null
 (cd "$stage"; sha256sum database.dump uploads.tgz configs.tgz > SHA256SUMS; sha256sum -c SHA256SUMS)
-restore=musonoi_v483_verify_$(date +%s)_test
+restore=musonoi_v${release_id}_verify_$(date +%s)_test
 "${old[@]}" exec -T database createdb -U musonoi_owner "$restore"
 "${old[@]}" exec -T database pg_restore --exit-on-error -U musonoi_owner -d "$restore" < "$stage/database.dump"
 query -d "$restore" < "$stage/reconcile.sql" > "$stage/restored"
@@ -138,10 +149,10 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 status health | json_is database ok
-status config | json_is version 4.8.3
+status config | json_is version "$target_version"
 status config | json_is frontendRevision "$target_revision"
 [[ $("${new[@]}" ps -q database) == "$old_db" ]]
 mounts "$old_db" | cmp "$stage/db-mounts"
 mounts "$("${new[@]}" ps -q app)" | cmp "$stage/app-mounts"
 trap - EXIT
-printf 'V483_DEPLOY_VERIFIED commit=%s migration=%s evidence=%s\n' "$commit" "$migration" "$stage"
+printf 'V%s_DEPLOY_VERIFIED commit=%s migration=%s evidence=%s\n' "$release_id" "$commit" "$migration" "$stage"

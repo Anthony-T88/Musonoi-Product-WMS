@@ -82,11 +82,13 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(({id,product})=>localStorage.setItem('musonoi-product:'+id,product),{id:admin.id,product:CO});
   await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.locator('[data-task-dismiss]').click());
-  await t.test('cobalt scoped map restores stale warehouse and malformed locations',async()=>{
-   for(const query of ['', '?warehouse_id='+randomUUID(), '?zone_id=obsolete', '?location_id='+randomUUID()]){
+  await t.test('cobalt scoped map restores stale warehouse, locations, and unrelated stock filters',async()=>{
+   for(const query of ['', '?warehouse_id='+randomUUID(), '?zone_id=obsolete', '?location_id='+randomUUID(),
+    '?unit=old-stock-archive&page=0&stock_state=obsolete']){
     await page.goto(origin+'/stock-map'+query);
     await page.locator('#co-map-svg.site-plan-svg').waitFor();
     assert.equal(new URL(page.url()).searchParams.get('warehouse_id'),f.warehouse);
+    for(const key of ['unit','page','stock_state'])assert.equal(new URL(page.url()).searchParams.has(key),false);
     assert(await page.locator('[data-co-location]').count()>=93);
    }
    await page.locator('#co-map-in').click();
@@ -95,6 +97,15 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await page.waitForFunction(()=>document.getElementById('co-map-svg').getAttribute('viewBox')===CobaltMap465.data.site_plan.bounds.join(' '));
    const input=page.locator('input[name=location_query]');await input.fill('CO-A-01');await input.press('Enter');
    await page.locator('#co-map-detail').getByText('CO-A-01',{exact:true}).first().waitFor();
+   const options='**/api/v1/cobalt/options';
+   await page.route(options,route=>route.fulfill({status:503,json:{error:'Synthetic options error'}}));
+   await page.reload();
+   await page.locator('#co-map-svg.site-plan-svg').waitFor();
+   await page.locator('#co-stock-error').getByText(/地图筛选项加载失败/).waitFor();
+   assert.equal(await page.locator('#co-stock-filter').count(),0);
+   await page.unroute(options);
+   await page.reload();
+   await page.locator('#co-stock-filter').waitFor({state:'attached'});
   });
   await t.test('administrator review dialog and historical source details',async()=>{
    await page.goto(origin+'/workbench/historical-movements');
