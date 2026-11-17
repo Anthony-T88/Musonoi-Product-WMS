@@ -39,8 +39,8 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "bytes": 29225,
-      "sha256": "e014e2101f45f927f2db6f61e045cfb2586dac50b31d8fe408cfc67e8a567be8"
+      "bytes": 30015,
+      "sha256": "cf1c6b86fc7777c636dae1b7a9a5fa73a64c5df46273cdac536cd0a0ccbca50b"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -3749,7 +3749,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "8103af8557277f7307e20eb3f5f995fbdf5df83a4237527d3865dabd06a88302",
+      "sha256": "13ad7fcd7016dfb9a87a2b7d8d1ee2902fe1e8ef74f72aac488bed690be0eacb",
       "bytes": 96164
     },
     {

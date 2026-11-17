@@ -17,7 +17,7 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "sha256": "e014e2101f45f927f2db6f61e045cfb2586dac50b31d8fe408cfc67e8a567be8"
+      "sha256": "cf1c6b86fc7777c636dae1b7a9a5fa73a64c5df46273cdac536cd0a0ccbca50b"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
