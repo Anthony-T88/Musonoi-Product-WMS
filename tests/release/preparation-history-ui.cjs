@@ -100,6 +100,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await page.locator('#preparation-plan-create').click();
     await page.waitForURL('**/preparation/work-plans/new');
     const body=page.locator('#preparation-batch-table tbody');
+    const saveDrafts=page.locator('#preparation-plan-batch').getByRole('button',{name:/^(保存草稿|Save Drafts)$/});
     const sales=body.locator('select').first();await sales.locator('option[value="'+fx.plan+'"]').waitFor({state:'attached'});await sales.selectOption(fx.plan);
     assert.equal(await body.locator('input[name=customer]').first().inputValue(),fx.customer);
     const lookup=page.locator('#preparation-occupied-filter');await lookup.locator('input').fill(fx.occupied.batch_no);
@@ -111,13 +112,13 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await page.locator('#preparation-paste-text').fill(fx.occupied.batch_no+'\n'+fx.item(791).batch_no);
     await page.locator('#preparation-paste-insert').click();
     assert.equal(await body.locator('tr').count(),2);
-    await page.locator('#preparation-plan-batch button.primary').click();
+    await saveDrafts.click();
     await body.locator('tr').first().locator('[data-batch-validation]').getByText(/占用|occupied/i).waitFor();
     assert.equal(await body.locator('input[name=batch_no]').nth(1).inputValue(),fx.item(791).batch_no);
     await body.locator('input[name=batch_no]').first().fill(fx.item(790).batch_no);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Batch entry must fit the viewport');
     await page.screenshot({path:path.join(E.runtime,'v483-preparation-'+product+'.png'),fullPage:true});
-    await page.locator('#preparation-plan-batch button.primary').click();
+    await saveDrafts.click();
     await page.waitForURL('**/preparation/work-plans?state=DRAFT');
     await page.locator('#preparation-plans-table').getByText(fx.item(790).batch_no,{exact:true}).waitFor();
     assert.equal(await page.locator('.wms-batch-created').count(),2);

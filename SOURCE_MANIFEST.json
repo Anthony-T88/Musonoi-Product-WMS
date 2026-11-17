@@ -2517,7 +2517,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "2dc592479128e2db4094fec54c54c7267bc49e98ab49c884aa332a37316565ac"
+      "sha256": "818744be4480bf3b375d4d6736e27bc545a6ca7425b8bf52b5c0fd1426b45348"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
@@ -2637,7 +2637,7 @@
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "dcc1d4b9a0d994ad7c784de1f1b211d998b68af41b4910d5b18827bf69431179"
+      "sha256": "509f36d884d8a2c43ac61b84220114855a522acc5682a378587aba629a1b1340"
     },
     {
       "path": "deploy/remove-unposted-test-receipt.sql",

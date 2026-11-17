@@ -53,12 +53,13 @@ test('real browser: current cobalt stock, independent permissions and both langu
   });
   await createPlan.click();
   const form=planner.page.locator('#preparation-plan-batch'),sales=form.locator('[name=sales_plan_id]');
+  const saveDrafts=form.getByRole('button',{name:/^(保存草稿|Save Drafts)$/});
   await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
   await sales.selectOption({index:1});
   assert(await form.locator('[name=customer]').inputValue());
   const suffix=product==='CU_CATHODE'?20+Math.floor(Math.random()*79):100+Math.floor(Math.random()*899);
   const batch=P.batch(product,suffix),batchField=form.locator('[name=batch_no]');
-  await form.locator('button.primary').click();
+  await saveDrafts.click();
   assert.equal(await batchField.getAttribute('aria-invalid'),'true');
   assert.match(await form.locator('[data-batch-validation]').innerText(),/填写批次号|Enter a lot number/);
   await form.screenshot({path:path.join(E.runtime,'wms-preparation-validation-'+product+'.png')});
@@ -66,7 +67,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   assert.equal(await batchField.getAttribute('aria-invalid'),null);
   await form.locator('[name=shipment_month]').fill(new Date().toISOString().slice(0,7));
   const saved=planner.page.waitForResponse(response=>response.request().method()==='POST'&&response.url().endsWith('/preparation-plans/batch'),{timeout:6000});
-  await form.locator('button.primary').click();
+  await saveDrafts.click();
   const saveResponse=await saved.catch(async error=>{
    const invalid=await form.locator(':invalid').evaluateAll(fields=>fields.map(field=>field.name));
    throw Error(product+' plan form did not submit '+JSON.stringify({invalid,errors}),{cause:error});
