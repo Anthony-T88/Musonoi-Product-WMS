@@ -7,8 +7,8 @@ const cobalt=product=>product==='CO_HYDROXIDE';
 const prefix=product=>cobalt(product)?'/cobalt':'';
 const routes={RECEIPT:'/receipts',LOADING_PLAN:'/loading-plans',LOADING_ORDER:'/outbounds',OUTBOUND:'/stock-outbound'};
 
-async function archive(api,f,product){
- const co=cobalt(product),tag=co?'QA-CO':'QA-CU',lot=P.batch(product,701),document='QA-PL-'+tag;
+async function archive(api,f,product,suffix=''){
+ const co=cobalt(product),tag=(co?'QA-CO':'QA-CU')+suffix,lot=P.batch(product,suffix?702:701),document='QA-PL-'+tag;
  const rows=Array.from({length:29},()=>[]);
  rows[0]=['PACKING LIST'];rows[2]=['','','','Packing List No:',document];rows[3]=['','','','Lot No:',lot];
  rows[6]=['','','','Shipping Date:','2020-03-05'];rows[21]=['Synthetic '+(co?'CO-AUDIT':'CU-AUDIT'),'','','','QA-TRUCK-'+tag];
@@ -158,6 +158,85 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await back();await hist.page.waitForURL(origin+loadPath);await back();await hist.page.waitForURL(origin+listPath);
     assert.deepEqual(hist.errors,[]);
    }finally{await hist.ctx.close();}
+  });
+
+  for(const product of products)await t.test(product+' open inbound and outbound lists refresh after void',async()=>{
+   await login('admin');
+   const removed=fixtures[product].history,kept=await archive(api,f,product,'-KEPT');
+   fixtures[product].kept=kept;
+   const {ctx,page}=await open('admin',product,1440);
+   try{
+    const pages=await Promise.all([ctx.newPage(),ctx.newPage()]);
+    const locations=[['/receipts','RECEIPT'],['/outbounds?state=OUTBOUND','LOADING_ORDER']];
+    const links=(i,record)=>pages[i].locator('a[href="'+routes[locations[i][1]]+'/historical/'+record.idByKind[locations[i][1]]+'"]').first();
+    await Promise.all(locations.map(async([url],i)=>{
+     await pages[i].goto(origin+url);
+     await links(i,removed).waitFor({timeout:12000});
+     await links(i,kept).waitFor({timeout:12000});
+    }));
+    await page.goto(origin+'/workbench/historical-movements/'+removed.source+'?product='+product);
+    await page.locator('#historical-void textarea').fill('Void a single synthetic source in another tab');
+    await page.locator('#historical-void button').click();
+    await page.locator('#operation-confirm-accept').click();
+    await page.locator('[data-import-state="voided"]').waitFor();
+    await Promise.all(locations.map(async([url],i)=>{
+     await links(i,removed).waitFor({state:'detached',timeout:6000});
+     await links(i,kept).waitFor({timeout:6000});
+     assert.equal(pages[i].url(),origin+url);
+    }));
+   }finally{await ctx.close();}
+  });
+
+  await t.test('filter and bulk void mixed-product historical documents with one audit per source',async()=>{
+   const [cu,co]=products,endpoint='/historical-movements/batch/void';
+   await login('admin');
+   const ids=products.map(product=>fixtures[product].kept.source),reason='Synthetic mixed-product bulk correction';
+   await api('production_operator',cu,endpoint,{ids,reason},403);
+   await api('admin',cu,endpoint,{ids:[ids[0],ids[0].toUpperCase()],reason},400);
+   await api('admin',cu,endpoint,{ids:[ids[0],crypto.randomUUID()],reason},404);
+   await api('admin',cu,endpoint,{ids:[ids[0],fixtures[cu].history.source],reason},409);
+   const active=(await api('admin',cu,'/historical-movements?all_products=1&state=ACTIVE')).items;
+   assert.deepEqual(active.map(row=>row.id).sort(),[...ids].sort());
+   assert.equal(active.every(row=>!row.voided_at),true);
+   await api('admin',cu,'/historical-movements?state=UNKNOWN',null,400);
+   const {ctx,page}=await open('admin',co,390);
+   try{
+    await page.goto(origin+'/workbench/historical-movements');
+    const filter=page.locator('#historical-filter'),state=filter.locator('[name=state]');
+    await state.selectOption('VOIDED');
+    await filter.locator('button[type="submit"]').click();
+    await page.locator('#historical-ledger [data-import-state="voided"]').first().waitFor();
+    assert.equal(await page.locator('#historical-bulk-void').count(),0);
+    await state.selectOption('ACTIVE');
+    await filter.locator('button[type="submit"]').click();
+    const selected=page.locator('#historical-ledger [data-historical-select]');
+    await selected.first().waitFor();
+    assert.equal(await selected.count(),2);
+    const bulk=page.locator('#historical-bulk-void');
+    assert(await bulk.isDisabled());
+    await page.locator('#historical-void-all').check();
+    await bulk.click();
+    await page.locator('#operation-confirm-cancel').click();
+    assert.equal(await page.locator('#historical-ledger [data-historical-select]:checked').count(),2);
+    await bulk.click();
+    await page.locator('#operation-confirm-comment').fill(reason);
+    const completed=page.waitForResponse(response=>response.url().endsWith(endpoint)&&response.request().method()==='POST');
+    await page.locator('#operation-confirm-accept').click();
+    const response=await completed;
+    assert.equal(response.status(),200,await response.text());
+    assert.equal((await response.json()).count,2);
+    await page.locator('#historical-void-all').waitFor({state:'detached'});
+    assert.equal(new URL(page.url()).searchParams.get('state'),'ACTIVE');
+   }finally{await ctx.close();}
+   await login('admin');
+   assert.equal((await api('admin',co,endpoint,{ids,reason})).count,2);
+   const archived=(await api('admin',co,'/historical-movements?all_products=1&state=VOIDED')).items;
+   assert.equal(archived.length,4);
+   assert.equal(archived.filter(row=>row.void_reason===reason).length,2);
+   const {rows:[audit]}=await c.query("SELECT count(*)::int n FROM audit_logs WHERE action='historical_movement_voided' AND entity_id=ANY($1::text[])",[ids]);
+   assert.equal(audit.n,2);
+   const {rows:[stock]}=await c.query('SELECT count(*)::int n FROM historical_outbound_units WHERE source_id=ANY($1::uuid[])',[ids]);
+   assert.equal(stock.n,0);
   });
  }finally{await browser?.close();await app?.close();await c.end();}
 });

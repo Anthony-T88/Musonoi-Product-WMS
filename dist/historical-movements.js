@@ -107,11 +107,13 @@ window.HistoricalMovements={
  },
  async list({retain=false}={}){
   const t=this.t,q=new URLSearchParams(location.search);
-  const [data,warehouses]=await Promise.all([API.request('/historical-movements?'+new URLSearchParams([...q,['all_products','1']])),API.request('/historical-movements/destinations')]);
+  const [data,warehouses]=await Promise.all([this.records(q),API.request('/historical-movements/destinations')]);
   if(!retain){this.queue=[];this.warehouse='';}
   const filter='<form id="historical-filter" class="filters wms-filter-row">'+[['from',t('起始日期','From')],['to',t('截止日期','To')]].map(([name,label])=>
    '<label>'+label+'<input type="date" name="'+name+'" value="'+esc(q.get(name)||'')+'"></label>').join('')+
-   '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" href="'+this.path+'">'+t('重置','Reset')+'</a></div></form>';
+   '<label>'+t('单据状态','Document Status')+'<select name="state">'+[['',t('全部','All')],['ACTIVE',t('有效','Active')],['VOIDED',t('已作废','Voided')]].map(([state,label])=>
+    '<option value="'+state+'"'+(q.get('state')===state?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
+   '<div class="wms-filter-actions"><button type="submit" class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+this.path+'">'+t('重置','Reset')+'</a></div></form>';
   this.page('历史出入库导入','Historical Stock Imports',this.section('上传装箱单','Upload Packing Lists',
    '<form id="historical-upload" class="user-form wms-import-upload" data-wms-validation><div class="form-grid wms-field-grid">'+
    '<label class="wms-field">'+t('归档仓库','Archive Warehouse')+'<select name="warehouse_id" required>'+
@@ -122,7 +124,8 @@ window.HistoricalMovements={
    '<p id="historical-progress" class="wms-feedback" role="status"></p>'+
    '<p id="historical-upload-error" class="error" role="alert">'+(warehouses.length?'':t('当前账号没有可用的归档仓库。','No archive warehouse is available.'))+'</p>'+
    '<div id="historical-preview" aria-live="polite"></div>')+
-   this.section('导入记录','Import Records',filter+'<div id="historical-ledger">'+this.ledger(data,q)+'</div>'),true);
+   this.section('导入记录','Import Records',filter+'<div id="historical-ledger"></div>'),true);
+  this.renderLedger(data,q);
   const form=$('historical-upload');
   if(this.warehouse)form.elements.warehouse_id.value=this.warehouse;
   for(const name of ['source','warehouse_id'])form.elements[name].onchange=()=>{this.queue=[];this.showQueue();};
@@ -130,12 +133,66 @@ window.HistoricalMovements={
   $('historical-filter').onsubmit=e=>{e.preventDefault();Router.go(this.path+'?'+new URLSearchParams(new FormData(e.target)));};
   this.showQueue();
  },
+ records(q){return API.request('/historical-movements?'+new URLSearchParams([...q,['all_products','1']]));},
+ async refreshLedger(box){
+  const q=new URLSearchParams(location.search);
+  let data=await this.records(q);
+  if(!box.isConnected)return;
+  if(!data.items.length&&data.page>1){
+   q.set('page',data.page-1);
+   data=await this.records(q);
+   if(!box.isConnected)return;
+   history.replaceState(history.state,'',this.path+'?'+q);
+  }
+  this.renderLedger(data,q);
+ },
+ renderLedger(data,q){
+  const box=$('historical-ledger'),t=this.t;
+  box.innerHTML=this.ledger(data,q);
+  const all=$('historical-void-all'),button=$('historical-bulk-void');
+  if(!button)return;
+  const inputs=[...box.querySelectorAll('[data-historical-select]')],selected=()=>inputs.filter(input=>input.checked);
+  let working=false;
+  const sync=()=>{
+   const count=selected().length;
+   button.disabled=working||count===0;
+   all.disabled=working;
+   all.checked=count===inputs.length;
+   all.indeterminate=count>0&&count<inputs.length;
+   $('historical-void-count').textContent=t('已选 '+count+' 份','Selected '+count);
+   for(const input of inputs)input.disabled=working;
+  };
+  all.onchange=()=>{for(const input of inputs)input.checked=all.checked;sync();};
+  for(const input of inputs)input.onchange=sync;
+  button.onclick=async()=>{
+   if(this.voiding)return;
+   const ids=selected().map(input=>input.value),error=$('historical-bulk-error');
+   this.voiding=working=true;sync();error.textContent='';
+   let reason='';
+   try{
+    if(!await OperationConfirm.ask({title:t('批量作废所选历史单据？','Void selected historical documents?'),
+     rows:[[t('单据数','Documents'),ids.length]],comment:true,commentRequired:true,commentMax:500,
+     commentLabel:t('作废原因（至少五个字符）','Void Reason (at least five characters)'),onComment:value=>reason=value}))return;
+    if(reason.length<5)throw Error(t('作废原因至少需要五个字符。','Enter a void reason of at least five characters.'));
+    const result=await API.request('/historical-movements/batch/void',{method:'POST',body:{ids,reason}});
+    this.voidChannel?.postMessage(result.products);
+    if(box.isConnected)await this.refreshLedger(box);
+    notify(t('已作废 '+result.count+' 份历史单据','Voided '+result.count+' historical documents'));
+   }catch(e){if(error.isConnected)error.textContent=e.uncertain?t('暂未确认作废结果，请查询单据状态。','The void result is pending. Check the document status.'):I18n.translate(e.message,true);}
+   finally{this.voiding=working=false;if(button.isConnected)sync();}
+  };
+  sync();
+ },
  ledger(data,q){
   const t=this.t;
+  const selectable=data.items.some(r=>!r.voided_at);
   const pager=(page,label)=>{const next=new URLSearchParams(q);next.set('page',page);return '<a class="button secondary compact" href="'+this.path+'?'+esc(next)+'">'+label+'</a>';};
-  return this.table([t('装箱单号','Packing List No.'),t('产品','Product'),t('业务日期','Business Date'),t('备货批次','Preparation Batch'),t('数量','Quantity'),t('净重（吨）','Net Weight (MT)'),t('状态','Status'),t('操作','Action')],
-   data.items.map(r=>[esc(r.document_no),this.product(r.product_code),esc(r.business_date),this.text(r.source_facts.batch_no),CountValues.display(r.quantity),this.weight(r.net_kg),
-    this.status(r.voided_at?'voided':r.import_batch_id?'imported':'legacy'),this.recordLink(r.id,r.product_code,t('查看','View'))]),[4,5])+
+  const actions=selectable?'<div class="business-toolbar"><label><input type="checkbox" id="historical-void-all">'+t('选择本页有效单据','Select Active Documents on This Page')+'</label>'+
+   '<span id="historical-void-count" role="status"></span><button id="historical-bulk-void" type="button" class="button danger-outline" disabled>'+t('批量作废','Void Selected')+'</button></div><p id="historical-bulk-error" class="wms-feedback error" role="alert"></p>':'';
+  return actions+this.table([...(selectable?[t('选择','Select')]:[]),t('装箱单号','Packing List No.'),t('产品','Product'),t('业务日期','Business Date'),t('备货批次','Preparation Batch'),t('数量','Quantity'),t('净重（吨）','Net Weight (MT)'),t('状态','Status'),t('操作','Action')],
+   data.items.map(r=>[...(selectable?[r.voided_at?'—':'<input type="checkbox" data-historical-select value="'+esc(r.id)+'" aria-label="'+esc(t('选择 ','Select ')+r.document_no)+'">']:[]),
+    esc(r.document_no),this.product(r.product_code),esc(r.business_date),this.text(r.source_facts.batch_no),CountValues.display(r.quantity),this.weight(r.net_kg),
+    this.status(r.voided_at?'voided':r.import_batch_id?'imported':'legacy'),this.recordLink(r.id,r.product_code,t('查看','View'))]),selectable?[5,6]:[4,5])+
    '<div class="wms-filter-actions">'+(data.page>1?pager(data.page-1,t('上一页','Previous')):'')+(data.has_next?pager(data.page+1,t('下一页','Next')):'')+'</div>';
  },
  async read(files,warehouse,form,replaceIndex){
@@ -225,8 +282,7 @@ window.HistoricalMovements={
     const response=await API.request('/historical-movements/batch/confirm',{method:'POST',timeoutMs:120000,body:{files:files.map(row=>({...row.body,preview_token:row.preview.preview_token,...(review?{exception_reason:reason}:{})}))}});
     for(const result of response.results){files[result.index].result=result;if(result.id)delete files[result.index].body;}
     if(box.isConnected){
-     const q=new URLSearchParams(location.search),data=await API.request('/historical-movements?'+new URLSearchParams([...q,['all_products','1']]));
-     if(box.isConnected)$('historical-ledger').innerHTML=this.ledger(data,q);
+     if(box.isConnected)await this.refreshLedger($('historical-ledger'));
     }
    }catch(e){if(box.isConnected)$('historical-upload-error').textContent=this.uploadError(e,true);}
    finally{this.busy=false;if(box.isConnected){progress.textContent='';for(const input of form.elements)input.disabled=false;this.showQueue();}}
@@ -315,7 +371,9 @@ window.HistoricalMovements={
   if($('historical-void'))$('historical-void').onsubmit=async e=>{
    e.preventDefault();const button=e.submitter;button.disabled=true;
    try{if(await OperationConfirm.ask({title:t('作废此历史单据？','Void this historical document?')})){
-    await API.request(api+'/void',{...options,method:'POST',body:Object.fromEntries(new FormData(e.target))});await this.detail(id);
+    await API.request(api+'/void',{...options,method:'POST',body:Object.fromEntries(new FormData(e.target))});
+    this.voidChannel?.postMessage([r.product_code]);
+    await this.detail(id);
    }}catch(error){$('historical-detail-error').textContent=I18n.translate(error.message,true);}finally{button.disabled=false;}
   };
  },
@@ -344,6 +402,14 @@ window.HistoricalMovements={
   if($('historical-unit-search'))$('historical-unit-search').onsubmit=e=>{e.preventDefault();Router.go(location.pathname+'?'+new URLSearchParams(new FormData(e.target)),true);};
  },
  install(){
+  if(typeof BroadcastChannel==='function'){
+   this.voidChannel?.close();
+   this.voidChannel=new BroadcastChannel('musonoi-historical-void');
+   this.voidChannel.onmessage=({data})=>{
+    if(window.AppSignedIn&&Array.isArray(data)&&data.includes(ProductContext.code)&&
+     ['/receipts','/outbounds'].includes(location.pathname))Router.show();
+   };
+  }
   RoutePermissions.register('historical-movements',path=>/^\/(?:workbench\/)?historical-movements(?:\/|$)/.test(path),()=>this.canImport()?undefined:'__historical_admin_only');
   RoutePermissions.register('historical-documents',path=>this.documentRoute(path),path=>this.permission(path.split('/')[1]));
   Router.add(/^\/workbench\/historical-movements$/,()=>this.list());

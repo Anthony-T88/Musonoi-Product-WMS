@@ -37,6 +37,14 @@ case "${2:-base}" in
     release_branch=release/v4.8.5
     site_target=("${3:?Expected cobalt project code}" "${4:?Expected cobalt warehouse code}" "${5:?Expected authorized administrator}")
     ;;
+  v485-ui1)
+    repo=/opt/musonoi-wms-release-v4.8.5-ui1
+    override=/etc/musonoi/preproduction-v485-ui1-build.override.yaml
+    source_revision=4.8.5
+    target_revision=4.8.5-ui1
+    target_version=4.8.5
+    release_branch=release/v4.8.5
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 migration=195_v482_dispatch_vehicle_month.sql

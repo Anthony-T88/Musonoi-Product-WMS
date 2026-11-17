@@ -23,6 +23,25 @@ async function transaction(pool,req,fn){
  }catch(error){await c.query('ROLLBACK');throw error;}finally{c.release();}
 }
 
+async function voidSources(c,req,ids,expectedProduct=null){
+ const reason=B.text(req.body?.reason,'纠错原因',500);
+ if(reason.length<5)throw B.error(400,'纠错原因至少需要五个字符');
+ await c.query('SELECT pg_advisory_xact_lock(477189)');
+ const {rows}=await c.query(`SELECT id,product_code,voided_at,voided_by,void_reason
+  FROM historical_movement_documents WHERE id=ANY($1::uuid[]) AND ($2::text IS NULL OR product_code=$2)
+  ORDER BY id FOR UPDATE`,[ids,expectedProduct]);
+ if(rows.length!==ids.length)throw B.error(404,'历史台账单据不存在');
+ if(rows.some(row=>row.voided_at&&(row.voided_by!==req.user.id||row.void_reason!==reason)))throw B.error(409,'此台账单据已作废');
+ const active=rows.filter(row=>!row.voided_at);
+ if(active.length){
+  const targets=active.map(row=>row.id);
+  await c.query('UPDATE historical_movement_documents SET voided_at=clock_timestamp(),voided_by=$2,void_reason=$3 WHERE id=ANY($1::uuid[])',[targets,req.user.id,reason]);
+  await c.query('UPDATE historical_stock_units SET active=false WHERE source_id=ANY($1::uuid[]) AND active',[targets]);
+  for(const row of active)await B.audit(c,req,'historical_movement_voided','historical_movement_documents',row.id,null,{product_code:row.product_code,reason});
+ }
+ return {count:rows.length,products:[...new Set(rows.map(row=>row.product_code))]};
+}
+
 function administrator(auth){
  return async req=>{await auth(req);if(!require('./management-security.cjs').isAdmin(req.user))throw B.error(403,'仅系统管理员可办理历史出入库导入');};
 }
@@ -31,6 +50,13 @@ function register({app,pool,auth,csrf}){
  const admin=administrator(auth);
  Backfill.registerBatch(app,pool,admin,csrf,transaction);
  Backfill.registerRead(app,pool,auth);
+ app.post('/api/v1/historical-movements/batch/void',{preHandler:[admin,csrf]},req=>{
+  const ids=req.body?.ids;
+  if(!Array.isArray(ids)||!ids.length||ids.length>25)throw B.error(400,'请选择 1 至 25 份历史单据');
+  const unique=new Set(ids.map(id=>B.uuid(id).toLowerCase()));
+  if(unique.size!==ids.length)throw B.error(400,'选择的历史单据有重复');
+  return transaction(pool,req,c=>voidSources(c,req,[...unique]));
+ });
  for(const prefix of ['/api/v1/historical-movements','/api/v1/cobalt/historical-movements']){
   const read={preHandler:admin},write={preHandler:[admin,csrf]};
   const product=req=>{
@@ -47,11 +73,15 @@ function register({app,pool,auth,csrf}){
    if(!Number.isSafeInteger(page)||page<1||page>10000)throw B.error(400,'页码无效');
    const type=q.movement_type?kind(q.movement_type):null,from=q.from?B.date(q.from):null,to=q.to?B.date(q.to):null;
    if(from&&to&&from>to)throw B.error(400,'开始日期不得晚于截止日期');
-   const where=' WHERE d.product_code=$1 AND ($2::text IS NULL OR d.movement_type=$2) AND ($3::date IS NULL OR d.business_date>=$3) AND ($4::date IS NULL OR d.business_date<=$4)';
-   const values=[product(req),type,from,to];
+   const state=q.state||null;
+   if(state&&!['ACTIVE','VOIDED'].includes(state))throw B.error(400,'历史单据状态无效');
+   const where=` WHERE d.product_code=$1 AND ($2::text IS NULL OR d.movement_type=$2)
+    AND ($3::date IS NULL OR d.business_date>=$3) AND ($4::date IS NULL OR d.business_date<=$4)
+    AND ($5::text IS NULL OR (d.voided_at IS NOT NULL)=($5='VOIDED'))`;
+   const values=[product(req),type,from,to,state];
    const all=req.query.all_products==='1';
    const {rows}=await pool.query(select+where.replace('d.product_code=$1',all?'$1::text IS NOT NULL':'d.product_code=$1')+
-    ' ORDER BY d.business_date DESC,d.id LIMIT 26 OFFSET $5',[...values,(page-1)*25]);
+    ' ORDER BY d.business_date DESC,d.id LIMIT 26 OFFSET $6',[...values,(page-1)*25]);
    return {items:rows.slice(0,25),page,has_next:rows.length>25};
   });
   app.get(prefix+'/:id',read,async req=>{
@@ -83,18 +113,9 @@ function register({app,pool,auth,csrf}){
    throw B.error(410,'请使用批量装箱单导入');
   });
   app.post(prefix+'/:id/void',write,req=>transaction(pool,req,async c=>{
-   await c.query('SELECT pg_advisory_xact_lock(477189)');
-   const row=await access(req,c),reason=B.text(req.body?.reason,'纠错原因',500);
-   if(reason.length<5)throw B.error(400,'纠错原因至少需要五个字符');
-   if(row.voided_at){
-    const {rows:[prior]}=await c.query('SELECT voided_by,void_reason FROM historical_movement_documents WHERE id=$1',[row.id]);
-    if(prior.voided_by===req.user.id&&prior.void_reason===reason)return {id:row.id};
-    throw B.error(409,'此台账单据已作废');
-   }
-   await c.query('UPDATE historical_movement_documents SET voided_at=clock_timestamp(),voided_by=$2,void_reason=$3 WHERE id=$1',[row.id,req.user.id,reason]);
-   if(row.import_batch_id)await c.query('UPDATE historical_stock_units SET active=false WHERE source_id=$1',[row.id]);
-   await B.audit(c,req,'historical_movement_voided','historical_movement_documents',row.id,null,{product_code:product(req),reason});
-   return {id:row.id};
+   const id=B.uuid(req.params.id).toLowerCase();
+   await voidSources(c,req,[id],product(req));
+   return {id};
   }));
  }
 }

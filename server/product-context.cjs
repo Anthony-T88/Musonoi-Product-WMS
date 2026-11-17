@@ -17,7 +17,7 @@ function install({app,auth,csrf,secure,cobaltEnabled=false,cobaltWorkEnabled=fal
   if(path!=='/api/v1/product-context'&&header&&cookie&&header!==cookie)throw failure(409,'产品已在其他页面切换，请刷新页面');
   if(require('./gate-printers.cjs').allowed(path,req.method))return;
   if(globalPath(path)||(path==='/api/v1/historical-movements'&&req.method==='GET')||
-   /^\/api\/v1\/historical-movements\/(?:destinations|batch\/(?:preview|confirm)|[0-9a-f-]{36}(?:\/(?:source|void))?)$/.test(path)||
+   /^\/api\/v1\/historical-movements\/(?:destinations|batch\/(?:preview|confirm|void)|[0-9a-f-]{36}(?:\/(?:source|void))?)$/.test(path)||
    path==='/api/v1/operations/status'&&req.method==='GET'&&req.query?.path==='/me/language')return;
   // Never let query parameters relabel a copper response as cobalt.
   if(req.query?.product_code&&req.query.product_code!==req.productCode)throw failure(400,'产品上下文不一致');
