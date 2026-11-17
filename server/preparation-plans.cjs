@@ -15,7 +15,7 @@ const read=async req=>assertRead(req.user,req.productCode);
 function assertCreate(user){if(!canCreate({user}))throw B.error(403,'当前岗位无权创建备货计划');}
 const cobaltBase='/api/v1/cobalt/preparation-plans';
 const allowed=(path,method)=>method==='GET'&&['/operations/status','/occupied'].some(s=>path===cobaltBase+s)||
- method==='POST'&&['/batch','/batch/preview'].some(s=>path===cobaltBase+s)||
+ method==='POST'&&['/batch','/batch/preview','/batch/submit','/batch/approve'].some(s=>path===cobaltBase+s)||
  /^\/api\/v1\/cobalt\/preparation-plans(?:\/[0-9a-f-]{36}(?:\/(?:submit|approve|reject))?)?$/i.test(path)&&['GET','POST','PATCH'].includes(method);
 
 const visibility="p.product_code=$2 AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND (s.customer_id IS NULL OR s.customer_id=p.customer_id) AND (p.warehouse_id IS NULL OR s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id))";
@@ -97,7 +97,8 @@ async function occupied(c,req){
  return {items:rows.slice(0,25),page,has_next:rows.length>25};
 }
 function batchItems(req){
- fields(req.body,['items']);
+ fields(req.body,['items','submit']);
+ if(req.body.submit!==undefined&&typeof req.body.submit!=='boolean')throw B.error(400,'提交审核参数无效');
  if(!Array.isArray(req.body.items)||!req.body.items.length||req.body.items.length>batchLimit)throw B.error(400,'每批须有 1 至 100 行备货计划');
  return req.body.items;
 }
@@ -131,7 +132,8 @@ async function saveBatch(c,req){
  for(const {item,index} of ordered){
   try{
    const draft=await save(c,req,null,item,{bulk:true});
-   saved[index]={id:draft.id,batch_no:draft.batch_no,state:draft.state};
+   const result=req.body.submit?await transition(c,req,draft.id,'submit',{version:draft.version}):draft;
+   saved[index]={id:result.id,batch_no:result.batch_no,state:result.state};
   }catch(e){if(e.statusCode&&e.statusCode<500)throw B.error(e.statusCode,'第 '+(index+1)+' 行：'+e.message);throw e;}
  }
  return {items:saved};
@@ -159,8 +161,7 @@ async function save(c,req,id=null,body=req.body,{preview=false,bulk=false}={}){
  await event(c,req,saved,prior?'EDIT':'CREATE');
  return bulk?saved:detail(c,req,saved.id);
 }
-async function transition(c,req,id,operation){
- const body=req.body;
+async function transition(c,req,id,operation,body=req.body){
  fields(body,['version','reason']);
  const old=await access(c,req,id,true),action=actions(req,old);
  const submit=operation==='submit';
@@ -172,6 +173,25 @@ async function transition(c,req,id,operation){
  const {rows:[plan]}=await c.query('UPDATE preparation_plans SET state=$2,version=version+1 WHERE id=$1 RETURNING *',[id,state]);
  await event(c,req,plan,operation.toUpperCase(),reason);
  return detail(c,req,id);
+}
+async function transitionBatch(c,req,operation){
+ fields(req.body,['items']);
+ const items=req.body.items;
+ if(!Array.isArray(items)||items.length<1||items.length>batchLimit)throw B.error(400,'请选择 1 至 100 张备货计划');
+ const ordered=items.map(item=>{
+  fields(item,['id','version']);
+  return {id:B.uuid(item.id).toLowerCase(),version:B.version(item.version)};
+ }).sort((a,b)=>a.id.localeCompare(b.id));
+ if(new Set(ordered.map(item=>item.id)).size!==ordered.length)throw B.error(400,'选中的备货计划重复');
+ const plans=[];
+ for(const item of ordered)plans.push(await access(c,req,item.id,true));
+ for(const id of [...new Set(plans.map(plan=>plan.sales_plan_id))].sort())await sales(c,req,id,true);
+ const result=[];
+ for(const item of ordered){
+  const plan=await transition(c,req,item.id,operation,{version:item.version});
+  result.push({id:plan.id,batch_no:plan.batch_no,state:plan.state});
+ }
+ return {items:result};
 }
 async function claim(c,req,id){
  if(!id)throw B.error(409,'新建备货作业须从已审批备货计划发起');
@@ -199,12 +219,13 @@ function register({app,pool,auth,csrf}){
    const {method,path,key}=req.query,base=prefix.slice('/api/v1'.length);
    const target=typeof path==='string'&&path.startsWith(base)?path.slice(base.length):null;
    const match=target!==null&&/^\/([0-9a-f-]{36})(?:\/(submit|approve|reject))?$/i.exec(target);
-   const valid=method==='POST'&&(target===''||target==='/batch'||match?.[2])||method==='PATCH'&&match&&!match[2];
+   const batch=['/batch','/batch/submit','/batch/approve'].includes(target);
+   const valid=method==='POST'&&(target===''||batch||match?.[2])||method==='PATCH'&&match&&!match[2];
    if(!valid||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key))throw B.error(400,'操作查询参数无效');
    const {rows:[receipt]}=await c.query('SELECT response FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,method+' /api/v1'+path,key]);
    const id=match?.[1]||receipt?.response.id;
    if(id)await access(c,req,id);
-   if(target==='/batch'&&receipt)for(const row of receipt.response.items)await access(c,req,row.id);
+   if(batch&&receipt)for(const row of receipt.response.items)await access(c,req,row.id);
    return {committed:!!receipt};
   }));
   app.get(prefix+'/:id',{preHandler:[auth,read]},req=>C.readTransaction(pool,c=>detail(c,req,req.params.id)));
@@ -214,6 +235,7 @@ function register({app,pool,auth,csrf}){
   }],handler:req=>B.mutate(pool,req,c=>handler(c,req))});
   mutate('POST',prefix,canCreate,(c,req)=>save(c,req));
   mutate('POST',prefix+'/batch',canCreate,saveBatch);
+  for(const operation of ['submit','approve'])mutate('POST',prefix+'/batch/'+operation,operation==='submit'?canCreate:canReview,(c,req)=>transitionBatch(c,req,operation));
   mutate('PATCH',prefix+'/:id',canCreate,(c,req)=>save(c,req,req.params.id));
   for(const operation of ['submit','approve','reject'])mutate('POST',prefix+'/:id/'+operation,operation==='submit'?canCreate:canReview,(c,req)=>transition(c,req,req.params.id,operation));
  }

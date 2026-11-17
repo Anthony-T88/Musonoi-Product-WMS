@@ -1229,8 +1229,8 @@
     },
     {
       "path": "dist/bundle-number.js",
-      "sha256": "8513a12c11d6154368e23fcd2ae5a2d69c036c045b3a806ef3f17f3a5cb5a29c",
-      "bytes": 516
+      "sha256": "ad4806fab54be27018b8dfcbfddb135069407259ee01afc550fb712c8cf088c0",
+      "bytes": 532
     },
     {
       "path": "dist/business-time.js",
@@ -1404,8 +1404,8 @@
     },
     {
       "path": "dist/export-licenses.js",
-      "bytes": 44672,
-      "sha256": "2a3e91df08b2ff9575ac8cdc31b12f71a0c7c357d0ea6c3e3a15bb1797b8fbbe"
+      "bytes": 45276,
+      "sha256": "bd8ce5980bd55535850661ae931fa3f19733a2e65ce19afd159ba09d39e9f841"
     },
     {
       "path": "dist/field.css",
@@ -1724,8 +1724,8 @@
     },
     {
       "path": "dist/preparation-plans.js",
-      "sha256": "6e2a724d198a8ae2a9b75165a019d178e8989e067ceef22523d27fae0ce09de5",
-      "bytes": 27541
+      "sha256": "37e3ffc2d91b4598bb7d671aa2ac1c1120a64d116baa418c10ee6918eef29107",
+      "bytes": 30158
     },
     {
       "path": "dist/product-context.js",
@@ -2414,8 +2414,8 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "sha256": "2c1877c8a567d1e79b65685f2a286ab3e70341eb7dc203614c29378e51848471",
-      "bytes": 26728
+      "sha256": "9af788080fea5b55eb87f212e993c62cef67dcf63beee71c93cdc43a7fcedc64",
+      "bytes": 26886
     },
     {
       "path": "docs/uiux/DESIGN.md",
@@ -3299,8 +3299,8 @@
     },
     {
       "path": "server/export-license-plans.cjs",
-      "bytes": 8134,
-      "sha256": "d02e91d48f089612e8a275eb0c431a166afe4057f9e905952338bdf2260e5ccf"
+      "bytes": 9219,
+      "sha256": "3fb08a1eec82999e5939b12605a8b744f90c54355ec6a41ff3469f3f30acc3da"
     },
     {
       "path": "server/export-licenses.cjs",
@@ -3484,8 +3484,8 @@
     },
     {
       "path": "server/preparation-plans.cjs",
-      "bytes": 17314,
-      "sha256": "eba67c20c3d77ef55c29a9f58bae2d9d6bc0a0355af95e9cffa60b44cdc4f4e5"
+      "bytes": 18742,
+      "sha256": "2df40f1ea5742c36772c7ee8232bef4580bef342ed8d81ba23496205eb982be3"
     },
     {
       "path": "server/preparation-tree.cjs",
@@ -3749,7 +3749,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "6a26a9990692e4c3d301331e79123cfb445e5cfb6302b0457fa505930abd6d2d",
+      "sha256": "dfaa0fc3d4a05ed3ed91a3ffafa53d4b3cfd7d44ddabc1c4255761df2a6d1dda",
       "bytes": 95987
     },
     {
@@ -4134,8 +4134,8 @@
     },
     {
       "path": "tests/release/v483-hotfix.cjs",
-      "sha256": "16dd996fff7f7e297b22b2f309f893cbe6ea087f30df513f2a0255bbfe299dec",
-      "bytes": 12313
+      "sha256": "821e65bfb8f094158e8776a8cc5ebc5e46cd8027a71002679b3377b68ef858af",
+      "bytes": 16179
     },
     {
       "path": "deploy/remove-copper-test-chain.sql",
@@ -4154,8 +4154,8 @@
     },
     {
       "path": "docs/v4.8.5-release.md",
-      "sha256": "f8b73595d487628c8ffbab47a070fe0089ba5a025f44d7274cea3c9919ab2621",
-      "bytes": 854
+      "sha256": "cbd521a570b99c74ea1b92ec4844f13cd63457cda4abd1084260cfbe33eab6c3",
+      "bytes": 1295
     },
     {
       "path": "scripts/preproduction-cobalt-map.cjs",

@@ -965,7 +965,7 @@
     },
     {
       "path": "dist/bundle-number.js",
-      "sha256": "8513a12c11d6154368e23fcd2ae5a2d69c036c045b3a806ef3f17f3a5cb5a29c"
+      "sha256": "ad4806fab54be27018b8dfcbfddb135069407259ee01afc550fb712c8cf088c0"
     },
     {
       "path": "dist/business-time.js",
@@ -1105,7 +1105,7 @@
     },
     {
       "path": "dist/export-licenses.js",
-      "sha256": "2a3e91df08b2ff9575ac8cdc31b12f71a0c7c357d0ea6c3e3a15bb1797b8fbbe"
+      "sha256": "bd8ce5980bd55535850661ae931fa3f19733a2e65ce19afd159ba09d39e9f841"
     },
     {
       "path": "dist/field.css",
@@ -1361,7 +1361,7 @@
     },
     {
       "path": "dist/preparation-plans.js",
-      "sha256": "6e2a724d198a8ae2a9b75165a019d178e8989e067ceef22523d27fae0ce09de5"
+      "sha256": "37e3ffc2d91b4598bb7d671aa2ac1c1120a64d116baa418c10ee6918eef29107"
     },
     {
       "path": "dist/product-context.js",
@@ -1993,7 +1993,7 @@
     },
     {
       "path": "server/export-license-plans.cjs",
-      "sha256": "d02e91d48f089612e8a275eb0c431a166afe4057f9e905952338bdf2260e5ccf"
+      "sha256": "3fb08a1eec82999e5939b12605a8b744f90c54355ec6a41ff3469f3f30acc3da"
     },
     {
       "path": "server/export-licenses.cjs",
@@ -2141,7 +2141,7 @@
     },
     {
       "path": "server/preparation-plans.cjs",
-      "sha256": "eba67c20c3d77ef55c29a9f58bae2d9d6bc0a0355af95e9cffa60b44cdc4f4e5"
+      "sha256": "2df40f1ea5742c36772c7ee8232bef4580bef342ed8d81ba23496205eb982be3"
     },
     {
       "path": "server/preparation-tree.cjs",
@@ -2645,7 +2645,7 @@
     },
     {
       "path": "tests/release/v483-hotfix.cjs",
-      "sha256": "16dd996fff7f7e297b22b2f309f893cbe6ea087f30df513f2a0255bbfe299dec"
+      "sha256": "821e65bfb8f094158e8776a8cc5ebc5e46cd8027a71002679b3377b68ef858af"
     },
     {
       "path": "deploy/remove-copper-test-chain.sql",

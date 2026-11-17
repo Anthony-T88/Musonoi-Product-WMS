@@ -54,7 +54,8 @@ window.PreparationPlans={
    heads.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody></tbody></table></div>';
   Router.page(title,'<section class="wms-page" data-page-composed data-no-i18n>'+
    '<form id="'+formId+'" class="user-form" novalidate><div class="business-toolbar wms-batch-toolbar">'+back+
-   '<button class="button primary">'+t('保存草稿','Save Drafts')+'</button></div>'+
+   '<button type="submit" class="button secondary">'+t('保存草稿','Save Drafts')+'</button>'+
+   '<button type="submit" class="button primary" data-submit-for-review>'+t('提交审核','Submit for Review')+'</button></div>'+
    '<section class="panel wms-section"><div class="wms-batch-toolbar"><div><h2>'+t('批量录入','Batch Entry')+
    '</h2><p id="preparation-batch-summary" class="wms-feedback" role="status"></p></div><div class="business-toolbar">'+
    '<button id="preparation-batch-add" type="button" class="button secondary">'+t('添加一行','Add Row')+'</button>'+
@@ -217,18 +218,22 @@ window.PreparationPlans={
   $('preparation-occupied-reset').onclick=()=>{lookup.reset();loadOccupied();};
   lookupResults.onclick=e=>{if(e.target.dataset.occupiedPage)loadOccupied(Number(e.target.dataset.occupiedPage));};
   form.onsubmit=e=>UI46Pages.submit(e,async()=>{
+   const submit=e.submitter?.hasAttribute('data-submit-for-review')||false;
    clearTimeout(timer);
    const rows=await validate();
    if(!rows)return;
    const bad=rows.findIndex(r=>r.invalid);
    if(bad>=0){const r=rows[bad];tbody.rows[bad].querySelector('[name="'+(r.field||'batch_no')+'"]').focus();
-    throw Error(t('请修正标记的行后再保存整批草稿。','Correct the marked rows before saving the batch.'));}
+    throw Error(t('请修正标记的行后再办理。','Correct the marked rows to continue.'));}
+   if(submit&&!await OperationConfirm.ask({title:t('提交整批备货计划审核？','Submit this batch of preparation plans for review?'),
+    rows:[[t('计划数量','Plans'),data.length]]}))return;
    try{
-    const saved=await API.request(api+'/batch',{method:'POST',body:{items:data.map(r=>({...r}))}});
+    const saved=await API.request(api+'/batch',{method:'POST',body:{items:data.map(r=>({...r})),submit}});
     this.recent={product:ProductContext.code,ids:saved.items.map(r=>r.id)};
     ProductContext.dirty=false;
-    await Router.go(this.route+'?state=DRAFT');
-    notify(t('已保存 '+saved.items.length+' 条备货草稿','Saved '+saved.items.length+' preparation drafts'));
+    await Router.go(this.route+'?state='+(submit?'PENDING':'DRAFT'));
+    notify(submit?t('已提交 '+saved.items.length+' 张备货计划','Submitted '+saved.items.length+' plans'):
+     t('已保存 '+saved.items.length+' 条备货草稿','Saved '+saved.items.length+' preparation drafts'));
    }catch(error){if(error.statusCode===409)await validate();throw error;}
   });
   ProductContext.dirty=false;
@@ -243,18 +248,45 @@ window.PreparationPlans={
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q);
   const status=['DRAFT','PENDING','APPROVED','REJECTED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
   const headings=[['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
-  const recent=this.recent?.product===ProductContext.code?this.recent.ids:[],rows=d.items.map(p=>'<tr'+(recent.includes(p.id)?' class="wms-batch-created"':'')+'><td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
+  const operations=[['submit','submit',t('一键提交审核','Submit Selected')],['approve','review',t('一键审批','Approve Selected')]];
+  const available=operations.filter(([,action])=>d.items.some(p=>p.actions[action]));
+  if(available.length)headings.unshift(['选择','Select']);
+  const selection=p=>available.length?'<td>'+(p.actions.submit||p.actions.review?'<input type="checkbox" data-preparation-select value="'+esc(p.id)+'" aria-label="'+esc(t('选择 ','Select ')+p.batch_no)+'">':'')+'</td>':'';
+  const recent=this.recent?.product===ProductContext.code?this.recent.ids:[],rows=d.items.map(p=>'<tr'+(recent.includes(p.id)?' class="wms-batch-created"':'')+'>'+selection(p)+'<td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
    (p.allocation_id||p.co_preparation_id?'<a href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':p.actions.start?'<a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'—')+'</td></tr>');
   Router.page(t('备货计划','Preparation Plans'),'<section class="wms-page" data-page-composed data-no-i18n>'+
    '<div class="business-toolbar">'+(d.can_create?'<button type="button" id="preparation-plan-create" class="button primary">'+t('新建备货计划','New Preparation Plan')+'</button>':'')+
+   available.map(([operation,,label])=>'<button type="button" class="button secondary" data-preparation-operation="'+operation+'" disabled>'+label+'</button>').join('')+
    this.backLink()+'</div>'+
    '<form id="preparation-plan-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Lot Number / Sales Plan / Customer')+
    '<input name="search" type="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><label>'+t('审批状态','Review Status')+
    '<select name="state"><option value="">'+t('全部','All')+'</option>'+status+'</select></label><div class="wms-filter-actions">'+
    '<button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+this.route+'">'+t('重置','Reset')+'</a></div></form>'+
+   '<p id="preparation-bulk-error" class="wms-feedback error" role="alert"></p>'+
    ExportLicenses.table(headings,rows,'preparation-plans-table',true)+CobaltStockUI.pager(d.page,d.total,d.page_size)+'</section>');
   $('preparation-plan-filter').onsubmit=e=>{e.preventDefault();Router.go(this.route+'?'+new URLSearchParams(new FormData(e.target)));};
   if($('preparation-plan-create'))$('preparation-plan-create').onclick=()=>Router.go(this.route+'/new');
+  const checks=[...document.querySelectorAll('[data-preparation-select]')],buttons=[...document.querySelectorAll('[data-preparation-operation]')];
+  const plans=new Map(d.items.map(p=>[p.id,p]));
+  const selected=()=>checks.filter(input=>input.checked).map(input=>plans.get(input.value));
+  let working=false;
+  const sync=()=>{
+   const items=selected();
+   for(const b of buttons)b.disabled=working||!items.length||items.some(p=>!p.actions[b.dataset.preparationOperation==='submit'?'submit':'review']);
+   for(const input of checks)input.disabled=working;
+  };
+  for(const input of checks)input.onchange=sync;
+  for(const button of buttons)button.onclick=async()=>{
+   if(working)return;
+   const items=selected(),operation=button.dataset.preparationOperation;
+   working=true;sync();$('preparation-bulk-error').textContent='';
+   try{
+    if(!await OperationConfirm.ask({title:button.textContent,rows:[[t('计划数量','Plans'),items.length]]}))return;
+    await API.request(this.api()+'/batch/'+operation,{method:'POST',body:{items:items.map(({id,version})=>({id,version}))}});
+    await this.list();window.dispatchEvent(new Event('inventory-changed'));
+   }catch(error){if($('preparation-bulk-error'))$('preparation-bulk-error').textContent=error.message;}
+   finally{working=false;sync();}
+  };
   CobaltStockUI.bindPager(d);ProductContext.dirty=false;
  },
  async detail(id){

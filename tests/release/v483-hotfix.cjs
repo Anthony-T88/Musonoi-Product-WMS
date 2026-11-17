@@ -40,6 +40,39 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
   async function batch(product,action,file,role='admin'){
    return (await request(role,product,imports+'/'+action,{files:[file]})).results[0];
   }
+  await t.test('bulk preparation submits and approves through existing copper and cobalt authorization',async()=>{
+   const P=require('./preparation-fixture.cjs');
+   for(const product of [CU,CO]){
+    const base=(product===CO?'/cobalt':'')+'/preparation-plans';
+    const plan=await P.salesPlan(request,f,product);
+    const items=[551,552].map(n=>({sales_plan_id:plan,batch_no:P.batch(product,n),shipment_month:P.localMonth()}));
+    const created=await request('export_supervisor',product,base+'/batch',{items,submit:true});
+    assert(created.items.every(item=>item.state==='PENDING'));
+    const pending=await Promise.all(created.items.map(item=>request('export_supervisor',product,base+'/'+item.id)));
+    const selection=pending.map(({id,version})=>({id,version}));
+    await request('export_supervisor',product,base+'/batch/approve',{items:selection},403);
+    await request('logistics_manager',product,base+'/batch/approve',{items:[selection[0],{...selection[1],version:99}]},409);
+    assert.equal((await request('logistics_manager',product,base+'/'+selection[0].id)).state,'PENDING');
+    assert((await request('logistics_manager',product,base+'/batch/approve',{items:selection})).items.every(item=>item.state==='APPROVED'));
+    const draft=await P.draft(request,product,plan,P.batch(product,553));
+    assert.equal((await request('export_supervisor',product,base+'/batch/submit',{items:[{id:draft.id,version:draft.version}]})).items[0].state,'PENDING');
+   }
+  });
+  await t.test('invoice numbering skips imported invoice and packing numbers without jumping to the historical maximum',async()=>{
+   const P=require('../../server/export-license-plans.cjs'),actor=account('admin').id;
+   for(const [document,invoice] of [['Synthetic-First','QA-FORM-1'],['QA-FORM-02-PL',null],['Synthetic-Late','QA-FORM-998']]){
+    await client.query(`INSERT INTO historical_movement_documents(product_code,movement_type,document_no,document_key,business_date,
+     date_evidence,source_name,source_sha256,source_data,source_facts,imported_by)
+     VALUES($1,'OUTBOUND',$2,upper($2),'2020-01-01','synthetic','synthetic.xlsx','test','',jsonb_build_object('invoice_no',$3::text),$4)`,[CU,document,invoice,actor]);
+   }
+   assert.deepEqual(await P.invoiceCandidate(client,{proforma_no:'QA-FORM',next_serial:'1'}),{invoice:'QA-FORM-03',serial:'3'});
+  });
+  await t.test('receipt workbook accepts an unpadded bundle serial and returns two digits',async()=>{
+   const book=new(require('exceljs').Workbook)(),sheet=book.addWorksheet('Receipts');
+   sheet.addRows([['捆包编号','捆包片数','生产日期','入库时间'],['MUS-2026-100-1',48,'2026-11-11','2026-11-11 10:30']]);
+   const parsed=await require('../../server/production-receipt-reader.cjs').parse(Buffer.from(await book.xlsx.writeBuffer()));
+   assert.equal(parsed.lines[0].bundle_no,'MUS-2026-100-01');
+  });
   const reason='Matched historical packing list and original seal record';
   for(const product of [CU,CO])await t.test(product+' duplicate reviews, source rows, totals and replay',async()=>{
    const p=product===CU?'CU':'CO',file=(suffix,rows)=>packing(product,f.warehouse,p+'-'+suffix,rows);
@@ -156,6 +189,17 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await page.locator('[data-import-state="voided"]').waitFor();
    assert.equal(await page.getByRole('heading',{name:'关联单据',exact:true}).count(),0);
    await page.getByText('Void synthetic browser import',{exact:true}).waitFor();
+  });
+  await t.test('creator sees Submit for Review and approver can approve selected plans on the list',async()=>{
+   await page.goto(origin+'/preparation/work-plans/new');
+   await page.locator('#preparation-plan-batch [data-submit-for-review]').waitFor();
+   assert(await page.locator('#preparation-plan-batch').getByRole('button',{name:'保存草稿',exact:true}).isVisible());
+   await page.goto(origin+'/preparation/work-plans?state=PENDING');
+   const check=page.locator('[data-preparation-select]').first(),approve=page.locator('[data-preparation-operation="approve"]');
+   await check.waitFor();assert(await approve.isDisabled());await check.check();
+   const response=page.waitForResponse(r=>r.url().endsWith('/preparation-plans/batch/approve')&&r.request().method()==='POST');
+   await approve.click();await page.locator('#operation-confirm-accept').click();
+   const result=await response;assert.equal(result.status(),200);assert.equal((await result.json()).items[0].state,'APPROVED');
   });
   assert.deepEqual(errors,[]);
  }finally{if(browser)await browser.close();if(app)await app.close();await client.end();}

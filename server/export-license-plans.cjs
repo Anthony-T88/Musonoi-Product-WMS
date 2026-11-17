@@ -26,22 +26,33 @@ async function allowedDates(c,id,date){
 }
 async function invoiceConflict(c,invoice,owner=null){
  if(!invoice)return;
+ await c.query('SELECT pg_advisory_xact_lock(477189)');
  await lockInvoice(c,invoice);
- const collision=(await c.query('SELECT 1 FROM export_license_allocations WHERE lower(invoice_no)=lower($1) AND plan_id IS DISTINCT FROM $2 LIMIT 1',[invoice,owner])).rowCount;
+ const collision=(await c.query(`SELECT 1 FROM export_license_allocations WHERE lower(invoice_no)=lower($1) AND plan_id IS DISTINCT FROM $2
+  UNION ALL SELECT 1 FROM (${historicalInvoices}) h WHERE historical_unit_key(h.invoice_no)=historical_unit_key($1) LIMIT 1`,[invoice,owner])).rowCount;
  if(collision)throw B.error(409,'发票号已由出口许可证分配');
 }
 async function lockInvoice(c,invoice){
  await c.query('SELECT pg_advisory_xact_lock(472,hashtext(lower($1)))',[invoice]);
 }
 const invoices=`SELECT invoice_no FROM export_license_allocations UNION ALL SELECT invoice_no FROM loading_plan_documents
- UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans
- UNION ALL SELECT coalesce(s.invoice_no,m.document_no) FROM export_license_historical_sources s
- JOIN historical_movement_documents m ON m.id=s.source_id AND m.voided_at IS NULL`;
+ UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans`;
+const historicalInvoices=`SELECT n.invoice_no FROM historical_movement_documents m
+ LEFT JOIN export_license_historical_sources s ON s.source_id=m.id
+ CROSS JOIN LATERAL (VALUES (m.source_facts->>'invoice_no'),(s.invoice_no),(regexp_replace(m.document_no,'-?PL$','','i'))) n(invoice_no)
+ WHERE m.voided_at IS NULL AND m.movement_type='OUTBOUND'`;
 async function invoiceCandidate(c,l){
  const {rows:[row]}=await c.query(`WITH suffixes AS (
   SELECT substr(invoice_no,length($1)+2) suffix FROM (${invoices}) invoices
   WHERE left(lower(invoice_no),length($1)+1)=lower($1)||'-'
- ) SELECT greatest($2::numeric,coalesce(max(CASE WHEN suffix~'^[0-9]+$' THEN suffix::numeric END),0)+1)::text serial FROM suffixes`,
+ ), next AS (SELECT greatest($2::numeric,coalesce(max(CASE WHEN suffix~'^[0-9]+$' THEN suffix::numeric END),0)+1) serial FROM suffixes),
+ historical_suffixes AS (
+  SELECT substr(historical_unit_key(invoice_no),length(historical_unit_key($1))+2) suffix FROM (${historicalInvoices}) h
+  WHERE left(historical_unit_key(invoice_no),length(historical_unit_key($1))+1)=historical_unit_key($1)||'-'
+ ), blocked AS (SELECT DISTINCT CASE WHEN suffix~'^[0-9]+$' THEN suffix::numeric END serial FROM historical_suffixes),
+ candidates AS (SELECT next.serial+offsets.n serial FROM next CROSS JOIN generate_series(0,(SELECT count(*)::int FROM blocked)) offsets(n))
+ SELECT serial::text FROM candidates c WHERE NOT EXISTS(SELECT 1 FROM blocked b WHERE b.serial=c.serial)
+ ORDER BY serial LIMIT 1`,
  [l.proforma_no,l.next_serial]);
  const invoice=l.proforma_no+'-'+row.serial.padStart(2,'0');
  if(invoice.length>77||BigInt(row.serial)>=9223372036854775807n)throw B.error(409,'生成的发票号超长');
@@ -63,7 +74,7 @@ async function prepare(c,req,plan,old,body,batch,date){
  const previous=await link(c,req.productCode,old?.id);
  if(previous?.state==='RELEASED')throw B.error(409,'许可证关联计划已取消');
  if(!body.license_id&&!previous){
-  await invoiceConflict(c,body.invoice_no,old?.id);
+  if(body.invoice_no!==old?.invoice_no)await invoiceConflict(c,body.invoice_no,old?.id);
   return null;
  }
  const id=body.license_id?B.uuid(body.license_id):previous.license_id;
@@ -76,6 +87,7 @@ async function prepare(c,req,plan,old,body,batch,date){
  }
  if(previous&&previous.state!=='RESERVED')throw B.error(409,'已核销许可证关联不可修改');
  const ids=[...new Set([id,previous?.license_id].filter(Boolean))].sort();
+ await c.query('SELECT pg_advisory_xact_lock(477189)');
  await c.query('SELECT id FROM export_licenses WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE',[ids]);
  const license=await L.record(c,req,id);
  if(license.project_id!==plan.project_id||license.customer_id!==plan.customer_id||license.contract_id!==plan.contract_id)throw B.error(409,'许可证与装车计划产品、买家或合同不一致');

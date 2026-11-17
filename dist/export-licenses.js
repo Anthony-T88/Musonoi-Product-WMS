@@ -476,6 +476,17 @@ window.ExportLicenses={
   const container=invoice?.closest('label')||manual?.closest('label');
   if(!container||!sales)return;
   container.before(slot);
+  let packing=form.elements.packing_list_no;
+  if(invoice&&!packing){
+   const label=document.createElement('label');label.textContent=t('装箱单号','Packing List No.');
+   packing=document.createElement('input');packing.readOnly=true;label.append(packing);container.after(label);
+  }
+  const syncPacking=()=>{
+   if(!invoice||!packing)return;
+   const value=invoice.value.trim();
+   packing.value=value?(value===record.invoice_no&&record.packing_list_no?record.packing_list_no:value+'-PL'):'';
+  };
+  invoice?.addEventListener('input',syncPacking);syncPacking();
   if(old)select.options[0].disabled=true;
   let request=0,previewRequest=0,timer;
   const show=()=>{
@@ -488,6 +499,7 @@ window.ExportLicenses={
     if(manual)manual.value=chosen?.license_no||old?.license_no||'';
     if(invoice)invoice.value=old?.license_id===select.value?old.invoice_no:'';
    }
+   syncPacking();
    const available=chosen?.available!=null?' '+t('可分配 ','Allocatable ')+chosen.available+' '+chosen.unit:'';
    note.textContent=reserved?t('最终发票号在保存时确定。','The final invoice number is assigned on save.')+available:'';
    if(!reserved||old?.license_id===licenseId)return;
@@ -496,6 +508,7 @@ window.ExportLicenses={
    API.request(this.api()+'/options?'+filters).then(d=>{
     if(token!==previewRequest||select.value!==licenseId||!form.isConnected)return;
     if(invoice)invoice.value=d.invoice_preview||'';
+    syncPacking();
     if(d.invoice_preview)note.textContent=t('预计发票号 ','Proposed invoice ')+d.invoice_preview+' · '+note.textContent;
    }).catch(error=>{if(token===previewRequest&&select.value===licenseId&&form.isConnected)note.textContent=error.message;});
   };
