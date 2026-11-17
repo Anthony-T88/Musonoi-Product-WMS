@@ -89,6 +89,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    await page.goto(origin+'/overview');
    await page.waitForFunction(()=>window.AppSignedIn&&typeof ProductContext!=='undefined'&&!document.querySelector('#session-restore:not([hidden])'));
    if(await page.evaluate(()=>ProductContext.code)!==product)await page.evaluate(code=>ProductContext.switchTo(code),product);
+   await page.waitForFunction(()=>!document.body.classList.contains('boot-pending')&&!Router.rendering);
    await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));
    return {ctx,page,errors};
   }
@@ -214,6 +215,10 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.equal(await selected.count(),2);
     const bulk=page.locator('#historical-bulk-void');
     assert(await bulk.isDisabled());
+    for(const width of [390,1440]){
+     await page.setViewportSize({width,height:900});
+     assert(await bulk.evaluate(button=>Math.abs(button.getBoundingClientRect().right-button.closest('.wms-action-bar').getBoundingClientRect().right)<2));
+    }
     await page.locator('#historical-void-all').check();
     await bulk.click();
     await page.locator('#operation-confirm-cancel').click();
@@ -237,6 +242,62 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.equal(audit.n,2);
    const {rows:[stock]}=await c.query('SELECT count(*)::int n FROM historical_outbound_units WHERE source_id=ANY($1::uuid[])',[ids]);
    assert.equal(stock.n,0);
+  });
+
+  for(const product of products)await t.test(product+' saves, confirms and clears the same arrival row',async()=>{
+   await login('admin');
+   const co=cobalt(product),plan=fixtures[product].plan,plate=co?'QA-CO-YARD':'QA-CU-YARD';
+   const dispatch=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch',info=await api('admin',product,dispatch);
+   const workbook=X.utils.book_new();
+   X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([['HORSE','TON'],[plate,30]]),'Dispatch');
+   const file={file_name:'arrival.xlsx',mapping:{sheet:'Dispatch',header_row:1,truck_column:1,capacity_column:2,capacity_kg:false},
+    file_base64:X.write(workbook,{type:'base64',bookType:'xlsx'}),...(co?{plan_version:info.plan.version}:{})};
+   const preview=await api('admin',product,dispatch+'/import-preview',file);
+   await api('admin',product,dispatch+(co?'/import':''),{...file,shipment_month:preview.shipment_month,preview_sha256:preview.file_sha256});
+   const vehicle=(await api('admin',product,dispatch)).vehicles.find(row=>row.truck_no===plate);
+   assert(vehicle);
+   const endpoint=(co?'/cobalt/sales':'/loading-plans')+'/arrivals';
+   const contact={trailer_one:plate+'-TRL',driver_name:plate+' Driver',passport_no:plate+'-PASS',arrived_at:new Date(Date.now()-120000).toISOString(),
+    ...(co?{transporter:'Synthetic Carrier',dispatch_version:vehicle.version}:{})};
+   const registration=await api('admin',product,endpoint+'/'+vehicle.id,contact);
+   await api('production_operator',product,endpoint+'/'+vehicle.id,{action:'CLEAR',version:registration.version},403);
+   const preparation=co?await api('admin',product,'/cobalt/preparations',{
+    preparation_plan_id:fixtures[product].occupied.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:1}):null;
+   const {ctx,page}=await open('admin',product,co?390:1440);
+   try{
+    const list=origin+'/loading-plans?tab=arrivals&shipment_month='+preview.shipment_month;
+    await page.goto(list);
+    const row=page.locator((co?'#co-arrivals-table':'#cu-arrivals-table')+' tbody tr').filter({hasText:plate});
+    const edit=()=>row.locator('a[href*="vehicle_id"]').click();
+    const form=page.locator(co?'#co-arrival-form':'#yard-arrival-form');
+    const confirmed=()=>row.locator('a[href^="/loading-plans/new"]').waitFor();
+    await confirmed();await edit();
+    await form.locator('[name=driver_name]').fill('');
+    await form.locator('[data-arrival-save]').click();
+    await row.getByText(/待修改确认|Pending Confirmation/).waitFor();
+    assert.equal(await row.count(),1);
+    assert.equal(await page.locator('[data-document-draft-row]').count(),0);
+    assert.equal(await row.locator('a[href^="/loading-plans/new"]').count(),0);
+    const path=co?'/cobalt/loading/plans':'/loading-plans/unified';
+    const blocked=await ctx.request.post(origin+'/api/v1'+path,{headers:{origin,'x-product-code':product,
+     'x-csrf-token':await page.evaluate(()=>API.csrfToken),'idempotency-key':crypto.randomUUID()},
+     data:{sales_plan_id:plan,arrival_id:registration.id,...(co?{preparation_id:preparation.id}:{})}});
+    assert.equal(blocked.status(),409,await blocked.text());
+    assert.match(await blocked.text(),/CO_LOADING_ARRIVAL_INVALID|尚未确认/);
+    await edit();await form.locator('[name=driver_name]').waitFor();
+    assert.equal(await form.locator('[name=driver_name]').inputValue(),'');
+    await form.locator('[name=driver_name]').fill(contact.driver_name);
+    await form.locator('button[type=submit]').click();
+    await page.locator('#operation-confirm-accept').click();
+    await confirmed();await edit();
+    await form.locator('[data-arrival-clear]').click();
+    await page.locator('#operation-confirm-accept').click();
+    await row.getByText(/待到厂登记|Awaiting Arrival/).waitFor();
+    assert.equal(await row.locator('a[href^="/loading-plans/new"]').count(),0);
+    const table=co?'co_vehicle_arrivals':'vehicle_arrivals';
+    const {rows:[saved]}=await c.query('SELECT id,registration_phase,arrived_at,trailer_one,driver_name,passport_no FROM '+table+' WHERE dispatch_vehicle_id=$1',[vehicle.id]);
+    assert.deepEqual(saved,{id:registration.id,registration_phase:'CLEARED',arrived_at:null,trailer_one:'',driver_name:'',passport_no:''});
+   }finally{await ctx.close();}
   });
  }finally{await browser?.close();await app?.close();await c.end();}
 });

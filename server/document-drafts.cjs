@@ -177,6 +177,7 @@ function register({app,pool,auth,csrf}){
   app.put(prefix+'/:id',{preHandler:[auth,csrf]},req=>transaction(pool,async c=>{
    await Lease.lockBusiness(c,req);
    const values=owner(req,req.params.id),body=req.body||{};
+   if(Object.hasOwn(specs,body.form_key)&&specs[body.form_key].vehicle)throw B.error(409,'请刷新页面后使用车辆到场登记的保存草稿按钮');
    await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[values[2]]);
    await validate(c,req,body.form_key,body.route,body.fields);
    const {rows:[prior]}=await c.query('SELECT * FROM document_drafts WHERE id=$1',[values[2]]);

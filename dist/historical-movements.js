@@ -187,8 +187,8 @@ window.HistoricalMovements={
   const t=this.t;
   const selectable=data.items.some(r=>!r.voided_at);
   const pager=(page,label)=>{const next=new URLSearchParams(q);next.set('page',page);return '<a class="button secondary compact" href="'+this.path+'?'+esc(next)+'">'+label+'</a>';};
-  const actions=selectable?'<div class="business-toolbar"><label><input type="checkbox" id="historical-void-all">'+t('选择本页有效单据','Select Active Documents on This Page')+'</label>'+
-   '<span id="historical-void-count" role="status"></span><button id="historical-bulk-void" type="button" class="button danger-outline" disabled>'+t('批量作废','Void Selected')+'</button></div><p id="historical-bulk-error" class="wms-feedback error" role="alert"></p>':'';
+  const actions=selectable?'<div class="wms-action-bar"><div class="wms-history-selection"><label><input type="checkbox" id="historical-void-all">'+t('选择本页有效单据','Select Active Documents on This Page')+'</label>'+
+   '<span id="historical-void-count" class="wms-feedback" role="status"></span></div><div class="wms-filter-actions"><button id="historical-bulk-void" type="button" class="button danger-outline" disabled>'+t('批量作废','Void Selected')+'</button></div></div><p id="historical-bulk-error" class="wms-feedback error" role="alert"></p>':'';
   return actions+this.table([...(selectable?[t('选择','Select')]:[]),t('装箱单号','Packing List No.'),t('产品','Product'),t('业务日期','Business Date'),t('备货批次','Preparation Batch'),t('数量','Quantity'),t('净重（吨）','Net Weight (MT)'),t('状态','Status'),t('操作','Action')],
    data.items.map(r=>[...(selectable?[r.voided_at?'—':'<input type="checkbox" data-historical-select value="'+esc(r.id)+'" aria-label="'+esc(t('选择 ','Select ')+r.document_no)+'">']:[]),
     esc(r.document_no),this.product(r.product_code),esc(r.business_date),this.text(r.source_facts.batch_no),CountValues.display(r.quantity),this.weight(r.net_kg),
@@ -358,7 +358,7 @@ window.HistoricalMovements={
     [t('计入库存追溯的明细','Lines included in stock history'),CountValues.display(r.exception_review.accepted_quantity)]])):'')+
    this.section('原表明细','Source Lines',this.lines(r.rows,r.product_code))+
    (!r.voided_at?this.section('导入纠错','Import Correction','<form id="historical-void" class="user-form"><label>'+t('作废原因','Void Reason')+
-    '<textarea name="reason" required minlength="5" maxlength="500"></textarea></label><button class="button danger-outline">'+t('作废该条历史单据','Void Historical Record')+'</button></form>'):
+    '<textarea name="reason" required minlength="5" maxlength="500"></textarea></label><div class="wms-filter-actions"><button class="button danger-outline">'+t('作废该条历史单据','Void Historical Record')+'</button></div></form>'):
     this.section('作废记录','Void Record',UI46Pages.factList([
      [t('作废人','Voided By'),this.text(r.voided_by)],
      [t('作废时间','Voided At'),this.text(BusinessTime.display(r.voided_at))],

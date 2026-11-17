@@ -37,6 +37,12 @@ Object.assign(TRANSLATIONS.en,{"车辆到厂登记":"Vehicle Arrival Registratio
 Object.assign(TRANSLATIONS.en,{"目的地":"Destination","到厂运输信息":"Arrival Transport Details","查看车辆到厂登记":"View Vehicle Arrivals","登记及编辑到厂运输资料":"Register and Edit Arrival Transport","该备货批次已被其他装车计划锁定":"This Lot is locked by another Loading Plan.","到厂车辆已取消或不属于当前销售计划":"The arrival vehicle is cancelled or belongs to another sales plan.","计划车号必须与到厂登记车辆一致":"The truck plate must match the arrival registration.","该到厂车辆已创建装车计划":"A Loading Plan already exists for this arrived vehicle.","派车车辆不存在或已取消":"The dispatched vehicle is unavailable or cancelled.","已创建计划的到厂资料已锁定":"Arrival details are locked after a Loading Plan is created.","到厂登记版本变化，请刷新":"The arrival registration has changed. Refresh and try again.","请填写挂车1、司机全名及司机护照号":"Enter Trailer 1, the driver full name and passport number.","没有车辆到厂登记权限":"You do not have permission to register vehicle arrivals.","车辆已取消、已创建计划或不在当前筛选范围":"The vehicle is cancelled, already planned or outside the current filter.","记录簿字段无效":"Invalid record book field.","记录内容包含无效字符":"The entry contains invalid characters."});
 
 TRANSLATIONS.en['司机、挂车及集装箱信息来自到厂登记，已与装车计划关联。']='Driver, trailer and container details come from the arrival registration linked to the Loading Plan.';
+Object.assign(TRANSLATIONS.en,{
+ '待修改确认':'Pending Confirmation',
+ '车辆到场登记尚未确认，不能创建装车计划':'Confirm the vehicle arrival before creating a Loading Plan.',
+ '到场登记版本已变化，请刷新':'The arrival registration has changed. Refresh and try again.',
+ '当前车辆没有可取消的到场登记':'This vehicle has no arrival registration to cancel.'
+});
 
 TRANSLATIONS.en['派车车辆已取消，请先核对并处理原装车计划']='The dispatched vehicle is cancelled. Review and resolve the original Loading Plan first.';
 

@@ -155,7 +155,6 @@ window.DocumentDrafts={
   '/receipts':['#op-table,#co-intake-table,.business-table table','v26-receipt','receipt-editor','co-create','co469-work-draft'],
   '/preparation':['#op-table,#ux10-preparation-list,.business-table table','v26-preparation','v261-create'],
   '/preparation/work-plans':['#preparation-plans-table','preparation-plan-form'],
-  '/loading-plans':['#cu-arrivals-table,#co-arrivals-table','yard-arrival-form','co-arrival-form'],
   '/loading-plans/query':['#co-loading-plans,.business-table table','single-plan-form','co-loading-form','co-loading-documents'],
   '/outbounds':['#op-table,#co-execution-list,.business-table table','v26-load','lp-load-form','pending-load-edit','cu-departure-draft','co-execution-departure','shipping-generate','co-packing-generate'],
   '/stocktaking':['#stocktake-list-table','v27-count-create','v33-count-create','co-count-create','v27-observation','co-count-record'],
@@ -262,7 +261,7 @@ window.DocumentDrafts={
   for(const row of rows.reverse())this.draftRow(table,headers,row);
  },
  refresh(){
-  for(const form of document.querySelectorAll('#page-content form,#dialog-content form'))if(this.forms[form.id])this.bind(form);
+  for(const form of document.querySelectorAll('#page-content form,#dialog-content form'))if(this.forms[form.id]&&!form.hasAttribute('data-arrival-native'))this.bind(form);
   this.list().catch(error=>{if(error.status!==401&&error.status!==403)console.warn('Document draft list:',error.message);});
  },
  install(){

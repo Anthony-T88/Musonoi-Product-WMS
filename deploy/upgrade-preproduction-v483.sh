@@ -12,6 +12,8 @@ source_revision=4.8.1-ui6
 target_revision=4.8.3
 target_version=4.8.3
 release_branch=release/v4.8.3
+migration=195_v482_dispatch_vehicle_month.sql
+migration_count=195
 case "${2:-base}" in
   base) ;;
   ui1)
@@ -45,9 +47,18 @@ case "${2:-base}" in
     target_version=4.8.5
     release_branch=release/v4.8.5
     ;;
+  v485-ui2)
+    repo=/opt/musonoi-wms-release-v4.8.5-ui2
+    override=/etc/musonoi/preproduction-v485-ui2-build.override.yaml
+    source_revision=4.8.5-ui1
+    target_revision=4.8.5-ui2
+    target_version=4.8.5
+    release_branch=release/v4.8.5
+    migration=196_v485_vehicle_arrival_confirmation.sql
+    migration_count=196
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
-migration=195_v482_dispatch_vehicle_month.sql
 release_id=${target_version//./}
 stage=$(mktemp -d "/root/musonoi-v${release_id}.XXXXXXXX")
 mapfile -t running < <(docker ps -q --filter "label=com.docker.compose.project=$project" --filter 'label=com.docker.compose.service=app')
@@ -71,8 +82,9 @@ status config | json_is frontendRevision "$source_revision"
 [[ $(query -d "$target" -c 'SELECT environment FROM system_info WHERE singleton') == test ]]
 before=$(query -d "$target" -c 'SELECT version FROM security_schema_status')
 case "$before" in
-  194_v481_dispatch_and_approval.sql) [[ $source_revision == 4.8.1-ui6 ]]; added=1 ;;
   "$migration") added=0 ;;
+  195_v482_dispatch_vehicle_month.sql) [[ $target_revision == 4.8.5-ui2 ]]; added=1 ;;
+  194_v481_dispatch_and_approval.sql) [[ $source_revision == 4.8.1-ui6 ]]; added=1 ;;
   *) printf 'Unexpected migration version %s\n' "$before"; exit 1 ;;
 esac
 old_db=$("${old[@]}" ps -q database)
@@ -117,11 +129,11 @@ for service in app migrate; do
   "${new[@]}" run --rm --no-deps "$service" node -e '
     const a=require("node:assert/strict"),r=require("./server/release.cjs");
     a.equal(r.version,process.argv[2]); a.equal(r.frontendRevision,process.argv[1]);
-    a.equal(r.requiredMigration,"195_v482_dispatch_vehicle_month.sql");
-  ' "$target_revision" "$target_version"
+    a.equal(r.requiredMigration,process.argv[3]);
+  ' "$target_revision" "$target_version" "$migration"
 done
 check_migration(){
-  python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["status"],d["migrations"],d["added"])==(sys.argv[1],195,int(sys.argv[2])); print(d)' "$1" "$added"
+  python3 -c 'import json,sys; d=json.load(sys.stdin); assert (d["status"],d["migrations"],d["added"])==(sys.argv[1],int(sys.argv[2]),int(sys.argv[3])); print(d)' "$1" "$migration_count" "$added"
 }
 "${new[@]}" run --rm --no-deps migrate node scripts/preproduction-db.cjs | check_migration DRY_RUN_ROLLED_BACK
 [[ $("${old[@]}" ps -q app) == "$old_app" ]]
@@ -136,6 +148,8 @@ SELECT 'historical_sources',count(*),md5(coalesce(string_agg(concat_ws(':',id,so
 SELECT 'cobalt_inventory',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY bag_id),'')) FROM co_inventory x;
 SELECT 'cobalt_locations_of_stock',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY bag_id),'')) FROM co_positions x;
 SELECT 'loading_plan_groups',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM loading_plan_groups x;
+SELECT 'vehicle_arrivals',count(*),md5(coalesce(string_agg((to_jsonb(x)-'registration_phase')::text,E'\n' ORDER BY id),'')) FROM vehicle_arrivals x;
+SELECT 'co_vehicle_arrivals',count(*),md5(coalesce(string_agg((to_jsonb(x)-'registration_phase')::text,E'\n' ORDER BY id),'')) FROM co_vehicle_arrivals x;
 SELECT 'loads',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM loading_orders x;
 SQL
 tar -czf "$stage/configs.tgz" "$envfile" "${files[@]}" "$override"

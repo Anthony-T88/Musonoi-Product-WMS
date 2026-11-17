@@ -27,14 +27,14 @@ window.CobaltSalesUI={
   }
   if(!q.has('shipment_month')){const day=BusinessTime.parts(new Date());q.set('shipment_month',day.year+'-'+day.month);}
   const d=await API.request(this.base+'/arrivals?'+q),states=[
-   ['WAITING_ARRIVAL','待到厂登记','Awaiting Arrival'],['WAITING_PLAN','等待创建装车计划','Awaiting Loading Plan'],
+   ['WAITING_ARRIVAL','待到厂登记','Awaiting Arrival'],['PENDING_CONFIRMATION','待修改确认','Pending Confirmation'],['WAITING_PLAN','等待创建装车计划','Awaiting Loading Plan'],
    ['PLANNED','已创建装车计划','Loading Plan Created'],['CANCELLED','已取消','Cancelled']];
   const counts=states.map(([key,z,en])=>'<article><span>'+t(z,en)+'</span><strong>'+(d.state_counts[key]||0)+'</strong></article>').join('');
   const canRegister=this.can('vehicle-arrival:write'),canPlan=this.can('loading-plan:write');
   const rows=d.items.map(r=>{
    const state=states.find(s=>s[0]===r.registration_state),params=new URLSearchParams(q);params.set('vehicle_id',r.id);
    const register=canRegister&&r.plan_status==='OPEN'&&!r.cancelled_at&&!r.loading_plan_id?
-    '<a class="button secondary compact" href="/loading-plans?'+esc(params)+'">'+t(r.arrival_id?'编辑到厂登记':'登记车辆到厂',r.arrival_id?'Edit Arrival':'Register Arrival')+'</a>':'';
+    '<a class="button secondary compact" href="/loading-plans?'+esc(params)+'">'+t(r.registration_state==='WAITING_ARRIVAL'?'登记车辆到厂':'编辑到厂登记',r.registration_state==='WAITING_ARRIVAL'?'Register Arrival':'Edit Arrival')+'</a>':'';
    const plan=r.loading_plan_id?'<a class="button secondary compact" href="/loading-plans/orders/'+r.loading_plan_id+'">'+t('查看装车计划','View Loading Plan')+'</a>':
     r.registration_state==='WAITING_PLAN'&&canPlan&&r.plan_status==='OPEN'?'<a class="button primary compact" href="/loading-plans/new?sales_plan_id='+r.sales_plan_id+'&arrival_id='+r.arrival_id+'">'+t('创建装车计划','Create Loading Plan')+'</a>':'';
    return `<tr><td>${esc(r.customer_name)}<br>${esc(r.sales_plan_code)}</td><td>${esc(r.shipment_month)}</td>
@@ -57,7 +57,33 @@ window.CobaltSalesUI={
  async exportArrivals(q,b=$('co-arrival-export')){b.disabled=true;try{const filters=Object.fromEntries([...q].filter(([k])=>!['page','page_size','vehicle_id','tab'].includes(k))),r=await API.request(this.base+'/arrivals/export',{method:'POST',body:filters,binary:true}),a=document.createElement('a'),url=URL.createObjectURL(r.blob);a.href=url;a.download=r.filename||'Vehicle_Arrivals_CO.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch(e){notify(this.error(e));}finally{if(b.isConnected)b.disabled=false;}},
  async arrivalForm(r,saved){if(r.loading_plan_id||r.cancelled_at)throw Error(this.t('车辆已取消或已创建装车计划','Vehicle is cancelled or already has a loading plan'));
  const back=new URLSearchParams(location.search);back.delete('vehicle_id');const backUrl='/loading-plans'+(back.size?'?'+back:'');
- if(r.plan_status==='CLOSED')throw Error(this.t('销售计划已关闭','Sales plan is closed'));if(!this.can('vehicle-arrival:write'))throw Error(this.t('无到场登记权限','No arrival registration permission'));this.arrivalRow=r;const v=saved||{arrived_at:BusinessTime.input(r.arrived_at||new Date()),trailer_one:r.trailer_one||r.trailer_no||'',trailer_two:r.trailer_two||'',driver_name:r.actual_driver_name||r.driver_name,passport_no:r.actual_passport_no||r.passport_no,transporter:r.actual_transporter||r.transporter,container_no:r.container_no,exception_remark:r.exception_remark};this.page(this.t('车辆到厂登记','Register Vehicle Arrival'),`<div class="lot-context-grid"><article>${this.t('客户','Customer')}<strong>${esc(r.customer_name)}</strong></article><article>${this.t('车头号（只读）','Truck Plate (Read Only)')}<strong>${esc(r.truck_no)}</strong></article><article>${this.t('销售计划','Sales Plan')}<strong>${esc(r.sales_plan_code)}</strong></article><article>${this.t('发运月份','Shipment Month')}<strong>${esc(r.shipment_month||'—')}</strong></article></div><form id="co-arrival-form" class="user-form"><div class="form-grid">${this.field('arrived_at','到达时间（卢本巴希）','Arrival Time (Lubumbashi)',v.arrived_at,'datetime-local')}${[['trailer_one','挂车1车牌号','Trailer 1'],['trailer_two','挂车2（选填）','Trailer 2 (Optional)'],['driver_name','司机全名','Driver Full Name'],['passport_no','司机护照号','Driver Passport'],['transporter','运输商','Transporter'],['container_no','集装箱号（选填）','Container (Optional)'],['exception_remark','异常备注','Exception Remarks']].map(([k,z,e])=>this.field(k,z,e,v[k],'text',['trailer_one','driver_name','passport_no','transporter'].includes(k))).join('')}</div><p id="co-sales-error" class="error" role="alert"></p><div class="business-toolbar"><button class="button primary">${this.t('确认车辆到厂','Confirm Vehicle Arrival')}</button><a class="button secondary" href="${esc(backUrl)}">${this.t('返回车辆列表','Back to Vehicles')}</a></div></form><section id="co-sales-history"></section>`);$('co-arrival-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{if(!await OperationConfirm.ask({title:this.t('确认车辆已到现场','Confirm Vehicle Is on Site'),rows:[[this.t('车头号','Truck'),r.truck_no],[this.t('客户','Customer'),r.customer_name]]}))return;const b=this.values(e.target);b.arrived_at=BusinessTime.toISO(b.arrived_at);b.dispatch_version=r.version;if(r.arrival_id)b.version=r.arrival_version;await API.request(this.base+'/arrivals/'+r.id,{method:'POST',body:b});ProductContext.dirty=false;await Router.go(backUrl);}catch(e){$('co-sales-error').textContent=this.error(e);}finally{if(e.submitter.isConnected)e.submitter.disabled=false;}};if(r.arrival_id)await this.history(r.arrival_id);ProductContext.dirty=false;},
+ if(r.plan_status==='CLOSED'||r.cancelled_at||r.loading_plan_id)throw Error(this.t('到场登记已锁定','Arrival registration is locked'));
+  if(!this.can('vehicle-arrival:write'))throw Error(this.t('无到场登记权限','No arrival registration permission'));
+  this.arrivalRow=r;
+  const t=this.t,hasRecord=!!r.registration_phase,v=saved||{
+   arrived_at:r.arrived_at?BusinessTime.input(r.arrived_at):hasRecord?'':BusinessTime.input(new Date()),
+   trailer_one:hasRecord?r.trailer_one:r.trailer_no,trailer_two:r.trailer_two,
+   driver_name:hasRecord?r.actual_driver_name:r.driver_name,passport_no:hasRecord?r.actual_passport_no:r.passport_no,
+   transporter:hasRecord?r.actual_transporter:r.transporter,container_no:r.container_no,exception_remark:r.exception_remark
+  };
+  this.page(t('车辆到厂登记','Register Vehicle Arrival'),'<div class="lot-context-grid">'+
+   [[t('客户','Customer'),r.customer_name],[t('车头号（只读）','Truck Plate (Read Only)'),r.truck_no],
+    [t('销售计划','Sales Plan'),r.sales_plan_code],[t('发运月份','Shipment Month'),r.shipment_month]].map(([label,value])=>
+    '<article>'+esc(label)+'<strong data-no-i18n>'+esc(value||'—')+'</strong></article>').join('')+'</div>'+
+   '<form id="co-arrival-form" class="user-form" data-arrival-native data-wms-validation><div class="form-grid wms-field-grid">'+
+   this.field('arrived_at','到达时间（卢本巴希）','Arrival Time (Lubumbashi)',v.arrived_at,'datetime-local',true)+
+   [['trailer_one','挂车1车牌号','Trailer 1'],['trailer_two','挂车2（选填）','Trailer 2 (Optional)'],['driver_name','司机全名','Driver Full Name'],
+    ['passport_no','司机护照号','Driver Passport'],['transporter','运输商','Transporter'],['container_no','集装箱号（选填）','Container (Optional)'],
+    ['exception_remark','异常备注','Exception Remarks']].map(([k,z,e])=>this.field(k,z,e,v[k],'text',['trailer_one','driver_name','passport_no','transporter'].includes(k))).join('')+
+   '</div><p id="co-sales-error" class="wms-feedback error" role="alert"></p>'+
+   LoadingYard.arrivalActions(backUrl,t('确认车辆到厂','Confirm Vehicle Arrival'),r)+'</form><section id="co-sales-history"></section>');
+  await LoadingYard.bindArrival($('co-arrival-form'),r,this.base+'/arrivals/'+r.id,backUrl,
+   {dispatch_version:r.version,...(r.arrival_id?{version:r.arrival_version}:{})},error=>{
+    if($('co-sales-error'))$('co-sales-error').textContent=this.error(error);
+   });
+  if(r.arrival_id)await this.history(r.arrival_id);
+  ProductContext.dirty=false;
+ },
  async history(id){const d=await API.request(this.base+'/history?entity_id='+id);if(!$('co-sales-history'))return;$('co-sales-history').innerHTML=`<details><summary>${this.t('操作历史（最近200条）','Operation History (Latest 200)')}</summary>${this.table([['时间','Time'],['操作人','Actor'],['变更前 / 后','Before / After']],d.items.map(e=>`<tr><td>${esc(e.occurred_at)}</td><td>${esc(I18n.language==='en'?e.actor_name_en:e.actor_name)}</td><td><details><summary>${this.t('查看变更','View Changes')}</summary><pre>${esc(JSON.stringify({before:e.before_data,after:e.after_data},null,2))}</pre></details></td></tr>`),'co-sales-events')}</details>`;},
  async language(){this.nav();const path=location.pathname,dirty=ProductContext.dirty;if($('co-sales-plan-form'))return this.planForm(this.data?.id,dirty?{...this.data,...this.values($('co-sales-plan-form'))}:undefined).then(()=>{ProductContext.dirty=dirty;});if($('co-arrival-form'))return this.arrivalForm(this.arrivalRow,dirty?this.values($('co-arrival-form')):undefined).then(()=>{ProductContext.dirty=dirty;});if(dirty){const state=[...document.querySelectorAll('.co-sales-page form')].map(f=>({id:f.id,values:this.values(f)})),customer=this.customerEdit,contract=this.contractEdit,vehicle=this.vehicleEdit;await this.route(path);for(const row of state){const form=$(row.id);if(form)for(const [k,v] of Object.entries(row.values))if(form.elements[k]&&form.elements[k].type!=='file'){if(form.elements[k].type==='checkbox')form.elements[k].checked=v;else form.elements[k].value=v;}}this.customerEdit=customer;this.contractEdit=contract;this.vehicleEdit=vehicle;ProductContext.dirty=true;}else await this.route(path);}
 };

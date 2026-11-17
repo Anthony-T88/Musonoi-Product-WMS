@@ -947,6 +947,19 @@ body.wms-navigating .workspace :is(#business-page,#dashboard,#inventory,#field) 
 }
 .wms-import-upload { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: var(--uix-gap); }
 .wms-import-upload .wms-field-grid { margin: 0; }
+#page-content :is(.wms-action-bar,.wms-arrival-actions) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--uix-gap-sm) var(--uix-gap);
+  margin-block: var(--uix-gap);
+}
+#page-content :is(.wms-action-bar,.wms-arrival-actions) > .wms-filter-actions { margin-inline-start: auto; }
+#page-content .wms-history-selection,
+#page-content .wms-history-selection > label { display: flex; align-items: center; gap: var(--uix-gap-sm); }
+#page-content .wms-history-selection { flex-wrap: wrap; }
+#page-content .wms-history-selection input { flex: 0 0 auto; margin: 0; }
+#historical-void > .wms-filter-actions { justify-content: flex-end; }
 .wms-import-file summary { cursor: pointer; }
 .wms-import-file summary .wms-import-filename { overflow-wrap: anywhere; margin-inline-end: var(--uix-gap-sm); font-weight: var(--uix-weight-emphasis); }
 .wms-import-facts { color: var(--uix-muted); overflow-wrap: anywhere; }
