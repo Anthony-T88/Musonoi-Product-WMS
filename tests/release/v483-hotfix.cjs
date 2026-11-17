@@ -69,9 +69,37 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    const invalid=packing(product,f.warehouse,p+'-INVALID',[[p+'-1',p+'-S1']],'not a date'),bad=await batch(product,'preview',invalid);
    assert.equal(bad.reviewable,false);
    assert.equal((await batch(product,'confirm',{...invalid,preview_token:bad.preview_token,exception_reason:reason})).code,'REVIEW_REQUIRED');
+   const backfill=(product===CO?'/cobalt':'')+'/historical-backfill';
+   const stockId=product===CO?record.id:(await client.query('SELECT id FROM historical_outbound_units WHERE source_id=$1',[record.id])).rows[0].id;
+   assert.equal((await request('admin',product,backfill+'/stock/batch/'+stockId)).rows.length,1);
+   await request('admin',product,'/historical-movements/'+record.id+'/void',{reason:'Void synthetic historical document'});
+   const voided=await request('admin',product,'/historical-movements/'+record.id);
+   assert(voided.voided_at);
+   assert.deepEqual(voided.documents,[]);
+   assert.equal(voided.rows.length,3);
+   assert.equal((await client.query('SELECT count(*)::int n FROM historical_outbound_units WHERE source_id=$1',[record.id])).rows[0].n,0);
+   await request('admin',product,backfill+'/stock/batch/'+stockId,null,404);
+   for(const doc of record.documents){
+    const params=new URLSearchParams({kind:doc.kind});
+    await request('admin',product,backfill+'/documents/'+doc.id+'?'+params,null,404);
+    assert(!(await request('admin',product,backfill+'/documents?'+params)).items.some(item=>item.id===doc.id));
+   }
+   assert.deepEqual((await client.query('SELECT count(*)::int n FROM historical_outbound_units WHERE source_id=$1',[imported.id])).rows[0],{n:2});
   });
-  const layout=require('../../server/data/cobalt-site-plan-r2.json');
-  await request('admin',CO,'/cobalt/stock/site-plan',{project_id:f.project,warehouse_id:f.warehouse,layout_key:layout.key,reason:'Synthetic map recovery verification'});
+  const {provision}=require('../../scripts/preproduction-cobalt-map.cjs');
+  const target={projectCode:'AUDIT',warehouseCode:'CO-APPROVED',username:account('admin').username};
+  const {rows:[mapWarehouse]}=await client.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'CO-APPROVED','Synthetic cobalt warehouse') RETURNING id",[f.project]);
+  await t.test('preproduction provision restores the approved map, guards ownership and is idempotent',async()=>{
+   await assert.rejects(provision(client,{...target,username:account('site_supervisor').username}),{code:'CO_SITE_TARGET_OR_ACTOR_NOT_FOUND'});
+   await assert.rejects(provision(client,{...target,warehouseCode:'AUDIT-WH'}),{code:'CO_SITE_EXISTING_ZONES_REQUIRE_REVIEW'});
+   const dry=await provision(client,target);
+   assert.equal(dry.status,'CO_SITE_DRY_RUN_ROLLED_BACK');assert.equal(dry.locations,93);
+   assert.equal((await client.query('SELECT count(*)::int n FROM co_locations WHERE warehouse_id=$1',[mapWarehouse.id])).rows[0].n,0);
+   const applied=await provision(client,{...target,apply:true});
+   assert.equal(applied.status,'CO_SITE_APPLIED');assert.equal(applied.locations,93);assert.equal(applied.occupied,0);
+   assert.equal((await provision(client,{...target,apply:true})).already_configured,true);
+   assert.equal((await request('admin',CO,'/cobalt/stock/map?warehouse_id='+mapWarehouse.id)).locations.length,93);
+  });
   await request('admin',CO,'/cobalt/stock/map?warehouse_id='+randomUUID(),null,403);
   await app.listen({port,host:'127.0.0.1'});
   browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined});
@@ -87,7 +115,7 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
     '?unit=old-stock-archive&page=0&stock_state=obsolete']){
     await page.goto(origin+'/stock-map'+query);
     await page.locator('#co-map-svg.site-plan-svg').waitFor();
-    assert.equal(new URL(page.url()).searchParams.get('warehouse_id'),f.warehouse);
+    assert.equal(new URL(page.url()).searchParams.get('warehouse_id'),mapWarehouse.id);
     for(const key of ['unit','page','stock_state'])assert.equal(new URL(page.url()).searchParams.has(key),false);
     assert(await page.locator('[data-co-location]').count()>=93);
    }
@@ -110,7 +138,7 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
   await t.test('administrator review dialog and historical source details',async()=>{
    await page.goto(origin+'/workbench/historical-movements');
    const form=page.locator('#historical-upload');await form.locator('select').selectOption(f.warehouse);
-   const file=packing(CO,f.warehouse,'CO-BROWSER',[['CO-3','CO-S2'],['CO-4','CO-S4']]);
+   const file=packing(CO,f.warehouse,'CO-BROWSER',[['CO-1','CO-S1'],['CO-4','CO-S4']]);
    await form.locator('input[type=file]').setInputFiles({name:file.file_name,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(file.file_base64,'base64')});
    await form.locator('button').click();
    await page.locator('[data-import-state="review"]').waitFor();
@@ -122,6 +150,12 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await page.locator('[data-history-file] a').first().click();
    await page.getByText(reason,{exact:true}).waitFor();
    await page.getByText(/仅保留原表记录/).waitFor();
+   await page.locator('#historical-void textarea').fill('Void synthetic browser import');
+   await page.locator('#historical-void button').click();
+   await page.locator('#operation-confirm-accept').click();
+   await page.locator('[data-import-state="voided"]').waitFor();
+   assert.equal(await page.getByRole('heading',{name:'关联单据',exact:true}).count(),0);
+   await page.getByText('Void synthetic browser import',{exact:true}).waitFor();
   });
   assert.deepEqual(errors,[]);
  }finally{if(browser)await browser.close();if(app)await app.close();await client.end();}

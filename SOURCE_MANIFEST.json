@@ -1,7 +1,7 @@
 {
-  "version": "4.8.4",
-  "auditRevision": "v484-local",
-  "revision": "4.8.4",
+  "version": "4.8.5",
+  "auditRevision": "v485-local",
+  "revision": "4.8.5",
   "files": [
     {
       "path": ".dockerignore",
@@ -877,7 +877,7 @@
     },
     {
       "path": "deploy/Dockerfile",
-      "sha256": "db4eed56ae1d64eb9383139aaa47ffbffc1b88353e3abf4642f7a08c18d0fdd0"
+      "sha256": "19f63ab0c3a932b98dd562bcbac125b714972b52146f9fbe3b4354a386216e0b"
     },
     {
       "path": "deploy/environment.example",
@@ -1137,7 +1137,7 @@
     },
     {
       "path": "dist/historical-movements.js",
-      "sha256": "32d650d9df780f69ffd7b52753c22171e0cf50a13e6d7b609b3412255ca7ec45"
+      "sha256": "57ba625f56074727659eae73d420ce18e8f0d0a60145d12e6b230d95b232df28"
     },
     {
       "path": "dist/history-ui.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "897593d05bf33aed3a60e71ec9b6be11b7729f0d3e702bfc8c3038685a741d8a"
+      "sha256": "6a85ef7b481ae16c799cc0bc5d904823891d4964fe1ee5324fb1b5823453cc3a"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "caf385f5f7f626db431212e408b6e31b2b189195d8eb85f114a0d026cbaa6f61"
+      "sha256": "631eacc9708bf6596bf0337308344af0c6caa77eb5b8ed8e6a0807dc1e7713d2"
     },
     {
       "path": "dist/reports463.js",
@@ -1449,7 +1449,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "e9968c5d92667ffcb019fdbd8f49846358fb10ce9c2a03c65277d2883d8a0174"
+      "sha256": "95fd03d9615ec34915c0526ab2cde0494b5d0a9ab3097dd29151359bfb7bbf38"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1749,7 +1749,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "da7dbe8d7aa9f795301fe9f8ac636988c6ae5c96901bb33855d0b2bda4bb0e28"
+      "sha256": "70e5bb5aca02b1cc1825dcd0139d157d21f9ce35468c06d56f01dea666a31d50"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -1885,7 +1885,7 @@
     },
     {
       "path": "server/cobalt-map-config.cjs",
-      "sha256": "94f501fafaded056ad4a2988dcc5410426a2034a8e7b50be10d873cd823ee434"
+      "sha256": "858f5e08167f6755ebf7eb0d8612dcc61c24f9c285169451a27e67a53dd0e55c"
     },
     {
       "path": "server/cobalt-metal.cjs",
@@ -2021,11 +2021,11 @@
     },
     {
       "path": "server/historical-backfill.cjs",
-      "sha256": "46e8dc441f627fd028bdc6774301c654233bbcebc258629f1982e26b6f34ad76"
+      "sha256": "3b91a23982f117991224a24a46d49d84608507b1bd289f42f18320b618f2251a"
     },
     {
       "path": "server/historical-movements.cjs",
-      "sha256": "bdb3cca5e1e240b1cbceeed2b16edd8c1687f8aa63ee2988df902583b717d4b2"
+      "sha256": "9ba5e5b9fbd59300d8fc6cd56fa84e3d662a54699ffbdefc23a11ad3a3296e6d"
     },
     {
       "path": "server/historical-packing.cjs",
@@ -2633,7 +2633,7 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "1985f3ef7f70826eaa8835d16c89bb9b510c41b5cd598f20ffe3557a60a12fd5"
+      "sha256": "16edc45399b32d7d5b11ef24d58062da14ae915e20bdb4f53f8f1859f3f8dbcb"
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
@@ -2645,7 +2645,7 @@
     },
     {
       "path": "tests/release/v483-hotfix.cjs",
-      "sha256": "4d4aeaaed930a25fd7824022e108089a1b314a5e984791d42325888baf19b37a"
+      "sha256": "16dd996fff7f7e297b22b2f309f893cbe6ea087f30df513f2a0255bbfe299dec"
     },
     {
       "path": "deploy/remove-copper-test-chain.sql",
@@ -2654,6 +2654,10 @@
     {
       "path": "tests/release/v484-receipt-cleanup.cjs",
       "sha256": "e74b4cc04e28ed119cc6a18395237fc66b909e593e5d36a9f986c494bc4f37a6"
+    },
+    {
+      "path": "scripts/preproduction-cobalt-map.cjs",
+      "sha256": "7b365d1c382da1f20f6c163d7882579df62812b56f0b1cea1e9387acc86b7585"
     }
   ]
 }

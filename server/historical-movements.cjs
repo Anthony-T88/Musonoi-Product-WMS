@@ -65,7 +65,7 @@ function register({app,pool,auth,csrf}){
    const sourceRows=new Map(rows.map(line=>[line.source_row,line]));
    for(const line of exception_review?.rows||[])sourceRows.set(line.source_row,line);
    return {...row,rows:[...sourceRows.values()].sort((a,b)=>a.source_row-b.source_row),exception_review,
-    documents:row.import_batch_id?await Backfill.related(pool,row.id):[]};
+    documents:row.import_batch_id&&!row.voided_at?await Backfill.related(pool,row.id):[]};
   });
   app.get(prefix+'/:id/source',read,async(req,reply)=>{
    const row=await access(req);

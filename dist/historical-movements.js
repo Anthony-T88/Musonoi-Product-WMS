@@ -292,7 +292,7 @@ window.HistoricalMovements={
    this.back(this.path,'返回导入记录','Back to Imports')+
    '<button type="button" class="button secondary" id="historical-source">'+t('下载原文件','Download Source')+'</button>','')+
    this.section('导入资料','Import Information',this.facts(r))+
-    (r.documents?.length?this.section('关联单据','Related Documents',r.product_code!==ProductContext.code?
+    (!r.voided_at&&r.documents?.length?this.section('关联单据','Related Documents',r.product_code!==ProductContext.code?
     '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':this.links(r.documents,{
     stock:!r.voided_at&&r.quantity?{label:t('查看已出库库存','View Outbound Stock'),code:r.source_facts?.batch_no,
      href:this.stockPath({packing_list_no:r.document_no,batch_no:r.source_facts?.batch_no})}:null
@@ -303,7 +303,10 @@ window.HistoricalMovements={
    this.section('原表明细','Source Lines',this.lines(r.rows,r.product_code))+
    (!r.voided_at?this.section('导入纠错','Import Correction','<form id="historical-void" class="user-form"><label>'+t('作废原因','Void Reason')+
     '<textarea name="reason" required minlength="5" maxlength="500"></textarea></label><button class="button danger-outline">'+t('作废该条历史单据','Void Historical Record')+'</button></form>'):
-    this.section('作废记录','Void Record',this.text(r.void_reason)))+'<p id="historical-detail-error" class="error" role="alert"></p>',true);
+    this.section('作废记录','Void Record',UI46Pages.factList([
+     [t('作废人','Voided By'),this.text(r.voided_by)],
+     [t('作废时间','Voided At'),this.text(BusinessTime.display(r.voided_at))],
+     [t('作废原因','Void Reason'),this.text(r.void_reason)]])))+'<p id="historical-detail-error" class="error" role="alert"></p>',true);
   this.followReturn();
   $('historical-source').onclick=async()=>{
    try{const file=await API.request(api+'/source',{...options,binary:true}),url=URL.createObjectURL(file.blob),a=document.createElement('a');a.href=url;a.download=r.source_name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}

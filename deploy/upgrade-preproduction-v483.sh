@@ -28,6 +28,15 @@ case "${2:-base}" in
     target_version=4.8.4
     release_branch=release/v4.8.4
     ;;
+  v485)
+    repo=/opt/musonoi-wms-release-v4.8.5
+    override=/etc/musonoi/preproduction-v485-build.override.yaml
+    source_revision=4.8.4
+    target_revision=4.8.5
+    target_version=4.8.5
+    release_branch=release/v4.8.5
+    site_target=("${3:?Expected cobalt project code}" "${4:?Expected cobalt warehouse code}" "${5:?Expected authorized administrator}")
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 migration=195_v482_dispatch_vehicle_month.sql
@@ -115,6 +124,9 @@ SELECT 'permissions',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' OR
 SELECT 'registrations',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM registration_requests x;
 SELECT 'preparation_plans',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM preparation_plans x;
 SELECT 'historical',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY source_id),'')) FROM historical_backfills x;
+SELECT 'historical_sources',count(*),md5(coalesce(string_agg(concat_ws(':',id,source_sha256,voided_at),E'\n' ORDER BY id),'')) FROM historical_movement_documents;
+SELECT 'cobalt_inventory',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY bag_id),'')) FROM co_inventory x;
+SELECT 'cobalt_locations_of_stock',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY bag_id),'')) FROM co_positions x;
 SELECT 'loading_plan_groups',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM loading_plan_groups x;
 SELECT 'loads',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM loading_orders x;
 SQL
@@ -141,6 +153,11 @@ if ((added)); then
   "${new[@]}" run --rm --no-deps -e TEST_BACKUP_VERIFIED=yes migrate node scripts/preproduction-db.cjs --apply --confirm-database "$target" | check_migration APPLIED
 fi
 [[ $(query -d "$target" -c 'SELECT version FROM security_schema_status') == "$migration" ]]
+if [[ ${2:-base} == v485 ]]; then
+  "${new[@]}" run --rm --no-deps migrate node scripts/preproduction-cobalt-map.cjs "${site_target[@]}" | json_is status CO_SITE_DRY_RUN_ROLLED_BACK
+  "${new[@]}" run --rm --no-deps -e TEST_BACKUP_VERIFIED=yes migrate \
+    node scripts/preproduction-cobalt-map.cjs "${site_target[@]}" --apply --confirm-database "$target" | tee "$stage/cobalt-site.json" | json_is status CO_SITE_APPLIED
+fi
 query -d "$target" < "$stage/reconcile.sql" > "$stage/after"
 cmp "$stage/before" "$stage/after"
 "${new[@]}" up -d --no-deps app

@@ -10,6 +10,7 @@ COPY --chown=node:node templates ./templates
 COPY --chown=node:node deploy ./deploy
 COPY --chown=node:node tests/release ./tests/release
 COPY --chown=node:node scripts/start-current.cjs scripts/db.cjs scripts/production-db.cjs scripts/preproduction-db.cjs scripts/production-bootstrap.cjs scripts/maintenance-connection.cjs scripts/migration-chain.cjs scripts/verify-release.cjs scripts/run-release-tests.cjs ./scripts/
+COPY --chown=node:node scripts/preproduction-cobalt-map.cjs ./scripts/
 COPY --chown=node:node README.md LICENSE NOTICE .env.example .dockerignore SOURCE_MANIFEST.json AUDIT_REMEDIATION.md ./
 RUN node scripts/verify-release.cjs
 RUN mkdir -p /app/uploads && chown node:node /app/uploads

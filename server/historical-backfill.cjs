@@ -221,8 +221,9 @@ const documentSelect=`SELECT d.id,d.kind,d.document_no,d.business_date::text,d.e
  FROM historical_business_documents d JOIN historical_backfills b ON b.source_id=d.source_id
  JOIN historical_movement_documents m ON m.id=b.source_id AND m.voided_at IS NULL
  JOIN users u ON u.id=b.backfilled_by JOIN warehouses w ON w.id=b.warehouse_id`;
-const related=(c,id)=>c.query(`SELECT id,kind,document_no,business_date::text,event_order FROM historical_business_documents
- WHERE source_id=$1 ORDER BY event_order`,[id]).then(result=>result.rows);
+const related=(c,id)=>c.query(`SELECT d.id,d.kind,d.document_no,d.business_date::text,d.event_order
+ FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id
+ WHERE d.source_id=$1 AND m.voided_at IS NULL ORDER BY d.event_order`,[id]).then(result=>result.rows);
 const lines=(c,id,query='',unitId=null)=>c.query(`SELECT id,source_row,unit_id,seal_no,sheets_count,net_kg::text,gross_kg::text
  FROM historical_outbound_units WHERE source_id=$1 AND ($2::uuid IS NULL OR id=$2) AND ($3='' OR
  strpos(lower(unit_id),lower($3))>0 OR strpos(lower(coalesce(seal_no,'')),lower($3))>0) ORDER BY source_row`,[id,unitId,query]).then(result=>result.rows);
