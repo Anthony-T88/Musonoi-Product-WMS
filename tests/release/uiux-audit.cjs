@@ -58,7 +58,7 @@ async function inspect(page,guest=false,checks=[],dialog=''){
     for(const data of window.I18n?.protected||[])if(han.test(data))value=value.replaceAll(data,'');
     if(han.test(value))remaining.add(original.slice(0,130));
    };
-   const localized=el=>!el.closest('[data-login-language],.language-select,script,style,textarea,pre');
+   const localized=el=>!el.closest('.system-language,.login46-languages,script,style,textarea,pre');
    add(document.title);
    const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),range=document.createRange();
    for(let text=walker.nextNode();text;text=walker.nextNode()){

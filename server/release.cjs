@@ -1,3 +1,3 @@
 'use strict';
 const version=require('../package.json').version;
-module.exports=Object.freeze({version,displayVersion:version,frontendRevision:version+'-ui3',requiredMigration:'196_v485_vehicle_arrival_confirmation.sql'});
+module.exports=Object.freeze({version,displayVersion:version,frontendRevision:version+'-ui4',requiredMigration:'196_v485_vehicle_arrival_confirmation.sql'});

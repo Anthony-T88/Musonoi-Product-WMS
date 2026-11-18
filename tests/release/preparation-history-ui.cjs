@@ -85,7 +85,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
   assert(products.every(product=>fixtures[product]),'Required copper and cobalt fixtures were created');
   await app.listen({port,host:'127.0.0.1'});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
-  await t.test('startup and offline status use the selected language',async()=>{
+  await t.test('startup and offline status localize while login language options keep their native names',async()=>{
    const page=await browser.newPage();
    let respond;
    const release=new Promise(resolve=>{respond=resolve;});
@@ -97,7 +97,13 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.doesNotMatch(await page.locator('#session-restore').innerText(),/\p{Script=Han}/u);
     respond();
     await page.locator('#login-panel').waitFor();
-    assert.equal(await page.locator('.login46-language-label').innerText(),'System Language');
+    const languages=page.locator('.login46-languages');
+    for(const language of ['en','zh-CN','en']){
+     await languages.locator('[data-login-language="'+language+'"]').click();
+     await page.waitForFunction(code=>document.documentElement.lang===code,language);
+     assert.equal(await languages.locator('.login46-language-label').innerText(),'语言/Language');
+     assert.deepEqual(await languages.locator('[data-login-language]').allTextContents(),['中文','English']);
+    }
     await page.goto(origin+'/offline.html');
     assert.match(await page.locator('main:visible').innerText(),/Product WMS · Offline/);
     assert.doesNotMatch(await page.locator('main:visible').innerText(),/\p{Script=Han}/u);
@@ -123,13 +129,21 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await page.evaluate(()=>I18n.change('en'));
     await page.goto(origin+'/preparation/work-plans/'+fx.occupied.id);
     const approvals=page.locator('.preparation-plan-approval-slot .r10-history');
+    const languagePicker=page.locator('.top-actions .system-language');
+    const assertPicker=async language=>{
+     assert.equal(await languagePicker.locator('span').textContent(),'语言/Language');
+     assert.deepEqual(await languagePicker.locator('option').allTextContents(),['中文','English']);
+     assert.equal(await languagePicker.locator('select').inputValue(),language);
+    };
     await approvals.getByRole('heading',{name:'Approval History'}).waitFor();
+    await assertPicker('en');
     assert.deepEqual(await approvals.locator('thead th').allTextContents(),['Time','Step / Action','Name','Role','Result','Review Note']);
     assert.equal(await approvals.locator('tr[data-role-basis="RECORDED"]').count(),3);
     await approvals.getByText('Submitted for Review',{exact:true}).waitFor();
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Approval history must fit the viewport');
     await page.evaluate(()=>I18n.change('zh-CN'));
     await approvals.getByRole('heading',{name:'审批历史'}).waitFor();
+    await assertPicker('zh-CN');
     await page.goto(origin+'/preparation/work-plans');
     await page.locator('#preparation-plan-create').click();
     await page.waitForURL('**/preparation/work-plans/new');
