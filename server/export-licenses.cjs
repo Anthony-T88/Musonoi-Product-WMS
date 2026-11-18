@@ -285,7 +285,7 @@ function register({app,pool,permitted,csrf}){
 async function pending(c,req){
  if(!req.user.permissions.includes(read)||!req.user.permissions.includes(approve))return [];
  const {rows}=await c.query("SELECT a.id,l.project_id,l.customer_id,a.requested_at created_at,u.display_name initiator_name,l.proforma_no document_no, "+
-  "'PENDING' status,'EXPORT_LICENSE_REVIEW' kind,'EXPORT_LICENSE' doc_type,'/export-licenses/'||l.id||'#permit-review-'||a.id href "+
+  "'PENDING' status,'EXPORT_LICENSE_REVIEW' kind,'EXPORT_LICENSE' doc_type,a.action review_action,'/export-licenses/'||l.id||'#permit-review-'||a.id href "+
   "FROM export_license_actions a JOIN export_licenses l ON l.id=a.license_id JOIN users u ON u.id=a.requested_by "+
   "WHERE a.decision='PENDING' AND l.product_code=$2 AND "+scope()+" ORDER BY a.requested_at,a.id",[req.user.id,req.productCode]);
  return rows;

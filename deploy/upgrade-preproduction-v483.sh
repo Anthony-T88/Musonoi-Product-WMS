@@ -77,6 +77,16 @@ case "${2:-base}" in
     migration=196_v485_vehicle_arrival_confirmation.sql
     migration_count=196
     ;;
+  v485-ui5)
+    repo=/opt/musonoi-wms-release-v4.8.5-ui5
+    override=/etc/musonoi/preproduction-v485-ui5-build.override.yaml
+    source_revision=4.8.5-ui4
+    target_revision=4.8.5-ui5
+    target_version=4.8.5
+    release_branch=release/v4.8.5
+    migration=196_v485_vehicle_arrival_confirmation.sql
+    migration_count=196
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 release_id=${target_version//./}

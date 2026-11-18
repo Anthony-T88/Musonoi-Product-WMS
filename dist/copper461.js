@@ -90,12 +90,60 @@ window.Copper461={
   this.page('销售合同详情','Sales Contract Details','CU-16','<section class="c461-banner"><div><p>'+this.L('销售合同详情','Sales Contract Details')+'</p><h2 data-no-i18n>'+esc(k.contract_no)+'</h2>'+this.state(k.deleted_at?'INACTIVE':k.validity)+'<p data-no-i18n>'+esc(k.customer_name)+' · '+esc(k.project_name)+'</p></div><div><a class="button secondary" href="#c461-contract-history">'+this.L('查看历史','View History')+'</a></div></section><div class="c461-grid"><div class="c461-main">'+this.card('基本信息','Basic Information',this.facts(facts))+this.card('业务明细','Sales Plans',(k.fulfilment_available?'':'<p>'+this.L('当前账号无完整计划范围权限。','This account cannot view complete sales plan progress.')+'</p>')+table)+this.card('合同备注','Notes','<p class="c461-note" data-no-i18n>'+esc(k.remark||'—')+'</p>')+'</div><aside class="c461-aside">'+actions+this.card('办理记录','Activity','<div id="c461-contract-history">'+this.timeline(k.history.map(h=>({at:h.occurred_at,actor_name:h.actor_name,action:h.action})),true)+'</div>')+this.card('关联单据','Related Documents',plans.map(p=>'<a class="c461-related" href="/sales-plans/'+p.id+'" data-no-i18n>'+esc(p.code)+' →</a>').join('')||'<p>'+this.L('暂无关联单据','No linked documents')+'</p>')+'</aside></div>');document.getElementById('c461-contract-delete')?.addEventListener('click',()=>Business.contractRemove(k));
  },
  kind(k){return ({SALES_REVIEW:['销售经理审批','Sales Review'],COMMERCE_REVIEW:['商务部经理审批','Commercial Review'],SALES_EDIT:['销售计划修改','Revise Sales Plan'],GATE_EXIT:['车辆出厂办理','Gate Exit'],HANDLED:['已办理','Handled']})[k]||[ManagementLabels.names[k]||k,ManagementLabels.en[ManagementLabels.names[k]]||ManagementLabels.names[k]||k];},
+ taskReviewStages:{
+  RECEIPT_REVIEW:['待入库审核','Pending Stock Entry Review'],
+  LOT_REVIEW:['待备货审核','Pending Preparation Review'],
+  PREPARATION_PLAN_REVIEW:['待备货计划审核','Pending Preparation Plan Review'],
+  LOAD_REVIEW:['待装车审核','Pending Loading Review'],
+  LOGISTICS_REVIEW:['待物流出库审核','Pending Logistics Stock Issue Review'],
+  FORMAL_OUTBOUND:['待生产终审出库','Pending Final Production Approval'],
+  COUNT_REVIEW:['待盘点差异复核','Pending Inventory Count Discrepancy Review'],
+  COUNT_APPROVE:['待盘点审批','Pending Inventory Count Approval'],
+  ADJUST_APPROVE:['待库存调整审批','Pending Stock Adjustment Approval'],
+  SALES_REVIEW:['待销售经理审批','Pending Sales Manager Approval'],
+  COMMERCE_REVIEW:['待商务部经理审批','Pending Commercial Manager Approval'],
+  SALES_CLOSE_REVIEW:['关闭申请待销售经理审批','Closure Pending Sales Manager Approval'],
+  COMMERCE_CLOSE_REVIEW:['关闭申请待商务部经理审批','Closure Pending Commercial Manager Approval'],
+  EXPORT_LICENSE_REVIEW:['待出口许可证审核','Pending Export License Review'],
+  REGISTRATION_REQUEST_REVIEW:['待账号注册审批','Pending Account Registration Approval'],
+  CO_RECEIPT_SITE:['待入库现场审核','Pending Site Stock Entry Review'],
+  CO_RECEIPT_PRODUCTION:['待生产审核入库','Pending Production Stock Entry Review'],
+  CO_COMPLETION_REVIEW:['待备货完工复核','Pending Preparation Completion Review'],
+  CO_AMEND_REVIEW:['待备货更正复核','Pending Preparation Correction Review'],
+  CO_LOAD_REVIEW:['待现场装车审核','Pending Site Loading Review'],
+  CO_LOGISTICS_REVIEW:['待物流出库审核','Pending Logistics Stock Issue Review'],
+  CO_FORMAL_OUTBOUND:['待生产终审出库','Pending Final Production Approval'],
+  CO_VEHICLE_REVIEW:['待车辆变更复核','Pending Vehicle Change Review'],
+  CO_EXCEPTION:['待装车异常复核','Pending Loading Exception Review'],
+  CO_COUNT_REVIEW:['待盘点独立复核','Pending Independent Inventory Count Review']
+ },
+ taskStage(task){
+  const stages=this.taskReviewStages;
+  let stage=stages[task.kind];
+  if(task.kind==='CO_VEHICLE_REVIEW'&&task.status==='CANCEL_MATCH')stage=['待取消装车匹配审核','Pending Loading Match Cancellation Review'];
+  if(task.kind==='EXPORT_LICENSE_REVIEW'){
+   const action=window.ExportLicenses?.actions[task.review_action];
+   if(action)stage=stage.map((label,index)=>label+' · '+action[index]);
+  }
+  if(!stage&&task.status==='PENDING'){
+   const review={SALES:'SALES_REVIEW',RECEIPT:'RECEIPT_REVIEW',LOT:'LOT_REVIEW',LOAD:'LOAD_REVIEW',PREPARATION_PLAN:'PREPARATION_PLAN_REVIEW'}[task.doc_type];
+   stage=stages[review]||['待审核','Pending Review'];
+  }
+  if(!stage&&task.status==='COMMERCE_PENDING')stage=task.doc_type==='SALES'?stages.COMMERCE_REVIEW:['待审核','Pending Review'];
+  if(!stage&&task.doc_type==='COUNT'){
+   const review={REVIEW:'COUNT_REVIEW',APPROVAL:'COUNT_APPROVE',SUBMITTED:'CO_COUNT_REVIEW'}[task.status];
+   stage=stages[review];
+  }
+  if(!stage&&task.doc_type==='ADJUST'&&task.status==='SUBMITTED')stage=stages.ADJUST_APPROVE;
+  if(!stage&&task.doc_type==='LOAD'&&task.status==='DEPARTED_PENDING')stage=task.logistics_review_at?stages.FORMAL_OUTBOUND:stages.LOGISTICS_REVIEW;
+  return stage?'<span class="c461-state">'+this.L(...stage)+'</span>':this.state(task.status);
+ },
  async tasks(){if(new URLSearchParams(location.search).get('tab')==='handover')return Handover467.page(this);const d=await API.request(this.base+'/tasks');this.taskData=d;const q=new URLSearchParams(location.search),tab=['initiated','completed'].includes(q.get('tab'))?q.get('tab'):'pending',kind=q.get('kind')||'',search=q.get('search')||'',metric=q.get('metric')||'';
   const src=d[tab],kinds=[...new Set(src.map(t=>t.doc_type||t.kind))].sort(),rows=src.filter(t=>(!kind||(t.doc_type||t.kind)===kind)&&(!metric||metric==='due'&&t.due_soon||metric==='approval'&&/REVIEW|APPROVE|FORMAL_OUTBOUND/.test(t.kind)||metric==='work'&&!/REVIEW|APPROVE|FORMAL_OUTBOUND/.test(t.kind)||metric==='today'&&this.date(new Date(t.handled_at).toLocaleDateString('en-CA',{timeZone:'Africa/Lubumbashi'}))===new Date(d.as_of).toLocaleDateString('en-CA',{timeZone:'Africa/Lubumbashi'}))&&(t.document_no+' '+(t.customer_name||'')+' '+(t.lot_no||'')).toLowerCase().includes(search.toLowerCase())),p=this.paging(rows.length,q);
   const typeNames=this.taskTypeNames||{SALES:['销售计划','Sales Plans'],RECEIPT:['生产入库','Receipts'],LOT:['备货批次','Preparation'],LOAD:['装车与出库','Loading & Stock Issue'],COUNT:['库存盘点','Inventory Count'],ADJUST:['库存调整','Adjustment'],LOADING_PLAN:['装车计划','Loading Plans'],VEHICLE:['车辆到厂','Vehicle Arrival'],ARRIVAL:['到厂后建单','Plan After Arrival'],GATE:['车辆出厂','Gate Exit']};
   const tabs='<nav class="c461-tabs" aria-label="'+this.t('待办分类','Task Categories')+'">'+[['pending','待我处理','Pending'],['handover','交接异常清单','Shift Handover'],['initiated','我发起的','Initiated by Me'],['completed','已办理','Handled by Me']].map(([v,z,e])=>'<a href="/overview?management=todos&tab='+v+'" '+(tab===v?'aria-current="page"':'')+'>'+this.L(z,e)+'</a>').join('')+'</nav>';
   const filter='<form id="c461-task-filter" class="c461-filter filters" data-v34-reset="true"><input type="hidden" name="management" value="todos"><input type="hidden" name="tab" value="'+tab+'">'+this.label('业务类型','Business Type','<select name="kind"><option value="">'+this.t('全部业务','All Types')+'</option>'+kinds.map(k=>'<option value="'+esc(k)+'" '+(k===kind?'selected':'')+'>'+esc(this.t(...(typeNames[k]||this.kind(k))))+'</option>').join('')+'</select>')+this.label('产品','Product','<select aria-label="'+this.t('产品','Product')+'" id="c461-task-product"><option value="CU_CATHODE">'+this.t('阴极铜','Copper Cathodes')+'</option><option value="CO_HYDROXIDE">'+this.t('氢氧化钴','Cobalt Hydroxide')+'</option></select>')+this.label('单号 / 客户','Document / Customer',this.input('search',search,'maxlength="160"'))+'<div class="c461-filter-actions"><button class="button primary">'+this.L('查询','Search')+'</button><button type="button" id="c461-task-filter-reset" class="button secondary">'+this.L('重置','Reset')+'</button></div></form>';
-  this.page('我的待办','My Tasks','CU-03',this.stats([['待我审批','Awaiting My Review',d.summary.approval,'approval'],['待我办理','Awaiting My Action',d.summary.work,'work'],['提醒时限已到','Reminder Threshold Reached',d.summary.due,'due'],['今日已办','Handled Today',d.summary.today,'today']])+tabs+filter+this.card(tab==='pending'?'待办事项':tab==='initiated'?'我发起的单据':'我的办理记录',tab==='pending'?'Pending Tasks':tab==='initiated'?'My Documents':'My Activity',''+this.table([['业务单据','Document'],['客户 / 批次','Customer / Lot'],['当前节点','Current Stage'],['发起人','Initiator'],[tab==='completed'?'办理时间':'等待时长',tab==='completed'?'Handled At':'Waiting'],['操作','Action']],rows.slice(p.start,p.start+20).map(t=>'<tr><td><a href="'+esc(t.href)+'" data-no-i18n><strong>'+esc(t.document_no||'—')+'</strong></a><small>'+this.L(...(typeNames[t.doc_type]||this.kind(t.kind)))+'</small></td><td data-no-i18n>'+esc(t.customer_name||'—')+'<small>'+esc(t.lot_no||'—')+'</small></td><td>'+this.state(t.status)+'</td><td data-no-i18n>'+esc(t.initiator_name||this.t('未记录','Not recorded'))+'</td><td data-no-i18n>'+(tab==='completed'?esc(this.time(t.handled_at)):t.wait_hours==null?'—':esc(Math.floor(t.wait_hours)+' '+this.t('小时','hours')))+'</td><td><a href="'+esc(t.href)+'">'+this.L(tab==='pending'?'进入详情办理 →':'查看详情 →',tab==='pending'?'Open to Process →':'View Details →')+'</a></td></tr>'))+this.pager(rows.length,p.page),'c461-list-card'));
+  this.page('我的待办','My Tasks','CU-03',this.stats([['待我审批','Awaiting My Review',d.summary.approval,'approval'],['待我办理','Awaiting My Action',d.summary.work,'work'],['提醒时限已到','Reminder Threshold Reached',d.summary.due,'due'],['今日已办','Handled Today',d.summary.today,'today']])+tabs+filter+this.card(tab==='pending'?'待办事项':tab==='initiated'?'我发起的单据':'我的办理记录',tab==='pending'?'Pending Tasks':tab==='initiated'?'My Documents':'My Activity',''+this.table([['业务单据','Document'],['客户 / 批次','Customer / Lot'],['当前节点','Current Stage'],['发起人','Initiator'],[tab==='completed'?'办理时间':'等待时长',tab==='completed'?'Handled At':'Waiting'],['操作','Action']],rows.slice(p.start,p.start+20).map(t=>'<tr><td><a href="'+esc(t.href)+'" data-no-i18n><strong>'+esc(t.document_no||'—')+'</strong></a><small>'+this.L(...(typeNames[t.doc_type]||this.kind(t.kind)))+'</small></td><td data-no-i18n>'+esc(t.customer_name||'—')+'<small>'+esc(t.lot_no||'—')+'</small></td><td>'+this.taskStage(t)+'</td><td data-no-i18n>'+esc(t.initiator_name||this.t('未记录','Not recorded'))+'</td><td data-no-i18n>'+(tab==='completed'?esc(this.time(t.handled_at)):t.wait_hours==null?'—':esc(Math.floor(t.wait_hours)+' '+this.t('小时','hours')))+'</td><td><a href="'+esc(t.href)+'">'+this.L(tab==='pending'?'进入详情办理 →':'查看详情 →',tab==='pending'?'Open to Process →':'View Details →')+'</a></td></tr>'))+this.pager(rows.length,p.page),'c461-list-card'));
   this.bindFilter('c461-task-filter','/overview?management=todos&tab='+tab);this.bindPager(p.page);for(const b of document.querySelectorAll('[data-c461-stat]'))b.onclick=()=>Router.go('/overview?management=todos&tab='+(b.dataset.c461Stat==='today'?'completed':'pending')+'&metric='+b.dataset.c461Stat);document.getElementById('c461-task-product').value=ProductContext.code;document.getElementById('c461-task-product').onchange=async e=>{if(e.target.value!==ProductContext.code)await ProductContext.switchTo(e.target.value);};
  },
  async warnings(){const d=await API.request(this.base+'/warning-settings'),q=new URLSearchParams(location.search),item=d.items.find(s=>s.project_id===q.get('project_id'))||d.items[0];this.warningData=d;if(!item){this.page('预警设置','Warning Settings','CU-04',this.card('当前配置','Current Configuration','<p>'+this.L('当前账号未分配项目范围。','No project scope is assigned.')+'</p>'));return;}

@@ -30,7 +30,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
  try{
   await migrate(c,{apply:true,appPassword:process.env.WMS_TEST_APP_PASSWORD,environment:'test'});
   const f=await E.seed(c,name),port=4397,origin='http://127.0.0.1:'+port;
-  app=await require('../../server/app.cjs').build({config:{...f.appCfg,port,origin}});
+  app=await require('../../server/app.cjs').build({config:{...f.appCfg,port,origin,trustedProxyIps:'127.0.0.1'}});
   const sessions=new Map();
   async function login(role){
    const account=f.accounts.find(a=>a.role===role),r=await app.inject({method:'POST',url:'/api/v1/auth/login',
@@ -109,8 +109,9 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.doesNotMatch(await page.locator('main:visible').innerText(),/\p{Script=Han}/u);
    }finally{respond();await page.close();}
   });
+  let browserLogin=0;
   async function open(role,product,width){
-   const a=f.accounts.find(x=>x.role===role),ctx=await browser.newContext({viewport:{width,height:900}});
+   const a=f.accounts.find(x=>x.role===role),ctx=await browser.newContext({viewport:{width,height:900},extraHTTPHeaders:{'X-Forwarded-For':'127.78.1.'+(++browserLogin)}});
    const r=await ctx.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}});
    assert.equal(r.status(),200);
    const page=await ctx.newPage(),errors=[];page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
@@ -344,6 +345,58 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const table=co?'co_vehicle_arrivals':'vehicle_arrivals';
     const {rows:[saved]}=await c.query('SELECT id,registration_phase,arrived_at,trailer_one,driver_name,passport_no FROM '+table+' WHERE dispatch_vehicle_id=$1',[vehicle.id]);
     assert.deepEqual(saved,{id:registration.id,registration_phase:'CLEARED',arrived_at:null,trailer_one:'',driver_name:'',passport_no:''});
+   }finally{await ctx.close();}
+  });
+  for(const product of products)await t.test(product+' My Tasks renders document-specific approval stages',async()=>{
+   const co=cobalt(product),{ctx,page}=await open('admin',product,co?390:1440);
+   const sharedCases=[
+    ['PREPARATION_PLAN_REVIEW','PREPARATION_PLAN','PENDING','待备货计划审核','Pending Preparation Plan Review'],
+    ['SALES_REVIEW','SALES','PENDING','待销售经理审批','Pending Sales Manager Approval'],
+    ['COMMERCE_REVIEW','SALES','COMMERCE_PENDING','待商务部经理审批','Pending Commercial Manager Approval'],
+    ['COMMERCE_CLOSE_REVIEW','SALES_CLOSE','CLOSE_COMMERCE_PENDING','关闭申请待商务部经理审批','Closure Pending Commercial Manager Approval'],
+    ['REGISTRATION_REQUEST_REVIEW','REGISTRATION_REQUEST','PENDING','待账号注册审批','Pending Account Registration Approval'],
+    ['EXPORT_LICENSE_REVIEW','EXPORT_LICENSE','PENDING','待出口许可证审核 · 延期','Pending Export License Review · Extend']
+   ];
+   const cases=sharedCases.concat(co?[
+    ['CO_RECEIPT_PRODUCTION','RECEIPT','PRODUCTION_PENDING','待生产审核入库','Pending Production Stock Entry Review'],
+    ['CO_AMEND_REVIEW','LOT','AMENDMENT_PENDING','待备货更正复核','Pending Preparation Correction Review'],
+    ['CO_VEHICLE_REVIEW','LOAD','CANCEL_MATCH','待取消装车匹配审核','Pending Loading Match Cancellation Review'],
+    ['CO_VEHICLE_REVIEW','LOAD','CHANGE_VEHICLE','待车辆变更复核','Pending Vehicle Change Review'],
+    ['CO_EXCEPTION','LOAD','OPEN','待装车异常复核','Pending Loading Exception Review'],
+    ['CO_COUNT_REVIEW','COUNT','SUBMITTED','待盘点独立复核','Pending Independent Inventory Count Review']
+   ]:[
+    ['RECEIPT_REVIEW','RECEIPT','PENDING','待入库审核','Pending Stock Entry Review'],
+    ['LOT_REVIEW','LOT','PENDING','待备货审核','Pending Preparation Review'],
+    ['LOAD_REVIEW','LOAD','PENDING','待装车审核','Pending Loading Review'],
+    ['LOGISTICS_REVIEW','LOAD','DEPARTED_PENDING','待物流出库审核','Pending Logistics Stock Issue Review'],
+    ['FORMAL_OUTBOUND','LOAD','DEPARTED_PENDING','待生产终审出库','Pending Final Production Approval'],
+    ['COUNT_REVIEW','COUNT','REVIEW','待盘点差异复核','Pending Inventory Count Discrepancy Review'],
+    ['COUNT_APPROVE','COUNT','APPROVAL','待盘点审批','Pending Inventory Count Approval'],
+    ['ADJUST_APPROVE','ADJUST','SUBMITTED','待库存调整审批','Pending Stock Adjustment Approval']
+   ]);
+   const pending=cases.map(([kind,doc_type,status],index)=>({kind,doc_type,status,id:crypto.randomUUID(),document_no:'QA-TASK-'+(index+1),href:'/overview',
+    ...(kind==='EXPORT_LICENSE_REVIEW'?{review_action:'EXTEND'}:{})}));
+   const history={doc_type:'LOT',status:'PENDING',document_no:'QA-INITIATED-LOT',href:'/overview'};
+   const taskPath=co?'/api/v1/cobalt/ui461/tasks':'/api/v1/v34/ui461/tasks';
+   try{
+    await page.route(url=>url.pathname===taskPath,route=>route.fulfill({json:{pending,initiated:[history],completed:[{...history,kind:'HANDLED'}],
+     summary:{approval:pending.length,work:0,due:0,today:0},as_of:new Date().toISOString()}}));
+    const todo=origin+'/overview?management=todos';
+    for(const [language,expectedIndex] of [['zh-CN',3],['en',4]]){
+     await page.evaluate(code=>I18n.change(code),language);
+     await page.goto(todo);
+     await page.locator('.c461-state').first().waitFor();
+     for(const [index,expected] of cases.entries()){
+      const row=page.getByRole('row').filter({has:page.getByRole('link',{name:pending[index].document_no,exact:true})});
+      assert.equal(await row.locator('.c461-state').innerText(),expected[expectedIndex]);
+     }
+     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'The task list must fit the viewport');
+     for(const tab of ['initiated','completed']){
+      await page.goto(todo+'&tab='+tab);
+      const historyRow=page.getByRole('row').filter({has:page.getByRole('link',{name:history.document_no,exact:true})});
+      assert.equal(await historyRow.locator('.c461-state').innerText(),language==='en'?'Pending Preparation Review':'待备货审核');
+     }
+    }
    }finally{await ctx.close();}
   });
  }finally{await browser?.close();await app?.close();await c.end();}
