@@ -28,15 +28,26 @@ async function invoiceConflict(c,invoice,owner=null){
  if(!invoice)return;
  await c.query('SELECT pg_advisory_xact_lock(477189)');
  await lockInvoice(c,invoice);
- const collision=(await c.query(`SELECT 1 FROM export_license_allocations WHERE lower(invoice_no)=lower($1) AND plan_id IS DISTINCT FROM $2
-  UNION ALL SELECT 1 FROM (${historicalInvoices}) h WHERE historical_unit_key(h.invoice_no)=historical_unit_key($1) LIMIT 1`,[invoice,owner])).rowCount;
- if(collision)throw B.error(409,'发票号已由出口许可证分配');
+ if(await hasInvoice(c,invoice,owner))throw B.error(409,'发票号已使用，请修改后保存');
+}
+async function hasInvoice(c,invoice,owner=null){
+ const {rowCount}=await c.query(`SELECT 1 FROM (
+  SELECT invoice_no FROM export_license_allocations WHERE plan_id IS DISTINCT FROM $2::uuid
+  UNION ALL SELECT invoice_no FROM loading_plan_documents WHERE id IS DISTINCT FROM $2
+  UNION ALL SELECT invoice_no FROM loading_plan_groups WHERE id IS DISTINCT FROM $2
+   AND id IS DISTINCT FROM (SELECT group_id FROM loading_plan_documents WHERE id=$2)
+  UNION ALL SELECT invoice_no FROM co_loading_plans WHERE id IS DISTINCT FROM $2
+  UNION ALL SELECT invoice_no FROM sales_invoice_confirmations
+  UNION ALL ${historicalInvoices}
+ ) n WHERE historical_unit_key(n.invoice_no)=historical_unit_key($1) LIMIT 1`,[invoice,owner]);
+ return rowCount>0;
 }
 async function lockInvoice(c,invoice){
  await c.query('SELECT pg_advisory_xact_lock(472,hashtext(lower($1)))',[invoice]);
 }
 const invoices=`SELECT invoice_no FROM export_license_allocations UNION ALL SELECT invoice_no FROM loading_plan_documents
- UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans`;
+ UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans
+ UNION ALL SELECT invoice_no FROM sales_invoice_confirmations`;
 const historicalInvoices=`SELECT n.invoice_no FROM historical_movement_documents m
  LEFT JOIN export_license_historical_sources s ON s.source_id=m.id
  CROSS JOIN LATERAL (VALUES (m.source_facts->>'invoice_no'),(s.invoice_no),(regexp_replace(m.document_no,'-?PL$','','i'))) n(invoice_no)
@@ -94,7 +105,9 @@ async function prepare(c,req,plan,old,body,batch,date){
  await allowedDates(c,id,date);
  const quantity=license.unit_basis==='CUSTOM'&&previous&&!switching&&!body.license_quantity?previous.reserved_quantity:await weight(c,license,batch,body);
  await L.assertCapacity(c,id,!switching?previous?.id||null:null,quantity);
- const invoice=previous&&!switching?previous.invoice_no:await nextInvoice(c,license);
+ const requested=!old&&body.invoice_no?B.text(body.invoice_no,'发票号',77):null;
+ if(requested)await invoiceConflict(c,requested);
+ const invoice=previous&&!switching?previous.invoice_no:requested||await nextInvoice(c,license);
  return {license,previous,switching,invoice,quantity,batch};
 }
 async function bind(c,req,plan,reservation){
@@ -125,4 +138,4 @@ async function cancelCobalt(c,req,plan){
  return {id:plan.id,status:'CANCELLED',project_id:plan.project_id,warehouse_id:plan.warehouse_id,customer_id:plan.customer_id};
 }
 
-module.exports={link,prepare,bind,beforeMatch,cancelCobalt,invoiceConflict,invoiceCandidate};
+module.exports={link,prepare,bind,beforeMatch,cancelCobalt,invoiceConflict,invoiceCandidate,hasInvoice};

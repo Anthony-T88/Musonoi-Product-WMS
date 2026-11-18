@@ -117,6 +117,16 @@ case "${2:-base}" in
     migration=196_v485_vehicle_arrival_confirmation.sql
     migration_count=196
     ;;
+  v485-ui9)
+    repo=/opt/musonoi-wms-release-v4.8.5-ui9
+    override=/etc/musonoi/preproduction-v485-ui9-build.override.yaml
+    source_revision=4.8.5-ui8
+    target_revision=4.8.5-ui9
+    target_version=4.8.5
+    release_branch=release/v4.8.5
+    migration=197_v485_historical_departure_and_sales_links.sql
+    migration_count=197
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 release_id=${target_version//./}
@@ -143,6 +153,7 @@ status config | json_is frontendRevision "$source_revision"
 before=$(query -d "$target" -c 'SELECT version FROM security_schema_status')
 case "$before" in
   "$migration") added=0 ;;
+  196_v485_vehicle_arrival_confirmation.sql) [[ $target_revision == 4.8.5-ui9 ]]; added=1 ;;
   195_v482_dispatch_vehicle_month.sql) [[ $target_revision == 4.8.5-ui2 ]]; added=1 ;;
   194_v481_dispatch_and_approval.sql) [[ $source_revision == 4.8.1-ui6 ]]; added=1 ;;
   *) printf 'Unexpected migration version %s\n' "$before"; exit 1 ;;

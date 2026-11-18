@@ -5,27 +5,86 @@ window.GateWorkspace468={
  signature:()=>ProductContext.code+'|'+location.pathname+location.search,
  query(){const q=new URLSearchParams(location.search);for(const k of ['permit','order','pane'])q.delete(k);q.set('view','departures');return q;},
  link(extra={}){const q=this.query();for(const [k,v]of Object.entries(extra)){if(v)q.set(k,v);else q.delete(k);}return '/outbounds?'+q;},
- state:s=>GateWorkspace468.t(...({MISSING:['待生成出门证','Permit Not Generated'],READY:['待确认实际出厂','Awaiting Physical Exit'],EXITED:['已确认实际出厂','Physical Exit Confirmed']}[s]||['待生成出门证','Permit Not Generated'])),
+ state:s=>GateWorkspace468.t(...({MISSING:['待生成出门证','Permit Not Generated'],READY:['待确认实际出厂','Awaiting Physical Exit'],HISTORY_PENDING:['历史车辆待确认出厂','Historical Exit Pending'],EXITED:['已确认实际出厂','Physical Exit Confirmed']}[s]||['全部','All'])),
+ exitHistoryAllowed(){return GateUI.can('gate:exit')&&['sales_manager','sales_operator','admin'].includes(CurrentUser.role_code);},
+ filters(q,list,states){
+  const t=this.t;
+  const input=(key,zh,en,type='search')=>'<label>'+t(zh,en)+'<input name="'+key+'" type="'+type+'" maxlength="160" value="'+esc(q.get(key)||'')+'"></label>';
+  const options=(values,key,label)=>values.map(value=>'<option value="'+esc(value)+'" '+((q.get(key)||'')===value?'selected':'')+'>'+esc(label(value))+'</option>').join('');
+  return '<form id="gate-filter" class="filters wms-filter-row"><div class="form-grid">'+input('permit_no','出门证编号','Gate Permit No.')+
+   input('truck_no','车牌号','Truck Plate')+'<label>'+t('客户','Customer')+'<select name="customer">'+
+   options(['',...(list.customers||[])],'customer',value=>value||t('全部客户','All Customers'))+'</select></label>'+
+   input('approved_on','出库审批时间','Outbound Approval Date','date')+'<label>'+t('状态','State')+'<select name="state">'+
+   options(states,'state',value=>this.state(value))+'</select></label></div>'+
+   '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+GateUI.path()+'">'+t('重置','Reset')+'</a></div></form>';
+ },
+ historyRow(row,selectable){
+  const t=this.t,confirmed=row.state==='EXITED';
+  const select=selectable?'<td>'+(confirmed?'—':'<input type="checkbox" data-historical-exit value="'+esc(row.historical_source_id)+'" aria-label="'+esc(t('选择 ','Select ')+row.code)+'">')+'</td>':'';
+  const link=row.historical_detail_id&&GateUI.can('load:read')?'<a class="button secondary" href="/outbounds/historical/'+esc(row.historical_detail_id)+'">'+t('查看历史单据','View Historical Document')+'</a>':'—';
+  return '<tr data-gate-order="'+esc(row.order_id)+'">'+select+'<td data-no-i18n><strong>'+esc(row.document_no||'—')+'</strong><small>'+t('历史装箱单','Historical Packing List')+' '+esc(row.code)+'</small></td>'+
+   '<td data-no-i18n>'+esc(row.truck_no)+'</td><td data-no-i18n>'+esc(row.customer_name||'—')+'</td><td>—<small data-no-i18n>'+
+   t('发运日期 ','Shipping date ')+esc(row.shipping_date)+'</small></td><td><span class="g468-badge" data-state="'+row.state+'">'+this.state(row.state)+'</span>'+
+   (confirmed?'<small data-no-i18n>'+esc(BusinessTime.display(row.historical_exit_confirmed_at))+'</small>':'')+'</td><td>'+link+'</td></tr>';
+ },
+ bindHistory(){
+  const button=$('gate-confirm-history');
+  if(!button)return;
+  const t=this.t,checks=[...document.querySelectorAll('[data-historical-exit]')],all=$('gate-select-history');
+  const selected=()=>checks.filter(box=>box.checked);
+  const update=()=>{const count=selected().length;button.disabled=!count;all.checked=count===checks.length;all.indeterminate=!!count&&!all.checked;};
+  for(const box of checks)box.onchange=update;
+  all.onchange=()=>{const checked=all.checked;checks.forEach(box=>{box.checked=checked;});update();};
+  button.onclick=async()=>{
+   const rows=selected(),error=$('gate-error');
+   if(rows.length>30){error.textContent=t('每次最多确认 30 张历史单据。','Select no more than 30 historical documents at a time.');return;}
+   let evidence='';
+   if(!await OperationConfirm.ask({title:t('确认所选历史车辆均已实际出厂？','Confirm all selected historical vehicles have physically exited?'),
+    rows:[[t('历史单据数','Historical Documents'),rows.length]],comment:true,commentRequired:true,commentMax:500,
+    commentLabel:t('出厂核对依据（至少 5 个字符）','Exit evidence (at least 5 characters)'),onComment:value=>{evidence=value;}}))return;
+   button.disabled=true;error.textContent='';
+   try{
+    const result=await API.request(GateUI.base()+'/historical-exits',{method:'POST',body:{ids:rows.map(box=>box.value),actual_exit:true,evidence}});
+    await this.render();
+    notify(t('已确认 '+result.count+' 张历史单据出厂','Confirmed exit for '+result.count+' historical documents'));
+   }catch(e){error.textContent=e.message;update();}
+  };
+  update();
+ },
  printed(d){return d.history.some(e=>e.action==='gate_print_dialog_requested'&&Number(e.after_data?.revision)===d.permit.current_revision);},
  facts(rows){return '<dl class="g468-facts">'+rows.map(([k,v])=>'<div><dt>'+k+'</dt><dd data-no-i18n>'+esc(v??'—')+'</dd></div>').join('')+'</dl>';},
- table(headers,rows,id){if(id==='gate-list')rows=rows.map(row=>{let i=0;return row.replace(/<td([^>]*)>/g,(m,attrs)=>attrs.includes('colspan')?m:'<td'+attrs+' data-label="'+esc(headers[i++])+'">');});return '<div class="g468-scroll"><table id="'+id+'" data-v34-enhanced="true" data-v34-server="true"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';},
+ table(headers,rows,id){if(id==='gate-list')rows=rows.map(row=>{let i=0;return row.replace(/<td([^>]*)>/g,(m,attrs)=>{
+  if(attrs.includes('colspan'))return m;
+  const heading=headers[i++];
+  return '<td'+attrs+' data-label="'+esc(heading?.startsWith('<input')?this.t('选择','Select'):heading)+'">';
+ });});return '<div class="g468-scroll"><table id="'+id+'" data-v34-enhanced="true" data-v34-server="true"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';},
  async render(id){
   if(!GateUI.can('gate:read'))throw Error(this.t('无车辆出厂权限','No gate access permission'));
   const generation=++this.generation,scope=this.signature(),q=new URLSearchParams(location.search),t=this.t;
-  const [list,detail]=await Promise.all([API.request(GateUI.base()+'?'+new URLSearchParams({page:q.get('page')||'1',search:q.get('search')||'',state:q.get('state')||''})),id?API.request(GateUI.base()+'/'+id):null]);
+  const [list,detail]=await Promise.all([API.request(GateUI.base()+'?'+this.query()),id?API.request(GateUI.base()+'/'+id):null]);
   const printers=detail&&GateUI.can('gate:print')?(await API.request('/printers')).items.filter(x=>x.active&&x.project_id===detail.permit.project_id):[];
   if(generation!==this.generation||scope!==this.signature()||!window.AppSignedIn)return;
   this.list=list;this.detail=detail;GateUI.data=detail;
   if(detail){if(GateUI.preserveVersion?.id===id)detail.permit.version=GateUI.preserveVersion.version;GateUI.detailVersion={id,version:detail.permit.version};}
-  const counts=list.counts||{},states=['','MISSING','READY','EXITED'];
-  const cards='<nav class="g468-states" aria-label="'+t('出厂状态','Gate State')+'">'+states.map(s=>'<a class="g468-state" '+((q.get('state')||'')===s?'aria-current="page"':'')+' href="'+esc(this.link({state:s,page:null}))+'"><span>'+t(...(s?{MISSING:['待生成出门证','Permit Not Generated'],READY:['待确认实际出厂','Awaiting Physical Exit'],EXITED:['已确认出厂','Exit Confirmed']}[s]:['全部车辆','All Vehicles']))+'</span><strong>'+Number(s?counts[s]||0:Object.values(counts).reduce((n,v)=>n+Number(v),0))+'</strong></a>').join('')+'</nav>';
-  const rows=list.items.map(r=>{const s=r.state||'MISSING',href=this.link(r.permit_id?{permit:r.permit_id,pane:s==='EXITED'?'history':r.current_print_requested?'exit':'print'}:{order:r.order_id}),label=s==='MISSING'?t('核对并生成','Verify and Generate'):s==='EXITED'?t('查看记录','View Record'):r.current_print_requested?t('确认出厂','Confirm Exit'):t('打印出门证','Print Permit');return '<tr data-gate-order="'+r.order_id+'"><td data-no-i18n><strong>'+esc(r.permit_id?(r.batch_number||r.document_no||'—'):'—')+'</strong><small>'+esc(r.permit_id?t('当前版本','Current Version')+' V'+r.current_revision:t('待生成出门证','Permit Not Generated'))+'</small></td><td data-no-i18n>'+esc(r.truck_no||'—')+'</td><td data-no-i18n>'+esc(r.customer_name||'—')+'</td><td data-no-i18n>'+esc(BusinessTime.display(r.approved_at))+'</td><td><span class="g468-badge" data-state="'+s+'">'+this.state(s)+'</span>'+(s==='READY'?'<small>'+t(r.current_print_requested?'当前版本打印窗口已请求':'待打开当前版本打印窗口',r.current_print_requested?'Current Print Window Requested':'Current Print Window Required')+'</small>':'')+'</td><td><div class="g468-row-actions"><a class="button '+(s==='EXITED'?'secondary':'primary')+'" href="'+esc(href)+'">'+label+'</a>'+(s==='READY'?'<a class="g468-text-link" href="'+esc(this.link({permit:r.permit_id,pane:'print'}))+'">'+t('查看 / 打印','View / Print')+'</a>':'')+'</div></td></tr>';});
-  const content=cards+'<section class="g468-list"><form id="gate-filter" class="g468-search"><label>'+t('出门证编号 / 车牌号 / 客户','Permit No. / Truck / Customer')+'<input name="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><input type="hidden" name="state" value="'+esc(q.get('state')||'')+'"><div class="business-toolbar"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" href="'+GateUI.path()+'">'+t('重置','Reset')+'</a></div></form>'+this.table([t('出门证编号','Gate Permit No.'),t('车牌号','Truck Plate'),t('客户','Customer'),t('最终出库审批时间','Final Outbound Approval'),t('状态','State'),t('操作','Actions')],rows.length?rows:['<tr><td colspan="6">'+t('暂无符合条件的车辆','No Vehicles Match These Filters')+'</td></tr>'],'gate-list')+'<footer class="g468-list-footer"><span>'+t('共','Total')+' '+list.total+' '+t('辆','vehicles')+'</span>'+CobaltStockUI.pager(list.page,list.total,list.page_size)+'</footer></section>';
-  const missing=!id&&q.get('order')?list.items.find(r=>r.order_id===q.get('order')):null;
+  const counts=list.counts||{},states=['','MISSING','READY','HISTORY_PENDING','EXITED'];
+  const selectable=this.exitHistoryAllowed()&&list.items.some(row=>row.state==='HISTORY_PENDING');
+  const cards='<nav class="g468-states" aria-label="'+t('出厂状态','Gate State')+'">'+states.map(s=>'<a class="g468-state" '+((q.get('state')||'')===s?'aria-current="page"':'')+' href="'+esc(this.link({state:s,page:null}))+'"><span>'+(s?this.state(s):t('全部车辆','All Vehicles'))+'</span><strong>'+Number(s?counts[s]||0:Object.values(counts).reduce((n,v)=>n+Number(v),0))+'</strong></a>').join('')+'</nav>';
+  const rows=list.items.map(r=>{if(r.historical_source_id)return this.historyRow(r,selectable);const s=r.state||'MISSING',href=this.link(r.permit_id?{permit:r.permit_id,pane:s==='EXITED'?'history':r.current_print_requested?'exit':'print'}:{order:r.order_id}),label=s==='MISSING'?t('核对并生成','Verify and Generate'):s==='EXITED'?t('查看记录','View Record'):r.current_print_requested?t('确认出厂','Confirm Exit'):t('打印出门证','Print Permit');return '<tr data-gate-order="'+r.order_id+'">'+(selectable?'<td>—</td>':'')+'<td data-no-i18n><strong>'+esc(r.document_no||'—')+'</strong><small>'+esc(r.permit_id?t('当前版本','Current Version')+' V'+r.current_revision:t('待生成出门证','Permit Not Generated'))+'</small></td><td data-no-i18n>'+esc(r.truck_no||'—')+'</td><td data-no-i18n>'+esc(r.customer_name||'—')+'</td><td data-no-i18n>'+esc(BusinessTime.display(r.approved_at))+'</td><td><span class="g468-badge" data-state="'+s+'">'+this.state(s)+'</span>'+(s==='READY'?'<small>'+t(r.current_print_requested?'当前版本打印窗口已请求':'待打开当前版本打印窗口',r.current_print_requested?'Current Print Window Requested':'Current Print Window Required')+'</small>':'')+'</td><td><div class="g468-row-actions"><a class="button '+(s==='EXITED'?'secondary':'primary')+'" href="'+esc(href)+'">'+label+'</a>'+(s==='READY'?'<a class="g468-text-link" href="'+esc(this.link({permit:r.permit_id,pane:'print'}))+'">'+t('查看 / 打印','View / Print')+'</a>':'')+'</div></td></tr>';});
+  const select=selectable?'<input type="checkbox" id="gate-select-history" aria-label="'+t('选择本页历史车辆','Select Historical Vehicles on This Page')+'">':'';
+  const bulk=selectable?'<div class="business-toolbar"><button type="button" class="button secondary" id="gate-confirm-history" disabled>'+
+   t('批量确认历史车辆出厂','Confirm Historical Exits')+'</button></div>':'';
+  const heads=[...(selectable?[select]:[]),t('出门证编号','Gate Permit No.'),t('车牌号','Truck Plate'),t('客户','Customer'),
+   t('出库审批时间','Outbound Approval Time'),t('状态','State'),t('操作','Actions')];
+  const content=cards+'<section class="g468-list">'+this.filters(q,list,states)+bulk+
+   this.table(heads,rows.length?rows:['<tr><td colspan="'+heads.length+'">'+t('暂无符合条件的车辆','No Vehicles Match These Filters')+'</td></tr>'],'gate-list')+
+   '<footer class="g468-list-footer"><span>'+t('共','Total')+' '+list.total+' '+t('辆','vehicles')+'</span>'+
+   CobaltStockUI.pager(list.page,list.total,list.page_size)+'</footer></section>';
+  const missing=!id&&q.get('order')?list.items.find(r=>!r.historical_source_id&&r.order_id===q.get('order')):null;
   Router.page(t('车辆出厂管理','Vehicle Gate Exit'),'<section class="g468 gate-page" data-ui468-owned="gate" data-no-i18n><div class="g468-top"><span>'+t('卢本巴希时间','Lubumbashi Time')+'</span>'+'</div>'+content+(detail?this.modal(detail,printers,list.items.find(r=>r.permit_id===id)):missing?this.missingModal(missing):'')+(!detail&&!missing?'<p id="gate-error" class="error" role="alert"></p>':'')+'</section>');
   GateUI.nav();ProductContext.dirty=false;
-  $('gate-filter').onsubmit=e=>{e.preventDefault();const form=e.target;Router.go(this.link({search:form.elements.search.value.trim(),state:form.elements.state.value,page:null}));};
+  $('gate-filter').onsubmit=e=>{e.preventDefault();Router.go(this.link({...Object.fromEntries(new FormData(e.target)),search:null,page:null,order:null,permit:null,pane:null}));};
   CobaltStockUI.bindPager(list);
+  this.bindHistory();
   const dialog=$('gate-handling');if(dialog){dialog.addEventListener('cancel',e=>{e.preventDefault();Router.go(this.link());});this.bind(detail,missing);dialog.showModal();}
  },
  modal(d,printers,row){

@@ -83,6 +83,72 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    fixtures[product]={plan,customer,occupied,item,history:await archive(api,f,product)};
   });
   assert(products.every(product=>fixtures[product]),'Required copper and cobalt fixtures were created');
+  for(const product of products)await t.test(product+' links reviewed historical trips, confirms invoices and records historical exits',async()=>{
+   const co=cobalt(product),plan=fixtures[product].plan,alternate=await P.salesPlan(api,f,product);
+   const plate=co?'AUDIT-CO-REPEAT':'AUDIT-CU-REPEAT',month=P.localMonth(),day=month+'-01';
+   const dispatch=async plan=>{
+    const base=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch',info=await api('admin',product,base);
+    const workbook=X.utils.book_new();
+    X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([['HORSE','TON'],[plate,30]]),'Dispatch');
+    const file={file_name:'historical-trips.xlsx',mapping:{sheet:'Dispatch',header_row:1,truck_column:1,capacity_column:2,capacity_kg:false},
+     file_base64:X.write(workbook,{type:'base64',bookType:'xlsx'}),...(co?{plan_version:info.plan.version}:{})};
+    const preview=await api('admin',product,base+'/import-preview',file);
+    await api('admin',product,base+(co?'/import':''),{...file,shipment_month:preview.shipment_month,preview_sha256:preview.file_sha256});
+    return (await api('admin',product,base)).vehicles.find(row=>row.truck_no===plate);
+   };
+   const first=await dispatch(plan),second=await dispatch(alternate);
+   const contractTable=co?'co_sales_contracts':'customer_contracts';
+   const {rows:[contract]}=await c.query('SELECT contract_no FROM '+contractTable+' WHERE id=$1',[f.customers[product].contract]);
+   async function importTrip(suffix,shippingDay=day){
+    const tag=plate+'-'+suffix,rows=Array.from({length:29},()=>[]);
+    rows[0]=['PACKING LIST'];rows[2]=['','','','Packing List No:',tag+'-PL'];rows[3]=['','','','Lot No:',tag+'-LOT'];
+    rows[4]=['','','','Contract No:',contract.contract_no];rows[6]=['','','','Shipping Date:',shippingDay];
+    rows[21]=['Synthetic '+(co?'CO-AUDIT':'CU-AUDIT'),'','','',plate.replaceAll('-',' ')];
+    rows[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
+    rows.push([1,'Synthetic',tag+'-UNIT',co?null:48,tag+'-SEAL',647,650],['Total',null,null,null,null,647,650]);
+    const workbook=X.utils.book_new();
+    X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet(rows),'PL');
+    X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([[],[],['','','','Invoice No:',tag+'-INV']]),'INV');
+    const file={file_name:tag+'.xlsx',file_base64:X.write(workbook,{type:'base64',bookType:'xlsx'}),warehouse_id:f.warehouse};
+    const base='/historical-movements/batch';
+    const [preview]=(await api('admin',product,base+'/preview',{files:[file]})).results;
+    assert(preview.importable,JSON.stringify(preview.issues));
+    const [result]=(await api('admin',product,base+'/confirm',{files:[{...file,preview_token:preview.preview_token}]})).results;
+    assert.equal(result.status,'IMPORTED');
+    return {id:result.id,tag};
+   }
+   const trip=await importTrip('FIRST'),other=await importTrip('SECOND'),older=await importTrip('OLDER','2020-03-05');
+   const sales=prefix(product)+'/sales-workflow/plans/';
+   const matches=(await api('admin',product,sales+plan+'/historical-matches')).items;
+   assert.deepEqual(new Set(matches.map(row=>row.source_id)),new Set([trip.id,other.id]));
+   assert(matches.every(row=>row.dispatch_id===first.id&&row.dispatch_matches===2&&row.source_matches===2));
+   const choice={source_id:trip.id,dispatch_id:first.id};
+   await api('admin',product,sales+plan+'/historical-matches',choice,409);
+   await api('admin',product,sales+plan+'/historical-matches',{...choice,verified_trip:true});
+   await api('admin',product,sales+alternate+'/historical-matches',{source_id:older.id,dispatch_id:second.id,verified_trip:true},409);
+   fixtures[product].historicalTrip={alternate,other,older};
+   let detail=await api('admin',product,sales+plan);
+   const batch=detail.posted_batches.find(row=>row.historical_source_id===trip.id);
+   assert.equal(batch.source_invoice_no,trip.tag+'-INV');
+   assert.equal(Number(batch.net_mt),0.647);
+   await api('admin',product,sales+plan+'/confirm-invoice',{loading_id:trip.id,batch_id:trip.id,invoice_no:trip.tag+'-INV'});
+   detail=await api('admin',product,sales+plan);
+   assert.equal(Number(detail.execution.invoiced),0.647);
+   const archived=(await api('admin',product,'/historical-movements?'+new URLSearchParams({batch_no:trip.tag,document_no:trip.tag,business_date:day,from:day,to:day,state:'ACTIVE'}))).items;
+   assert.deepEqual(archived.map(row=>row.id),[trip.id]);
+   const gate=prefix(product)+'/gate-permits';
+   const pending=(await api('admin',product,gate+'?'+new URLSearchParams({state:'HISTORY_PENDING',truck_no:plate.replaceAll('-',' ')}))).items;
+   assert.equal(pending.length,3);
+   assert(pending.every(row=>row.approved_at===null&&row.historical_detail_id));
+   assert.equal((await api('admin',product,gate+'?state=HISTORY_PENDING&approved_on='+day)).total,0);
+   const exits={ids:[trip.id,other.id],actual_exit:true,evidence:'Reviewed synthetic historical gate register'};
+   assert.deepEqual(await api('admin',product,gate+'/historical-exits',exits),{count:2,already_confirmed:0});
+   assert.deepEqual(await api('admin',product,gate+'/historical-exits',exits),{count:0,already_confirmed:2});
+   assert.equal((await api('admin',product,gate+'?state=EXITED')).items.filter(row=>row.historical_source_id).length,2);
+   const numbering=prefix(product)+'/export-permits/invoice-number?'+new URLSearchParams({sales_plan_id:plan});
+   assert((await api('admin',product,numbering)).invoice_preview.endsWith('-01'));
+   assert.deepEqual(await api('admin',product,numbering+'&'+new URLSearchParams({invoice_no:trip.tag+'-INV'})),{duplicate:true});
+  });
   await app.listen({port,host:'127.0.0.1'});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
   await t.test('startup and offline status localize while login language options keep their native names',async()=>{
@@ -244,7 +310,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    await api('admin',cu,endpoint,{ids:[ids[0],ids[0].toUpperCase()],reason},400);
    await api('admin',cu,endpoint,{ids:[ids[0],crypto.randomUUID()],reason},404);
    await api('admin',cu,endpoint,{ids:[ids[0],fixtures[cu].history.source],reason},409);
-   const active=(await api('admin',cu,'/historical-movements?all_products=1&state=ACTIVE')).items;
+   const active=(await api('admin',cu,'/historical-movements?all_products=1&state=ACTIVE&document_no=QA-PL-')).items;
    assert.deepEqual(active.map(row=>row.id).sort(),[...ids].sort());
    assert.equal(active.every(row=>!row.voided_at),true);
    await api('admin',cu,'/historical-movements?state=UNKNOWN',null,400);
@@ -252,6 +318,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    try{
     await page.goto(origin+'/workbench/historical-movements');
     const filter=page.locator('#historical-filter'),state=filter.locator('[name=state]');
+    await filter.locator('[name=document_no]').fill('QA-PL-');
     await state.selectOption('VOIDED');
     await filter.locator('button[type="submit"]').click();
     await page.locator('#historical-ledger [data-import-state="voided"]').first().waitFor();
@@ -464,12 +531,17 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const co=cobalt(product),{ctx,page}=await open('admin',product,1440);
    try{
     await page.goto(origin+'/overview');
+    const stockPanels=page.locator('.oa-three > section');
+    await stockPanels.first().waitFor();
+    const headings=()=>stockPanels.locator('h2').allTextContents();
+    const initialHeadings=await headings();
     const filter=page.locator(co?'#co-overview-filter':'#dashboard-form');
     await filter.locator('[name="from"]').fill('2020-03-01');
     await filter.locator('[name="to"]').fill('2020-03-20');
     await filter.locator('button.primary').click();
     const plot=page.locator('[data-oa-plot="net"]');
     await plot.locator('.oa-date-tick').filter({hasText:'2020-03-15'}).waitFor();
+    assert.deepEqual(await headings(),initialHeadings);
     if(co)await page.setViewportSize({width:390,height:844});
     const assertPeriod=async(period,kind)=>{
      const tick=plot.locator('.oa-date-tick').filter({hasText:period});
@@ -517,6 +589,14 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const permits=form.locator('[name="license_id"]');
     await permits.selectOption('license-51');
     await page.waitForFunction(()=>document.querySelector('[name="invoice_no"]')?.value==='QA-INVOICE-051');
+    const invoice=form.locator('[name=invoice_no]');
+    assert(await invoice.isEditable());
+    const existing=co?'AUDIT-CO-REPEAT-FIRST-INV':'AUDIT-CU-REPEAT-FIRST-INV';
+    await invoice.fill(existing);
+    await form.locator('#loading-permit-picker-invoice-check').getByText(/已使用|already in use/).waitFor();
+    assert.equal(await invoice.evaluate(input=>input.validity.customError),true);
+    await invoice.fill('QA-MANUAL-AVAILABLE');
+    await page.waitForFunction(()=>document.querySelector('[name=invoice_no]')?.validity.valid);
     const receipt='/receipts/new'+(intake?'?preparation_plan='+intake.id:'');
     for(const path of [receipt,'/sales-plans/new','/stocktaking/new','/export-licenses/new']){
      await page.goto(origin+path);
@@ -526,6 +606,49 @@ test('copper and cobalt preparation batches and historical navigation on indepen
       assert(await action.evaluate(button=>button.nextElementSibling?.type==='submit'),path);
      }
     }
+   }finally{await ctx.close();}
+  });
+  for(const product of products)await t.test(product+' historical sale and departure entry points use aligned filters and confirm selected records',async()=>{
+   const {ctx,page}=await open('admin',product,1440),{alternate,other,older}=fixtures[product].historicalTrip;
+   const layout=async(selector,fields)=>{
+    const form=page.locator(selector);
+    await form.waitFor();
+    assert.deepEqual(await form.locator('input,select').evaluateAll(nodes=>nodes.map(node=>node.name)),fields);
+    for(const width of [1440,390]){
+     await page.setViewportSize({width,height:900});
+     const gaps=await form.evaluate(form=>{
+      const outer=form.getBoundingClientRect(),first=form.querySelector('input').getBoundingClientRect();
+      const actions=form.querySelector('.wms-filter-actions').getBoundingClientRect();
+      const style=getComputedStyle(form);
+      const left=outer.left+parseFloat(style.paddingLeft)+parseFloat(style.borderLeftWidth);
+      const right=outer.right-parseFloat(style.paddingRight)-parseFloat(style.borderRightWidth);
+      return [first.left-left,right-actions.right];
+     });
+     assert(gaps.every(gap=>Math.abs(gap)<3),JSON.stringify({selector,width,gaps}));
+    }
+   };
+   try{
+    await page.goto(origin+'/sales-plans/'+alternate);
+    await page.locator('#sales-history-find').click();
+    const candidate=page.locator('#sales-history-table tbody tr').filter({hasText:other.tag});
+    await candidate.locator('[data-history-match]').click();
+    const linked=page.waitForResponse(response=>response.url().endsWith('/historical-matches')&&response.request().method()==='POST');
+    await page.locator('#operation-confirm-accept').click();
+    const response=await linked;
+    assert.equal(response.status(),200,await response.text());
+    await page.locator('#sales-invoice-table tbody tr').filter({hasText:other.tag+'-PL'}).waitFor();
+    await page.goto(origin+'/workbench/historical-movements');
+    await layout('#historical-filter',['batch_no','document_no','business_date','from','to','state']);
+    await page.goto(origin+'/outbounds?view=departures&state=HISTORY_PENDING');
+    await layout('#gate-filter',['permit_no','truck_no','customer','approved_on','state']);
+    const archived=page.locator('#gate-list tbody tr').filter({hasText:older.tag});
+    await archived.locator('input[type=checkbox]').check();
+    await page.locator('#gate-confirm-history').click();
+    await page.locator('#operation-confirm-comment').fill('Synthetic gate register reviewed');
+    await page.locator('#operation-confirm-accept').click();
+    await archived.waitFor({state:'detached'});
+    await page.goto(origin+'/outbounds?view=departures&state=EXITED');
+    await archived.locator('[data-state=EXITED]').waitFor();
    }finally{await ctx.close();}
   });
   for(const product of products)await t.test(product+' My Tasks renders document-specific approval stages',async()=>{

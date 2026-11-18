@@ -72,16 +72,22 @@ function register({app,pool,auth,csrf}){
    const q=req.query,page=Number(q.page||1);
    if(!Number.isSafeInteger(page)||page<1||page>10000)throw B.error(400,'页码无效');
    const type=q.movement_type?kind(q.movement_type):null,from=q.from?B.date(q.from):null,to=q.to?B.date(q.to):null;
+   const businessDate=q.business_date?B.date(q.business_date):null;
+   const keyword=(value,label)=>typeof value==='string'&&!value.trim()||value===undefined?null:B.text(value,label,160);
+   const batch=keyword(q.batch_no,'批次号'),document=keyword(q.document_no,'装箱单号');
    if(from&&to&&from>to)throw B.error(400,'开始日期不得晚于截止日期');
    const state=q.state||null;
    if(state&&!['ACTIVE','VOIDED'].includes(state))throw B.error(400,'历史单据状态无效');
    const where=` WHERE d.product_code=$1 AND ($2::text IS NULL OR d.movement_type=$2)
     AND ($3::date IS NULL OR d.business_date>=$3) AND ($4::date IS NULL OR d.business_date<=$4)
-    AND ($5::text IS NULL OR (d.voided_at IS NOT NULL)=($5='VOIDED'))`;
-   const values=[product(req),type,from,to,state];
+    AND ($5::text IS NULL OR (d.voided_at IS NOT NULL)=($5='VOIDED'))
+    AND ($6::date IS NULL OR d.business_date=$6)
+    AND ($7::text IS NULL OR strpos(lower(d.source_facts->>'batch_no'),lower($7))>0)
+    AND ($8::text IS NULL OR strpos(lower(d.document_no),lower($8))>0)`;
+   const values=[product(req),type,from,to,state,businessDate,batch,document];
    const all=req.query.all_products==='1';
    const {rows}=await pool.query(select+where.replace('d.product_code=$1',all?'$1::text IS NOT NULL':'d.product_code=$1')+
-    ' ORDER BY d.business_date DESC,d.id LIMIT 26 OFFSET $6',[...values,(page-1)*25]);
+    ' ORDER BY d.business_date DESC,d.id LIMIT 26 OFFSET $9',[...values,(page-1)*25]);
    return {items:rows.slice(0,25),page,has_next:rows.length>25};
   });
   app.get(prefix+'/:id',read,async req=>{

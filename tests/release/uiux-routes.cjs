@@ -81,7 +81,7 @@ function pages(ids){
  const keyRoles=['sales_operator','logistics_manager','logistics_field_operator','site_supervisor','production_manager','production_operator','customer_admin'];
  add('login','/',[],{screenshot:true});
  add('register-dialog','/',[],{state:'registration dialog'});
- add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles});
+ add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles,state:'current and pre-inventory-history period layout'});
  add('password-dialog','/overview',BOTH,{state:'self-service password dialog',screenshot:true,roles:['production_operator']});
  add('todo','/overview',BOTH,{query:'?management=todos',roles:['sales_operator','logistics_manager'],state:'document-specific review stages'});
  add('overview-detail','/overview/details',BOTH,{query:'?metric=physical'});
@@ -157,7 +157,7 @@ function pages(ids){
   entry.url='/loading-plans?'+new URLSearchParams({vehicle_id:ids[example]||missingId});
  }
  add('loading-search','/loading-plans/query',BOTH,{screenshot:true});
- add('loading-new','/loading-plans/new',BOTH,{state:'license selection and adjacent draft and save'});
+ add('loading-new','/loading-plans/new',BOTH,{state:'license selection, editable invoice recommendation and duplicate check'});
  add('cu-plan-group','/loading-plans/:id',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-edit','/loading-plans/:id/edit',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-cancel','/loading-plans/:id/cancel',[CU],{example:'cuPlanGroup'});
@@ -169,7 +169,7 @@ function pages(ids){
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager']});
- add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager']});
+ add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'five departure filters and selected historical exits'});
  add('templates','/outbounds/templates',BOTH);
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);
@@ -187,7 +187,7 @@ function pages(ids){
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
- add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger, Excel drop, replacement and cell diagnostics'});
+ add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'six archive filters and Excel diagnostics'});
  add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});
  add('historical-former-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'redirected'});
  add('cu-historical-record','/workbench/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported',query:'?product=CU_CATHODE'});

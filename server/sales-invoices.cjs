@@ -3,7 +3,13 @@ const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),shipping=requ
 const copper='CU_CATHODE',cobalt='CO_HYDROXIDE';
 const roles=['sales_operator','sales_manager','admin'];
 const canConfirm=req=>roles.includes(req.user.role_code)&&req.user.permissions.includes('plan:write');
-const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/export-licenses'||method==='POST'&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/confirm-invoice$/i.test(path);
+const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/export-licenses'||
+ ['GET','POST'].includes(method)&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/historical-matches$/i.test(path)||
+ method==='POST'&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/confirm-invoice$/i.test(path);
+const archiveScope=`EXISTS (SELECT 1 FROM historical_backfills h JOIN user_scopes u ON u.project_id=h.project_id
+ AND (u.warehouse_id IS NULL OR u.warehouse_id=h.warehouse_id)
+ AND (u.customer_id IS NULL OR u.customer_id=h.customer_id OR h.customer_id IS NULL AND u.customer_id=p.customer_id)
+ WHERE u.user_id=$1 AND h.source_id=s.historical_source_id)`;
 
 async function totals(c,product,plans){
  if(!plans.length)return new Map();
@@ -12,7 +18,8 @@ async function totals(c,product,plans){
 }
 
 async function execution(c,req,selection,params){
- const co=req.productCode===cobalt,joins=co?'':'JOIN loading_orders l ON l.id=s.loading_id',visible=co?'true':shipping.scope;
+ const co=req.productCode===cobalt,joins=co?'':'LEFT JOIN loading_orders l ON l.id=s.loading_id',live=co?'true':shipping.scope;
+ const visible=`(s.historical_source_id IS NULL AND (${live}) OR s.historical_source_id IS NOT NULL AND ${archiveScope})`;
  const {rows}=await c.query(`
   WITH plans AS MATERIALIZED (${selection}), movements AS (
    SELECT s.plan_id,sum(s.net_mt) posted,sum(s.net_mt) FILTER(WHERE s.confirmed_at IS NOT NULL) invoiced,
@@ -68,11 +75,13 @@ async function shipments(c,req,planId,loadingId=null,batchId=null){
  const co=req.productCode===cobalt;
  const scope=co?`EXISTS(SELECT 1 FROM user_scopes u WHERE u.user_id=$1 AND u.project_id=p.project_id
    AND(u.warehouse_id IS NULL OR u.warehouse_id=p.warehouse_id) AND(u.customer_id IS NULL OR u.customer_id=p.customer_id))`:shipping.scope;
- const joins=co?'JOIN co_sales_plans p ON p.id=s.plan_id':'JOIN loading_orders l ON l.id=s.loading_id';
+ const joins=co?'JOIN co_sales_plans p ON p.id=s.plan_id':'JOIN sales_plans p ON p.id=s.plan_id LEFT JOIN loading_orders l ON l.id=s.loading_id';
  const {rows}=await c.query(`SELECT s.*,s.net_mt::text,actor.display_name confirmed_by_name
   FROM sales_invoice_shipments s ${joins} LEFT JOIN users actor ON actor.id=s.confirmed_by
   WHERE s.product_code=$2 AND s.plan_id=$3 AND ($4::uuid IS NULL OR s.loading_id=$4)
-  AND ($5::uuid IS NULL OR s.batch_id=$5) AND ${scope} ORDER BY s.posted_at DESC NULLS LAST,s.loading_id,s.batch_id`,
+  AND ($5::uuid IS NULL OR s.batch_id=$5)
+  AND (s.historical_source_id IS NULL AND (${scope}) OR s.historical_source_id IS NOT NULL AND ${archiveScope})
+  ORDER BY s.posted_at DESC NULLS LAST,s.loading_id,s.batch_id`,
  [req.user.id,req.productCode,planId,loadingId,batchId]);
  return rows;
 }
@@ -85,7 +94,11 @@ async function confirm(c,req){
  if(co)await require('./cobalt-sales.cjs').access(c,req,'plan',planId);
  else await require('./allocations.cjs').planAccess(c,req,planId);
  await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['sales-invoice:'+req.productCode+':'+loadingId.toLowerCase()]);
- const [row]=await shipments(c,req,planId,loadingId,batchId);
+ let [row]=await shipments(c,req,planId,loadingId,batchId);
+ if(row?.historical_source_id){
+  await c.query('SELECT pg_advisory_xact_lock(477189)');
+  [row]=await shipments(c,req,planId,loadingId,batchId);
+ }
  if(!row)throw B.error(404,'SALES_INVOICE_POSTED_BATCH_REQUIRED');
  if(row.invoice_no&&row.invoice_no!==invoiceNo||row.source_invoice_no&&row.source_invoice_no!==invoiceNo)throw B.error(409,'SALES_INVOICE_NUMBER_MISMATCH');
  if(row.confirmed_at){
@@ -119,8 +132,18 @@ async function licenses(c,req){
 }
 
 function register({app,pool,permitted,csrf}){
+ const archive=require('./historical-sales.cjs');
  for(const prefix of ['/api/v1','/api/v1/cobalt']){
   app.get(prefix+'/export-licenses',{preHandler:permitted('loading-plan:read')},req=>C.readTransaction(pool,c=>licenses(c,req)));
+  const match=prefix+'/sales-workflow/plans/:id/historical-matches';
+  app.get(match,{preHandler:[permitted('plan:read'),permitted('plan:write')]},req=>{
+   if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
+   return C.readTransaction(pool,c=>archive.candidates(c,req));
+  });
+  app.post(match,{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>{
+   if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
+   return B.mutate(pool,req,c=>archive.link(c,req));
+  });
   app.post(prefix+'/sales-workflow/plans/:id/confirm-invoice',{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>{
    if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
    return B.mutate(pool,req,c=>confirm(c,req));

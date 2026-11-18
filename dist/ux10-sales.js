@@ -47,7 +47,8 @@ window.SalesReviewUI={
  invoicePanel(plan){
   if(!Array.isArray(plan.posted_batches))return '';
   const t=this.t,rows=plan.posted_batches,title=t('正式出库与开票确认','Formal Outbound and Invoice Confirmation');
-  if(!rows.length)return '<section class="panel user-form" id="sales-invoice-batches" data-no-i18n><h2>'+title+'</h2><p>'+t('暂无正式出库批次。','No formally posted batches.')+'</p></section>';
+  const search=plan.can_confirm_invoice?'<div class="business-toolbar"><button type="button" class="button secondary" id="sales-history-find">'+
+   t('按派车单查找历史装箱单','Find Historical Packing Lists by Dispatch')+'</button></div>':'';
   const headings=[['装车单','Loading Order'],['备货批次','Preparation Batch'],['车辆','Truck'],['出库净重','Outbound Net Weight'],['装车发票号','Shipment Invoice No.'],['开票状态','Invoice Status'],['操作','Actions']];
   const cells=rows.map((row,index)=>{
    const invoice=row.invoice_no||row.source_invoice_no||'',edit=plan.can_confirm_invoice&&!row.confirmed_at&&!invoice;
@@ -56,14 +57,48 @@ window.SalesReviewUI={
    const actor=[row.confirmed_by_name,row.confirmed_at?BusinessTime.display(row.confirmed_at):null].filter(Boolean).join(' · ');
    const action=row.confirmed_at?esc(actor):
     plan.can_confirm_invoice?'<button type="button" class="button secondary compact" data-confirm-invoice="'+index+'">'+t('确认开票','Confirm Invoice')+'</button>':'—';
-   const values=[esc(row.loading_no),esc(row.batch_no),esc(row.truck_no||'—'),row.unknown_packages?'—':Sales468.weight(row.net_mt),number,state,action];
+   const values=[esc(row.loading_no)+(row.historical_source_id?'<small>'+t('历史装箱单','Historical Packing List')+'</small>':''),esc(row.batch_no),esc(row.truck_no||'—'),row.unknown_packages?'—':Sales468.weight(row.net_mt),number,state,action];
    return '<tr>'+values.map((value,i)=>'<td data-label="'+esc(t(...headings[i]))+'">'+value+'</td>').join('')+'</tr>';
   });
-  const table=ExportLicenses.table(headings,cells,'sales-invoice-table',true,{numeric:[3],actions:[6]});
-  return '<section class="panel user-form" id="sales-invoice-batches" data-no-i18n><h2>'+title+'</h2><p>'+t('销售确认开票后，该批次净重计入履约。','Net weight counts toward fulfilment after Sales confirms the invoice.')+'</p>'+table+'<p class="error" id="sales-invoice-error" role="alert"></p></section>';
+  const table=rows.length?ExportLicenses.table(headings,cells,'sales-invoice-table',true,{numeric:[3],actions:[6]}):
+   '<p>'+t('暂无正式出库或已关联历史批次。','No posted or linked historical batches.')+'</p>';
+  return '<section class="panel user-form" id="sales-invoice-batches" data-no-i18n><h2>'+title+'</h2>'+search+
+   '<p>'+t('销售确认开票后，该批次净重计入履约。','Net weight counts toward fulfilment after Sales confirms the invoice.')+'</p>'+table+'<p class="error" id="sales-invoice-error" role="alert"></p></section>';
+ },
+ async historicalMatches(plan,button){
+  const t=this.t,path=this.base()+'/plans/'+plan.id+'/historical-matches',error=$('sales-invoice-error');
+  button.disabled=true;error.textContent='';
+  try{
+   const {items}=await API.request(path);
+   if(!button.isConnected)return;
+   const headings=[['装箱单号／批次','Packing List / Lot'],['发运日期','Shipping Date'],['车头／挂车','Truck / Trailer'],['派车月份／挂车','Dispatch Month / Trailer'],['操作','Actions']];
+   const rows=items.map((item,index)=>{
+    const ambiguous=item.dispatch_matches>1||item.source_matches>1;
+    return '<tr><td>'+esc(item.document_no)+'<small>'+esc(item.batch_no||'—')+'</small></td><td>'+esc(item.shipping_date)+
+     '</td><td>'+esc(item.source_truck)+' / '+esc(item.source_trailer||'—')+'</td><td>'+esc(item.shipment_month)+' / '+esc(item.trailer_no||'—')+
+     '</td><td><button type="button" class="button secondary" data-history-match="'+index+'">'+
+     t(ambiguous?'核对趟次并关联':'确认关联',ambiguous?'Verify and Link Trip':'Confirm Link')+'</button></td></tr>';
+   });
+   dialog(t('历史装箱单匹配结果','Historical Packing List Matches'),'<div data-no-i18n>'+
+    (rows.length?ExportLicenses.table(headings,rows,'sales-history-table',true,{actions:[4]}):
+     '<p>'+t('没有找到符合车牌、发运月份和客户或合同的未关联单据。','No unlinked documents match the plate, shipment month and customer or contract.')+'</p>')+
+    '<p class="error" id="sales-history-error" role="alert"></p></div>');
+   for(const action of document.querySelectorAll('[data-history-match]'))action.onclick=async()=>{
+    const row=items[Number(action.dataset.historyMatch)],error=$('sales-history-error');
+    if(!await OperationConfirm.ask({title:t('已核对原始装箱单，本次派车与这张单据属于同一趟？','Does the original packing list confirm that this dispatch is the same trip?'),
+     rows:[[t('装箱单号','Packing List No.'),row.document_no],[t('发运日期','Shipping Date'),row.shipping_date],
+      [t('派车月份','Dispatch Month'),row.shipment_month],[t('车牌号','Truck Plate'),row.truck_no]]}))return;
+    action.disabled=true;error.textContent='';
+    try{await API.request(path,{method:'POST',body:{source_id:row.source_id,dispatch_id:row.dispatch_id,verified_trip:true}});$('dialog').close();await this.form(plan.id);}
+    catch(e){error.textContent=e.message;action.disabled=false;}
+   };
+  }catch(e){error.textContent=e.message;}
+  finally{button.disabled=false;}
  },
  bindInvoices(plan){
   const t=this.t;
+  const history=$('sales-history-find');
+  if(history)history.onclick=()=>this.historicalMatches(plan,history);
   for(const button of document.querySelectorAll('[data-confirm-invoice]'))button.onclick=async()=>{
    const index=Number(button.dataset.confirmInvoice),row=plan.posted_batches[index],error=$('sales-invoice-error'),input=$('sales-invoice-'+index);
    const invoice_no=row.source_invoice_no||input?.value.trim();error.textContent='';

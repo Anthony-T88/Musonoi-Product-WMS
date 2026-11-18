@@ -1,7 +1,7 @@
 {
   "version": "4.8.5",
-  "auditRevision": "v485-ui8",
-  "revision": "4.8.5-ui8",
+  "auditRevision": "v485-ui9",
+  "revision": "4.8.5-ui9",
   "files": [
     {
       "path": ".dockerignore",
@@ -17,7 +17,7 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "sha256": "cf1c6b86fc7777c636dae1b7a9a5fa73a64c5df46273cdac536cd0a0ccbca50b"
+      "sha256": "eeae25384be8d5e2f78a08c87b7d9d8a776d18d5f53a9d3275e9bf4f7e5bf203"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -1105,7 +1105,7 @@
     },
     {
       "path": "dist/export-licenses.js",
-      "sha256": "43c3a5d9ff000af0036d495eadb6e178e88b3cb30b9b14483985ed2c3ce43cc3"
+      "sha256": "0e0736ab45d0724b952e0634516042ad6504aac8e3e2c55d9e6e2c19ba8a3382"
     },
     {
       "path": "dist/field.css",
@@ -1125,11 +1125,11 @@
     },
     {
       "path": "dist/gate468r8.css",
-      "sha256": "15f11f98baa59c6827f9af69efe49898920a6fe5346310c986353dac3eba84cc"
+      "sha256": "a42efb12b4af15fdf7a6e0b7eeca1f280bf7e8ad4c6713c88ae9d03713fd7108"
     },
     {
       "path": "dist/gate468r8.js",
-      "sha256": "7ae0303aab490e7a009ff7999a50f7c0dd3324c2f370bc9409881bbc01605fd9"
+      "sha256": "c9ac8d160aec7ccd6be34b1052b4b711ae640c4aaee7b7f5fc7fcaad74e8bcc2"
     },
     {
       "path": "dist/handover467.js",
@@ -1137,7 +1137,7 @@
     },
     {
       "path": "dist/historical-movements.js",
-      "sha256": "cb825688f4e52eb4b3172ceca2fcf985cc995c3453fb8524daf591ea0a85505c"
+      "sha256": "266db688661c8d762848092eafb9eab7158acd5eafcd2a753070b7a2e9eb6d21"
     },
     {
       "path": "dist/history-ui.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "84a4d1092b1051579e06049f7507cf81fa07b13309e63c3a6533ea29413ae804"
+      "sha256": "98f8367cca4770de494c40f407242c4ecf71f3275b2d41afeaaf53a9f999df68"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1297,7 +1297,7 @@
     },
     {
       "path": "dist/overview-analysis.js",
-      "sha256": "4de4334751706ba243285ebe1dd425d3d1c2414c789a6700bd28abf45a31fb2c"
+      "sha256": "1092433b44ca4d949d710a003f7ad4f0b3bfd426a2755b86f8c4caebb983a36d"
     },
     {
       "path": "dist/overview-design-model.js",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "ccf0bf3c856be62d1c2db745ffb63937b175915e28136cbcd4cb50cb800bf5fa"
+      "sha256": "7dbcc51836e8f85a7f2458b155df0e69965ef65f1d9d84938b4aaba638dabb26"
     },
     {
       "path": "dist/reports463.js",
@@ -1449,7 +1449,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "f65efa5821628e8c45f4ec5b08e7e841f462501683545223433b11327d76e310"
+      "sha256": "01f733d7b9ae6e47986fc96508dc305ad289a5eaf9f1b0d7944f7cdbb588baf4"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1553,7 +1553,7 @@
     },
     {
       "path": "dist/ux10-sales.js",
-      "sha256": "223a772b0909fffa3a778d605ba58d7c7cdd51553a79cfdde5362c27952e2834"
+      "sha256": "70ff718880dc29719ee6ada1c329ad23a7f30ae5a7a174b9ffbf184f2d948732"
     },
     {
       "path": "dist/ux10.css",
@@ -1993,11 +1993,11 @@
     },
     {
       "path": "server/export-license-plans.cjs",
-      "sha256": "3fb08a1eec82999e5939b12605a8b744f90c54355ec6a41ff3469f3f30acc3da"
+      "sha256": "4360942014d0ea78a6edfc5b4a28d2d847ce4066543208100653905cf4233140"
     },
     {
       "path": "server/export-licenses.cjs",
-      "sha256": "a49ac8f2e4d92a60c2e9746a13d85a97ce8f9726fc633c68fb0e8f5ea97aa95b"
+      "sha256": "ed26f948a336f5004acc6050081ea91dd93a3e68690f9e94cdd644420e745399"
     },
     {
       "path": "server/export-shipping.cjs",
@@ -2005,7 +2005,7 @@
     },
     {
       "path": "server/gate-permits.cjs",
-      "sha256": "9f3e9c7998aad2e1e02d044d5f10a3068b9129a698aecaf045f9a4e8a2175071"
+      "sha256": "11e883e496552f3020caa2cbb8a20752ff327c896b9c53ac33d63a27251b718e"
     },
     {
       "path": "server/gate-printers.cjs",
@@ -2024,12 +2024,20 @@
       "sha256": "a6fa768db9b0ac1171c5928182edf13f04dcc528b6425010dc17541debfd5e72"
     },
     {
+      "path": "server/historical-gate.cjs",
+      "sha256": "63edac73eef32299a38cc7232f8e9a2d4f5a632a8cedaaa8913095e48a694242"
+    },
+    {
       "path": "server/historical-movements.cjs",
-      "sha256": "22fafcc63c33ae8ee1a7b081f314bf2f05adaaaa8eafe4b3dc5f58bf16fde846"
+      "sha256": "401f26aeb2907906e15b7827e79373ba834f335c9754b4feccf83135c670861c"
     },
     {
       "path": "server/historical-packing.cjs",
       "sha256": "798a6bb36476846759d81b81a977431946bbea30722a1dfe5309249c81c92936"
+    },
+    {
+      "path": "server/historical-sales.cjs",
+      "sha256": "767118028799981c15bd0167a8aff57814c8791dac1fddedae6a965fa813d4a6"
     },
     {
       "path": "server/inventory-control.cjs",
@@ -2185,7 +2193,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "0e7ae43d2092c37d18d3de4c358504e7c07312242e46696225be89369b6480cb"
+      "sha256": "a7a1d74016bddcfb8dbd88a2881e7dff1919abbd64c8d07c76a24b3325a33345"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2217,7 +2225,7 @@
     },
     {
       "path": "server/sales-approval.cjs",
-      "sha256": "71af851db14b07e4284eb14b786a198f1213c3dcf348f2003abc4d6362ce4682"
+      "sha256": "65e99ed3873672e1799133383edb10ca1527f8e39742baef08112a20d3840aa3"
     },
     {
       "path": "server/sales-close.cjs",
@@ -2233,7 +2241,7 @@
     },
     {
       "path": "server/sales-invoices.cjs",
-      "sha256": "a4a5bc3424bd6fc839fdf9c801b46754ccf6dfa3eda510bb9e87c0a0140a6c3d"
+      "sha256": "38632da556a00daa985bb4234fc8de3cba8a49d8629d263a4b211ef03aad9aa0"
     },
     {
       "path": "server/sampling.cjs",
@@ -2569,7 +2577,7 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "0c2d408dbc8b58dc7f451787f5714aac38cc570fcec0ca36d165ab968fb5dc72"
+      "sha256": "ac93bdeb0c2f34bda16c02e2829f2b1a1cf498bfdbb3594fbd3a3bab3c790d3b"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -2581,7 +2589,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "7e2a2be4792d4511a1857b47eed94359e4dd263ffd6b70b0b903ef62c95c29b1"
+      "sha256": "109487c1c5ecf0b2bc1bcb23cf0aae8228e7fa2762792d0fb9c700200825b40f"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -2636,12 +2644,16 @@
       "sha256": "4c8df23ddf6905b0500b431b3a5e2be3ff502b7fa772dabc140c1c65f80f161b"
     },
     {
+      "path": "db/migrations/197_v485_historical_departure_and_sales_links.sql",
+      "sha256": "6c8611add5f24f1fe5a3d9e527f23092b51eb7484b56fce954ce60d4aa87522d"
+    },
+    {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "efc32f08e9b8ffd17331551febf078dee37b0c4c3990c84b249c420e68aebba1"
+      "sha256": "195a208b33c565a3e8883e41bbe3a1894c13a1c41fbd88a26ed92f8515e86d62"
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "72fe9089fa129acf7c310a988330956a00ecddbad759c977a4f52a978da52b34"
+      "sha256": "96b8bc6e1a55759d6f8f1f7880c186d3b8b7604771b48cece638e77f40d898b3"
     },
     {
       "path": "deploy/remove-unposted-test-receipt.sql",

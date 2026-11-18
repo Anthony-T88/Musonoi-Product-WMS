@@ -55,19 +55,24 @@ window.OverviewAnalysis={
  cobalt(data){const parent=document.querySelector('.co-overview-page');if(parent)this.render(parent,data,true);},
  render(parent,data,co){if(!data.chart_trend)return;const filter=co?parent.querySelector('.overview-filter-box'):null,model=this.model(data,co),root=document.createElement('div');root.className='oa467';root.dataset.noI18n='';root.dataset.overviewAnalysis='true';root.dataset.product=co?'CO_HYDROXIDE':'CU_CATHODE';const generation=++this.sequence;this.current={root,data,co,generation};
  const t=this.t,prepared=co?null:data.metrics.prepared_pending_outbound,unavailable=!!data.window.history_unavailable,cards=co?this.cobaltCards(data.analysis,data.historical_imports):null;
+ const stockUnknown=t('所选截止日的库存无法追溯','Stock is unavailable at the selected cutoff');
+ const stockMetric=(label,row,weight=false)=>unavailable?this.card(label,'—','',stockUnknown):this.batchCard(label,row,weight);
+ const stockPanels=unavailable?[
+  ['库存状态结构','Inventory State'],['客户库存结构','Customer Inventory']
+ ].map(([zh,en])=>this.panel(zh,en,'','<p class="oa-empty">'+stockUnknown+'</p>')).join(''):this.stock(model)+this.customers(model);
  root.innerHTML=(data.window?.history_started_at?'<p class="'+(data.window.partial?'oa-warning':'oa-scope')+'">'+esc(this.historyNotice(data.window))+'</p>':'')+
  (co&&data.metal?CobaltMetal.overview(data.metal,cards):'<div class="oa-kpis'+(co?'':' oa-kpis-copper')+'">'+(co?(cards?
  this.batchCard(t('备货作业中吨包','Bags in Preparation'),cards.preparing)+
  this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),cards.prepared,true)+
  this.batchCard(t('装车中库存','Stock in Loading'),cards.loading,true)+
  this.batchCard(t('已出库重量','Outbound Weight'),cards.outbound,true):''):
- (unavailable?'':this.card(t('可用捆包库存','Available Bundle Stock'),CountValues.display(data.metrics.available.bundles),t('捆','bundles'),'')+
- this.batchCard(t('备货作业中捆包','Bundles in Preparation'),data.metrics.preparing)+
- this.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),prepared,true)+
- this.batchCard(t('装车中库存','Stock in Loading'),data.metrics.loading,true))+
+ (this.card(t('可用捆包库存','Available Bundle Stock'),unavailable?'—':CountValues.display(data.metrics.available.bundles),t('捆','bundles'),unavailable?stockUnknown:'')+
+ stockMetric(t('备货作业中捆包','Bundles in Preparation'),data.metrics.preparing)+
+ stockMetric(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),prepared,true)+
+ stockMetric(t('装车中库存','Stock in Loading'),data.metrics.loading,true))+
  (co?'':this.card(t('已出库重量','Outbound Weight'),this.number(model.outbound),t('吨','MT'),CountValues.display(model.vehicles)+' '+t('辆','vehicles'))))+
  (co?'':this.card(t('销售计划履约','Sales Fulfilment'),model.rate==null?'—':this.number(model.rate,1),'%',''))+'</div>')+
- '<div class="oa-grid oa-charts">'+['net','vehicles','receipts','stock'].map(key=>co&&data.metal&&key==='receipts'?this.panel('月度发运金属量统计','Monthly Shipment Metal','',CobaltMetal.chart(data.metal.months),'oa-chart oa-metal-chart'):this.chart(model,key)).join('')+'</div><div class="oa-grid oa-three">'+(unavailable?'':this.stock(model)+this.customers(model))+this.attention(model)+'</div>'+this.execution(model)+this.flow(model)+(this.can('report:read')?this.panel('收发存与月度预检','Stock Balance & Monthly Precheck',t('产品＋仓库＋自然月 · 只读，不锁账','Product + warehouse + calendar month · Read-only'),'<div data-oa-balance>'+t('正在读取整仓月度预检…','Loading warehouse monthly precheck…')+'</div>','oa-balance-panel'):'');
+ '<div class="oa-grid oa-charts">'+['net','vehicles','receipts','stock'].map(key=>co&&data.metal&&key==='receipts'?this.panel('月度发运金属量统计','Monthly Shipment Metal','',CobaltMetal.chart(data.metal.months),'oa-chart oa-metal-chart'):this.chart(model,key)).join('')+'</div><div class="oa-grid oa-three">'+stockPanels+this.attention(model)+'</div>'+this.execution(model)+this.flow(model)+(this.can('report:read')?this.panel('收发存与月度预检','Stock Balance & Monthly Precheck',t('产品＋仓库＋自然月 · 只读，不锁账','Product + warehouse + calendar month · Read-only'),'<div data-oa-balance>'+t('正在读取整仓月度预检…','Loading warehouse monthly precheck…')+'</div>','oa-balance-panel'):'');
  parent.replaceChildren(...(filter?[filter]:[]),root);this.bindCharts(root,model);window.ExportLicenses?.mountOverview(root);if(this.can('report:read'))this.loadBalance(this.current,model);
  },
  chartDefinition(model,key){

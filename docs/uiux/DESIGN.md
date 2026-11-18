@@ -48,6 +48,8 @@
 
 使用原生 form 和 label。常用字段从左到右，按钮组靠右。宽度不足时先把低频字段放入 `details` 的「更多筛选」，随后让字段组换行。查询与重置相邻，保持与字段等高。配置 `data-wms-reset` 后共享增强逻辑沿用该重置操作。保留已有查询参数及表格分页行为。
 
+历史导入及车辆出厂筛选的字段组从容器左端排布，查询与重置在右端成组。历史车辆展示原单发运日期，缺少原始出库审批时间时留空并保留历史来源标记。
+
 ```html
 <form class="filters wms-filter-row">
   <label>批次号<input name="search" type="search"></label>

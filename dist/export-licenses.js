@@ -473,7 +473,7 @@ window.ExportLicenses={
   slot.className='export-license-picker';
   const search=record.id?'<label>'+t('搜索出口许可证','Search Export Licenses')+
    '<input id="'+id+'-search" type="search" maxlength="160"></label>':'';
-  slot.innerHTML=search+'<label>'+t('出口许可证','Export License')+'<select name="license_id"><option value="">'+t('使用原有手工编号流程','Use Existing Manual Numbering')+'</option></select></label><div id="'+id+'-quantity" hidden><label>'+t('预占数量','Reserved Quantity')+'<input name="license_quantity"></label><input type="hidden" name="license_unit"></div><p id="'+id+'-note" role="status"></p>';
+  slot.innerHTML=search+'<label>'+t('出口许可证','Export License')+'<select name="license_id"><option value="">'+t('不关联出口许可证','No Export License')+'</option></select></label><div id="'+id+'-quantity" hidden><label>'+t('预占数量','Reserved Quantity')+'<input name="license_quantity"></label><input type="hidden" name="license_unit"></div><p id="'+id+'-note" role="status"></p>';
   const invoice=form.elements.invoice_no,manual=form.elements.export_license_no,select=slot.querySelector('select'),date=form.elements.planned_load_date,sales=form.elements.sales_plan_id,query=slot.querySelector('input[type=search]'),note=slot.querySelector('p');
   const container=invoice?.closest('label')||manual?.closest('label');
   if(!container||!sales)return;
@@ -490,28 +490,52 @@ window.ExportLicenses={
   };
   invoice?.addEventListener('input',syncPacking);syncPacking();
   if(old)select.options[0].disabled=true;
-  let request=0,previewRequest=0,timer;
+  const creating=!record.id,numberUrl=this.api()+'/invoice-number';
+  let edited=Boolean(invoice?.value),request=0,previewRequest=0,lookup=0,timer,checkTimer;
+  const feedback=document.createElement('small');
+  feedback.setAttribute('role','status');
+  if(creating&&invoice){
+   feedback.id=id+'-invoice-check';feedback.className='wms-feedback';
+   invoice.maxLength=77;
+   const descriptions=[invoice.getAttribute('aria-describedby'),feedback.id].filter(Boolean).join(' ');
+   invoice.setAttribute('aria-describedby',descriptions);container.append(feedback);
+   invoice.addEventListener('input',()=>{
+    edited=true;invoice.setCustomValidity('');feedback.textContent='';clearTimeout(checkTimer);
+    const value=invoice.value.trim(),token=++lookup;
+    if(!value||!sales.value)return;
+    checkTimer=setTimeout(async()=>{
+     try{
+      const {duplicate}=await API.request(numberUrl+'?'+new URLSearchParams({sales_plan_id:sales.value,invoice_no:value}));
+      if(token!==lookup||invoice.value.trim()!==value||!form.isConnected)return;
+      const message=duplicate?t('发票号已使用，请更换。','This invoice number is already in use. Enter a different number.'):'';
+      invoice.setCustomValidity(message);
+      feedback.textContent=message;
+     }catch(error){if(token===lookup&&form.isConnected)feedback.textContent=error.message;}
+    },220);
+   });
+  }
   const show=()=>{
    const token=++previewRequest,licenseId=select.value;
    const chosen=known.get(select.value),reserved=!!select.value,isCustom=chosen?.unit_basis==='CUSTOM';
-   if(invoice){invoice.required=!reserved&&ProductContext.isCopper();invoice.readOnly=reserved;}
+   if(invoice){invoice.required=creating||!reserved&&ProductContext.isCopper();invoice.readOnly=reserved&&!creating;}
    if(manual)manual.readOnly=reserved;
    slot.querySelector('#'+id+'-quantity').hidden=!isCustom;form.elements.license_unit.value=isCustom?chosen.unit:'';
    if(reserved){
     if(manual)manual.value=chosen?.license_no||old?.license_no||'';
-    if(invoice)invoice.value=old?.license_id===select.value?old.invoice_no:'';
+    if(invoice&&!creating)invoice.value=old?.license_id===select.value?old.invoice_no:'';
    }
    syncPacking();
    const available=chosen?.available!=null?' '+t('可分配 ','Allocatable ')+chosen.available+' '+chosen.unit:'';
-   note.textContent=reserved?t('最终发票号在保存时确定。','The final invoice number is assigned on save.')+available:'';
-   if(!reserved||old?.license_id===licenseId)return;
-   const filters=new URLSearchParams({sales_plan_id:sales.value,invoice_preview_id:licenseId});
+   note.textContent=available;
+   if(!sales.value||!reserved&&!creating||reserved&&old?.license_id===licenseId)return;
+   const filters=new URLSearchParams({sales_plan_id:sales.value});
+   if(reserved)filters.set('invoice_preview_id',licenseId);
    if(date?.value)filters.set('planned_load_date',date.value);
-   API.request(this.api()+'/options?'+filters).then(d=>{
+   API.request((reserved?this.api()+'/options':numberUrl)+'?'+filters).then(d=>{
     if(token!==previewRequest||select.value!==licenseId||!form.isConnected)return;
-    if(invoice)invoice.value=d.invoice_preview||'';
+    if(invoice&&(!creating||!edited))invoice.value=d.invoice_preview||'';
     syncPacking();
-    if(d.invoice_preview)note.textContent=t('预计发票号 ','Proposed invoice ')+d.invoice_preview+' · '+note.textContent;
+    if(d.invoice_preview)note.textContent=t('推荐发票号 ','Suggested invoice ')+d.invoice_preview+(creating?t('，可修改。','. You can edit this number.'):'')+available;
    }).catch(error=>{if(token===previewRequest&&select.value===licenseId&&form.isConnected)note.textContent=error.message;});
   };
   const refresh=async()=>{

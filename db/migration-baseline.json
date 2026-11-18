@@ -785,6 +785,10 @@
     {
       "version": "196_v485_vehicle_arrival_confirmation.sql",
       "checksum": "4c8df23ddf6905b0500b431b3a5e2be3ff502b7fa772dabc140c1c65f80f161b"
+    },
+    {
+      "version": "197_v485_historical_departure_and_sales_links.sql",
+      "checksum": "6c8611add5f24f1fe5a3d9e527f23092b51eb7484b56fce954ce60d4aa87522d"
     }
   ]
 }

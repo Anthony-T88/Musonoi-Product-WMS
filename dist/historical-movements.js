@@ -149,10 +149,12 @@ window.HistoricalMovements={
   const t=this.t,q=new URLSearchParams(location.search);
   const [data,warehouses]=await Promise.all([this.records(q),API.request('/historical-movements/destinations')]);
   if(!retain){this.queue=[];this.warehouse='';}
-  const filter='<form id="historical-filter" class="filters wms-filter-row">'+[['from',t('起始日期','From')],['to',t('截止日期','To')]].map(([name,label])=>
-   '<label>'+label+'<input type="date" name="'+name+'" value="'+esc(q.get(name)||'')+'"></label>').join('')+
+  const fields=[['batch_no','批次号','Batch No.','search'],['document_no','装箱单号','Packing List No.','search'],
+   ['business_date','业务日期','Business Date','date'],['from','起始日期','From','date'],['to','截止日期','To','date']];
+  const filter='<form id="historical-filter" class="filters wms-filter-row"><div class="form-grid">'+fields.map(([name,zh,en,type])=>
+   '<label>'+t(zh,en)+'<input type="'+type+'" name="'+name+'" '+(type==='search'?'maxlength="160" ':'')+'value="'+esc(q.get(name)||'')+'"></label>').join('')+
    '<label>'+t('单据状态','Document Status')+'<select name="state">'+[['',t('全部','All')],['ACTIVE',t('有效','Active')],['VOIDED',t('已作废','Voided')]].map(([state,label])=>
-    '<option value="'+state+'"'+(q.get('state')===state?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
+   '<option value="'+state+'"'+(q.get('state')===state?' selected':'')+'>'+label+'</option>').join('')+'</select></label></div>'+
    '<div class="wms-filter-actions"><button type="submit" class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+this.path+'">'+t('重置','Reset')+'</a></div></form>';
   this.page('历史出入库导入','Historical Stock Imports',this.section('上传装箱单','Upload Packing Lists',
    '<form id="historical-upload" class="user-form wms-import-upload" data-wms-validation><div class="form-grid wms-field-grid">'+

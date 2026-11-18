@@ -6,7 +6,7 @@ const read='export-license:read',write='export-license:write',approve='export-li
 const actions=['ISSUE','AMEND','EXTEND','CANCEL','CLOSE','CLOSE_EXCEPTION','SETTLE','CORRECT'];
 const allowed=(path,method)=>{
  if(/^\/api\/v1\/cobalt\/export-permits\/record-books\/[0-9a-f-]{36}$/i.test(path))return ['PATCH','DELETE'].includes(method);
- const m=/^\/api\/v1\/cobalt\/export-permits(?:\/operations\/status|\/(options|contracts|preferences|record-books|[0-9a-f-]{36})(?:\/actions(?:\/[0-9a-f-]{36})?)?)?$/i.exec(path);
+ const m=/^\/api\/v1\/cobalt\/export-permits(?:\/operations\/status|\/(options|invoice-number|contracts|preferences|record-books|[0-9a-f-]{36})(?:\/actions(?:\/[0-9a-f-]{36})?)?)?$/i.exec(path);
  return !!m&&['GET','POST','PATCH'].includes(method);
 };
 const fail=(status,message)=>B.error(status,message);
@@ -251,6 +251,14 @@ function register({app,pool,permitted,csrf}){
   }],handler:req=>B.mutate(pool,req,c=>fn(c,req))});
   app.get(prefix,{preHandler:permitted(read)},req=>C.readTransaction(pool,c=>list(c,req,false)));
   app.get(prefix+'/options',{preHandler:permitted('loading-plan:read')},req=>C.readTransaction(pool,c=>list(c,req,true)));
+  app.get(prefix+'/invoice-number',{preHandler:permitted('loading-plan:write')},req=>C.readTransaction(pool,async c=>{
+   const id=B.uuid(req.query.sales_plan_id),plan=req.productCode===CO?await require('./cobalt-sales.cjs').access(c,req,'plan',id):
+    await require('./allocations.cjs').planAccess(c,req,id);
+   const invoice=require('./export-license-plans.cjs');
+   if(req.query.invoice_no)return {duplicate:await invoice.hasInvoice(c,B.text(req.query.invoice_no,'发票号',77))};
+   const {invoice:invoice_preview}=await invoice.invoiceCandidate(c,{proforma_no:plan.code,next_serial:1});
+   return {invoice_preview};
+  }));
   app.get(prefix+'/operations/status',{preHandler:permitted(read)},req=>C.readTransaction(pool,async c=>{
    const {method,path,key}=req.query,base=prefix.slice('/api/v1'.length),target=typeof path==='string'&&path.startsWith(base)?path.slice(base.length):null;
    const matched=target!==null&&/^\/([0-9a-f-]{36})(?:\/actions(?:\/[0-9a-f-]{36})?)?$/i.exec(target);

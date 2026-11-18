@@ -180,7 +180,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "current and pre-inventory-history period layout",
       "template": "/overview"
     },
     {
@@ -841,7 +841,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "license selection and adjacent draft and save",
+      "state": "license selection, editable invoice recommendation and duplicate check",
       "template": "/loading-plans/new"
     },
     {
@@ -939,7 +939,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "five departure filters and selected historical exits",
       "template": "/outbounds"
     },
     {
@@ -1087,7 +1087,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "ledger, Excel drop, replacement and cell diagnostics",
+      "state": "six archive filters and Excel diagnostics",
       "template": "/workbench/historical-movements"
     },
     {
