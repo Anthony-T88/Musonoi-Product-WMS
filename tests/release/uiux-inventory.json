@@ -807,7 +807,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "arrival and optional second trailer",
       "template": "/loading-plans"
     },
     {
@@ -1087,7 +1087,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "ledger, multiple Excel drop and single replacement",
+      "state": "ledger, Excel drop, replacement and cell diagnostics",
       "template": "/workbench/historical-movements"
     },
     {

@@ -1444,8 +1444,8 @@
     },
     {
       "path": "dist/historical-movements.js",
-      "sha256": "8d7e247f351a8cf68cdf51a3d440d82742e4ad16c81581284fe2d8d6086859c1",
-      "bytes": 36954
+      "sha256": "cb825688f4e52eb4b3172ceca2fcf985cc995c3453fb8524daf591ea0a85505c",
+      "bytes": 42266
     },
     {
       "path": "dist/history-ui.js",
@@ -1504,7 +1504,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "bfa30c04bc7d722f06111d402e350c8bd511674537d918dcd513a791fff5d8fd",
+      "sha256": "84a4d1092b1051579e06049f7507cf81fa07b13309e63c3a6533ea29413ae804",
       "bytes": 15951
     },
     {
@@ -1774,7 +1774,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "f67f9c016f82cb85b8e278ec7bdd6c3e0478417a8f000e568c800ffb70f34c7b",
+      "sha256": "ccf0bf3c856be62d1c2db745ffb63937b175915e28136cbcd4cb50cb800bf5fa",
       "bytes": 418
     },
     {
@@ -1834,7 +1834,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "d1912e27606d83156ab4d4dda57d33fd19592f9fe5fffeef881591d858386477",
+      "sha256": "f65efa5821628e8c45f4ec5b08e7e841f462501683545223433b11327d76e310",
       "bytes": 2915
     },
     {
@@ -2414,13 +2414,13 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "sha256": "2021ebbf7fa8bb404bb6d8c229c62f620cfb942b8a681bf5e6e47fc7eab0c9c2",
-      "bytes": 28844
+      "sha256": "0586cf374997fe72c53fed14ae70232c7b34488845e670a9f7d00a5e26160212",
+      "bytes": 29183
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "sha256": "8c21c6d35115549fad0e63b522b17c338a04f38009a628b905d55306e9c54440",
-      "bytes": 13425
+      "sha256": "37a280b2b42e60af303323998870c4d17548184a53eb38e2bf2514de3a59c4e4",
+      "bytes": 13599
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3334,8 +3334,8 @@
     },
     {
       "path": "server/historical-backfill.cjs",
-      "sha256": "3b91a23982f117991224a24a46d49d84608507b1bd289f42f18320b618f2251a",
-      "bytes": 28088
+      "sha256": "a6fa768db9b0ac1171c5928182edf13f04dcc528b6425010dc17541debfd5e72",
+      "bytes": 28997
     },
     {
       "path": "server/historical-movements.cjs",
@@ -3344,8 +3344,8 @@
     },
     {
       "path": "server/historical-packing.cjs",
-      "sha256": "c266f4937db609628bb9401b75f08de5c5b567d603fa2a2a34e186f26f8c3f40",
-      "bytes": 7294
+      "sha256": "798a6bb36476846759d81b81a977431946bbea30722a1dfe5309249c81c92936",
+      "bytes": 9817
     },
     {
       "path": "server/inventory-control.cjs",
@@ -3539,7 +3539,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "c5bc26baa912b9eefad7ef61bf3d5ec5ac75a4ba83e0a3af8f0cea35c4646d68",
+      "sha256": "0e7ae43d2092c37d18d3de4c358504e7c07312242e46696225be89369b6480cb",
       "bytes": 222
     },
     {
@@ -3709,8 +3709,8 @@
     },
     {
       "path": "server/vehicle-arrivals.cjs",
-      "sha256": "99861d8421f2004453cd05db31a8c336b7a8649db598c460ec36ed53fe0c271c",
-      "bytes": 14370
+      "sha256": "5ed3607c701567dde35ad67c5a70b5b1efbcc0266755c171435e1eeec5476348",
+      "bytes": 14559
     },
     {
       "path": "server/warehouse-templates.cjs",
@@ -3749,7 +3749,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "3fef9e2dd907cce1381cc920a9392d5d33754b7a858a3f7b1047fcaeec391bb7",
+      "sha256": "046a0215ab12c51cb4e139a3692f989c6ade80c3d5078dfff562379e667d33a1",
       "bytes": 96158
     },
     {
@@ -4024,8 +4024,8 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "6c23e454b530b0e129ad050e6be750a48a62995db9cd3cacdf3caef35b1efb0e",
-      "bytes": 32469
+      "sha256": "0c2d408dbc8b58dc7f451787f5714aac38cc570fcec0ca36d165ab968fb5dc72",
+      "bytes": 32498
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -4039,8 +4039,8 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "d09d3237aa26361b88cdc14e4c71f2cef276338addf6db866d1c3ce8d59e4bd2",
-      "bytes": 20236
+      "sha256": "7e2a2be4792d4511a1857b47eed94359e4dd263ffd6b70b0b903ef62c95c29b1",
+      "bytes": 20282
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -4119,13 +4119,13 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "4c3ee2e12c539717c4edb5c286ff2a2c21b44fc7042997f2a966a2ef1b0c979c",
-      "bytes": 12160
+      "sha256": "efc32f08e9b8ffd17331551febf078dee37b0c4c3990c84b249c420e68aebba1",
+      "bytes": 12492
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "bytes": 39562,
-      "sha256": "750e1eee3bf911db8a4ee2043372613e033dd8d9df78e79c67a93d146d208e5d"
+      "bytes": 40386,
+      "sha256": "72fe9089fa129acf7c310a988330956a00ecddbad759c977a4f52a978da52b34"
     },
     {
       "path": "docs/v4.8.3-release.md",
@@ -4139,8 +4139,8 @@
     },
     {
       "path": "tests/release/v483-hotfix.cjs",
-      "sha256": "821e65bfb8f094158e8776a8cc5ebc5e46cd8027a71002679b3377b68ef858af",
-      "bytes": 16179
+      "sha256": "c57bc826c4e34a4045076e785e43cbccab86b5ad5155e233f209ea3c33efa3f4",
+      "bytes": 18324
     },
     {
       "path": "deploy/remove-copper-test-chain.sql",

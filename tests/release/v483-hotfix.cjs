@@ -190,6 +190,39 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    assert.equal(await page.getByRole('heading',{name:'关联单据',exact:true}).count(),0);
    await page.getByText('Void synthetic browser import',{exact:true}).waitFor();
   });
+  await t.test('historical import names damaged headers, invalid cells and mismatching totals',async()=>{
+   await page.goto(origin+'/workbench/historical-movements');
+   const form=page.locator('#historical-upload');
+   await form.locator('select').selectOption(f.warehouse);
+   const examples=[
+    ['HEADER',{'F29':'NET WEIGHT (LB)','G29':'GROSS WEIGHT (LB)'}],
+    ['CELLS',{'E7':'bad-date','D30':0,'F30':'unknown'}],
+    ['TOTAL',{'F31':648,'G31':652}]
+   ];
+   const files=examples.map(([name,edits])=>{
+    const input=packing(CU,f.warehouse,'DIAGNOSTIC-'+name,[['DIAGNOSTIC-'+name,'SEAL-'+name]]);
+    const book=XLSX.read(input.file_base64,{type:'base64'});
+    for(const [cell,value] of Object.entries(edits))XLSX.utils.sheet_add_aoa(book.Sheets.PL,[[value]],{origin:cell});
+    return {name:input.file_name,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+     buffer:XLSX.write(book,{bookType:'xlsx',type:'buffer'})};
+   });
+   await form.locator('input[type=file]').setInputFiles(files);
+   await form.locator('button').click();
+   const preview=page.locator('#historical-preview');
+   await preview.getByText(/PL!F29.*应为 NET WEIGHT \(KG\).*NET WEIGHT \(LB\)/).waitFor();
+   await preview.getByText(/PL!G29.*GROSS WEIGHT \(KG\).*GROSS WEIGHT \(LB\)/).waitFor();
+   await preview.getByText(/PL!E7.*bad-date/).waitFor();
+   await preview.getByText(/发现 1 条明细异常，见原表第 30 行/).waitFor();
+   await preview.getByText(/PL!D30.*片数.*原值 0.*PL!F30.*净重.*unknown/).waitFor();
+   await preview.getByText(/PL!F31.*原单 648 kg.*明细合计 647 kg/).waitFor();
+   await preview.getByText(/PL!G31.*原单 652 kg.*明细合计 650 kg/).waitFor();
+   assert.equal(await preview.locator('[data-import-state="correction"]').count(),3);
+   assert(await page.locator('#historical-confirm').isDisabled());
+   await page.evaluate(()=>I18n.set('en'));
+   await preview.getByText(/PL!F29.*Expected NET WEIGHT \(KG\).*Found NET WEIGHT \(LB\)/).waitFor();
+   await preview.getByText(/PL!F31.*648 kg.*Detail rows total 647 kg/).waitFor();
+   await page.evaluate(()=>I18n.set('zh-CN'));
+  });
   await t.test('creator sees Submit for Review and approver can approve selected plans on the list',async()=>{
    await page.goto(origin+'/preparation/work-plans/new');
    await page.locator('#preparation-plan-batch [data-submit-for-review]').waitFor();

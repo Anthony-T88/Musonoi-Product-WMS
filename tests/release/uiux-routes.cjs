@@ -150,7 +150,7 @@ function pages(ids){
  add('cu-weighings','/outbounds/weighings',[CU],{state:'retired permission'});
  add('cu-weigh-new','/outbounds/weighings/new',[CU]);
  add('cu-weigh','/outbounds/weighings/:id',[CU],{example:'cuWeigh',state:'retired permission'});
- add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager']});
+ add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'arrival and optional second trailer'});
  for(const [product,key,example] of [[CU,'cu-arrival','cuArrivalPending'],[CO,'co-arrival','coArrival']]){
   add(key,'/loading-plans',[product],{example,state:'waiting-arrival'});
   const entry=cases.at(-1);
@@ -187,7 +187,7 @@ function pages(ids){
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
- add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger, multiple Excel drop and single replacement'});
+ add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger, Excel drop, replacement and cell diagnostics'});
  add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});
  add('historical-former-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'redirected'});
  add('cu-historical-record','/workbench/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported',query:'?product=CU_CATHODE'});

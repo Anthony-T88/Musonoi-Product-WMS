@@ -297,17 +297,25 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const co=cobalt(product),plan=fixtures[product].plan,plate=co?'QA-CO-YARD':'QA-CU-YARD';
    const dispatch=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch',info=await api('admin',product,dispatch);
    const workbook=X.utils.book_new();
-   X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([['HORSE','TON'],[plate,30]]),'Dispatch');
+   X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([['HORSE','TON'],[plate,30],[plate+'-2',30]]),'Dispatch');
    const file={file_name:'arrival.xlsx',mapping:{sheet:'Dispatch',header_row:1,truck_column:1,capacity_column:2,capacity_kg:false},
     file_base64:X.write(workbook,{type:'base64',bookType:'xlsx'}),...(co?{plan_version:info.plan.version}:{})};
    const preview=await api('admin',product,dispatch+'/import-preview',file);
    await api('admin',product,dispatch+(co?'/import':''),{...file,shipment_month:preview.shipment_month,preview_sha256:preview.file_sha256});
-   const vehicle=(await api('admin',product,dispatch)).vehicles.find(row=>row.truck_no===plate);
-   assert(vehicle);
+   const vehicles=(await api('admin',product,dispatch)).vehicles;
+   const vehicle=vehicles.find(row=>row.truck_no===plate),other=vehicles.find(row=>row.truck_no===plate+'-2');
+   assert(vehicle&&other);
    const endpoint=(co?'/cobalt/sales':'/loading-plans')+'/arrivals';
    const contact={trailer_one:plate+'-TRL',driver_name:plate+' Driver',passport_no:plate+'-PASS',arrived_at:new Date(Date.now()-120000).toISOString(),
     ...(co?{transporter:'Synthetic Carrier',dispatch_version:vehicle.version}:{})};
-   const registration=await api('admin',product,endpoint+'/'+vehicle.id,contact);
+   const registration=await api('admin',product,endpoint+'/'+vehicle.id,{...contact,trailer_two:'N/A'});
+   assert.equal(registration.trailer_two,'');
+   const otherContact={...contact,trailer_one:plate+'-TRL-2',driver_name:plate+' Driver 2',passport_no:plate+'-PASS-2',
+    ...(co?{dispatch_version:other.version}:{})};
+   const duplicate=await api('admin',product,endpoint+'/'+other.id,{...otherContact,trailer_two:contact.trailer_one},409);
+   assert.match(duplicate.error,/挂车2|Trailer 2/);
+   const second=await api('admin',product,endpoint+'/'+other.id,{...otherContact,trailer_two:' n / a '});
+   assert.equal(second.trailer_two,'');
    await api('production_operator',product,endpoint+'/'+vehicle.id,{action:'CLEAR',version:registration.version},403);
    const preparation=co?await api('admin',product,'/cobalt/preparations',{
     preparation_plan_id:fixtures[product].occupied.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:1}):null;
@@ -315,7 +323,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    try{
     const list=origin+'/loading-plans?tab=arrivals&shipment_month='+preview.shipment_month;
     await page.goto(list);
-    const row=page.locator((co?'#co-arrivals-table':'#cu-arrivals-table')+' tbody tr').filter({hasText:plate});
+    const row=page.locator((co?'#co-arrivals-table':'#cu-arrivals-table')+' tbody tr').filter({has:page.getByText(plate,{exact:true})});
     const edit=()=>row.locator('a[href*="vehicle_id"]').click();
     const form=page.locator(co?'#co-arrival-form':'#yard-arrival-form');
     const confirmed=()=>row.locator('a[href^="/loading-plans/new"]').waitFor();
@@ -335,9 +343,11 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await edit();await form.locator('[name=driver_name]').waitFor();
     assert.equal(await form.locator('[name=driver_name]').inputValue(),'');
     await form.locator('[name=driver_name]').fill(contact.driver_name);
+    await form.locator('[name=trailer_two]').fill('N/A');
     await form.locator('button[type=submit]').click();
     await page.locator('#operation-confirm-accept').click();
     await confirmed();await edit();
+    assert.equal(await form.locator('[name=trailer_two]').inputValue(),'');
     await form.locator('[data-arrival-clear]').click();
     await page.locator('#operation-confirm-accept').click();
     await row.getByText(/待到厂登记|Awaiting Arrival/).waitFor();

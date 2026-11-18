@@ -22,15 +22,32 @@ window.HistoricalMovements={
  },
  message(code){
   const labels={
-   SHIPPING_DATE_MISSING:['发运日期缺失','Shipping date is missing'],SHIPPING_DATE_INVALID:['发运日期格式无效或晚于今天','Invalid or future shipping date'],
+   SHIPPING_DATE_MISSING:['请填写发运日期','Enter the shipping date'],SHIPPING_DATE_INVALID:['发运日期格式无效，请使用 YYYY-MM-DD','Enter a valid shipping date in YYYY-MM-DD format'],
+   SHIPPING_DATE_FUTURE:['发运日期晚于卢本巴希当前日期','Shipping date is later than today in Lubumbashi'],
    SHIPPING_DATE_AMBIGUOUS:['发运日期字段重复','More than one shipping date field'],RECEIPT_AFTER_SHIPPING:['原始入库日期晚于发运日期','Original receipt is later than shipping'],
-   FORMAL_DOCUMENT_CONFLICT:['与现有正式单据冲突','Conflicts with a formal document'],DOCUMENT_CONFLICT:['同号单据内容、日期或仓库冲突','Same number with different content, date or warehouse'],
+   FORMAL_DOCUMENT_CONFLICT:['与现有正式单据冲突','Conflicts with a formal document'],DOCUMENT_CONFLICT:['已存在同号历史单据','A historical document with this number already exists'],
    UNIT_CONFLICT:['编号已关联其他单据','Identifier already linked to another document'],UNIT_MISSING:['缺少编号','Missing identifier'],DUPLICATE_UNIT:['单内编号重复','Duplicate identifier'],
    DUPLICATE_SEAL:['单内铅封号重复','Duplicate seal in the file'],SEAL_CONFLICT:['铅封号已关联其他单据','Seal already linked to another document'],
    EXCEPTION_REASON_REQUIRED:['请填写 5 至 500 字的复核原因','Enter a review reason of 5 to 500 characters'],
-   INVALID_SHEETS:['片数无效','Invalid sheet count'],INVALID_WEIGHT:['重量缺失或无效','Missing or invalid weight'],SOURCE_TOTAL_MISMATCH:['原单合计与明细不符','Totals do not match detail rows'],
-   TOTAL_ROW_MISSING:['缺少合计行','Totals row is missing'],DOCUMENT_NO_MISSING:['缺少装箱单号','Missing packing list number'],BATCH_NO_MISSING:['缺少备货批次','Missing preparation batch'],
-   DETAILS_MISSING:['缺少明细','Missing detail rows'],INVALID_WORKBOOK:['工作簿格式或表头无效','Invalid workbook format or headers'],
+   INVALID_SHEETS:['片数须为 1 至 100000 的整数','Sheet count must be a whole number between 1 and 100,000'],
+   INVALID_WEIGHT:['重量缺失或无效','Missing or invalid weight'],
+   NET_WEIGHT_INVALID:['净重须为大于 0 的 kg 数值','Net weight must be a positive value in kg'],
+   GROSS_WEIGHT_INVALID:['毛重须为大于 0 的 kg 数值','Gross weight must be a positive value in kg'],
+   GROSS_BELOW_NET:['毛重小于净重','Gross weight is less than net weight'],
+   SOURCE_TOTAL_MISMATCH:['原单合计与明细不符','Source total does not match the detail rows'],
+   TOTAL_ROW_MISSING:['请在明细下方的 A 列填写 TOTAL 作为合计行','Add a totals row marked TOTAL in column A below the detail rows'],
+   DOCUMENT_NO_MISSING:['请填写有效的装箱单号','Enter a valid packing list number'],BATCH_NO_MISSING:['请填写有效的备货批次','Enter a valid preparation lot number'],
+   DETAILS_MISSING:['第 30 行起未找到捆包或袋明细','No bundle or bag detail rows were found from row 30'],
+   INVALID_WORKBOOK:['工作簿格式或表头无效','Invalid workbook format or headers'],
+   FILE_TYPE_INVALID:['文件名或扩展名无效，请选用 XLS 或 XLSX 工作簿','Invalid file name or extension. Choose an XLS or XLSX workbook.'],
+   FILE_ENCODING_INVALID:['文件数据不完整或超过大小限制，请重新选择文件','File data is incomplete or exceeds the size limit. Select the file again.'],
+   FILE_FORMAT_MISMATCH:['文件内容与扩展名不匹配，请用 Excel 重新另存为 XLS 或 XLSX','The file content does not match its extension. Save it again as XLS or XLSX in Excel.'],
+   WORKBOOK_ARCHIVE_INVALID:['XLSX 结构无效或含不支持的组件，请使用标准模板重新另存','The XLSX archive is invalid or contains unsupported components. Save it again using the standard template.'],
+   WORKBOOK_UNREADABLE:['无法读取工作簿，请用 Excel 打开检查并重新保存','Could not read the workbook. Open it in Excel and save it again.'],
+   WORKBOOK_STRUCTURE_INVALID:['请移除宏，并将工作表数量减至 16 张以内','Remove macros and keep no more than 16 worksheets.'],
+   PACKING_SHEET_MISSING:['缺少 PL 装箱单工作表，请检查工作表名称','The PL packing list worksheet is missing. Check the worksheet name.'],
+   HEADER_MISMATCH:['表头与装箱单模板不一致','Header does not match the packing list template'],
+   TEMPLATE_PRODUCT_MISMATCH:['装箱单产品与所选产品不一致','The packing list product does not match the selected product'],
    FILE_TOO_LARGE:['单份文件不能超过 512 KB','Each file must be 512 KB or smaller'],
    FILE_READ_FAILED:['无法读取文件。若文件仅存于网盘，请先下载或设为离线可用，再重新选择。','Could not read the file. If it is online-only, download it or make it available offline, then select it again.'],
    HISTORY_SCOPE:['仓库不在授权范围内','Warehouse is outside your scope'],REVIEW_REQUIRED:['数据已变化，请重新预览','Data changed. Preview again.'],
@@ -38,6 +55,29 @@ window.HistoricalMovements={
    IMPORT_WRITE_FAILED:['整张已回滚，可重试','The entire file was rolled back. Retry.']
   };
   return labels[code]?this.t(...labels[code]):this.t('无法处理文件','File could not be processed');
+ },
+ issueText(issue){
+  const t=this.t,{code,cell,cells,other_cell,value,expected,references,different_fields}=issue;
+  const display=value=>value==null||value===''?t('空白','blank'):value;
+  const location=cells?.length?cells.join('、'):cell;
+  const message=(location?location+' · ':'')+this.message(code);
+  if(code==='HEADER_MISMATCH')return message+t('。应为 ','. Expected ')+expected+t('，当前为 ','. Found ')+display(value);
+  if(code==='SOURCE_TOTAL_MISMATCH'){
+   const weight=issue.field==='net_kg'?t('净重','Net weight'):t('毛重','Gross weight');
+   return message+' · '+weight+t('原单 ',' on the source ')+Number(value)+' kg'+t('，明细合计 ','. Detail rows total ')+Number(expected)+' kg';
+  }
+  if(code==='GROSS_BELOW_NET')return message+' · '+Number(value)+' kg < '+other_cell+' '+Number(expected)+' kg';
+  if(code==='SHIPPING_DATE_FUTURE')return message+' · '+value+t('，当天日期 ','. Today is ')+expected;
+  if(code==='RECEIPT_AFTER_SHIPPING')return message+' · '+value+' > '+other_cell+' '+expected;
+  if(code==='DUPLICATE_UNIT'||code==='DUPLICATE_SEAL')return message+' · '+t('另见 ','See also ')+other_cell;
+  if(code==='DOCUMENT_CONFLICT'){
+   const fields={content:t('原文件或明细','source file or details'),shipping_date:t('发运日期','shipping date'),warehouse:t('归档仓库','archive warehouse')};
+   return message+' · '+value+t('。请核对不一致的','. Check the differing ')+different_fields.map(key=>fields[key]).join(t('、',', '));
+  }
+  if(references?.length)return message+' · '+t('关联编号 ','Related references ')+references.join(' / ');
+  if(value!==undefined&&!['SHIPPING_DATE_AMBIGUOUS','SHIPPING_DATE_MISSING'].includes(code))
+   return message+' · '+t('原值 ','Found ')+display(value);
+  return message;
  },
  uploadError(error,confirm=false){
   if(error.statusCode===413)return this.t('本次上传总大小超过服务器限制。请减少每次选择的文件数后重试。','This upload exceeds the server limit. Select fewer files at a time and retry.');
@@ -236,11 +276,19 @@ window.HistoricalMovements={
   box.innerHTML='<h3>'+t('批量导入预览','Batch Import Preview')+'</h3>'+queue.map((row,index)=>{
    const {name,preview:p,result}=row;
    const id=result?.id||p?.already_imported,product=p?.product_code;
-   const review=(result?.issues||p?.issues||[]).map(code=>this.message(code));
-   if(p?.shipping_issue)review.push(p.shipping_cell||'PL!E7');
-   if(p?.conflicting_documents?.length)review.push(p.conflicting_documents.join(' / '));
-   if(result?.code||p?.code)review.push(this.message(result?.code||p.code));
-   if(p?.error&&I18n.language!=='en')review.push(p.error);
+   const validation=result?.issues||result?.issue_details?result:p;
+   const details=validation?.issue_details||[],shown=new Set(details.map(issue=>issue.code));
+   if(shown.has('SHIPPING_DATE_FUTURE'))shown.add('SHIPPING_DATE_INVALID');
+   const review=[...details.map(issue=>this.issueText(issue)),...(validation?.issues||[]).filter(code=>!shown.has(code)).map(code=>this.message(code))];
+   const code=result?.code||p?.code;
+   if(code&&!shown.has(code))review.push(this.message(code));
+   if(['INVALID_WORKBOOK','WORKBOOK_ARCHIVE_INVALID'].includes(code)&&I18n.language!=='en'&&p?.error)review.push(p.error);
+   const lines=result?.rows?.length?result.rows:p?.rows;
+   const flagged=(lines||[]).filter(line=>line.flags?.length);
+   if(flagged.length){
+    const lineNumbers=flagged.slice(0,5).map(line=>line.source_row).join(t('、',', '));
+    review.push(t('发现 '+flagged.length+' 条明细异常，见原表第 '+lineNumbers+(flagged.length>5?' 等':'')+' 行。',flagged.length+' detail rows flagged. See source '+(flagged.length===1?'row ':'rows ')+lineNumbers+(flagged.length>5?' and others':'')+'.'));
+   }
    const status=id?(result?.status==='IMPORTED'?'imported':'duplicate'):
     p?.importable&&!result?'ready':canReview(row)?'review':result?.code==='IMPORT_WRITE_FAILED'?'retry':'correction';
    const facts=[this.product(product),p?.business_date,p?.document_no,p?.batch_no,
@@ -249,8 +297,8 @@ window.HistoricalMovements={
    return '<details class="panel wms-section wms-import-file" data-history-file="'+index+'"'+(queue.length===1||review.length||canReview(row)?' open':'')+'><summary>'+
     '<span class="wms-import-filename">'+esc(name)+'</span>'+this.status(status)+'</summary>'+
     (facts.length?'<p class="wms-import-facts">'+facts.map(esc).join(' · ')+'</p>':'')+
-    (review.length?'<p class="error" role="status">'+esc(review.join(' · '))+'</p>':'')+
-    (p?.rows?.length?this.lines(result?.rows?.length?result.rows:p.rows,product):'')+
+    (review.length?'<div class="error" role="status"><ul>'+review.map(message=>'<li>'+esc(message)+'</li>').join('')+'</ul></div>':'')+
+    (lines?.length?this.lines(lines,product):'')+
     (canReview(row)?'<div class="business-toolbar"><button type="button" class="button secondary" data-history-review="'+index+'" '+(this.busy?'disabled':'')+'>'+t('复核并导入','Review and Import')+'</button></div>':'')+
    (id?'<div class="business-toolbar">'+this.recordLink(id,product,t('查看导入记录','View Import Record'))+
     (product===ProductContext.code&&this.canArea('inventory')&&p?.accepted_quantity?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')+'</div>':
@@ -323,9 +371,22 @@ window.HistoricalMovements={
   return this.table([t('原表行','Source Row'),t(cu?'捆包号':'袋号',cu?'Bundle No.':'Bag No.'),t('铅封号','Seal No.'),
    ...(cu?[t('片数','Sheets')]:[]),t('毛重（吨）','Gross (MT)'),t('净重（吨）','Net (MT)'),t('校验','Validation')],
    rows.map(r=>[r.source_row,this.text(r.unit_id),this.text(r.seal_no),...(cu?[CountValues.display(r.sheets_count)]:[]),
-    this.weight(r.gross_kg),this.weight(r.net_kg),this.text([...(r.flags||[]).map(code=>this.message(code)),
-     ...(r.conflicts||[]),...(r.seal_conflicts||[]),...(r.excluded?[t('仅保留原表记录','Source record only')]:[])].join(' · '))]),
+    this.weight(r.gross_kg),this.weight(r.net_kg),this.text(this.lineIssues(r).join(' · '))]),
    cu?[0,3,4,5]:[0,3,4]);
+ },
+ lineIssues(row){
+  const t=this.t,details=row.issue_details||[],shown=new Set(details.map(issue=>issue.code));
+  if(['NET_WEIGHT_INVALID','GROSS_WEIGHT_INVALID','GROSS_BELOW_NET'].some(code=>shown.has(code)))shown.add('INVALID_WEIGHT');
+  const messages=details.map(issue=>this.issueText(issue));
+  for(const code of row.flags||[]){
+   if(shown.has(code))continue;
+   if(code==='UNIT_CONFLICT'||code==='SEAL_CONFLICT'){
+    const seal=code==='SEAL_CONFLICT';
+    messages.push(this.issueText({code,cell:'PL!'+(seal?'E':'C')+row.source_row,references:seal?row.seal_conflicts:row.conflicts}));
+   }else messages.push(this.message(code));
+  }
+  if(row.excluded)messages.push(t('仅保留原表记录','Source record only'));
+  return messages;
  },
  facts(row){
   const t=this.t,f=row.source_facts||row;

@@ -15,7 +15,7 @@ const scope=(a='b')=>`EXISTS (SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND
  AND (s.customer_id IS NULL OR s.customer_id=${a}.customer_id))`;
 const bad=(code,message,status=400)=>Object.assign(B.error(status,message),{code});
 const allowed=(path,method)=>method==='GET'&&/^\/api\/v1\/cobalt\/historical-backfill\/(?:documents(?:\/[0-9a-f-]{36})?|stock\/batch\/[0-9a-f-]{36})$/.test(path);
-const factsOf=({rows,document_no,document_key,errors,...facts})=>facts;
+const factsOf=({rows,document_no,document_key,errors,issue_details,...facts})=>facts;
 const reviewableFlags=new Set(['DUPLICATE_UNIT','UNIT_CONFLICT','DUPLICATE_SEAL','SEAL_CONFLICT']);
 
 async function destinations(c,req){
@@ -45,13 +45,20 @@ function compareLines(existing,proposed,{seal=true}={}){
 async function review(c,req,body){
  const file=Packing.source(body),facts=Packing.parse(null,file);
  const site=await destination(c,req,body.warehouse_id,facts);
- const product=facts.product_code,day=facts.shipping_date,issues=[...facts.errors];
+ const product=facts.product_code,day=facts.shipping_date,issues=[...facts.errors],issue_details=[...facts.issue_details];
  const keys=facts.rows.map(row=>row.unit_key).filter(Boolean);
  const seals=[...new Set(facts.rows.map(row=>Packing.key(row.seal_no)).filter(Boolean))];
  if(facts.shipping_issue)issues.push(facts.shipping_issue);
- if(day&&day>today())issues.push('SHIPPING_DATE_INVALID');
+ const currentDay=today();
+ if(day&&day>currentDay){
+  issues.push('SHIPPING_DATE_INVALID');
+  issue_details.push({code:'SHIPPING_DATE_FUTURE',cell:facts.shipping_cell,value:day,expected:currentDay});
+ }
  const original=facts.actual_dates.INBOUND?.day||null;
- if(original&&day&&original>day)issues.push('RECEIPT_AFTER_SHIPPING');
+ if(original&&day&&original>day){
+  issues.push('RECEIPT_AFTER_SHIPPING');
+  issue_details.push({code:'RECEIPT_AFTER_SHIPPING',cell:facts.actual_dates.INBOUND.cell,other_cell:facts.shipping_cell,value:original,expected:day});
+ }
  const {rows:ledger}=await c.query(`SELECT m.id,m.document_key,m.document_no,m.source_facts,m.movement_type,m.business_date::text,m.source_sha256,
   b.source_id backfill,b.warehouse_id,
   ARRAY(SELECT historical_stock_key(l.unit_id) FROM historical_movement_lines l WHERE l.document_id=m.id AND historical_stock_key(l.unit_id)=ANY($3::text[])) matching_units,
@@ -66,9 +73,14 @@ async function review(c,req,body){
  if(legacyOutbound){
   const same=legacyOutbound.source_sha256===file.sha256&&Packing.key(legacyOutbound.source_facts.batch_no)===Packing.key(facts.batch_no)&&
    (legacyOutbound.backfill||compareLines(await priorLines(legacyOutbound.id),facts.rows));
-  if(same&&legacyOutbound.business_date===day&&(!legacyOutbound.backfill||legacyOutbound.warehouse_id===site.id)){
+  const sameDate=legacyOutbound.business_date===day,sameWarehouse=!legacyOutbound.backfill||legacyOutbound.warehouse_id===site.id;
+  if(same&&sameDate&&sameWarehouse){
    if(legacyOutbound.backfill)already=legacyOutbound.id;else reuse=legacyOutbound.id;
-  }else issues.push('DOCUMENT_CONFLICT');
+  }else{
+   issues.push('DOCUMENT_CONFLICT');
+   issue_details.push({code:'DOCUMENT_CONFLICT',cell:'PL!E3',value:legacyOutbound.document_no,
+    different_fields:[...(!same?['content']:[]),...(!sameDate?['shipping_date']:[]),...(!sameWarehouse?['warehouse']:[])]});
+  }
  }
  const inbound=ledger.filter(row=>row.movement_type==='INBOUND');
  if(inbound.length===1){
@@ -94,7 +106,10 @@ async function review(c,req,body){
    UNION SELECT code FROM co_loading_plans WHERE historical_unit_key(packing_list_no)=$1 AND status<>'CANCELLED'`:
   `SELECT document_no reference FROM packing_list_documents WHERE historical_unit_key(document_no)=$1
    UNION SELECT code FROM loading_plan_documents WHERE historical_unit_key(packing_list_no)=$1 AND cancelled_at IS NULL`,[facts.document_key]);
- if(existingDocs.length)issues.push('FORMAL_DOCUMENT_CONFLICT');
+ if(existingDocs.length){
+  issues.push('FORMAL_DOCUMENT_CONFLICT');
+  issue_details.push({code:'FORMAL_DOCUMENT_CONFLICT',cell:'PL!E3',references:existingDocs.map(row=>row.reference)});
+ }
  const references=new Map(),sealReferences=new Map();
  const addReference=(index,key,reference)=>{
   if(!index.has(key))index.set(key,new Set());
@@ -121,7 +136,7 @@ async function review(c,req,body){
  const flags=rows.flatMap(row=>row.flags),eligible=!already&&!issues.length;
  const token=Packing.digest(JSON.stringify([req.user.id,file.sha256,product,day,site.id,site.customer_id,issues,existingDocs.map(row=>row.reference).sort(),
   already,reuse,originalDate,receiptId,rows.map(row=>[row.source_row,row.flags,row.conflicts,row.seal_conflicts,row.excluded])]));
- return {file,facts,site,reuse,receiptId,originalDate,preview:{...facts,rows,issues,conflicting_documents:existingDocs.map(row=>row.reference),
+ return {file,facts,site,reuse,receiptId,originalDate,preview:{...facts,rows,issues,issue_details,conflicting_documents:existingDocs.map(row=>row.reference),
   business_date:day,original_receipt_date:originalDate,already_imported:already,
   importable:eligible&&!flags.length,reviewable:eligible&&flags.length>0&&flags.every(flag=>reviewableFlags.has(flag))&&
    (!reuse||rows.every(row=>!row.flags.includes('UNIT_CONFLICT'))),
@@ -135,7 +150,7 @@ async function confirm(c,req,body,batch){
  if(preview.already_imported)return {status:'ALREADY_IMPORTED',id:preview.already_imported};
  const flagged=preview.rows.filter(row=>row.flags.length);
  if(preview.preview_token!==body.preview_token||(!preview.importable&&!preview.reviewable))
-  return {status:'FAILED',code:'REVIEW_REQUIRED',issues:preview.issues,rows:flagged};
+  return {status:'FAILED',code:'REVIEW_REQUIRED',issues:preview.issues,issue_details:preview.issue_details,rows:flagged};
  let exception=null;
  if(preview.reviewable){
   const reason=typeof body.exception_reason==='string'?body.exception_reason.trim():'';
@@ -205,6 +220,7 @@ function registerBatch(app,pool,admin,csrf,transaction){
    }catch(error){
     if(!error.statusCode&&!['23505','23514'].includes(error.code))require('./service-errors.cjs').report(error,req);
     results.push({index,status:'FAILED',code:error.statusCode?(error.code||'INVALID_WORKBOOK'):action==='preview'?'PREVIEW_FAILED':'IMPORT_WRITE_FAILED',
+     ...(error.statusCode===400&&Array.isArray(error.details)?{issue_details:error.details}:{}),
      error:error.statusCode&&error.statusCode<500?error.message:undefined});
    }
   }

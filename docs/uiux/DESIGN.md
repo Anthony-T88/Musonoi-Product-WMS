@@ -62,6 +62,7 @@
 
 - 登录页和登录后的语言选择器均固定显示「语言/Language」。选项固定显示其本名「中文」和「English」。切换界面语言时，选择器的标签和选项文字保持一致。此控件的双语标签是全站语言规范的例外。
 - Excel 上传使用共享拖放区域 `.wms-excel-drop`，在原文件控件旁提示「将 Excel 文件拖到这里」。保留点击选择和键盘访问。拖入的文件交给原控件及原有的预览和确认流程；文件类型、单选或多选、尺寸、权限及错误提示沿用各自业务规则。
+- 历史单据导入异常在对应文件预览中列出。可定位的异常注明工作表单元格、实际值及预期值；明细冲突注明原表行和相关编号。
 - 使用 `.user-form .form-grid.wms-field-grid`。简单字段用 `label.wms-field`，采用共享行对齐标签、控件和提示。长备注、附件及明细用 `data-field-span="full"` 跨列。字段使用原生 `required`、`readonly`、`disabled`。
 - 启用 `data-wms-validation` 的表单自动为 `.wms-field` 内的原生校验生成下方说明，使用 `aria-invalid` 和 `aria-describedby`。可定位的业务字段错误使用相同语义。整单错误显示在所属操作区。注册及许可证延期使用自己的字段校验和共享错误样式。
 - 主、次、危险、紧凑按钮使用 `.button.primary`、`.button.secondary`、`.button.danger-outline`、`.button.compact`。图标按钮提供可读名称。保存、提交、通过、退回、返回、查询、重置采用统一动词，审批仍显示具体办理动作。
