@@ -471,7 +471,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "seven persistent record selectors",
+      "state": "new license record and record-book row actions",
       "template": "/export-licenses/new"
     },
     {
@@ -939,7 +939,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "five departure filters and selected historical exits",
+      "state": "single-row desktop filters and exited history",
       "template": "/outbounds"
     },
     {

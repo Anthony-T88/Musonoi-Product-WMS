@@ -1,7 +1,7 @@
 'use strict';
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),S=require('./export-shipping.cjs'),R=require('./gate-render.cjs'),PL=require('./packing-list.cjs'),T=require('../dist/tonnes.js');
 const uuid='[0-9a-fA-F-]{36}';
-function allowed(p,m){const root='/api/v1/(?:cobalt/)?gate-permits';return m==='GET'&&new RegExp('^'+root+'(?:|/tasks|/operations/status|/'+uuid+'|/'+uuid+'/revisions/[1-9][0-9]*/(?:file|view))$').test(p)||m==='POST'&&new RegExp('^'+root+'/(?:historical-exits|from/'+uuid+'|'+uuid+'/(?:revise|print|exit))$').test(p);}
+function allowed(p,m){const root='/api/v1/(?:cobalt/)?gate-permits';return m==='GET'&&new RegExp('^'+root+'(?:|/tasks|/operations/status|/'+uuid+'|/'+uuid+'/revisions/[1-9][0-9]*/(?:file|view))$').test(p)||m==='POST'&&new RegExp('^'+root+'/(?:from/'+uuid+'|'+uuid+'/(?:revise|print|exit))$').test(p);}
 const download=p=>new RegExp('^/api/v1/(?:cobalt/)?gate-permits/'+uuid+'/revisions/[1-9][0-9]*/file$').test(p);
 const fields=(b,keys)=>{if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!keys.includes(k)))throw B.error(400,'GATE_INPUT');};
 async function source(c,req,id,ready=true){
@@ -16,8 +16,8 @@ async function issue(c,req,orderId,p,reason){const s=await source(c,req,orderId)
  const snapshot={...s,document_no:s.batch_number,business_date:date,applicant:req.user.display_name},rendered=await R.render(snapshot),html=R.html(rendered.layout,snapshot.document_no);await c.query('INSERT INTO gate_permit_revisions(permit_id,revision,snapshot,template_sha256,file_sha256,html_sha256,content,print_html,reason,generated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[p.id,rev,snapshot,rendered.template_sha256,rendered.file_sha256,PL.digest(Buffer.from(html)),rendered.buffer,html,reason,req.user.id]);if(rev>1)await c.query('UPDATE gate_permits SET current_revision=$2,version=version+1 WHERE id=$1',[p.id,rev]);await event(c,req,p.id,rev===1?'gate_issued':'gate_revised',null,{revision:rev,source_order:orderId,document_no:p.document_no});return {permit_id:p.id,revision:rev};
 }
 async function list(c,req,tasks=false){
- const q=req.query||{},page=Number(q.page||1),state=q.state||'',size=tasks?300:30;
- if(!Number.isInteger(page)||page<1||page>100000||!['','READY','EXITED','MISSING','HISTORY_PENDING'].includes(state))throw B.error(400,'GATE_INPUT');
+ const q=req.query||{},page=Number(q.page||1),state=q.state==='HISTORY_PENDING'?'EXITED':q.state||'',size=tasks?300:30;
+ if(!Number.isInteger(page)||page<1||page>100000||!['','READY','EXITED','MISSING'].includes(state))throw B.error(400,'GATE_INPUT');
  const filter=key=>q[key]?B.text(q[key],key,160):'';
  const product=req.productCode,co=product==='CO_HYDROXIDE';
  const scope=co?`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=sp.project_id
@@ -36,9 +36,9 @@ async function list(c,req,tasks=false){
   g.id permit_id,g.document_no,coalesce(g.state,'MISSING') state,g.version,g.current_revision,
   EXISTS(SELECT 1 FROM gate_print_jobs p WHERE p.permit_id=g.id AND p.revision=g.current_revision) current_print_requested,
   (SELECT actual_exit_at FROM gate_exits WHERE permit_id=g.id) actual_exit_at,NULL::uuid historical_source_id,
-  NULL::uuid historical_detail_id,NULL::text shipping_date,NULL::timestamptz historical_exit_confirmed_at ${from}`;
+  NULL::uuid historical_detail_id,NULL::text shipping_date ${from}`;
  const archive=tasks?" AND $2::text IS NOT NULL":' UNION ALL '+require('./historical-gate.cjs').listSql;
- const candidates='WITH all_rows AS ('+live+archive+') ';
+ const candidates='WITH all_rows AS MATERIALIZED ('+live+archive+') ';
  const filtered=`FROM all_rows WHERE ($3='' OR strpos(lower(coalesce(document_no,'')),lower($3))>0)
   AND ($4='' OR strpos(lower(coalesce(truck_no,'')),lower($4))>0)
   AND ($5='' OR customer_name=$5)
@@ -46,15 +46,20 @@ async function list(c,req,tasks=false){
   AND ($7='' OR strpos(lower(concat_ws(' ',code,document_no,batch_number,truck_no,customer_name)),lower($7))>0)`+
   (tasks?" AND state<>'EXITED'":'');
  const values=[req.user.id,product,filter('permit_no'),filter('truck_no'),filter('customer'),q.approved_on?B.date(q.approved_on):null,filter('search')];
- const stats=(await c.query(candidates+'SELECT state,count(*)::int count '+filtered+' GROUP BY state',values)).rows;
- const counts=Object.fromEntries(stats.map(row=>[row.state,row.count]));
- const items=(await c.query(candidates+'SELECT * '+filtered+" AND ($8='' OR state=$8) "+
-  "ORDER BY coalesce(approved_at,shipping_date::date::timestamp AT TIME ZONE 'Africa/Lubumbashi') DESC NULLS LAST,order_id LIMIT $9 OFFSET $10",
-  [...values,state,size,(page-1)*size])).rows;
- const customers=tasks?[]:(await c.query(candidates+"SELECT DISTINCT customer_name FROM all_rows WHERE nullif(customer_name,'') IS NOT NULL ORDER BY customer_name",values.slice(0,2))).rows.map(row=>row.customer_name);
- return {items,counts,customers,total:state?counts[state]||0:stats.reduce((total,row)=>total+row.count,0),page,page_size:size};
+ const order="coalesce(approved_at,shipping_date::date::timestamp AT TIME ZONE 'Africa/Lubumbashi') DESC NULLS LAST,order_id";
+ const customers=tasks?"'[]'::jsonb":`(SELECT coalesce(jsonb_agg(DISTINCT customer_name ORDER BY customer_name),'[]')
+  FROM all_rows WHERE nullif(customer_name,'') IS NOT NULL)`;
+ const {rows:[data]}=await c.query(candidates+`, filtered_rows AS MATERIALIZED (SELECT * ${filtered}),
+  stats AS (SELECT state,count(*)::int count FROM filtered_rows GROUP BY state),
+  page_rows AS (SELECT * FROM filtered_rows WHERE ($8='' OR state=$8)
+   ORDER BY ${order} LIMIT $9 OFFSET $10)
+  SELECT coalesce((SELECT jsonb_object_agg(state,count) FROM stats),'{}') counts,
+   coalesce((SELECT jsonb_agg(p ORDER BY ${order}) FROM page_rows p),'[]') items,${customers} customers`,
+  [...values,state,size,(page-1)*size]);
+ const total=state?data.counts[state]||0:Object.values(data.counts).reduce((sum,count)=>sum+count,0);
+ return {...data,total,page,page_size:size};
 }
-async function register({app,pool,permitted,csrf}){for(const co of [false,true]){const base=co?'/api/v1/cobalt/gate-permits':'/api/v1/gate-permits';app.get(base,{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,c=>list(c,req)));app.post(base+'/historical-exits',{preHandler:[permitted('gate:exit'),csrf]},req=>mutate(pool,req,'gate:exit',c=>require('./historical-gate.cjs').confirm(c,req)));app.get(base+'/tasks',{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,async c=>{if(!['sales_manager','sales_operator','admin'].includes(req.user.role_code))return {items:[],total:0};const d=await list(c,{...req,query:{}},true);return {items:d.items.map(r=>({kind:'GATE_EXIT',id:r.order_id,status:r.state||'MISSING',document_no:r.batch_number||r.document_no||r.code,href:'/outbounds?view=departures'+(r.permit_id?'&permit='+r.permit_id:'')})),total:d.total};}));app.get(base+'/operations/status',{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,async c=>{const r=(await c.query('SELECT response FROM gate_requests WHERE actor_id=$1 AND product_code=$2 AND route=$3 AND key=$4',[req.user.id,req.productCode,(req.query.method||'POST')+' /api/v1'+req.query.path,req.query.key])).rows[0];if(r?.response.permit_id)await access(c,req,r.response.permit_id);return {committed:!!r,response:r?.response,notice:r?'已确认操作结果':'未找到已提交结果，请保留原幂等键'};}));
+async function register({app,pool,permitted,csrf}){for(const co of [false,true]){const base=co?'/api/v1/cobalt/gate-permits':'/api/v1/gate-permits';app.get(base,{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,c=>list(c,req)));app.get(base+'/tasks',{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,async c=>{if(!['sales_manager','sales_operator','admin'].includes(req.user.role_code))return {items:[],total:0};const d=await list(c,{...req,query:{}},true);return {items:d.items.map(r=>({kind:'GATE_EXIT',id:r.order_id,status:r.state||'MISSING',document_no:r.batch_number||r.document_no||r.code,href:'/outbounds?view=departures'+(r.permit_id?'&permit='+r.permit_id:'')})),total:d.total};}));app.get(base+'/operations/status',{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,async c=>{const r=(await c.query('SELECT response FROM gate_requests WHERE actor_id=$1 AND product_code=$2 AND route=$3 AND key=$4',[req.user.id,req.productCode,(req.query.method||'POST')+' /api/v1'+req.query.path,req.query.key])).rows[0];if(r?.response.permit_id)await access(c,req,r.response.permit_id);return {committed:!!r,response:r?.response,notice:r?'已确认操作结果':'未找到已提交结果，请保留原幂等键'};}));
  app.get(base+'/:id',{preHandler:permitted('gate:read')},req=>C.readTransaction(pool,async c=>{const p=await access(c,req,req.params.id),r=(await c.query('SELECT revision,snapshot,file_sha256,template_sha256,generated_at,reason FROM gate_permit_revisions WHERE permit_id=$1 ORDER BY revision DESC',[p.id])).rows;return {permit:p,revisions:r,exit:(await c.query('SELECT * FROM gate_exits WHERE permit_id=$1',[p.id])).rows[0]||null,history:(await c.query('SELECT e.*,u.display_name actor_name FROM gate_events e JOIN users u ON u.id=e.actor_id WHERE permit_id=$1 ORDER BY e.id',[p.id])).rows};}));
  app.post(base+'/from/:order',{preHandler:[permitted('gate:issue'),csrf]},req=>mutate(pool,req,'gate:issue',async c=>{fields(req.body,[]);await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.productCode+req.params.order]);const p=(await c.query('SELECT * FROM gate_permits WHERE product_code=$1 AND coalesce(co_order_id,cu_loading_id)=$2',[req.productCode,B.uuid(req.params.order)])).rows[0];if(p){await access(c,req,p.id);return {permit_id:p.id,revision:p.current_revision};}return issue(c,req,req.params.order,null,'首次生成');}));
  for(const action of ['revise','print','exit'])app.post(base+'/:id/'+action,{preHandler:[permitted({'revise':'gate:issue',print:'gate:print',exit:'gate:exit'}[action]),csrf]},req=>mutate(pool,req,{'revise':'gate:issue',print:'gate:print',exit:'gate:exit'}[action],async c=>{const p=await access(c,req,req.params.id,true),b=req.body;fields(b,action==='revise'?['version','reason']:action==='print'?['version','printer_id']:['version','actual_exit_at','actual_exit','printed_permit_checked','note']);B.version(b.version);if(p.version!==b.version)throw B.error(409,'GATE_STALE');if(action==='revise'){fields(b,['version','reason']);return issue(c,req,p.co_order_id||p.cu_loading_id,p,B.text(b.reason,'修订原因',1000));}if(action==='print'){fields(b,['version','printer_id']);let printer=null;if(b.printer_id){printer=(await c.query('SELECT * FROM gate_printers WHERE id=$1 AND project_id=$2 AND active',[B.uuid(b.printer_id),p.project_id])).rows[0];if(!printer)throw B.error(403,'GATE_PRINTER_SCOPE');}const job=(await c.query("INSERT INTO gate_print_jobs(permit_id,revision,printer_id,actor_id,state) VALUES($1,$2,$3,$4,'DIALOG_REQUESTED') RETURNING id",[p.id,p.current_revision,b.printer_id||null,req.user.id])).rows[0];await event(c,req,p.id,'gate_print_dialog_requested',null,{job_id:job.id,revision:p.current_revision,printer:printer?{id:printer.id,name:printer.name,queue_name:printer.queue_name,paper_size:printer.paper_size,orientation:printer.orientation,version:printer.version}:null});return {permit_id:p.id,revision:p.current_revision,job_id:job.id};}

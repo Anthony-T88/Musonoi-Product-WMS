@@ -15,9 +15,9 @@ window.HistoricalMovements={
  text(v){return esc(v==null||v===''?'—':v);},
  weight(kg){return kg==null?'—':Tonnes.format(Tonnes.fixed(Tonnes.scaled(String(kg),9)/1000n,9));},
  section(zh,en,body){return '<section class="panel wms-section"><h2>'+this.t(zh,en)+'</h2>'+body+'</section>';},
- table(head,rows,numeric=[]){
+ table(head,rows,numeric=[],server=false){
   if(!rows.length)return System46.stateHTML('empty');
-  return '<div class="business-table">'+UI46Pages.table('<table><thead><tr>'+head.map(label=>'<th scope="col">'+esc(label)+'</th>').join('')+
+  return '<div class="business-table">'+UI46Pages.table('<table'+(server?' data-v34-server="true"':'')+'><thead><tr>'+head.map(label=>'<th scope="col">'+esc(label)+'</th>').join('')+
    '</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(value=>'<td>'+value+'</td>').join('')+'</tr>').join('')+'</tbody></table>',{numeric})+'</div>';
  },
  message(code){
@@ -143,7 +143,7 @@ window.HistoricalMovements={
  page(zh,en,body,admin=false){
   const title=this.t(zh,en);
   Router.page(title,'<div data-page-composed data-no-i18n data-historical-page>'+
-   (admin?'<nav aria-label="'+this.t('面包屑','Breadcrumb')+'" class="business-toolbar"><a href="/workbench">'+this.t('系统管理','System Administration')+'</a><span aria-hidden="true">›</span><span aria-current="page">'+this.t('历史出入库导入','Historical Stock Imports')+'</span></nav>':'')+body+'</div>');
+   (admin?'<nav aria-label="'+this.t('面包屑','Breadcrumb')+'" class="wms-history-breadcrumb"><a href="/workbench">'+this.t('系统管理','System Administration')+'</a><span aria-hidden="true">›</span><span aria-current="page">'+this.t('历史出入库导入','Historical Stock Imports')+'</span></nav>':'')+body+'</div>');
  },
  async list({retain=false}={}){
   const t=this.t,q=new URLSearchParams(location.search);
@@ -175,13 +175,18 @@ window.HistoricalMovements={
   $('historical-filter').onsubmit=e=>{e.preventDefault();Router.go(this.path+'?'+new URLSearchParams(new FormData(e.target)));};
   this.showQueue();
  },
- records(q){return API.request('/historical-movements?'+new URLSearchParams([...q,['all_products','1']]));},
+ records(q){
+  const query=new URLSearchParams(q);
+  query.set('page_size',RowsPerPage.read('historical-ledger',RowsPerPage.standard,q.get('page_size')));
+  query.set('all_products','1');
+  return API.request('/historical-movements?'+query);
+ },
  async refreshLedger(box){
   const q=new URLSearchParams(location.search);
   let data=await this.records(q);
   if(!box.isConnected)return;
   if(!data.items.length&&data.page>1){
-   q.set('page',data.page-1);
+   q.set('page',Math.max(1,Math.ceil(data.total/data.page_size)));
    data=await this.records(q);
    if(!box.isConnected)return;
    history.replaceState(history.state,'',this.path+'?'+q);
@@ -191,6 +196,12 @@ window.HistoricalMovements={
  renderLedger(data,q){
   const box=$('historical-ledger'),t=this.t;
   box.innerHTML=this.ledger(data,q);
+  $('historical-page-size').onchange=e=>{
+   const size=Number(e.target.value),next=new URLSearchParams(q);
+   RowsPerPage.remember('historical-ledger',size);
+   next.set('page_size',size);next.delete('page');
+   Router.go(this.path+'?'+next);
+  };
   const all=$('historical-void-all'),button=$('historical-bulk-void');
   if(!button)return;
   const inputs=[...box.querySelectorAll('[data-historical-select]')],selected=()=>inputs.filter(input=>input.checked);
@@ -234,8 +245,13 @@ window.HistoricalMovements={
   return actions+this.table([...(selectable?[t('选择','Select')]:[]),t('装箱单号','Packing List No.'),t('产品','Product'),t('业务日期','Business Date'),t('备货批次','Preparation Batch'),t('数量','Quantity'),t('净重（吨）','Net Weight (MT)'),t('状态','Status'),t('操作','Action')],
    data.items.map(r=>[...(selectable?[r.voided_at?'—':'<input type="checkbox" data-historical-select value="'+esc(r.id)+'" aria-label="'+esc(t('选择 ','Select ')+r.document_no)+'">']:[]),
     esc(r.document_no),this.product(r.product_code),esc(r.business_date),this.text(r.source_facts.batch_no),CountValues.display(r.quantity),this.weight(r.net_kg),
-    this.status(r.voided_at?'voided':r.import_batch_id?'imported':'legacy'),this.recordLink(r.id,r.product_code,t('查看','View'))]),selectable?[5,6]:[4,5])+
-   '<div class="wms-filter-actions">'+(data.page>1?pager(data.page-1,t('上一页','Previous')):'')+(data.has_next?pager(data.page+1,t('下一页','Next')):'')+'</div>';
+   this.status(r.voided_at?'voided':r.import_batch_id?'imported':'legacy'),this.recordLink(r.id,r.product_code,t('查看','View'))]),selectable?[5,6]:[4,5],true)+
+   '<nav class="co-pager historical-pagination" aria-label="'+t('导入记录分页','Import Record Pagination')+'">'+
+   (data.page>1?pager(data.page-1,t('上一页','Previous')):'<button class="button secondary compact" disabled>'+t('上一页','Previous')+'</button>')+
+   '<span>'+data.page+' / '+Math.max(1,Math.ceil(data.total/data.page_size))+' · '+data.total+'</span>'+
+   '<select id="historical-page-size" aria-label="'+t('每页行数','Rows per page')+'">'+RowsPerPage.standard.map(size=>
+    '<option value="'+size+'"'+(size===data.page_size?' selected':'')+'>'+size+'</option>').join('')+'</select>'+
+   (data.has_next?pager(data.page+1,t('下一页','Next')):'<button class="button secondary compact" disabled>'+t('下一页','Next')+'</button>')+'</nav>';
  },
  async read(files,warehouse,form,replaceIndex){
   if(this.busy)return;

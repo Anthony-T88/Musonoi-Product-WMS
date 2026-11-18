@@ -7,6 +7,19 @@
 .g468-state strong{font-size:26px;font-weight:550;font-variant-numeric:tabular-nums;color:#2c6544}
 .g468-state[aria-current=page]{background:#edf4e9;border-color:#4a8053;color:#2c6544}
 .g468-list{border:1px solid #dce6dc;border-radius:11px;background:#fff;min-width:0;overflow:hidden}
+#page-content form#gate-filter>.form-grid{margin:0;min-width:0}
+@media(min-width:1050px){
+ html[data-release-ui="46"] #page-content form#gate-filter{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:var(--uix-gap-sm);
+ }
+ html[data-release-ui="46"] #page-content form#gate-filter>.form-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr)) minmax(8.5rem,1fr) minmax(0,1fr);
+  gap:var(--uix-gap-sm);
+ }
+ #page-content form#gate-filter>.wms-filter-actions{flex-wrap:nowrap}
+}
 .g468-search{display:flex;align-items:end;gap:14px;padding:20px;flex-wrap:wrap}
 .g468-search>label{flex:1;min-width:180px;display:grid;gap:8px;font-size:13px;color:#718177}
 .g468 :is(input:not([type=checkbox]),select,textarea){max-width:100%;min-width:0;width:100%;box-sizing:border-box;background:#fff;border:1px solid #dce6dc;border-radius:7px;padding:10px;color:#263b30;font:inherit}

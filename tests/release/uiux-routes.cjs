@@ -110,7 +110,7 @@ function pages(ids){
  add('export-licenses','/export-licenses',BOTH,{screenshot:true,roles:['sales_operator','commerce_manager','logistics_field_operator','production_operator']});
  add('export-licenses-filtered','/export-licenses',BOTH,{query:'?status=ACTIVE',state:'status filter',screenshot:true});
  add('legacy-export-licenses','/export-licenses',BOTH,{query:'?view=legacy',state:'historical'});
- add('export-license-new','/export-licenses/new',BOTH,{state:'seven persistent record selectors',screenshot:true});
+ add('export-license-new','/export-licenses/new',BOTH,{state:'new license record and record-book row actions',screenshot:true});
  add('cu-export-license','/export-licenses/:id',[CU],{example:'cuPermit',state:'quota and linked loading plans',screenshot:true});
  add('co-export-license','/export-licenses/:id',[CO],{example:'coPermit',state:'quota and linked loading plans',screenshot:true});
  add('cu-export-license-edit','/export-licenses/:id/edit',[CU],{example:'cuPermitDraft',state:'applying'});
@@ -169,7 +169,7 @@ function pages(ids){
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager']});
- add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'five departure filters and selected historical exits'});
+ add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
  add('templates','/outbounds/templates',BOTH);
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);

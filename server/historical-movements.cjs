@@ -10,10 +10,11 @@ const kind=value=>{
 };
 const select=`SELECT d.id,d.product_code,d.movement_type,d.document_no,d.business_date::text,d.date_evidence,d.source_name,d.source_sha256,d.source_facts,
  d.imported_at,d.voided_at,d.void_reason,u.display_name imported_by,v.display_name voided_by,b.import_batch_id,
- (SELECT count(*)::int FROM historical_movement_lines l WHERE l.document_id=d.id) quantity,
- (SELECT sum(net_kg)::text FROM historical_movement_lines l WHERE l.document_id=d.id) net_kg
+ weights.quantity,weights.net_kg
  FROM historical_movement_documents d JOIN users u ON u.id=d.imported_by LEFT JOIN users v ON v.id=d.voided_by
- LEFT JOIN historical_backfills b ON b.source_id=d.id`;
+ LEFT JOIN historical_backfills b ON b.source_id=d.id
+ CROSS JOIN LATERAL (SELECT count(*)::int quantity,sum(l.net_kg)::text net_kg
+  FROM historical_movement_lines l WHERE l.document_id=d.id) weights`;
 
 async function transaction(pool,req,fn){
  const c=await pool.connect();
@@ -69,8 +70,9 @@ function register({app,pool,auth,csrf}){
    if(!row)throw B.error(404,'历史台账单据不存在');return row;
   };
   app.get(prefix,read,async req=>{
-   const q=req.query,page=Number(q.page||1);
+   const q=req.query,page=Number(q.page||1),size=Number(q.page_size||25);
    if(!Number.isSafeInteger(page)||page<1||page>10000)throw B.error(400,'页码无效');
+   if(![10,25,50,100].includes(size))throw B.error(400,'每页行数无效');
    const type=q.movement_type?kind(q.movement_type):null,from=q.from?B.date(q.from):null,to=q.to?B.date(q.to):null;
    const businessDate=q.business_date?B.date(q.business_date):null;
    const keyword=(value,label)=>typeof value==='string'&&!value.trim()||value===undefined?null:B.text(value,label,160);
@@ -86,9 +88,18 @@ function register({app,pool,auth,csrf}){
     AND ($8::text IS NULL OR strpos(lower(d.document_no),lower($8))>0)`;
    const values=[product(req),type,from,to,state,businessDate,batch,document];
    const all=req.query.all_products==='1';
-   const {rows}=await pool.query(select+where.replace('d.product_code=$1',all?'$1::text IS NOT NULL':'d.product_code=$1')+
-    ' ORDER BY d.business_date DESC,d.id LIMIT 26 OFFSET $9',[...values,(page-1)*25]);
-   return {items:rows.slice(0,25),page,has_next:rows.length>25};
+   const matching=all?where.replace('d.product_code=$1','$1::text IS NOT NULL'):where;
+   const {rows:[result]}=await pool.query(`WITH filtered AS MATERIALIZED (
+    SELECT d.id,d.business_date FROM historical_movement_documents d ${matching}
+   ), page_ids AS (
+    SELECT id FROM filtered ORDER BY business_date DESC,id LIMIT $9 OFFSET $10
+   ), page_rows AS (
+    ${select} JOIN page_ids ids ON ids.id=d.id
+   )
+   SELECT (SELECT count(*)::int FROM filtered) total,
+    coalesce((SELECT jsonb_agg(r ORDER BY r.business_date DESC,r.id) FROM page_rows r),'[]') items`,
+    [...values,size,(page-1)*size]);
+   return {...result,page,page_size:size,has_next:page*size<result.total};
   });
   app.get(prefix+'/:id',read,async req=>{
    const row=await access(req);

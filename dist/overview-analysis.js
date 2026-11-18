@@ -141,7 +141,16 @@ window.OverviewAnalysis={
   try{const saved=localStorage.getItem(storageKey);return this.types[storageKey]||(['bar','line'].includes(saved)?saved:fallback);}catch{return this.types[storageKey]||fallback;}
  },
  bindCharts(root,model){
-  const plots=[...root.querySelectorAll('[data-oa-plot]')],draw=()=>{if(root.isConnected)for(const plot of plots)this.draw(root,model,plot.dataset.oaPlot);};
+  const plots=[...root.querySelectorAll('[data-oa-plot]')],widths=new WeakMap();
+  const draw=()=>{
+   if(!root.isConnected)return;
+   for(const plot of plots){
+    const width=plot.clientWidth;
+    if(!width||widths.get(plot)===width)continue;
+    widths.set(plot,width);
+    this.draw(root,model,plot.dataset.oaPlot);
+   }
+  };
   for(const plot of plots)plot.style.minWidth=this.plotWidth(model)+'px';
   for(const b of root.querySelectorAll('[data-oa-type]'))b.onclick=()=>{
    const key='wms-overview-analysis:'+CurrentUser.id+':'+(model.co?'co':'cu')+':'+b.dataset.oaKey;
@@ -227,7 +236,10 @@ window.OverviewAnalysis={
   host.innerHTML=svg+'</svg>'+(!hasRecords?'<p class="oa-plot-empty">'+this.t('所选期间暂无记录','No records in this period')+'</p>':'');
   const chart=host.querySelector('svg');
   const tooltip=document.createElement('div');tooltip.className='oa-hover-tip';tooltip.hidden=true;tooltip.setAttribute('role','tooltip');host.append(tooltip);
+  let visiblePeriod=-1;
   const show=(index,transform)=>{
+   if(index===visiblePeriod&&!tooltip.hidden)return;
+   visiblePeriod=index;
    const row=rows[index];
    const values=data.map(item=>item.name+' · '+(item.values[index]===null?'—':
     (count&&!item.secondary?CountValues.display(row[item.key]):this.number(item.values[index]))+' '+(item.secondary?secondaryUnit:unit)));
@@ -235,7 +247,7 @@ window.OverviewAnalysis={
    const anchor=new DOMPoint(x(index),T).matrixTransform(transform);
    tooltip.style.left=Math.max(0,Math.min(host.clientWidth-tooltip.offsetWidth,anchor.x-host.getBoundingClientRect().left+8))+'px';
   };
-  host.onpointermove=e=>{
+  const hover=e=>{
    const transform=chart.getScreenCTM();
    if(!transform)return;
    const period=e.target.closest('[data-oa-period]');
@@ -244,6 +256,8 @@ window.OverviewAnalysis={
    if(point.x<L||point.x>right||point.y<T||point.y>T+h){tooltip.hidden=true;return;}
    show(Math.min(rows.length-1,Math.floor((point.x-L)/w*rows.length)),transform);
   };
+  host.onpointerenter=hover;
+  host.onpointermove=hover;
   host.onpointerleave=()=>{tooltip.hidden=true;};
  },
  stock(m){const t=this.t,labels={available:t('可用库存','Available'),locked:t('备货锁定','Preparation Locked'),preparing:t('备货作业中','Preparing'),review:t('待完工审核','Completion Review'),prepared:t('备货完成待匹配','Prepared, Unmatched'),assigned:t('已分配装车','Assigned to Loading'),loaded:t('已装车待出库','Loaded, Not Outbound')};return this.panel('库存状态结构','Inventory State',t('批次 / 数量 / 已知净重','Lots / Quantity / Known Net Weight'),'<div class="oa-state-list">'+m.states.map(s=>'<div><div class="oa-pair"><span>'+labels[s.key]+'</span><strong>'+this.structure(s,m.unit)+'</strong></div><progress max="'+Math.max(1,m.states.reduce((sum,row)=>sum+row.quantity,0))+'" value="'+s.quantity+'" aria-label="'+labels[s.key]+'"></progress></div>').join('')+'</div><div class="oa-quality"><div class="oa-pair"><span>'+t('实际重量确认覆盖','Actual Weight Coverage')+'</span><strong>'+(m.physical?this.number((m.physical-m.unknown)/m.physical*100,1)+'%':'—')+'</strong></div><p>'+m.unknown+' '+m.unit+' '+t('重量待确认','awaiting weight confirmation')+'</p></div>');},

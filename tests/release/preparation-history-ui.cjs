@@ -137,14 +137,12 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const archived=(await api('admin',product,'/historical-movements?'+new URLSearchParams({batch_no:trip.tag,document_no:trip.tag,business_date:day,from:day,to:day,state:'ACTIVE'}))).items;
    assert.deepEqual(archived.map(row=>row.id),[trip.id]);
    const gate=prefix(product)+'/gate-permits';
-   const pending=(await api('admin',product,gate+'?'+new URLSearchParams({state:'HISTORY_PENDING',truck_no:plate.replaceAll('-',' ')}))).items;
-   assert.equal(pending.length,3);
-   assert(pending.every(row=>row.approved_at===null&&row.historical_detail_id));
-   assert.equal((await api('admin',product,gate+'?state=HISTORY_PENDING&approved_on='+day)).total,0);
-   const exits={ids:[trip.id,other.id],actual_exit:true,evidence:'Reviewed synthetic historical gate register'};
-   assert.deepEqual(await api('admin',product,gate+'/historical-exits',exits),{count:2,already_confirmed:0});
-   assert.deepEqual(await api('admin',product,gate+'/historical-exits',exits),{count:0,already_confirmed:2});
-   assert.equal((await api('admin',product,gate+'?state=EXITED')).items.filter(row=>row.historical_source_id).length,2);
+   const exited=(await api('admin',product,gate+'?'+new URLSearchParams({state:'EXITED',truck_no:plate.replaceAll('-',' ')}))).items;
+   assert.equal(exited.length,3);
+   assert(exited.every(row=>row.state==='EXITED'&&row.approved_at===null&&row.actual_exit_at===null&&row.historical_detail_id));
+   assert.equal((await api('admin',product,gate+'?state=EXITED&approved_on='+day)).total,0);
+   const historyIds=new Set((await api('admin',product,gate+'?state=EXITED')).items.map(row=>row.historical_source_id));
+   assert([trip.id,other.id,older.id].every(id=>historyIds.has(id)));
    const numbering=prefix(product)+'/export-permits/invoice-number?'+new URLSearchParams({sales_plan_id:plan});
    assert((await api('admin',product,numbering)).invoice_preview.endsWith('-01'));
    assert.deepEqual(await api('admin',product,numbering+'&'+new URLSearchParams({invoice_no:trip.tag+'-INV'})),{duplicate:true});
@@ -544,17 +542,22 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.deepEqual(await headings(),initialHeadings);
     if(co)await page.setViewportSize({width:390,height:844});
     const assertPeriod=async(period,kind)=>{
+     await page.mouse.move(0,0);
      const tick=plot.locator('.oa-date-tick').filter({hasText:period});
-     const point=await tick.evaluate((label,kind)=>{
-      label.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
-      if(kind==='label'){
-       const box=label.getBBox();
-       return new DOMPoint(box.x+box.width/2,box.y+box.height/2).matrixTransform(label.getScreenCTM()).toJSON();
-      }
-      return new DOMPoint(Number(label.getAttribute('x')),82).matrixTransform(label.ownerSVGElement.getScreenCTM()).toJSON();
-     },kind);
-     await page.mouse.move(point.x,point.y);
-     assert.equal((await plot.getByRole('tooltip').innerText()).split('\n')[0],period);
+     if(kind==='label'){
+      await tick.hover();
+     }else{
+      const position=await tick.evaluate(label=>{
+       const chart=label.ownerSVGElement;
+       const box=chart.getBoundingClientRect();
+       const point=new DOMPoint(Number(label.getAttribute('x')),82).matrixTransform(chart.getScreenCTM());
+       return {x:point.x-box.left,y:point.y-box.top};
+      });
+      await plot.locator('svg').hover({position});
+     }
+     const tooltip=plot.getByRole('tooltip');
+     await tooltip.waitFor();
+     assert.equal((await tooltip.innerText()).split('\n')[0],period,JSON.stringify({period,kind}));
     };
     for(const mode of ['bar','line']){
      await page.locator('[data-oa-key="net"][data-oa-type="'+mode+'"]').click();
@@ -608,7 +611,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     }
    }finally{await ctx.close();}
   });
-  for(const product of products)await t.test(product+' historical sale and departure entry points use aligned filters and confirm selected records',async()=>{
+  for(const product of products)await t.test(product+' historical sale and departure entry points use aligned filters and open exited records',async()=>{
    const {ctx,page}=await open('admin',product,1440),{alternate,other,older}=fixtures[product].historicalTrip;
    const layout=async(selector,fields)=>{
     const form=page.locator(selector);
@@ -625,6 +628,10 @@ test('copper and cobalt preparation batches and historical navigation on indepen
       return [first.left-left,right-actions.right];
      });
      assert(gaps.every(gap=>Math.abs(gap)<3),JSON.stringify({selector,width,gaps}));
+     if(selector==='#gate-filter'&&width===1440){
+      const tops=await form.locator('input,select,.wms-filter-actions button').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().top));
+      assert(Math.max(...tops)-Math.min(...tops)<3,JSON.stringify(tops));
+     }
     }
    };
    try{
@@ -639,16 +646,38 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await page.locator('#sales-invoice-table tbody tr').filter({hasText:other.tag+'-PL'}).waitFor();
     await page.goto(origin+'/workbench/historical-movements');
     await layout('#historical-filter',['batch_no','document_no','business_date','from','to','state']);
-    await page.goto(origin+'/outbounds?view=departures&state=HISTORY_PENDING');
+    assert.equal(await page.locator('#historical-ledger .v34-pagination').count(),0);
+    assert.equal(await page.locator('#historical-ledger .co-pager').count(),1);
+    await page.goto(origin+'/outbounds?view=departures&state=EXITED');
     await layout('#gate-filter',['permit_no','truck_no','customer','approved_on','state']);
     const archived=page.locator('#gate-list tbody tr').filter({hasText:older.tag});
-    await archived.locator('input[type=checkbox]').check();
-    await page.locator('#gate-confirm-history').click();
-    await page.locator('#operation-confirm-comment').fill('Synthetic gate register reviewed');
-    await page.locator('#operation-confirm-accept').click();
-    await archived.waitFor({state:'detached'});
-    await page.goto(origin+'/outbounds?view=departures&state=EXITED');
     await archived.locator('[data-state=EXITED]').waitFor();
+    assert.equal(await page.locator('#gate-confirm-history').count(),0);
+    await archived.locator('a[href^="/stock-outbound/historical/"]').click();
+    await page.waitForURL('**/stock-outbound/historical/*');
+    await page.locator('#page-content').getByText(older.tag+'-PL',{exact:true}).first().waitFor();
+   }finally{await ctx.close();}
+  });
+  for(const product of products)await t.test(product+' export license record book actions align on the right',async()=>{
+   const contract=f.customers[product].contract,value='Synthetic Destination for Record Book Layout';
+   sessions.delete('admin');
+   await api('admin',product,prefix(product)+'/export-permits/record-books',{contract_id:contract,kind:'destination',value});
+   const {ctx,page}=await open('admin',product,1440);
+   try{
+    await page.goto(origin+'/export-licenses/new');
+    await page.getByRole('heading',{name:/^(新建出口许可证档案|New Export License Record)$/}).waitFor();
+    await page.locator('#export-license-application select[name=contract_id]').selectOption(contract);
+    await page.locator('[data-book-open=destination]').click();
+    const row=page.locator('#permit-book-dialog [data-book-entries] li').filter({hasText:value});
+    for(const width of [1440,390]){
+     await page.setViewportSize({width,height:900});
+     const bounds=await row.evaluate(li=>{
+      const label=li.firstElementChild.getBoundingClientRect(),actions=li.lastElementChild.getBoundingClientRect();
+      return {label:label.right,left:actions.left,right:actions.right,edge:li.getBoundingClientRect().right};
+     });
+     assert(bounds.left>=bounds.label-1&&Math.abs(bounds.right-bounds.edge)<2,JSON.stringify(bounds));
+    }
+    assert.equal(await page.evaluate(()=>ExportLicenses.quantity('12.345678',{unit_basis:'COBALT_MT'},4)),'12.3457');
    }finally{await ctx.close();}
   });
   for(const product of products)await t.test(product+' My Tasks renders document-specific approval stages',async()=>{
