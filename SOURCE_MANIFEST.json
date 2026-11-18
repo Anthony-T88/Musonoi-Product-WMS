@@ -1,7 +1,7 @@
 {
   "version": "4.8.5",
-  "auditRevision": "v485-ui5",
-  "revision": "4.8.5-ui5",
+  "auditRevision": "v485-ui6",
+  "revision": "4.8.5-ui6",
   "files": [
     {
       "path": ".dockerignore",
@@ -1021,7 +1021,7 @@
     },
     {
       "path": "dist/cobalt-preparation469.js",
-      "sha256": "ee3279c9d9634a6290a48c1c9d9114dad993ef9340ef72f0e79744015722824c"
+      "sha256": "b8fd999c6eadba2d3e766ba8b42fb9eccf573f955e015a5d91713c7d5b673a78"
     },
     {
       "path": "dist/cobalt-refinement-ui.js",
@@ -1077,7 +1077,7 @@
     },
     {
       "path": "dist/copper461.js",
-      "sha256": "eeae9efce5fe5339f5091cf877163f828e80ca153495a04112c2f4e44922b6bb"
+      "sha256": "3acf71e03539958f9c66e802ff1fe6255a24f73c6bef43718bbe79c134727660"
     },
     {
       "path": "dist/core.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "c3629303dd41738227c5a2b206d4f44552b2173d2c6282ceac6853313b5290d5"
+      "sha256": "9a41c90131a3dcd16423e2c030689f486839e0b9b2a3f8ee5190019916414f12"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "408b7ce69ca6177d637b610ef6faa21d99a6e8b889a6aa7b341845d574e4ccff"
+      "sha256": "081fc791a57e18b309c8c6c3a105fa448b5c6e36867ec1bdd8e386f757562ecf"
     },
     {
       "path": "dist/reports463.js",
@@ -1449,7 +1449,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "7c869203bd534e3301fe6a4bc20e72ae7e5b85fcea317ff790a780ff0087d6c6"
+      "sha256": "23e707e3e3bd94f9185abf852bdbe56fd8abdf7cc24bbe07a18b67c4c3405d32"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1497,7 +1497,7 @@
     },
     {
       "path": "dist/ui46-pages.js",
-      "sha256": "d44b5c0b5ef9145c0ee97687c7b453e32e2a0fd0f140d75cae5cbac02b97bbc7"
+      "sha256": "c3d449289668bc72c184774faff45247bb2c2611ad94c004471a9add166d7975"
     },
     {
       "path": "dist/ui46.css",
@@ -1533,7 +1533,7 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "sha256": "bd0271b327b7349acf47f68e6521db229d1e0530b801a667bfe07bbfca3a67d7"
+      "sha256": "7f2a22cbb709194a94b1fa57baa30e0b3d6f96ce59da2694504d594d853cd99d"
     },
     {
       "path": "dist/ux-r4.css",
@@ -1933,7 +1933,7 @@
     },
     {
       "path": "server/cobalt461.cjs",
-      "sha256": "ff419637271652a4c3e09fec26ff251677826ab93512fc9e7b513eabbc921d24"
+      "sha256": "461531e32e7cc7fe3ac0671669d5f0f5cb4590118fdc44f2845ab3f8f2ddf825"
     },
     {
       "path": "server/commercial-invoice.cjs",
@@ -2185,7 +2185,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "97baf614142b2846002330cd76b30358d6d0f04fffb8ab8adff1aea3229822c8"
+      "sha256": "6ca6b7f5da16956efef93e5c68c469df92277216a6f45faa4a0450d1b5610705"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2469,7 +2469,7 @@
     },
     {
       "path": "tests/release/historical-upload-ui.cjs",
-      "sha256": "f3b39ee56efdeb4b885897919d5f088f6c7cb1d40a0124219c9afff77d98246c"
+      "sha256": "eabc7b61c5d0ddd3b116768263baaf00e8144c25008e055619cefd343af51f90"
     },
     {
       "path": "tests/release/lock-order.cjs",
@@ -2569,7 +2569,7 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "1b104a77facaf3e0e9a2ba1f592662b65eb5efda3ed4cb2b597e12c10f521e15"
+      "sha256": "4d12dded3e853840f7aef5e8eff9a3122bbcf88298d67b359385a52fd24ac959"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -2581,7 +2581,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "f7a0ba5f83cb1c74df1b373cfd884118fa82b29c6b3679dcea26cd123665bae5"
+      "sha256": "8c0dc2cd0660370486d4530a9f3794fa33646dc38b6ed18aa1359f6abd8f9876"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -2637,11 +2637,11 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "310002b5adf4f93b363efa34680ad6d2034b739c7d81f4f7256f99108335671f"
+      "sha256": "34d5632db80d9f284a7e14097e6765f55894c5612829dc03f4d2f4670902f6fa"
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "e3c87f40370b16bdb69354fc74c42dc041ddf06c451ac3c64b0b5f84de1da397"
+      "sha256": "98a42a4cf97f82589945424705b1949e13869b2759003544cdac314816a16e2e"
     },
     {
       "path": "deploy/remove-unposted-test-receipt.sql",

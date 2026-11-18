@@ -823,6 +823,21 @@ html[data-release-ui="46"] :is(#page-content,dialog) :is(.wms-field-grid,[data-w
   overflow-wrap: anywhere;
 }
 .wms-field-error[hidden] { display: none; }
+.wms-excel-drop {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--uix-gap-xs);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: var(--uix-gap-sm);
+  border: var(--uix-border-width) dashed var(--uix-brand);
+  border-radius: var(--uix-radius);
+  background: var(--uix-surface);
+}
+.wms-excel-drop-hint { color: var(--uix-muted); font-size: var(--uix-caption); }
+.wms-excel-drop > input[type="file"] { min-inline-size: 0; max-inline-size: 100%; }
+.wms-excel-drop[data-drag-active] { background: var(--uix-success-soft); }
+.wms-excel-drop:has(input:disabled) { border-color: var(--uix-border); }
 @supports (grid-template-rows: subgrid) {
   .wms-field-grid > .wms-field {
     display: grid;

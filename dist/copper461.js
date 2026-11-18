@@ -108,7 +108,7 @@ window.Copper461={
   REGISTRATION_REQUEST_REVIEW:['待账号注册审批','Pending Account Registration Approval'],
   CO_RECEIPT_SITE:['待入库现场审核','Pending Site Stock Entry Review'],
   CO_RECEIPT_PRODUCTION:['待生产审核入库','Pending Production Stock Entry Review'],
-  CO_COMPLETION_REVIEW:['待备货完工复核','Pending Preparation Completion Review'],
+  CO_COMPLETION_REVIEW:['待完工审核','Pending Completion Review'],
   CO_AMEND_REVIEW:['待备货更正复核','Pending Preparation Correction Review'],
   CO_LOAD_REVIEW:['待现场装车审核','Pending Site Loading Review'],
   CO_LOGISTICS_REVIEW:['待物流出库审核','Pending Logistics Stock Issue Review'],
@@ -120,6 +120,17 @@ window.Copper461={
  taskStage(task){
   const stages=this.taskReviewStages;
   let stage=stages[task.kind];
+  if(task.intake_flow_version===2){
+   const intakeStages=window.CobaltPreparation469?.intakeReviewStages;
+   if(task.kind==='CO_COMPLETION_REVIEW')stage=intakeStages?.SITE_PENDING||stage;
+   if(task.kind==='CO_RECEIPT_PRODUCTION')stage=intakeStages?.PRODUCTION_PENDING||stage;
+   if(!stage&&['RECEIPT','LOT'].includes(task.doc_type))stage=intakeStages?.[task.intake_status];
+  }
+  if(!stage&&task.intake_flow_version===1&&task.doc_type==='RECEIPT'){
+   const kind={SITE_PENDING:'CO_RECEIPT_SITE',PRODUCTION_PENDING:'CO_RECEIPT_PRODUCTION'}[task.status];
+   stage=stages[kind];
+  }
+  if(!stage&&task.intake_flow_version===1&&task.doc_type==='LOT'&&task.status==='PENDING_COMPLETION_REVIEW')stage=stages.CO_COMPLETION_REVIEW;
   if(task.kind==='CO_VEHICLE_REVIEW'&&task.status==='CANCEL_MATCH')stage=['待取消装车匹配审核','Pending Loading Match Cancellation Review'];
   if(task.kind==='EXPORT_LICENSE_REVIEW'){
    const action=window.ExportLicenses?.actions[task.review_action];

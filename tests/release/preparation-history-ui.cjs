@@ -347,6 +347,65 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.deepEqual(saved,{id:registration.id,registration_phase:'CLEARED',arrived_at:null,trailer_one:'',driver_name:'',passport_no:''});
    }finally{await ctx.close();}
   });
+  await t.test('Cobalt site and production task labels match the live detail workflow',async()=>{
+   sessions.clear();
+   const product='CO_HYDROXIDE',operator='logistics_field_operator';
+   const plan=await P.approved(api,product,fixtures[product].plan,P.batch(product,795));
+   const prep=await api(operator,product,'/cobalt/preparations',{preparation_plan_id:plan.id,project_id:f.project,
+    warehouse_id:f.warehouse,total_bags:1,planned_location_id:f.location});
+   const url='/cobalt/preparations/'+prep.id;
+   await api(operator,product,url+'/submit',{version:prep.version});
+   let work=await api(operator,product,url+'/work');
+   const [bag]=work.bags;
+   await api(operator,product,url+'/work/save',{batch_version:work.work.version,bags:[{
+    bag_id:bag.bag_id,version:bag.version,actual_gross_kg:'651',seal_no:'UI6-CO-APPROVAL',sampled:true}]});
+   work=await api(operator,product,url+'/work');
+   const layout=await api('admin',product,'/cobalt/stock/layout');
+   const location=layout.locations.find(l=>l.id===f.location);
+   const placement={preparation_id:prep.id,batch_version:work.work.version,selection:'ALL',target_location_id:location.id,target_version:location.version,source:'PREPARATION'};
+   const preview=await api('site_supervisor',product,'/cobalt/stock/place-preview',placement);
+   await api('site_supervisor',product,'/cobalt/stock/place',{...placement,preview_hash:preview.preview_hash});
+   work=await api(operator,product,url+'/work');
+   await api(operator,product,url+'/work/submit',{batch_version:work.work.version});
+   const compare=async(role,path,stage,step)=>{
+    const {ctx,page}=await open(role,product,390);
+    try{
+     await page.evaluate(()=>I18n.set('zh-CN'));
+     await page.goto(origin+'/overview?management=todos');
+     const row=page.locator('tbody tr').filter({has:page.locator('a[href="'+path+'"]')});
+     await row.locator('.c461-state').filter({hasText:stage}).waitFor();
+     await row.getByRole('link',{name:'进入详情办理 →',exact:true}).click();
+     const badge=page.locator('.co469-state');
+     await badge.waitFor();
+     assert.equal(await badge.innerText(),stage);
+     assert.equal(await page.locator('[data-workflow-kind="co-preparation"] [aria-current="step"] strong').innerText(),step);
+    }finally{await ctx.close();}
+   };
+   await compare('site_supervisor','/preparation/'+prep.id+'/work','待物流现场主管审核','现场主管审核');
+   sessions.delete('site_supervisor');
+   work=await api('site_supervisor',product,url+'/work');
+   await api('site_supervisor',product,url+'/work/approve',{batch_version:work.work.version});
+   await compare('production_manager','/receipts/'+prep.id,'待生产管理部经理确认入库','确认入库');
+  });
+  await t.test('Copper receipt Excel drop retains the native picker and validation on a narrow screen',async()=>{
+   const {ctx,page}=await open('admin','CU_CATHODE',390);
+   try{
+    await page.goto(origin+'/receipts/import');
+    const zone=page.locator('.wms-excel-drop'),input=zone.locator('input[type="file"]');
+    await zone.waitFor();
+    await page.evaluate(async()=>{
+     const transfer=new DataTransfer();
+     transfer.items.add(new File(['example'],'Receipt.XLSX'));
+     document.querySelector('.wms-excel-drop').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));
+    });
+    assert.equal(await input.evaluate(el=>el.files[0].name),'Receipt.XLSX');
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+    await input.setInputFiles({name:'Selected.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from('placeholder')});
+    assert.equal(await input.evaluate(el=>el.files[0].name),'Selected.xlsx');
+    await page.evaluate(()=>I18n.change('en'));
+    await zone.getByText('Drag Excel files here',{exact:true}).waitFor();
+   }finally{await ctx.close();}
+  });
   for(const product of products)await t.test(product+' My Tasks renders document-specific approval stages',async()=>{
    const co=cobalt(product),{ctx,page}=await open('admin',product,co?390:1440);
    const sharedCases=[

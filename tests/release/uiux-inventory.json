@@ -536,7 +536,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "dispatch and Excel drop",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -560,7 +560,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "dispatch and Excel drop",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -634,7 +634,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "single Excel drop",
       "template": "/receipts/import"
     },
     {
@@ -1087,7 +1087,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "ledger and upload",
+      "state": "ledger, multiple Excel drop and single replacement",
       "template": "/workbench/historical-movements"
     },
     {

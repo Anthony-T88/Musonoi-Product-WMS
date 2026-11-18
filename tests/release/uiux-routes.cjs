@@ -119,7 +119,7 @@ function pages(ids){
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});
   add(prefix+'-sales-edit','/sales-plans/:id/edit',[product],{example:prefix+'Plan'});
-  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager']});
+  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'dispatch and Excel drop'});
  }
  add('cu-sales-shipping','/sales-plans/:id/shipping',[CU],{example:'cuPlan'});
  add('legacy-sales-new','/preparation/plans/new',[CU]);
@@ -129,7 +129,7 @@ function pages(ids){
  add('receipt-new','/receipts/new',BOTH,{screenshot:true,roles:['logistics_field_operator']});
  add('cu-receipt','/receipts/:id',[CU],{example:'cuReceipt'});
  add('cu-receipt-edit','/receipts/:id/edit',[CU],{example:'cuReceiptDraft',state:'draft'});
- add('cu-receipt-import','/receipts/import',[CU]);
+ add('cu-receipt-import','/receipts/import',[CU],{state:'single Excel drop'});
  add('co-prep','/receipts/:id',[CO],{example:'coPrep',screenshot:true,state:'completed'});
  add('co-prep-work','/receipts/:id',[CO],{example:'coPrepEditable',screenshot:true,state:'editable',roles:['logistics_field_operator','site_supervisor']});
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
@@ -187,7 +187,7 @@ function pages(ids){
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
- add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger and upload'});
+ add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'ledger, multiple Excel drop and single replacement'});
  add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});
  add('historical-former-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'redirected'});
  add('cu-historical-record','/workbench/historical-movements/:id',[CU],{example:'cuHistorical',state:'imported',query:'?product=CU_CATHODE'});

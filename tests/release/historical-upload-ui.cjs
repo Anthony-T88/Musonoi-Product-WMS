@@ -23,6 +23,23 @@ function workbook(index,tag){
  return {name:number+'.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer};
 }
 
+async function drop(zone,files){
+ await zone.waitFor();
+ const transfer=await zone.page().evaluateHandle(items=>{
+  const transfer=new DataTransfer();
+  for(const {name,mimeType,base64} of items){
+   const bytes=Uint8Array.from(atob(base64),char=>char.charCodeAt(0));
+   transfer.items.add(new File([bytes],name,{type:mimeType}));
+  }
+  return transfer;
+ },files.map(({name,mimeType,buffer})=>({name,mimeType,base64:buffer.toString('base64')})));
+ try{
+  await zone.dispatchEvent('dragover',{dataTransfer:transfer});
+  assert.equal(await zone.getAttribute('data-drag-active'),'');
+  await zone.dispatchEvent('drop',{dataTransfer:transfer});
+ }finally{await transfer.dispose();}
+}
+
 test('historical import previews and confirms a batch above 3 MiB and explains file or proxy failures',async()=>{
  const fixture=E.fixture(),origin=fixture.appCfg.origin;
  const app=await require('../../server/app.cjs').build({config:fixture.appCfg});
@@ -42,6 +59,7 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
   await page.goto(origin+'/workbench/historical-movements');
   const form=page.locator('#historical-upload');
   await form.locator('select').selectOption(fixture.warehouse);
+  await page.evaluate(()=>I18n.set('zh-CN'));
   const fileInput=form.locator('input[type=file]');
   const previewButton=form.locator('button');
   const notice=page.locator('#historical-upload-error');
@@ -53,7 +71,13 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
     return this.name==='Unreadable.xlsx'?Promise.reject(new DOMException('Online-only fixture','NotReadableError')):original.call(this);
    };
   });
-  await fileInput.setInputFiles([...files,...extra]);
+  const zone=form.locator('.wms-excel-drop');
+  await zone.getByText('将 Excel 文件拖到这里',{exact:true}).waitFor();
+  await drop(zone,[...files,...extra]);
+  assert.deepEqual(await fileInput.evaluate(input=>Array.from(input.files,file=>file.name)),[...files,...extra].map(file=>file.name));
+  await drop(zone,[{...extra[0],name:'Not-A-Workbook.pdf'}]);
+  await page.locator('#toast').filter({hasText:/请拖入此处支持的 Excel 格式/}).waitFor();
+  assert.equal(await fileInput.evaluate(input=>input.files.length),7);
   await page.route(previewUrl,proxyError,{times:1});
   await previewButton.click();
   await notice.getByText('本次上传总大小超过服务器限制。请减少每次选择的文件数后重试。',{exact:true}).waitFor();
@@ -70,6 +94,12 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
   await page.getByText(/若文件仅存于网盘/).waitFor();
 
   await page.getByText('单份文件不能超过 512 KB',{exact:true}).waitFor();
+  const replace=page.locator('[data-history-file="6"] .wms-excel-drop');
+  await drop(replace,files.slice(0,2));
+  await page.locator('#toast').filter({hasText:'此处每次只能添加一个 Excel 文件。'}).waitFor();
+  await drop(replace,[{...extra[1],name:'Oversized-retry.XLSX'}]);
+  await page.locator('[data-history-file="6"]').getByText('Oversized-retry.XLSX',{exact:true}).waitFor();
+  await page.locator('[data-history-file="6"]').getByText('单份文件不能超过 512 KB',{exact:true}).waitFor();
   const confirm=async()=>{
    await page.locator('#historical-confirm').click();
    await page.locator('dialog[open] button.primary').click();
@@ -89,7 +119,8 @@ test('historical import previews and confirms a batch above 3 MiB and explains f
   assert.equal(new Set(result.results.map(r=>r.import_batch_id)).size,1);
   await page.locator('#historical-ledger').getByText('UPLOAD-TEST-'+tag+'-0',{exact:true}).waitFor();
   await page.evaluate(()=>I18n.set('en'));
-  await form.getByText('Packing Lists (XLS or XLSX)',{exact:true}).waitFor();
+  await form.getByText(/^Packing Lists \(XLS or XLSX\)/).waitFor();
+  await zone.getByText('Drag Excel files here',{exact:true}).waitFor();
   await fileInput.setInputFiles(files.slice(0,1));
   await page.route(previewUrl,proxyError,{times:1});
   await previewButton.click();

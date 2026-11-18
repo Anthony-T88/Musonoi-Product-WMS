@@ -4,9 +4,74 @@
 window.UI46Pages={
  t:(z,e)=>I18n.language==='en'?e:z,cache:new Map(),ready:false,
  init(){if(this.ready)return;this.ready=true;this.bindFieldValidation();Object.assign(TRANSLATIONS.en,{'计划发运数量（吨）':'Planned Shipment Quantity (MT)','计划备货批次数量':'Planned Lots','预计ARECOMS金属吨':'Planned ARECOMS MT','计划车辆数量':'Planned Vehicles','销售业务员提交 → 销售经理审批 → 商务部经理终审。终审通过后方可派车、备货或装车。':'Sales Operator → Sales Manager → Commercial Department Manager. Dispatch, preparation and loading require final approval.','提交销售经理审批':'Submit for Sales Approval','保存并重新提交审批':'Save and Resubmit for Approval','返回销售管理':'Back to Sales Plans','商务部经理终审':'Commercial Department Manager Review','销售经理审批':'Sales Manager Review','通过并送商务部经理审批':'Approve and Send to Commercial Manager','终审通过，完成创建':'Approve and Create','审批说明（驳回必填）':'Review Note (required when rejecting)','驳回业务员修改':'Return to Sales Operator','销售审批说明':'Sales Review Note','商务审批说明':'Commercial Review Note'});I18n.pattern=new RegExp(Object.keys(TRANSLATIONS.en).filter(Boolean).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');const request=API.request.bind(API);API.request=async(url,options)=>{const key=this.signature(),data=await request(url,options);if((!options?.method||options.method==='GET')&&this.signature()===key&&!/^\/(auth|me|users|roles|product-context)/.test(url)){this.cache.set(url.split('?')[0],{key,data});if(this.cache.size>20)this.cache.delete(this.cache.keys().next().value);}return data;};window.addEventListener('session-expired',()=>this.cache.clear());
+  this.bindExcelDrop();
   // Sales already has authorized server pagination. Do not paginate that page
   // again with the generic client-side table helper.
   if(typeof PageTables!=='undefined'){const enhance=PageTables.enhance.bind(PageTables);PageTables.enhance=()=>{if(UI46.enabled()&&!UI46.copperMap()){const table=document.getElementById('ux10-sales-table');if(table&&!table.dataset.v34Server){table.dataset.v34Server='true';table.dataset.p46Server='';}}enhance();if(UI46.state?.composition)this.normalize(UI46.state);};}
+ },
+ bindExcelDrop(){
+  const selector='input[type="file"][accept]',zoneClass='wms-excel-drop',hintClass='wms-excel-drop-hint',t=this.t;
+  const formats=input=>input.accept.toLowerCase().split(',').map(value=>value.trim()).filter(Boolean);
+  const dropHint=()=>t('将 Excel 文件拖到这里','Drag Excel files here');
+  const fileDrag=event=>Array.from(event.dataTransfer?.types||[]).includes('Files');
+  let id=0;
+  const mount=input=>{
+   if(input.parentElement?.classList.contains(zoneClass)||!formats(input).some(format=>format==='.xls'||format==='.xlsx'))return;
+   const zone=document.createElement('span'),hint=document.createElement('span');
+   zone.className=zoneClass;
+   hint.className=hintClass;
+   hint.id='wms-excel-drop-hint-'+(++id);
+   hint.dataset.noI18n='';
+   hint.setAttribute('aria-hidden','true');
+   hint.textContent=dropHint();
+   input.setAttribute('aria-describedby',[input.getAttribute('aria-describedby'),hint.id].filter(Boolean).join(' '));
+   input.before(zone);
+   zone.append(hint,input);
+   zone.addEventListener('dragover',event=>{
+    if(!fileDrag(event))return;
+    event.preventDefault();
+    const disabled=input.matches(':disabled');
+    event.dataTransfer.dropEffect=disabled?'none':'copy';
+    zone.toggleAttribute('data-drag-active',!disabled);
+   });
+   zone.addEventListener('dragleave',event=>{
+    if(!event.relatedTarget||!zone.contains(event.relatedTarget))zone.removeAttribute('data-drag-active');
+   });
+   zone.addEventListener('drop',event=>{
+    zone.removeAttribute('data-drag-active');
+    if(!fileDrag(event))return;
+    event.preventDefault();
+    if(input.matches(':disabled'))return;
+    const files=Array.from(event.dataTransfer.files),allowed=formats(input);
+    if(!files.length||files.some(file=>!allowed.some(format=>format.startsWith('.')&&file.name.toLowerCase().endsWith(format)))){
+     notify(t('请拖入此处支持的 Excel 格式：','Drop Excel files in the supported formats: ')+allowed.join(', '));
+     return;
+    }
+    if(!input.multiple&&files.length>1){
+     notify(t('此处每次只能添加一个 Excel 文件。','Drop one Excel file at a time here.'));
+     return;
+    }
+    const selection=new DataTransfer();
+    for(const file of files)selection.items.add(file);
+    input.files=selection.files;
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+   });
+  };
+  const scan=root=>{
+   if(root.matches?.(selector))mount(root);
+   root.querySelectorAll?.(selector).forEach(mount);
+  };
+  const observer=new MutationObserver(records=>{
+   if(records.some(record=>record.type==='attributes')){
+    const label=dropHint();
+    for(const hint of document.getElementsByClassName(hintClass))if(hint.textContent!==label)hint.textContent=label;
+   }
+   for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.isConnected)scan(node);
+  });
+  observer.observe(document.body,{subtree:true,childList:true});
+  observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+  scan(document.body);
  },
  signature(){return (window.ProductContext?.code||'')+'|'+location.pathname+location.search;},
  chrome(enabled){const top=document.querySelector('.top-actions');if(!top)return;if(!enabled){if(this.chromeState){for(const {node,marker}of this.chromeState.moves.reverse())if(marker.isConnected)marker.replaceWith(node);document.removeEventListener('click',this.chromeState.outside);this.chromeState.menu.remove();this.chromeState=null;}return;}if(this.chromeState){this.chromeState.password.textContent=this.t('修改密码','Change Password');return;}
