@@ -823,6 +823,8 @@ html[data-release-ui="46"] :is(#page-content,dialog) :is(.wms-field-grid,[data-w
   overflow-wrap: anywhere;
 }
 .wms-field-error[hidden] { display: none; }
+[data-draft-feedback]:empty { display: none; }
+form > [data-draft-save] + button { margin-inline-start: var(--uix-gap-xs); }
 .wms-excel-drop {
   box-sizing: border-box;
   display: grid;

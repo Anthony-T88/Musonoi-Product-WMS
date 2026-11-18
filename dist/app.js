@@ -2,6 +2,22 @@
 const $=id=>document.getElementById(id), I=Inventory;
 const keys=['search','location','batch','customer','status','sample','start','end',...(window.Connected?['business_status','lot_no',...(window.AppConfig?.inventoryDepthV33?['contract_no','packing_list_no']:[])]:[])];
 let page=1,size=10,sort='date',direction='desc',filtered=[],selected=new Set(),toastTimer;
+const RowsPerPage={
+ inventory:[10,20,50],
+ standard:[10,25,50,100],
+ key(table){return ['musonoi-rows-per-page',window.CurrentUser?.id||'guest',window.ProductContext?.code||'CU_CATHODE',location.pathname,table].join(':');},
+ read(table,allowed,requested){
+  if(allowed.includes(Number(requested)))return Number(requested);
+  try{
+   const stored=Number(localStorage.getItem(this.key(table)));
+   if(allowed.includes(stored))return stored;
+  }catch{}
+  return allowed[0];
+ },
+ remember(table,value){
+  try{localStorage.setItem(this.key(table),String(value));}catch{}
+ }
+};
 const logs=[];
 const remote=!!window.Connected;
 let totalRows=0,requestSequence=0,serviceReady=!remote,filterSignature='';
@@ -94,7 +110,12 @@ function apply(){page=1;render();}
 let searchTimer;keys.forEach(k=>$(k).addEventListener(k==='search'?'input':'change',()=>{clearTimeout(searchTimer);if(remote&&k==='search')searchTimer=setTimeout(apply,200);else apply();}));
 $('filter-form').addEventListener('submit',async e=>{e.preventDefault();page=1;await render();if(remote&&!serviceReady)return;if(!$('date-error').hidden){notify('日期范围无效，请先调整日期。');return;}audit(`查询库存：${totalRows} 捆`);notify(`查询完成，共找到 ${totalRows} 捆${remote?'数据库':'演示'}库存。`);});
 $('reset').onclick=()=>{keys.forEach(k=>$(k).value=k==='status'?'ALL':'');selected.clear();page=1;render();notify('已重置全部筛选条件。');};
-$('page-size').onchange=()=>{size=Number($('page-size').value);page=1;render();};
+$('page-size').onchange=()=>{
+ size=Number($('page-size').value);
+ RowsPerPage.remember('inventory',size);
+ page=1;
+ render();
+};
 $('previous').onclick=()=>{if(page>1){page--;render();}};$('next').onclick=()=>{if(page<Math.ceil(totalRows/size)){page++;render();}};
 $('page-buttons').onclick=e=>{const b=e.target.closest('[data-page]');if(b){page=Number(b.dataset.page);render();}};
 document.querySelectorAll('th[data-sort] button').forEach(b=>b.onclick=()=>{const k=b.parentElement.dataset.sort;direction=sort===k&&direction==='asc'?'desc':'asc';sort=k;page=1;render();});

@@ -92,7 +92,8 @@ async function list(c,req,eligible){
   if(q.planned_load_date){add('l.valid_from<=?::date',B.date(q.planned_load_date));add(effective+'>=?::date',q.planned_load_date);}
  }
  const where=' WHERE '+conditions.join(' AND ');
- const result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT 50 OFFSET '+((page-1)*50),v);
+ const pageSize=50,checkMore=eligible&&!q.invoice_preview_id;
+ const result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT '+(checkMore?pageSize+1:pageSize)+' OFFSET '+((page-1)*pageSize),v);
  if(eligible){
   const license=result.rows[0];
   if(q.invoice_preview_id&&license){
@@ -100,7 +101,7 @@ async function list(c,req,eligible){
    const {invoice}=await require('./export-license-plans.cjs').invoiceCandidate(c,{...license,...serial});
    return {items:result.rows,invoice_preview:invoice};
   }
-  return {items:result.rows};
+  return {items:result.rows.slice(0,pageSize),has_more:result.rows.length>pageSize};
  }
  // One aggregate pass produces the filtered count and the unfiltered indicators
  // and per-unit totals. The page and summary share the same read transaction.

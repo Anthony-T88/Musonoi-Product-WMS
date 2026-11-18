@@ -191,19 +191,18 @@ window.OverviewAnalysis={
   const labelY=height-B+12;
   rows.forEach((row,i)=>{
    const xx=x(i);
-   svg+='<text class="oa-axis oa-date-tick" x="'+xx+'" y="'+labelY+'" transform="rotate(-54 '+xx+' '+labelY+')" text-anchor="end">'+esc(row.period)+'</text>';
+   svg+='<text class="oa-axis oa-date-tick" data-oa-period="'+i+'" x="'+xx+'" y="'+labelY+'" transform="rotate(-54 '+xx+' '+labelY+')" text-anchor="end">'+esc(row.period)+'</text>';
   });
   const barWidth=Math.min(24,w/rows.length*.7/series.length);
   data.forEach((item,j)=>{
-   const {y}=item.secondary?rightAxis:leftAxis,seriesUnit=item.secondary?secondaryUnit:unit;
-   const tip=(value,i)=>'<title>'+esc(rows[i].period+' · '+item.name+' · '+
-    (count&&!item.secondary?CountValues.display(rows[i][item.key]):this.number(value,4))+' '+seriesUnit)+'</title>';
+   const {y}=item.secondary?rightAxis:leftAxis;
+   const period=i=>' data-oa-period="'+i+'"';
    if(type==='bar'){
     svg+=item.values.map((value,i)=>{
      if(value==null)return '';
      const barHeight=y(0)-y(value);
-     return '<rect class="oa-bar '+item.css+'" x="'+(x(i)+(j-(series.length-1)/2)*barWidth-barWidth/2)+'" y="'+
-      (barHeight?y(value):y(0)-1)+'" width="'+Math.max(1,barWidth-1)+'" height="'+Math.max(1,barHeight)+'">'+tip(value,i)+'</rect>';
+     return '<rect class="oa-bar '+item.css+'"'+period(i)+' x="'+(x(i)+(j-(series.length-1)/2)*barWidth-barWidth/2)+'" y="'+
+      (barHeight?y(value):y(0)-1)+'" width="'+Math.max(1,barWidth-1)+'" height="'+Math.max(1,barHeight)+'"/>';
     }).join('');
    }else{
     let connected=false;
@@ -213,27 +212,32 @@ window.OverviewAnalysis={
     }).join(' ');
     svg+='<path class="oa-line '+item.css+'" d="'+path+'"/>';
     svg+=item.values.map((value,i)=>value==null?'':j===0?
-     '<circle class="oa-dot '+item.css+'" cx="'+x(i)+'" cy="'+y(value)+'" r="3.5">'+tip(value,i)+'</circle>':
-     '<rect class="oa-dot '+item.css+'" x="'+(x(i)-3)+'" y="'+(y(value)-3)+'" width="6" height="6">'+tip(value,i)+'</rect>').join('');
+     '<circle class="oa-dot '+item.css+'"'+period(i)+' cx="'+x(i)+'" cy="'+y(value)+'" r="3.5"/>':
+     '<rect class="oa-dot '+item.css+'"'+period(i)+' x="'+(x(i)-3)+'" y="'+(y(value)-3)+'" width="6" height="6"/>').join('');
    }
   });
   const unitLabel=(label,x)=>'<text class="oa-axis" transform="translate('+x+' '+(T+h/2)+') rotate(-90)" text-anchor="middle">'+esc(label)+'</text>';
   svg+=axisText(this.t('日期','Date'),L+w/2,height-3,'middle')+unitLabel(unit,13);
   if(rightAxis)svg+=unitLabel(secondaryUnit,width-13);
   host.innerHTML=svg+'</svg>'+(!hasRecords?'<p class="oa-plot-empty">'+this.t('所选期间暂无记录','No records in this period')+'</p>':'');
+  const chart=host.querySelector('svg');
   const tooltip=document.createElement('div');tooltip.className='oa-hover-tip';tooltip.hidden=true;tooltip.setAttribute('role','tooltip');host.append(tooltip);
-  const show=index=>{
+  const show=(index,transform)=>{
    const row=rows[index];
    const values=data.map(item=>item.name+' · '+(item.values[index]===null?'—':
     (count&&!item.secondary?CountValues.display(row[item.key]):this.number(item.values[index]))+' '+(item.secondary?secondaryUnit:unit)));
    tooltip.textContent=[row.period,...values].join('\n');tooltip.hidden=false;
-   tooltip.style.left=Math.max(0,Math.min(width-tooltip.offsetWidth,x(index)+8))+'px';
+   const anchor=new DOMPoint(x(index),T).matrixTransform(transform);
+   tooltip.style.left=Math.max(0,Math.min(host.clientWidth-tooltip.offsetWidth,anchor.x-host.getBoundingClientRect().left+8))+'px';
   };
   host.onpointermove=e=>{
-   const bounds=host.querySelector('svg').getBoundingClientRect(),px=(e.clientX-bounds.left)*width/bounds.width;
-   const py=(e.clientY-bounds.top)*height/bounds.height;
-   if(px<L||px>right||py<T||py>T+h){tooltip.hidden=true;return;}
-   show(Math.min(rows.length-1,Math.floor((px-L)/w*rows.length)));
+   const transform=chart.getScreenCTM();
+   if(!transform)return;
+   const period=e.target.closest('[data-oa-period]');
+   if(period){show(Number(period.dataset.oaPeriod),transform);return;}
+   const point=new DOMPoint(e.clientX,e.clientY).matrixTransform(transform.inverse());
+   if(point.x<L||point.x>right||point.y<T||point.y>T+h){tooltip.hidden=true;return;}
+   show(Math.min(rows.length-1,Math.floor((point.x-L)/w*rows.length)),transform);
   };
   host.onpointerleave=()=>{tooltip.hidden=true;};
  },

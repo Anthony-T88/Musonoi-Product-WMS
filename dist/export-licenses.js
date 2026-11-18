@@ -471,7 +471,9 @@ window.ExportLicenses={
  mountPicker(form,record={}){
   const t=this.t,id='loading-permit-picker',slot=document.createElement('div'),known=new Map(),old=record.export_license;
   slot.className='export-license-picker';
-  slot.innerHTML='<label>'+t('搜索出口许可证','Search Export Licenses')+'<input id="'+id+'-search" type="search" maxlength="160"></label><label>'+t('出口许可证','Export License')+'<select name="license_id"><option value="">'+t('使用原有手工编号流程','Use Existing Manual Numbering')+'</option></select></label><div id="'+id+'-quantity" hidden><label>'+t('预占数量','Reserved Quantity')+'<input name="license_quantity"></label><input type="hidden" name="license_unit"></div><p id="'+id+'-note" role="status"></p>';
+  const search=record.id?'<label>'+t('搜索出口许可证','Search Export Licenses')+
+   '<input id="'+id+'-search" type="search" maxlength="160"></label>':'';
+  slot.innerHTML=search+'<label>'+t('出口许可证','Export License')+'<select name="license_id"><option value="">'+t('使用原有手工编号流程','Use Existing Manual Numbering')+'</option></select></label><div id="'+id+'-quantity" hidden><label>'+t('预占数量','Reserved Quantity')+'<input name="license_quantity"></label><input type="hidden" name="license_unit"></div><p id="'+id+'-note" role="status"></p>';
   const invoice=form.elements.invoice_no,manual=form.elements.export_license_no,select=slot.querySelector('select'),date=form.elements.planned_load_date,sales=form.elements.sales_plan_id,query=slot.querySelector('input[type=search]'),note=slot.querySelector('p');
   const container=invoice?.closest('label')||manual?.closest('label');
   if(!container||!sales)return;
@@ -514,21 +516,30 @@ window.ExportLicenses={
   };
   const refresh=async()=>{
    const token=++request,previous=select.value||old?.license_id||'';
-   known.clear();if(old)known.set(old.license_id,old);
+   const options=new Map();
+   if(old)options.set(old.license_id,old);
    if(sales.value)try{
-    const filters=new URLSearchParams({sales_plan_id:sales.value,search:query.value});
+    const filters=new URLSearchParams({sales_plan_id:sales.value});
+    if(query?.value)filters.set('search',query.value);
     if(date?.value)filters.set('planned_load_date',date.value);
-    const d=await API.request(this.api()+'/options?'+filters);
-    if(token!==request||!form.isConnected)return;
-    for(const item of d.items)known.set(item.id,item);
+    for(let page=1;;page++){
+     if(page>1)filters.set('page',page);
+     const data=await API.request(this.api()+'/options?'+filters);
+     if(token!==request||!form.isConnected)return;
+     for(const item of data.items)options.set(item.id,item);
+     if(query||!data.has_more)break;
+    }
    }catch(e){if(token===request&&form.isConnected)note.textContent=e.message;return;}
+   known.clear();
+   for(const [key,item] of options)known.set(key,item);
    select.querySelectorAll('option:not(:first-child)').forEach(o=>o.remove());
    for(const [key,item] of known)select.add(new Option([item.proforma_no,item.license_no,item.buyer,item.contract_no,item.available!=null?t('可分配 ','Allocatable ')+item.available+' '+item.unit:'',item.effective_until].filter(Boolean).join(' / '),key));
    select.value=known.has(previous)?previous:'';
    if(old&&select.value===old.license_id&&old.unit_basis==='CUSTOM')form.elements.license_quantity.value=old.reserved_quantity;
    show();
   };
-  select.onchange=show;query.oninput=()=>{clearTimeout(timer);timer=setTimeout(refresh,220);};
+  select.onchange=show;
+  if(query)query.oninput=()=>{clearTimeout(timer);timer=setTimeout(refresh,220);};
   sales.addEventListener('change',refresh);date?.addEventListener('change',refresh);
   refresh();
  },

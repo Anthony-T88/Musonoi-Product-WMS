@@ -406,6 +406,118 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await zone.getByText('Drag Excel files here',{exact:true}).waitFor();
    }finally{await ctx.close();}
   });
+  await t.test('Rows per page survive refresh, returning to the route and independent list choices',async()=>{
+   const {ctx,page}=await open('admin','CU_CATHODE',1440);
+   try{
+    const cases=[
+     ['/inventory','#page-size',20],
+     ['/loading-plans/query','#v34-page-size',50]
+    ];
+    for(const [path,selector,rows] of cases){
+     const select=page.locator(selector);
+     await page.goto(origin+path);
+     await select.waitFor();
+     assert.equal(await select.inputValue(),'10');
+     await select.selectOption(String(rows));
+     await page.waitForFunction(value=>new URLSearchParams(location.search).get('page_size')===value,String(rows));
+     await page.reload();
+     await select.waitFor();
+     assert.equal(await select.inputValue(),String(rows));
+     await page.goto(origin+'/overview');
+     await page.goto(origin+path);
+     await select.waitFor();
+     assert.equal(await select.inputValue(),String(rows));
+    }
+    // Exercise the shared client table pager with enough rows to expose its size control.
+    const attachTable=()=>page.evaluate(()=>{
+     const wrap=document.createElement('div');
+     wrap.className='business-table';
+     wrap.innerHTML='<table id="paging-demo"><thead><tr><th>Name</th><th>Ref</th></tr></thead><tbody>'+
+      Array.from({length:32},(_,i)=>'<tr><td>Entry '+i+'</td><td>'+i+'</td></tr>').join('')+'</tbody></table>';
+     document.querySelector('#page-content').append(wrap);
+    });
+    await page.goto(origin+'/workbench');
+    await page.locator('#business-title').waitFor();
+    await attachTable();
+    const client=page.locator('#page-content .v34-pagination select');
+    assert.equal(await client.inputValue(),'10');
+    await client.selectOption('25');
+    assert.equal(await page.locator('#paging-demo tbody tr:visible').count(),25);
+    await page.reload();
+    await page.locator('#business-title').waitFor();
+    await attachTable();
+    assert.equal(await client.inputValue(),'25');
+    assert.equal(await page.locator('#paging-demo tbody tr:visible').count(),25);
+   }finally{await ctx.close();}
+  });
+  for(const product of products)await t.test(product+' chart dates follow the plotted period and the date labels',async()=>{
+   const co=cobalt(product),{ctx,page}=await open('admin',product,1440);
+   try{
+    await page.goto(origin+'/overview');
+    const filter=page.locator(co?'#co-overview-filter':'#dashboard-form');
+    await filter.locator('[name="from"]').fill('2020-03-01');
+    await filter.locator('[name="to"]').fill('2020-03-20');
+    await filter.locator('button.primary').click();
+    const plot=page.locator('[data-oa-plot="net"]');
+    await plot.locator('.oa-date-tick').filter({hasText:'2020-03-15'}).waitFor();
+    if(co)await page.setViewportSize({width:390,height:844});
+    const assertPeriod=async(period,kind)=>{
+     const tick=plot.locator('.oa-date-tick').filter({hasText:period});
+     const point=await tick.evaluate((label,kind)=>{
+      label.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+      if(kind==='label'){
+       const box=label.getBBox();
+       return new DOMPoint(box.x+box.width/2,box.y+box.height/2).matrixTransform(label.getScreenCTM()).toJSON();
+      }
+      return new DOMPoint(Number(label.getAttribute('x')),82).matrixTransform(label.ownerSVGElement.getScreenCTM()).toJSON();
+     },kind);
+     await page.mouse.move(point.x,point.y);
+     assert.equal((await plot.getByRole('tooltip').innerText()).split('\n')[0],period);
+    };
+    for(const mode of ['bar','line']){
+     await page.locator('[data-oa-key="net"][data-oa-type="'+mode+'"]').click();
+     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+     for(const date of ['2020-03-03','2020-03-15','2020-03-19'])await assertPeriod(date,'plot');
+     await assertPeriod('2020-03-15','label');
+    }
+   }finally{await ctx.close();}
+  });
+  for(const product of products)await t.test(product+' creation keeps draft by save and offers all eligible licenses',async()=>{
+   const co=cobalt(product);
+   sessions.delete('export_supervisor');
+   sessions.delete('logistics_manager');
+   const intake=co?await P.approved(api,product,fixtures[product].plan,P.batch(product,796)):null;
+   const {ctx,page}=await open('admin',product,co?390:1440);
+   try{
+    await page.route(url=>url.pathname.endsWith('/export-permits/options'),route=>{
+     const query=new URL(route.request().url()).searchParams;
+     const option=i=>({id:'license-'+i,license_no:'QA-PERMIT-'+i,available:'2',unit:'MT',unit_basis:'NET_MT'});
+     if(query.has('invoice_preview_id'))return route.fulfill({json:{items:[option(51)],invoice_preview:'QA-INVOICE-051'}});
+     const second=query.get('page')==='2';
+     return route.fulfill({json:{items:second?[option(51)]:Array.from({length:50},(_,i)=>option(i+1)),has_more:!second}});
+    });
+    await page.goto(origin+'/loading-plans/new');
+    const form=page.locator(co?'#co-loading-form':'#single-plan-form');
+    const draft=form.locator('[data-draft-save]');
+    await draft.waitFor();
+    assert(await draft.evaluate(button=>button.nextElementSibling?.matches('button.primary')&&
+     button.nextElementSibling?.type==='submit'&&Boolean(button.closest('.o4-footer'))));
+    assert.equal(await form.locator('#loading-permit-picker-search').count(),0);
+    await form.locator('[name="sales_plan_id"]').selectOption(fixtures[product].plan);
+    const permits=form.locator('[name="license_id"]');
+    await permits.selectOption('license-51');
+    await page.waitForFunction(()=>document.querySelector('[name="invoice_no"]')?.value==='QA-INVOICE-051');
+    const receipt='/receipts/new'+(intake?'?preparation_plan='+intake.id:'');
+    for(const path of [receipt,'/sales-plans/new','/stocktaking/new','/export-licenses/new']){
+     await page.goto(origin+path);
+     const pageForm=page.locator('#page-content form').filter({has:page.locator('[data-draft-feedback]')});
+     await pageForm.first().waitFor();
+     for(const action of await pageForm.locator('[data-draft-save]').all()){
+      assert(await action.evaluate(button=>button.nextElementSibling?.type==='submit'),path);
+     }
+    }
+   }finally{await ctx.close();}
+  });
   for(const product of products)await t.test(product+' My Tasks renders document-specific approval stages',async()=>{
    const co=cobalt(product),{ctx,page}=await open('admin',product,co?390:1440);
    const sharedCases=[

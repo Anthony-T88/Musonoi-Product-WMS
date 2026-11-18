@@ -106,7 +106,7 @@ window.DocumentDrafts={
  async save(form,button){
   const key=this.api(),record=form.documentDraft||{id:crypto.randomUUID(),version:0,route:this.route()};
   form.documentDraft=record;
-  const feedback=form.querySelector('[data-draft-feedback]');
+  const feedback=form.draftActions.feedback;
   button.disabled=true;
   try{
    if(!form.checkValidity()&&[...form.elements].some(control=>control.validity?.badInput))throw Error(this.t('请修正格式无效的输入','Correct fields with an invalid format'));
@@ -119,25 +119,54 @@ window.DocumentDrafts={
   }catch(error){feedback.textContent=I18n.translate(error.message,true);}
   finally{button.disabled=false;}
  },
+ saveAction(form){
+  if(form.id==='co469-work-draft')return form.closest('.co469-page')?.querySelector('[data-co469-action="save"]');
+  const submits=[...form.elements].filter(control=>control.tagName==='BUTTON'&&control.type==='submit'&&!control.hidden);
+  return submits.find(button=>button.classList.contains('primary'))||submits[0];
+ },
+ positionActions(form){
+  const {button,feedback}=form.draftActions;
+  const save=this.saveAction(form);
+  if(save){
+   if(button){
+    if(button.nextElementSibling!==save||feedback.nextElementSibling!==button)save.before(feedback,button);
+   }else if(feedback.nextElementSibling!==save)save.before(feedback);
+   return;
+  }
+  if(form.contains(feedback))return;
+  const actions=form.querySelector(':scope > .wms-filter-actions,:scope > .wms-form-actions')||document.createElement('div');
+  if(!actions.isConnected){actions.className='wms-filter-actions';form.append(actions);}
+  actions.append(feedback);
+  if(button)actions.append(button);
+ },
  bind(form){
-  if(form.dataset.documentDraftBound||!this.fields(form).size&&!form.documentDraftFields)return;
-  form.dataset.documentDraftBound='1';
-  let controls=form.querySelector(':scope > .wms-filter-actions,:scope > .wms-form-actions');
-  if(!controls){controls=document.createElement('div');controls.className='wms-filter-actions';form.append(controls);}
-  const native=['v26-receipt','receipt-editor'].includes(form.id)&&[...form.querySelectorAll('button')].find(button=>
-   ['保存草稿','Save Draft'].includes(button.textContent.trim()));
+  if(form.draftActions){this.positionActions(form);return;}
+  if(!this.fields(form).size&&!form.documentDraftFields)return;
+  const save=this.saveAction(form);
+  const native=save&&['v26-receipt','receipt-editor','v27-count-create'].includes(form.id)&&
+   /^(保存草稿|save draft)/i.test(save.textContent.trim())?save:null;
+  const feedback=document.createElement('span');
+  feedback.className='wms-feedback';
+  feedback.setAttribute('role','status');
+  feedback.dataset.draftFeedback='';
+  let button=null;
   if(native){
    native.addEventListener('click',event=>{
     if(form.checkValidity())return;
     event.preventDefault();this.save(form,event.currentTarget);
    });
   }else{
-   controls.insertAdjacentHTML('beforeend','<button type="button" class="button secondary" data-draft-save>'+this.t('保存草稿','Save Draft')+'</button>');
-   controls.querySelector('[data-draft-save]').onclick=event=>this.save(form,event.currentTarget);
+   button=document.createElement('button');
+   button.type='button';
+   button.className='button secondary';
+   button.dataset.draftSave='';
+   button.textContent=this.t('保存草稿','Save Draft');
+   button.onclick=event=>this.save(form,event.currentTarget);
   }
-  controls.insertAdjacentHTML('beforeend','<span class="wms-feedback" role="status" data-draft-feedback></span>');
+  form.draftActions={button,feedback};
+  this.positionActions(form);
   form.addEventListener('submit',()=>this.arm(form),true);
-  this.attach(form).catch(error=>{controls.querySelector('[data-draft-feedback]').textContent=I18n.translate(error.message,true);});
+  this.attach(form).catch(error=>{feedback.textContent=I18n.translate(error.message,true);});
  },
  arm(form){
   if(form.documentDraft?.version&&!(this.pending?.form===form&&this.pending.result))
@@ -148,7 +177,7 @@ window.DocumentDrafts={
   if(!record||record.product_code!==ProductContext.code||record.form_key!==form.id||record.route!==this.route())return;
   this.resume=null;form.documentDraft=record;
   await this.fill(form,record.fields);
-  form.querySelector('[data-draft-feedback]').textContent=this.t('已载入草稿','Draft loaded');
+  form.draftActions.feedback.textContent=this.t('已载入草稿','Draft loaded');
   ProductContext.dirty=false;
  },
  lists:{
