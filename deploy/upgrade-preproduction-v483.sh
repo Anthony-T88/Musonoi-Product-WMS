@@ -137,11 +137,13 @@ case "${2:-base}" in
     migration=197_v485_historical_departure_and_sales_links.sql
     migration_count=197
     ;;
-  v486-ui1)
-    repo=/opt/musonoi-wms-release-v4.8.6-ui1
-    override=/etc/musonoi/preproduction-v486-ui1-build.override.yaml
+  v486-ui1|v486-ui2)
+    suffix=${2#v486-}
+    repo=/opt/musonoi-wms-release-v4.8.6-$suffix
+    override=/etc/musonoi/preproduction-v486-$suffix-build.override.yaml
     source_revision=4.8.6
-    target_revision=4.8.6-ui1
+    if [[ $suffix == ui2 ]]; then source_revision=4.8.6-ui1; fi
+    target_revision=4.8.6-$suffix
     target_version=4.8.6
     release_branch=release/v4.8.6
     migration=197_v485_historical_departure_and_sales_links.sql

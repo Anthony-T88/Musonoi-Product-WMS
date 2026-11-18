@@ -249,6 +249,10 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(archive.statusCode,200);
  const invoiceBook=new(require('exceljs').Workbook)();await invoiceBook.xlsx.load(archive.rawPayload);
  const inv=invoiceBook.getWorksheet('INV');
+ assert.equal(inv.pageSetup.fitToPage,true);
+ assert.equal(inv.pageSetup.fitToWidth,1);
+ assert.equal(inv.pageSetup.fitToHeight,1);
+ assert.equal(invoiceBook.getWorksheet('PL').pageSetup.fitToHeight,0);
  assert.equal(inv.getCell('F30').value,1234.56);
  assert.equal(inv.getCell('F31').value,50);
  assert.equal(inv.getCell('G30').result,2509.24);

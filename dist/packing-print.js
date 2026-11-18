@@ -18,9 +18,8 @@ const PackingPrint={
    return typeof raw==='number'&&Number.isFinite(raw)&&raw>=0&&raw<=2?raw*25.4:12;
   });
   const width=(landscape?long:short)-margins[1]-margins[3],height=(landscape?short:long)-margins[0]-margins[2];
-  const contentWidth=Number.parseFloat(sheet.style.width),contentHeight=[...sheet.querySelectorAll('tr')].reduce((total,row)=>total+(Number.parseFloat(row.style.height)||0),0);
+  const contentWidth=Number.parseFloat(sheet.style.width);
   const mmToPx=96/25.4;
-  const scale=Math.min(1,width*mmToPx/contentWidth,settings?.fitHeight&&contentHeight>0?height*mmToPx/contentHeight:1);
   const win=window.open('about:blank','_blank');
   if(!win){notify(t('请允许弹出窗口后打印。','Allow pop-ups to print this document.'));return;}
   win.opener=null;
@@ -31,14 +30,32 @@ const PackingPrint={
   const paperLabel=paper+' · '+t(landscape?'横向':'纵向',landscape?'Landscape':'Portrait');
   label.setAttribute('role','status');label.textContent=t('正在加载打印样式…','Loading print styles…');
   toolbar.append(button,label);
-  const page=doc.importNode(sheet,true);page.removeAttribute('style');page.style.width=contentWidth+'px';page.style.zoom=String(scale);
-  doc.body.append(toolbar,page);
+  const page=doc.importNode(sheet,true);page.removeAttribute('style');page.style.width=contentWidth+'px';
+  doc.body.append(toolbar);
+  let frame;
+  if(settings?.fitHeight){
+   frame=doc.createElement('div');frame.className='single-print-page';frame.append(page);doc.body.append(frame);
+  }else{
+   page.style.zoom=String(Math.min(1,width*mmToPx/contentWidth));doc.body.append(page);
+  }
   const stylesheet=doc.createElement('link');stylesheet.rel='stylesheet';
   stylesheet.href=new URL('/packing-print.css?rev='+ClientRelease.revision,location.origin).href;
   stylesheet.onerror=()=>{label.textContent=t('打印样式加载失败，请重新打开预览。','Print styles could not be loaded. Reopen the preview.');};
-  stylesheet.onload=()=>{
+  stylesheet.onload=async()=>{
    const margin=margins.map(mm=>mm.toFixed(3)+'mm').join(' ');
    stylesheet.sheet.insertRule('@page { size: '+paper+' '+orientation+'; margin: '+margin+'; }',stylesheet.sheet.cssRules.length);
+   if(frame){
+    await Promise.all([...page.querySelectorAll('img')].map(img=>img.decode().catch(()=>{})));
+    await doc.fonts.ready;
+    const fit=()=>{
+     // Actual row heights include wrapping; positioned drawings may extend past the table.
+     const w=Math.max(page.offsetWidth,page.scrollWidth),h=Math.max(page.offsetHeight,page.scrollHeight);
+     const scale=Math.min(1,(width*mmToPx-2)/w,(height*mmToPx-2)/h);
+     page.style.transform='scale('+scale+')';
+     frame.style.width=Math.ceil(w*scale)+'px';frame.style.height=Math.ceil(h*scale)+'px';
+    };
+    fit();win.addEventListener('beforeprint',fit);
+   }
    label.textContent=paperLabel;button.disabled=false;button.focus();
   };
   doc.head.append(stylesheet);

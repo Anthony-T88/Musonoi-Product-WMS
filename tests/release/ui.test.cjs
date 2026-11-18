@@ -1,6 +1,49 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{chromium}=require('playwright'),E=require('./environment.cjs');
 const release=require('../../server/release.cjs');
+test('commercial invoice prints on one page and long packing lists paginate',async()=>{
+ const fs=require('node:fs/promises'),PL=require('../../server/packing-list.cjs');
+ const items=Array.from({length:85},(_,i)=>({bundle_no:'B-'+i,sheets_per_bundle:48,seal_no:'S-'+i,net_weight:'1.000000',gross_weight:'1.050000'}));
+ const {buffer}=await PL.render({include_invoice:true,document_no:'PL-123',document_date:'2026-11-18',
+  customer_name:'Example buyer',transport:{buyer_information:'Warehouse address and delivery instructions. '.repeat(18)},
+  loading_plan:{invoice_no:'INV-123'},contracts:['Example contract'],lots:['LOT-1'],items,bundle_count:items.length,
+  total_net_weight:'85.000000',total_gross_weight:'89.250000',commercial_invoice:{unit_price_usd:'100.00'}});
+ const assets=['release.js','packing-print.js','v30-ui.js','packing-print.css','uiux-governance.css'];
+ const site=require('node:http').createServer(async(req,res)=>{
+  const asset=new URL(req.url,'http://localhost').pathname.slice(1);
+  if(!asset){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end('<div id="packing-list-preview"></div>');}
+  if(!assets.includes(asset)){res.writeHead(404);return res.end();}
+  res.setHeader('Content-Type',asset.endsWith('.css')?'text/css':'application/javascript; charset=utf-8');
+  res.end(await fs.readFile(path.resolve('dist',asset)));
+ });
+ await new Promise(resolve=>site.listen(0,'127.0.0.1',resolve));
+ let browser;
+ try{
+  browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
+  const context=await browser.newContext(),page=await context.newPage();
+  const origin='http://127.0.0.1:'+site.address().port,output=path.resolve('.runtime/release-tests');
+  await fs.mkdir(output,{recursive:true});
+  await page.goto(origin);
+  await page.evaluate(()=>{
+   window.$=id=>document.getElementById(id);window.I18n={language:'en'};
+   window.Flow={loads(){},load(){}};window.Business={allocations(){}};window.Router={names:{},permission(){},init(){}};
+  });
+  for(const script of ['release.js','packing-print.js','v30-ui.js'])await page.addScriptTag({url:origin+'/'+script});
+  // The supplied template retains the older scale settings used by archived invoices.
+  for(const [name,file,sheet] of [['archived-invoice',await fs.readFile(PL.template),'INV'],['invoice',buffer,'INV'],['packing-list',buffer,'PL']]){
+   const layout=await PL.preview(file,sheet);
+   assert.equal(layout.print.fitHeight,sheet==='INV');
+   await page.evaluate(layout=>Shipping.drawPreview(layout),layout);
+   const opened=page.waitForEvent('popup');await page.getByRole('button',{name:'Print Current Document'}).click();
+   const popup=await opened;
+   await popup.waitForFunction(()=>document.querySelector('#print-current-document')?.disabled===false);
+   const pdf=await popup.pdf({path:path.join(output,name+'.pdf'),preferCSSPageSize:true,printBackground:true});
+   const count=pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)?.length;
+   if(sheet==='INV')assert.equal(count,1,name);else assert(count>1,name);
+   await popup.close();
+  }
+ }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
+});
 test('real browser: current cobalt stock, independent permissions and both languages at desktop/mobile widths',async()=>{
  const f=E.fixture(),origin=f.appCfg.origin,app=await require('../../server/app.cjs').build({config:f.appCfg});let browser;const errors=[],shapes=[];
  try{
