@@ -217,6 +217,9 @@ async function occupyCobaltLocation(location){
       await cards.last().waitFor();
       assert.equal(await cards.count(),5);
       assert.equal(await advanced.count(),0);
+      const customer=page.locator('.wms-map-search select[name=customer_id]');
+      assert(await customer.isVisible());
+      assert(await customer.evaluate(el=>Math.abs(el.getBoundingClientRect().bottom-document.querySelector('.wms-map-search input').getBoundingClientRect().bottom)<3));
       assert.equal(await page.locator('.map-app').evaluate(node=>node.firstElementChild.id),'stock-map-metrics');
       const labels=await cards.locator('span').allTextContents();
       assert.deepEqual(labels,language==='en'?['Occupied Locations','Unoccupied Locations','Occupied Locations in P1','Occupied Locations in P2','Occupied Locations in P3']:['已占用货位数','未占用货位数','P1库区占用货位数','P2库区占用货位数','P3库区占用货位数']);
@@ -230,16 +233,16 @@ async function occupyCobaltLocation(location){
       proofs.push({product,language,width,metrics:labels});
       continue;
      }
-     await advanced.locator('summary').click();
-     await advanced.locator('.wms-map-filter-fields').waitFor();
-     const layout=await advanced.locator('.wms-map-filter-row').evaluate(form=>{
-      const buttons=form.querySelector('.wms-filter-actions'),fields=form.querySelector('.wms-map-filter-fields'),bounds=form.getBoundingClientRect();
-      return {left:Math.abs(fields.getBoundingClientRect().left-bounds.left)<3,right:Math.abs(buttons.getBoundingClientRect().right-bounds.right)<3,
-       overflow:document.documentElement.scrollWidth>innerWidth+2,bounds:[bounds.x,bounds.width,buttons.getBoundingClientRect().x,buttons.getBoundingClientRect().width],css:[getComputedStyle(form).display,getComputedStyle(form).justifyContent,getComputedStyle(buttons).marginInlineStart,buttons.className,getComputedStyle(form).paddingRight,getComputedStyle(form).marginRight,[...form.children].map(n=>[n.className,n.tagName,n.getBoundingClientRect().width,getComputedStyle(n).position])]};
+     assert.equal(await advanced.count(),0);
+     const filters=page.locator('#co-stock-filter');
+     await filters.locator('select[name=customer_id]').waitFor();
+     const layout=await filters.evaluate(form=>{
+      const fields=[...form.querySelectorAll('select')].map(node=>node.getBoundingClientRect());
+      return {rows:new Set(fields.map(r=>Math.round(r.bottom))).size,overflow:document.documentElement.scrollWidth>innerWidth+2};
      });
-     assert(layout.left&&layout.right&&!layout.overflow,JSON.stringify({product,language,width,layout}));
-     await advanced.screenshot({path:output+'/'+(cu?'cu':'co')+'-map-tools-'+language+'-'+width+'.png'});
-     await advanced.locator('summary').click();assert.equal(await advanced.getAttribute('open'),null);
+     assert.equal(layout.rows,1,JSON.stringify({language,width,layout}));
+     assert.equal(layout.overflow,false);
+     await filters.screenshot({path:output+'/co-map-tools-'+language+'-'+width+'.png'});
      proofs.push({product,language,width,filters:layout});
     }
     await page.setViewportSize({width:1440,height:900});

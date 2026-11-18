@@ -98,7 +98,8 @@ function pages(ids){
  add('customers','/customers',BOTH,{screenshot:true,roles:['sales_operator','customer_admin']});
  add('co-customer-edit','/customers',[CO],{query:'?editor=customer'});
  add('co-contract-edit','/customers',[CO],{query:'?editor=contract'});
- add('master','/customers/master-data',[CU]);
+ add('master','/customers/master-data',BOTH);
+ add('co-master-locations','/customers/master-data',[CO],{query:'?type=locations',state:'cobalt locations'});
  for(const [name,example] of [['customers','cuCustomer'],['batches','cuMasterBatch'],['warehouses','warehouse'],['yards','cuMasterYard'],['locations','cuMasterLocation']]){
   add('master-'+name+'-new','/customers/master-data/'+name+'/new',[CU]);
   add('master-'+name+'-edit','/customers/master-data/'+name+'/:id',[CU],{example});

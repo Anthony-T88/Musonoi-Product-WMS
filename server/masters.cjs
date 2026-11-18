@@ -9,6 +9,19 @@ async function saveMaster(c,req,edit,type,fields){const b=req.body||{};let befor
  const names=Object.keys(vals);if(!names.length)throw B.error(400,'没有修改字段');let row;if(edit)row=(await c.query(`UPDATE ${type} SET ${names.map((k,i)=>`${k}=$${i+1}`).join(',')},version=version+1 WHERE id=$${names.length+1} RETURNING *`,[...Object.values(vals),before.id])).rows[0];else row=(await c.query(`INSERT INTO ${type}(project_id,${names.join(',')}) VALUES($1,${names.map((_,i)=>'$'+(i+2)).join(',')}) RETURNING *`,[project,...Object.values(vals)])).rows[0];await B.audit(c,req,edit?'master_updated':'master_created',type,row.id,before,row);return row;}
 module.exports=async function({app,pool,permitted,csrf}){
  app.get('/api/v1/masters',{preHandler:permitted('master:read')},async req=>{const result={projects:(await pool.query('SELECT DISTINCT p.* FROM projects p JOIN user_scopes s ON s.project_id=p.id WHERE s.user_id=$1',[req.user.id])).rows};for(const type of Object.keys(types)){if(type==='customers'&&!req.user.permissions.includes('customer:read')){result.customers=[];continue;}const extra=type==='customers'?"AND m.product_code='CU_CATHODE' AND (s.customer_id IS NULL OR s.customer_id=m.id)":type==='warehouses'?'AND (s.warehouse_id IS NULL OR s.warehouse_id=m.id)':['locations','yards'].includes(type)?'AND (s.warehouse_id IS NULL OR s.warehouse_id=m.warehouse_id)':'';result[type]=(await pool.query(`SELECT m.* FROM ${type} m WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=m.project_id ${extra}) ORDER BY code LIMIT 1000`,[req.user.id])).rows;}return result;});
+ app.get('/api/v1/cobalt/masters',{preHandler:permitted('master:read')},async req=>{
+  const scopeValues=[req.user.id];
+  const hasScope=(warehouse)=>`EXISTS (SELECT 1 FROM user_scopes s WHERE s.user_id=$1
+   AND s.project_id=m.project_id AND s.customer_id IS NULL
+   AND (s.warehouse_id IS NULL OR s.warehouse_id=${warehouse}))`;
+  const [projects,warehouses,yards,locations]=await Promise.all([
+   pool.query('SELECT p.id,p.name FROM projects p WHERE EXISTS (SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.id AND s.customer_id IS NULL) ORDER BY p.name',scopeValues),
+   pool.query('SELECT m.id,m.code,m.name,m.project_id,m.active FROM warehouses m WHERE '+hasScope('m.id')+' ORDER BY m.code',scopeValues),
+   pool.query('SELECT m.id,m.code,m.name,m.name_en,m.project_id,m.warehouse_id,m.active FROM co_zones m WHERE '+hasScope('m.warehouse_id')+' ORDER BY m.code',scopeValues),
+   pool.query('SELECT m.id,m.code,m.project_id,m.warehouse_id,m.zone_id yard_id,m.active FROM co_locations m WHERE '+hasScope('m.warehouse_id')+' ORDER BY m.code',scopeValues)
+  ]);
+  return {projects:projects.rows,warehouses:warehouses.rows,yards:yards.rows,locations:locations.rows};
+ });
  for(const [type,fields] of Object.entries(types)){
  const save=(req,edit)=>B.mutate(pool,req,c=>saveMaster(c,req,edit,type,fields));
  app.post('/api/v1/masters/'+type,{preHandler:[permitted(type==='customers'?'customer:write':'master:write'),csrf]},req=>save(req,false));app.patch('/api/v1/masters/'+type+'/:id',{preHandler:[permitted(type==='customers'?'customer:write':'master:write'),csrf]},req=>save(req,true));}

@@ -6,7 +6,7 @@ window.InventoryArchives={
  location(value){
   if(value==='临时堆存区')return this.t('新生产捆包堆存区','New Production Bundles Stock Area');
   if(value==='P3-LEFTOVER')return this.t('剩余捆包堆存区','Left Over Bundles Stock Area');
-  return value;
+  return copperSlotLabel(value);
  },
  recordedNote(value){return TRANSLATIONS.en[value]?I18n.translate(value,true):value;},
  facts(rows){return UI46Pages.factList(rows.map(([zh,en,value])=>[this.t(zh,en),this.text(value)]));},

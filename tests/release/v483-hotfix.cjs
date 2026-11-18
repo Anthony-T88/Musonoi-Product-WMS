@@ -156,6 +156,28 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await page.waitForFunction(()=>document.getElementById('co-map-svg').getAttribute('viewBox')!==CobaltMap465.data.site_plan.bounds.join(' '));
    await page.locator('#co-map-fit').click();
    await page.waitForFunction(()=>document.getElementById('co-map-svg').getAttribute('viewBox')===CobaltMap465.data.site_plan.bounds.join(' '));
+   assert.equal(await page.locator('.wms-map-advanced').count(),0);
+   assert(await page.locator('#co-stock-filter select[name=customer_id]').isVisible());
+   assert.equal(await page.locator('#co-stock-filter').getByRole('button',{name:/^(重置|清除条件|Reset|Clear Filters)$/}).count(),1);
+   assert.equal(await page.locator('#co-stock-filter :is([name=history],[name=phase],[name=occupancy])').count(),0);
+   for(const width of [390,1440]){
+    await page.setViewportSize({width,height:900});
+    const aligned=await page.locator('#co-stock-filter').evaluate(form=>{
+     const fields=[...form.querySelectorAll('select')].map(e=>e.getBoundingClientRect().bottom);
+     return Math.max(...fields)-Math.min(...fields)<3&&document.documentElement.scrollWidth<=innerWidth+2;
+    });
+    assert(aligned,'Cobalt map filter row at '+width);
+   }
+   const widths=await page.locator('#co-map-svg').evaluate(async svg=>{
+    const bounds=svg.getBoundingClientRect(),samples=[];
+    for(let i=0;i<12;i++){
+     if(i<6)svg.dispatchEvent(new WheelEvent('wheel',{deltaY:-65,clientX:bounds.x+bounds.width/2,clientY:bounds.y+bounds.height/2,bubbles:true,cancelable:true}));
+     await new Promise(requestAnimationFrame);
+     samples.push(svg.viewBox.baseVal.width);
+    }
+    return samples;
+   });
+   assert(widths.at(-1)<widths[0]&&widths.every((w,i)=>!i||w<=widths[i-1]),'Successive zoom-in frames must never jump back');
    const input=page.locator('input[name=location_query]');await input.fill('CO-A-01');await input.press('Enter');
    await page.locator('#co-map-detail').getByText('CO-A-01',{exact:true}).first().waitFor();
    const options='**/api/v1/cobalt/options';
@@ -167,6 +189,16 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await page.unroute(options);
    await page.reload();
    await page.locator('#co-stock-filter').waitFor({state:'attached'});
+  });
+  await t.test('cobalt master data uses authorized cobalt zones and locations',async()=>{
+   const masters=product=>context.request.get(origin+'/api/v1/cobalt/masters',{headers:{'X-Product-Code':product}});
+   assert.equal((await masters(CU)).status(),409);
+   const response=await masters(CO);assert.equal(response.status(),200);
+   const data=await response.json();
+   assert(data.locations.some(l=>l.code==='CO-A-01'&&l.warehouse_id===mapWarehouse.id));
+   await page.goto(origin+'/customers/master-data/locations/new');
+   await page.waitForURL('**/customers/master-data?type=locations');
+   await page.locator('#s46-master-table').getByText('CO-A-01',{exact:true}).first().waitFor();
   });
   await t.test('administrator review dialog and historical source details',async()=>{
    await page.goto(origin+'/workbench/historical-movements');
@@ -233,6 +265,30 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    const response=page.waitForResponse(r=>r.url().endsWith('/preparation-plans/batch/approve')&&r.request().method()==='POST');
    await approve.click();await page.locator('#operation-confirm-accept').click();
    const result=await response;assert.equal(result.status(),200);assert.equal((await result.json()).items[0].state,'APPROVED');
+  });
+  await t.test('copper map and stock documents display the same P3 slot and retain its location ID',async()=>{
+   const {rows:[slot]}=await client.query("INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage) VALUES($1,$2,'P4-01','P4-01','FORMAL') RETURNING id",[f.project,f.warehouse]);
+   await page.close();
+   const cu=await context.newPage();
+   await cu.addInitScript(id=>localStorage.setItem('musonoi-product:'+id,'CU_CATHODE'),admin.id);
+   await cu.addLocatorHandler(cu.locator('#task-notice[open]'),()=>cu.locator('[data-task-dismiss]').click());
+   const scope='?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse});
+   await cu.goto(origin+'/stock-map'+scope);
+   const field=cu.locator('.wms-map-search select[name=customer_id]');
+   await field.waitFor({timeout:8000}).catch(async e=>{throw Error(e.message+' '+(await cu.locator('body').innerText()).slice(-1600));});
+   for(const width of [390,1440]){
+    await cu.setViewportSize({width,height:900});
+    assert(await field.evaluate(el=>Math.abs(el.getBoundingClientRect().bottom-document.querySelector('.wms-map-search input').getBoundingClientRect().bottom)<3));
+   }
+   const query=cu.locator('.wms-map-search input');await query.fill('P3-01');await query.press('Enter');
+   await cu.locator('#stock-map-detail').getByText('P3-01',{exact:true}).first().waitFor();
+   assert.match(await cu.locator('#stock-map-svg [data-map-cell="P4-01"]').getAttribute('aria-label'),/^P3-01/);
+   for(const [url,selector] of [['/stock-map/relocate','target_location_id'],['/stocktaking/new','location_id']]){
+    await cu.goto(origin+url+scope);
+    const option=cu.locator('select[name='+selector+'] option[value="'+slot.id+'"]');
+    await option.waitFor({state:'attached'});assert.equal(await option.textContent(),'P3-01');
+   }
+   await cu.close();
   });
   assert.deepEqual(errors,[]);
  }finally{if(browser)await browser.close();if(app)await app.close();await client.end();}

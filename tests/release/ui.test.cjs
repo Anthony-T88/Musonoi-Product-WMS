@@ -313,8 +313,8 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('#v271-map-labels .v271-label-grid').isVisible());
  await go(page,'/stock-map?project_id='+f.project+'&warehouse_id='+f.warehouse);
  await page.locator('#co-map-canvas').waitFor();
- await page.locator('.wms-map-advanced > summary').click();
- for(const field of ['project_id','warehouse_id','zone_id','location_id','batch','bag','unlocated'])assert(await page.locator('#co-stock-filter [name='+field+']').isVisible(),field);
+ assert.equal(await page.locator('.wms-map-advanced').count(),0);
+ for(const field of ['project_id','warehouse_id','zone_id','location_id','customer_id','batch','bag','unlocated'])assert(await page.locator('#co-stock-filter [name='+field+']').isVisible(),field);
  for(const field of ['status','phase'])assert.equal(await page.locator('#co-stock-filter [name='+field+']').count(),0);
  assert(await page.locator('#co-map-adjust').isDisabled());
  assert(await page.locator('#map465-temporary-list').isVisible());

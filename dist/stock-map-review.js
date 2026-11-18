@@ -21,15 +21,13 @@ const StockMapReview={
   root.classList.add('wms-map-reviewed');
   const t=this.t,stage=root.querySelector(cobalt?'.map465-stage':'.v27-map-stage'),toolbar=stage?.querySelector(cobalt?'.co-map-toolbar':'.v27-map-toolbar');
   if(!toolbar)return;
-  const advanced=document.createElement('details');advanced.className='wms-map-advanced';
-  advanced.innerHTML='<summary>'+t('更多筛选与操作','More Filters and Actions')+'</summary>';
   const controls=document.createElement('section');controls.className='wms-map-controls panel';controls.dataset.noI18n='';
-  controls.innerHTML='<form class="wms-map-search"><label>'+t('定位货位','Find Location')+'<input type="search" name="location_query" maxlength="80" placeholder="'+
-   t(cobalt?'货位号 / 备货批次号 / 袋号':'货位号 / 备货批次号 / 客户',cobalt?'Location / preparation batch / bag':'Location / preparation batch / customer')+
+  controls.innerHTML='<form class="wms-map-search" data-work-view><label>'+t('定位货位','Find Location')+'<input type="search" name="location_query" maxlength="80" placeholder="'+
+   t(cobalt?'货位号 / 备货批次号 / 袋号':'货位号 / 备货批次号',cobalt?'Location / preparation batch / bag':'Location / preparation batch')+
    '"></label><div class="wms-filter-actions"><button class="button primary">'+t('定位','Locate')+'</button><button class="button secondary" type="button" data-map-clear>'+t('清除','Clear')+'</button></div></form>'+
    '<div class="wms-map-actions"></div><div class="wms-map-zones" role="group" aria-label="'+t('按库区查看','Browse Zones')+'"></div>'+
    '<p class="wms-feedback" role="status"></p><div class="wms-map-matches" hidden></div>';
-  root.prepend(controls);if(cobalt)controls.after(advanced);
+  root.prepend(controls);
   const form=controls.querySelector('form'),input=form.elements.location_query,feedback=controls.querySelector('[role="status"]'),results=controls.querySelector('.wms-map-matches');
   const move=(selector,target)=>{const node=root.querySelector(selector);if(node)target.append(node);};
   const actions=controls.querySelector('.wms-map-actions'),zones=controls.querySelector('.wms-map-zones');
@@ -39,28 +37,23 @@ const StockMapReview={
   const refresh=document.createElement('button');refresh.type='button';refresh.className='button secondary';refresh.textContent=t('刷新','Refresh');
   refresh.onclick=()=>Router.go(location.pathname+location.search,true);actions.append(refresh);
   if(cobalt){
-   for(const selector of ['.co-stock-page > form','.co-stock-filter','.map465-stats','.map465-actions'])move(selector,advanced);
-   advanced.append(toolbar);
+   const filters=root.querySelector('#co-stock-filter');
+   if(filters){filters.classList.add('wms-map-filter-row');controls.before(filters);}
   }else{
+   const customer=root.querySelector('#stock-map-filter select[name="customer_id"]');
+   if(customer){
+    const field=customer.closest('label');
+    field.firstChild.textContent=t('客户','Customer');
+    field.querySelector('option[value=""]').textContent=t('全部','All');
+    input.closest('label').after(field);
+    customer.onchange=()=>{
+     const q=StockMap.params();
+     if(customer.value)q.set('customer_id',customer.value);else q.delete('customer_id');
+     Router.go(StockMap.url(q));
+    };
+   }
    this.copperMetrics(root);
    root.querySelectorAll('.map-filter-box,.v27-map-filter').forEach(node=>node.remove());
-  }
-  const filters=advanced.querySelector(cobalt?'#co-stock-filter':'#stock-map-filter');
-  if(filters){
-   filters.classList.add('wms-filter-row','wms-map-filter-row');
-   filters.classList.remove('filters','co-stock-filter','ui46-filter','p46-filter');
-   const fields=filters.querySelector('.map-filter-grid')||document.createElement('div');
-   fields.classList.add('wms-map-filter-fields');
-   for(const field of [...filters.querySelectorAll(':scope > label')])fields.append(field);
-   if(!fields.isConnected)filters.prepend(fields);
-   const oldButtons=filters.querySelector('.business-toolbar');
-   const buttons=oldButtons||document.createElement('div');
-   buttons.classList.remove('business-toolbar');
-   buttons.classList.add('wms-filter-actions');
-   const collectButtons=()=>{for(const button of [...filters.querySelectorAll(':scope > button')])buttons.append(button);};
-   collectButtons();
-   if(!buttons.isConnected)filters.append(buttons);
-   new MutationObserver(collectButtons).observe(filters,{childList:true});
   }
   const regions=cobalt?[...root.querySelectorAll('[data-site-zone]')]:
    ['P1','P2','P4','P5','P3'].map(code=>root.querySelector('[data-map-region="'+code+'"]')).filter(Boolean);
@@ -100,14 +93,15 @@ const StockMapReview={
    if(!query){feedback.textContent=t('请输入定位条件。','Enter a location, batch or search term.');return;}
    try{
     const rows=cobalt?CobaltMap465.data.locations:StockMap.data.locations;
-    const locationCode=(cobalt?query:query.replace(/^p3-(\d+)$/,'p4-$1')).replace(/^(p\d+-|co-[abc]-)([1-9])$/,(_,prefix,serial)=>prefix+'0'+serial);
-    const exact=rows.find(row=>[row.code,row.cell_code].some(value=>[query,locationCode].includes(value?.toLowerCase())));
+    const locationCode=query.replace(/^(p\d+-|co-[abc]-)([1-9])$/,(_,prefix,serial)=>prefix+'0'+serial);
+    const find=code=>rows.find(row=>[row.code,row.cell_code].some(value=>value?.toLowerCase()===code));
+    const exact=(!cobalt&&/^p3-\d+$/.test(locationCode)?find(locationCode.replace(/^p3-/,'p4-')):null)||find(locationCode)||find(query);
     let hits=exact?[exact]:rows.filter(row=>(cobalt?[row.code,row.preparation_batch_no]:
      [row.code,row.cell_code,StockMap.areaName(row),row.claim_lot_no,...(row.current.lots||[]),...row.current.customers.map(c=>c.name)])
      .some(value=>value?.toLowerCase().includes(query)));
     if(cobalt&&!hits.length){
      const filters=new URLSearchParams(location.search);
-     for(const key of [...filters.keys()])if(!['project_id','warehouse_id','zone_id'].includes(key))filters.delete(key);
+     for(const key of [...filters.keys()])if(!['project_id','warehouse_id','zone_id','customer_id'].includes(key))filters.delete(key);
      filters.set('bag',input.value.trim());
      const found=await API.request('/cobalt/stock/map?'+filters);
      const ids=new Set(found.locations.filter(row=>row.matched_bags>0).map(row=>row.id));
@@ -125,7 +119,7 @@ const StockMapReview={
    }catch(err){if(token===sequence&&root.isConnected)feedback.textContent=err.message;}
   };
   controls.querySelector('[data-map-clear]').onclick=()=>{
-   ++sequence;form.reset();results.hidden=true;feedback.textContent='';
+   ++sequence;input.value='';results.hidden=true;feedback.textContent='';
    if(cobalt&&detail)CobaltMap465.closeDetail(detail,false);
    if(!cobalt){StockMap.detailSequence++;MapView.selected=null;}
    if(detail)detail.hidden=true;

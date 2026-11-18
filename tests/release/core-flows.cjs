@@ -69,7 +69,11 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,
    planned_load_date:today,destination:'Synthetic destination',invoice_no:'DUPLICATE-'+salt,export_license_no:'RC2-LICENSE',remark:'',...preview.versions},409);
   const match=async()=>{const d=await api('/cobalt/loading/plans/'+plan.id),p=await api('/cobalt/loading/preview?plan_id='+plan.id+'&sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);await api('/cobalt/loading/plans/'+plan.id+'/match','logistics_field_operator',{version:d.plan.version,preview_hash:p.preview_hash});return api('/cobalt/loading/plans/'+plan.id);};
-  f.rc2match=match;matched=await match();review=await api('/cobalt/loading/orders/'+matched.order.id+'/requests','logistics_field_operator',{version:matched.order.version,kind:'CANCEL_MATCH',reason:'Synthetic cancellation proof'});
+  f.rc2match=match;matched=await match();
+  const scopedMap=id=>api('/cobalt/stock/map?'+new URLSearchParams({warehouse_id:f.warehouse,preparation_id:prep.id,customer_id:id}));
+  assert.equal((await scopedMap(customer.id)).summary.bags,1);
+  assert.equal((await scopedMap(crypto.randomUUID())).summary.bags,0);
+  review=await api('/cobalt/loading/orders/'+matched.order.id+'/requests','logistics_field_operator',{version:matched.order.version,kind:'CANCEL_MATCH',reason:'Synthetic cancellation proof'});
  });
  await check('administrator with raw historical grant is denied; supervisor needs permission and correct version',async()=>{
   const body={version:review.version,order_version:matched.order.version,note:'Synthetic review'};
@@ -78,7 +82,9 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const id=f.accounts.find(a=>a.role==='site_supervisor').id;await c.query("DELETE FROM role_permissions WHERE role_code='site_supervisor' AND permission_code='co:loading-review'");
   assert.equal((await request('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body)).statusCode,401);
   await c.query("INSERT INTO role_permissions VALUES('site_supervisor','co:loading-review')");const a=f.accounts.find(a=>a.id===id),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.94.0.1',headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});sessions.site_supervisor={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};
-  await api('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body);assert.equal((await api('/cobalt/loading/plans/'+plan.id)).plan.status,'DRAFT');matched=await f.rc2match();
+  await api('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body);assert.equal((await api('/cobalt/loading/plans/'+plan.id)).plan.status,'DRAFT');
+  assert.equal((await api('/cobalt/stock/map?'+new URLSearchParams({warehouse_id:f.warehouse,preparation_id:prep.id,customer_id:customer.id}))).summary.bags,0);
+  matched=await f.rc2match();
   await c.query('BEGIN');try{
    await c.query("INSERT INTO role_permissions VALUES('site_supervisor','loading-plan:match') ON CONFLICT DO NOTHING");
    const self=(await c.query("INSERT INTO co_loading_reviews(order_id,kind,expected_order_version,reason,requested_by) VALUES($1,'CANCEL_MATCH',$2,'Synthetic authorized self review',$3) RETURNING id",[matched.order.id,matched.order.version,id])).rows[0];

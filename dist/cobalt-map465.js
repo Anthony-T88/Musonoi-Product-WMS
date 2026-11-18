@@ -2,7 +2,7 @@
 window.CobaltMap465={
  t:(z,e)=>I18n.language==='en'?e:z,sequence:0,
  install(){if(this.installed)return;this.installed=true;CobaltStockUI.map=()=>this.open();CobaltStockUI.selectLocation=id=>this.select(id);},
- link(path,values={}){const q=new URLSearchParams(location.search);for(const k of ['page','location_id','zone_id','bag','production_batch'])q.delete(k);for(const[k,v]of Object.entries(values))v==null||v===''?q.delete(k):q.set(k,v);return path+(q.size?'?'+q:'');},
+ link(path,values={}){const q=new URLSearchParams(location.search);for(const k of ['page','location_id','zone_id','bag','customer_id','production_batch'])q.delete(k);for(const[k,v]of Object.entries(values))v==null||v===''?q.delete(k):q.set(k,v);return path+(q.size?'?'+q:'');},
  state(l){if(!l.active||!l.zone_active)return 'DISABLED';if(!l.bags)return l.occupied_by?'VERIFY':'EMPTY';if(l.loading_occupied_bags>0){if(['LOADING','REVIEW_PENDING','LOADED','DEPARTED'].includes(l.lifecycle_state))return 'LOADING';if(['OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION'].includes(l.lifecycle_state))return 'OUTBOUND_REVIEW';return 'MATCHED';}if(l.intake_status==='PRODUCTION_PENDING')return 'PRODUCTION_REVIEW';if(l.work_status==='PENDING_COMPLETION_REVIEW'||l.intake_status==='SITE_PENDING'||l.amendment_status==='PENDING')return 'SITE_REVIEW';return l.work_status==='COMPLETED'&&l.intake_status==='RECEIVED'?'READY':'PREPARING';},
  states:['PREPARING','SITE_REVIEW','PRODUCTION_REVIEW','READY','MATCHED','LOADING','OUTBOUND_REVIEW','EMPTY','VERIFY','DISABLED'],
  stateText(s){return this.t(...({PREPARING:['备货作业中','Preparation'],SITE_REVIEW:['待现场主管审核','Site Review'],PRODUCTION_REVIEW:['待生产经理确认入库','Production Receipt Review'],READY:['已入库可匹配','Received / Ready'],MATCHED:['已匹配锁定','Matched / Locked'],LOADING:['装车办理中','Loading'],OUTBOUND_REVIEW:['出库审批中','Outbound Review'],VERIFY:['占用待核实','Reservation to Verify'],EMPTY:['空货位','Empty'],DISABLED:['已停用','Disabled'],OCCUPIED:['在位库存','Stock at Location'],LOCKED:['匹配锁定','Loading Plan Locked']}[s]||[s,s]));},
@@ -20,7 +20,7 @@ window.CobaltMap465={
  },
  async open(){
   const seq=++this.sequence,input=new URLSearchParams(location.search),q=new URLSearchParams();
-  const scope=['project_id','warehouse_id','zone_id','location_id','preparation_id'];
+  const scope=['project_id','warehouse_id','zone_id','location_id','preparation_id','customer_id'];
   const current=()=>seq===this.sequence&&!ProductContext.isCopper()&&location.pathname==='/stock-map';
   for(const key of scope){
    const value=input.get(key);
@@ -45,7 +45,7 @@ window.CobaltMap465={
   const target='/stock-map'+(q.size?'?'+q:'');
   if(target!==location.pathname+location.search)history.replaceState(history.state,'',target);
   let filters='',filterUnavailable=false;
-  try{filters=await CobaltStockUI.filters({workStatus:false,layout:d});}
+  try{filters=await CobaltStockUI.filters({workStatus:false,layout:d,map:true});}
   catch(error){if(error.statusCode===401)throw error;filterUnavailable=true;}
   if(!current())return;
   this.data=d;CobaltStockUI.mapData=d;const t=this.t,counts={all:d.locations.length,occupied:d.locations.filter(l=>l.bags>0).length};
@@ -57,8 +57,9 @@ window.CobaltMap465={
  },
  cards(){
   const wanted=document.getElementById('map465-state').value,t=this.t;
-  for(const l of this.data.locations)document.querySelector('[data-co-location="'+l.id+'"]')?.classList.toggle('map465-state-dimmed',!!wanted&&this.state(l)!==wanted);
-  const locations=this.data.locations.filter(l=>(l.bags>0||l.occupied_by)&&(!wanted||this.state(l)===wanted));
+  const customer=new URLSearchParams(location.search).has('customer_id'),matches=l=>!customer||l.matched_bags>0;
+  for(const l of this.data.locations)document.querySelector('[data-co-location="'+l.id+'"]')?.classList.toggle('map465-state-dimmed',!matches(l)||!!wanted&&this.state(l)!==wanted);
+  const locations=this.data.locations.filter(l=>(l.bags>0||l.occupied_by)&&matches(l)&&(!wanted||this.state(l)===wanted));
   const card=l=>'<button class="map465-location-card" type="button" data-map465-location="'+l.id+'" data-state="'+this.state(l)+'"><header><strong data-no-i18n>'+esc(l.code)+'</strong><span>'+this.stateText(this.state(l))+'</span></header><p data-no-i18n>'+esc(l.preparation_batch_no||t('暂无在位批次','No Batch at Location'))+'</p><footer><span>'+esc(I18n.language==='en'?l.zone_name_en:l.zone_name)+'</span><b>'+l.bags+' '+t('袋','Bags')+'</b></footer></button>';
   for(const [id,temporary] of [['map465-temporary-list',true],['map465-location-list',false]]){
    const list=document.getElementById(id);

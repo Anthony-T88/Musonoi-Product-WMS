@@ -677,8 +677,6 @@ html[data-release-ui="46"] #page-content .map-app .wms-map-zones :is([data-map-r
 @media (max-width: 480px) {
   #page-content .co2-filter #co-stock-filter > label { flex-basis: 100%; }
 }
-.wms-map-advanced { margin-block-end: var(--uix-gap); }
-.wms-map-advanced summary { color: var(--uix-brand); cursor: pointer; }
 #page-content [data-historical-page] a:not(.button) {
   color: var(--uix-brand);
   text-decoration: underline;
@@ -707,53 +705,6 @@ html[data-release-ui="46"] #business-page > .page-heading {
 }
 @media(max-width:380px){
   .overview-filter-box .v479-overview-fields { grid-template-columns: minmax(0,1fr); }
-}
-html[data-release-ui="46"] #page-content .wms-map-reviewed .wms-map-advanced :is(#stock-map-filter,#co-stock-filter).wms-map-filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--uix-gap-sm);
-  inline-size: 100%;
-  box-sizing: border-box;
-  padding: 0;
-  border: 0;
-  justify-content: space-between;
-}
-.wms-map-reviewed .wms-map-filter-row .wms-map-filter-fields {
-  display: flex;
-  flex: 1 1 30rem;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--uix-gap-sm);
-  min-inline-size: 0;
-}
-.wms-map-reviewed .wms-map-filter-fields > label {
-  flex: 0 1 var(--uix-filter-min);
-  min-inline-size: min(100%, 8rem);
-  margin: 0;
-}
-.wms-map-reviewed .wms-map-filter-fields :is(input,select):not([type="checkbox"]) {
-  block-size: var(--uix-control);
-  inline-size: 100%;
-}
-#page-content .wms-map-reviewed .wms-map-filter-row > .wms-filter-actions {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  gap: var(--uix-gap-xs);
-  margin: 0 0 0 auto;
-  margin-inline-start: auto;
-  padding-inline: 0;
-  inline-size: max-content;
-  max-inline-size: 100%;
-  justify-content: flex-end;
-}
-.wms-map-reviewed .wms-map-filter-row > .wms-filter-actions > button {
-  min-block-size: var(--uix-control);
-}
-@media (max-width: 700px) {
-  .wms-map-reviewed .wms-map-filter-row .wms-map-filter-fields { flex-basis: 100%; }
-  .wms-map-reviewed .wms-map-filter-fields > label { flex: 1 1 8rem; }
 }
 .wms-map-reviewed :is(.stock-map-layout,.map465-grid) { position: relative; min-inline-size: 0; }
 .map-app.wms-map-reviewed .stock-map-layout.v27-has-detail:has(>.map-detail:not([hidden])) { grid-template-columns: minmax(0,1fr); }
@@ -1019,3 +970,16 @@ html[data-release-ui="46"] #page-content .wms-route-error {
   border-radius: var(--uix-radius);
 }
 html[data-release-ui="46"] #page-content .wms-route-error :is(p, small) { color: var(--uix-muted); }
+
+/* Stock map filters stay on one row. The narrow viewport scrolls within the filter bar. */
+#page-content .map465 .wms-map-filter-row {
+  display: flex; flex-wrap: nowrap; align-items: end; gap: var(--uix-gap-sm);
+  padding: var(--uix-gap-sm); margin-block-end: var(--uix-gap); min-inline-size: 0;
+  max-inline-size: 100%; overflow-x: auto;
+}
+#page-content .map465 .wms-map-filter-row > label { flex: 1 0 5.5rem; min-inline-size: 0; }
+#page-content .map465 .wms-map-filter-row > :is(button,.co-stock-check) { flex: 0 0 auto; white-space: nowrap; }
+#page-content .map465 .wms-map-filter-row :is(select,input:not([type="checkbox"])) { inline-size: 100%; min-inline-size: 0; }
+.wms-map-controls .wms-map-search { flex-wrap: nowrap; max-inline-size: 100%; overflow-x: auto; }
+.map-app .wms-map-search > label { flex: 1 0 8rem; }
+.wms-map-search select { inline-size: 100%; min-inline-size: 0; min-block-size: var(--uix-control); }

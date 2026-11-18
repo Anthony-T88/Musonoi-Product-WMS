@@ -320,9 +320,18 @@
     {
       "key": "master",
       "products": [
-        "CU_CATHODE"
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
       ],
       "state": "standard",
+      "template": "/customers/master-data"
+    },
+    {
+      "key": "co-master-locations",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "cobalt locations",
       "template": "/customers/master-data"
     },
     {
