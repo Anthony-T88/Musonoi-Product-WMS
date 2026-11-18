@@ -1,7 +1,7 @@
 {
-  "version": "4.8.5",
-  "auditRevision": "v485-ui9",
-  "revision": "4.8.5-ui9",
+  "version": "4.8.6",
+  "auditRevision": "v486",
+  "revision": "4.8.6",
   "files": [
     {
       "path": ".dockerignore",
@@ -921,11 +921,11 @@
     },
     {
       "path": "dist/api.js",
-      "sha256": "26772b3ddc3cc887c854972d0286b662425e9902ac0aef33714de5fb87ee8b3f"
+      "sha256": "7ad8929592692d8403a3ad2df62a210ea01590d9aa4e33e24a9c1ad64a84fbc9"
     },
     {
       "path": "dist/app.js",
-      "sha256": "c4bfce0172ea5ae756ce55e13347f93801de818b79853bbdce4f5225054a322a"
+      "sha256": "57bc4dc302f3fb38e4e5b454bc0f745fcc12e79aff2363b5a4f79ef40fd989a6"
     },
     {
       "path": "dist/approval-display468r10.css",
@@ -961,7 +961,7 @@
     },
     {
       "path": "dist/boot.js",
-      "sha256": "ac18537dde57e7cd93ee960ae217356c9a53627f45133eb82a28de69a3ec37e8"
+      "sha256": "4ae3e546b82da604f5a5522e232ee89a7e474ad6272ff6c483be34f6f557d876"
     },
     {
       "path": "dist/bundle-number.js",
@@ -1081,7 +1081,7 @@
     },
     {
       "path": "dist/core.js",
-      "sha256": "a206fc6cb1c52b73fa601f5af6a3a4d9351b50944e18cffc71d70545ce280832"
+      "sha256": "57b0c499ff2ac0de1d3f4191ec6e19170b795704a2c0814d69243410c4b44087"
     },
     {
       "path": "dist/count-values.js",
@@ -1149,11 +1149,11 @@
     },
     {
       "path": "dist/i18n-dictionary.js",
-      "sha256": "27f23587747f8050c69fffd549038473038a40f84551f9e01e26833ebbcc9ccf"
+      "sha256": "a27222d228cc1d8060b2c400653f8480936da69617b54530aeb2abd01be2dee7"
     },
     {
       "path": "dist/i18n-v262.js",
-      "sha256": "62b6b227b90bbdbacf0f8acfa754df6bba89c01b16b11c6844c16501575d8163"
+      "sha256": "9919c817a968bca71c9f5085a898946f09f7081ce22faaf6db8466a427e53bd8"
     },
     {
       "path": "dist/i18n-v27.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "98f8367cca4770de494c40f407242c4ecf71f3275b2d41afeaaf53a9f999df68"
+      "sha256": "6acf1397e6def4936740b4b20cfb92ebe3e6452a21cb6fda9969a8662e9c544d"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1209,7 +1209,7 @@
     },
     {
       "path": "dist/label-print.js",
-      "sha256": "6829615e2d8a229ab864a52184bbbcaa76ebad2c2863dfc68c972070ae1d6dd7"
+      "sha256": "6f7dd242e6f1062455af7fb54187ba7a20ff2d4e9518e7fc3f68b7425df59f19"
     },
     {
       "path": "dist/labels-ui.js",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "7dbcc51836e8f85a7f2458b155df0e69965ef65f1d9d84938b4aaba638dabb26"
+      "sha256": "b9e6ddf74287a9dbd9925c06bc770bd90d3a728129dcaa6b9206c9c51984cc5c"
     },
     {
       "path": "dist/reports463.js",
@@ -1437,7 +1437,7 @@
     },
     {
       "path": "dist/stock-map.js",
-      "sha256": "e0e57a3be661649564ab77f0997f7725c504177608813076cc08aadab7306167"
+      "sha256": "75a4027fd478b140460f647b2a09d97d535dcc3ba6ad972c831039138cb3a0de"
     },
     {
       "path": "dist/stocktake-list.js",
@@ -1449,7 +1449,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "01f733d7b9ae6e47986fc96508dc305ad289a5eaf9f1b0d7944f7cdbb588baf4"
+      "sha256": "32a1715c289bea3c965ab184a8e2fa873b602500272abd01e3c53e1ed208c170"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1749,7 +1749,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "70e5bb5aca02b1cc1825dcd0139d157d21f9ce35468c06d56f01dea666a31d50"
+      "sha256": "0d7f0aba81d2225f5c6bd1ffb8df9579561a92810791cddc21002a85ed7c2cc7"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -1761,7 +1761,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "030acac427cbbf634bf607c7f4e420e80bdea1561fa5bbb75c1defb3ade62611"
+      "sha256": "29c210497313e6d468a23bf1d3bc8ed96b0c5efee3d857f9e48c32c30ec75857"
     },
     {
       "path": "scripts/db.cjs",
@@ -1825,7 +1825,7 @@
     },
     {
       "path": "server/app.cjs",
-      "sha256": "69aaa141bf69dc72c90fde438b5279ff8ed88fce5772474d85c7abdc2357bc06"
+      "sha256": "eaf1cc2a1638a608aea6bcb24ca9dfb0cc463a59ebb498e127183cc5cbc64807"
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -1985,7 +1985,7 @@
     },
     {
       "path": "server/export-language.cjs",
-      "sha256": "27c150fe32791629f5adb53453ec3c36608a3eb075b8c40eabdde5b1bfbd5114"
+      "sha256": "7dd37018572bff4a16f7957ff647ce5b680bb747534b6f85ddc9f98bcbad9a4a"
     },
     {
       "path": "server/export-license-books.cjs",
@@ -2057,7 +2057,7 @@
     },
     {
       "path": "server/labels.cjs",
-      "sha256": "0d7998eebcc214eff8ea4fe0a1b87ff73171a2227bf84c64dd7cd16a5ad817e9"
+      "sha256": "178c8aec7f089f948d327d5f247be01f21c40b8315d354e416f68bf0bc30efee"
     },
     {
       "path": "server/loading-capacity.cjs",
@@ -2193,7 +2193,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "a7a1d74016bddcfb8dbd88a2881e7dff1919abbd64c8d07c76a24b3325a33345"
+      "sha256": "c8fa2aacd6ca088593ba30a02461d2591079ec5e0bcec54a73d50e192bfdd4a3"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2333,7 +2333,7 @@
     },
     {
       "path": "server/warehouse-templates.cjs",
-      "sha256": "5a8cc6b906c820166d85665cd1853c4db453234f643df8b65f8f2703c83e5d08"
+      "sha256": "50bb610ad2e56b945c466b9c2ce37662dce28a3a79d766bf4a6b40ba470dccb4"
     },
     {
       "path": "server/weighing.cjs",
@@ -2485,7 +2485,7 @@
     },
     {
       "path": "tests/release/migrations.test.cjs",
-      "sha256": "f5d6b8f5482c06ae6b6d9bd83d4275d6ddaf6f9145c3ed7ca61923f2278176de"
+      "sha256": "d9d42be7f2a3313d1be22649acbb284219d10f2f03c8f152e9d23de8b37d560e"
     },
     {
       "path": "tests/release/pool-reliability.cjs",

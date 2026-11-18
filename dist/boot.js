@@ -18,7 +18,7 @@
  }
  window.Connected=true;document.querySelector('.demo-banner').hidden=true;document.querySelector('.demo-label').hidden=true;
  el('login-panel').hidden=true;document.querySelector('.workspace').setAttribute('inert','');document.querySelector('.sidebar').setAttribute('inert','');
- document.querySelector('.demo-label').textContent='正在连接 PostgreSQL';document.querySelector('.demo-banner strong').textContent='正在读取服务端环境';document.querySelector('.demo-banner div>span').textContent='连接失败将显示错误，不会切换至模拟库存。';
+ document.querySelector('.demo-label').textContent='正在连接 PostgreSQL';document.querySelector('.demo-banner strong').textContent='正在读取服务端环境';document.querySelector('.demo-banner div>span').textContent='正在连接业务数据库。';
  let assetRevision=ClientRelease.revision;
  function signedOut(event){
   if(!window.AppSignedIn)return;
@@ -36,10 +36,10 @@
  if(window.I18n){I18n.protected.add(CurrentUser.display_name);I18n.set(CurrentUser.language_code||'zh-CN');}
  el('allocation-filter').hidden=false;window.AppSignedIn=true;el('login-panel').hidden=true;el('session-restore').hidden=false;
  el('role').closest('label').hidden=true;document.body.classList.add('database-mode');el('signed-user').hidden=false;el('signed-user').textContent=CurrentUser.display_name;document.querySelector('table caption').textContent='数据库库存明细，点击列标题排序';
- document.querySelector('.demo-label').textContent=cfg.environment==='test'?'TEST 隔离数据库':'业务数据库';
+ document.querySelector('.demo-label').textContent=cfg.environment==='test'?'预上线环境':'业务数据库';
  document.querySelector('.avatar').textContent=CurrentUser.display_name.slice(0,1);
- document.querySelector('.demo-banner strong').textContent=cfg.environment==='test'?'隔离测试数据 · PostgreSQL':'业务数据 · PostgreSQL';
- document.querySelector('.demo-banner div>span').textContent=cfg.environment==='test'?'本机TEST数据库 · 业务记录持久保存，操作及审批均有审计。':'库存来自授权数据库；取样、检斤、装车、审批及离场通过服务端授权执行。';
+ document.querySelector('.demo-banner strong').textContent=cfg.environment==='test'?'预上线环境 · PostgreSQL':'业务数据 · PostgreSQL';
+ document.querySelector('.demo-banner div>span').textContent=cfg.environment==='test'?'业务记录已保存，操作和审批可在日志中查询。':'库存来自授权数据库；取样、检斤、装车、审批及离场通过服务端授权执行。';
  document.querySelector('.snapshot').textContent=CurrentUser.display_name;
  document.querySelector('.sidebar-bottom').textContent='V'+cfg.version+' · '+CurrentUser.display_name;
  document.querySelector('footer').lastElementChild.textContent='Product WMS · V'+cfg.version;

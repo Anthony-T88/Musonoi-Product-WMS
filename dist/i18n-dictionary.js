@@ -1361,3 +1361,22 @@ Object.assign(TRANSLATIONS.en,{
  '货位客户不一致或存在历史混放，请先安排合法移库；锁定/释放不会绕过此规则':'Location customer mismatch or legacy mixing; arrange a valid transfer before locking or releasing',
  '货位最大捆数或最大净重容量超限':'Location bundle or net weight capacity exceeded'
 });
+
+Object.assign(TRANSLATIONS.en,{
+ "预上线环境": "Pre-launch Environment",
+ "预上线环境 · PostgreSQL": "Pre-launch Environment · PostgreSQL",
+ "业务记录已保存，操作和审批可在日志中查询。": "Business records are saved. Actions and approvals appear in the audit log.",
+ "预上线录入": "Pre-launch Entry",
+ "穆松尼项目": "Musonoi Project",
+ "离线预览": "Offline Preview",
+ "预览数据": "Preview Data",
+ "预览角色": "Preview Role",
+ "预览操作记录": "Preview Activity",
+ "本地预览模式": "Local Preview",
+ "离线快照": "Offline Snapshot",
+ "当前显示预览数据。": "Preview data is displayed.",
+ "库存数据暂不可用": "Inventory data is temporarily unavailable",
+ "正在连接业务数据库。": "Connecting to the business database.",
+ "服务请求失败，请重试。": "The request failed. Please try again.",
+ "数据库或服务暂不可用，请稍后重试。": "The database or service is temporarily unavailable. Please try again later."
+});
