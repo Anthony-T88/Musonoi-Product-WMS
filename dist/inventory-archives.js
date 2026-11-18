@@ -3,6 +3,12 @@ window.InventoryArchives={
  t:(zh,en)=>I18n.language==='en'?en:zh,
  text:value=>value==null||value===''?'—':esc(value),
  time(value){return !value?'—':/^\d{4}-\d{2}-\d{2}$/.test(value)?esc(value):esc(BusinessTime.display(value));},
+ location(value){
+  if(value==='临时堆存区')return this.t('新生产捆包堆存区','New Production Bundles Stock Area');
+  if(value==='P3-LEFTOVER')return this.t('剩余捆包堆存区','Left Over Bundles Stock Area');
+  return value;
+ },
+ recordedNote(value){return TRANSLATIONS.en[value]?I18n.translate(value,true):value;},
  facts(rows){return UI46Pages.factList(rows.map(([zh,en,value])=>[this.t(zh,en),this.text(value)]));},
  table(head,rows){
   if(!rows.length)return '<p class="wms-feedback">'+this.t('暂无记录','No records')+'</p>';
@@ -69,7 +75,7 @@ window.InventoryArchives={
    '<span id="c461-bundle-actions"></span>';
   const activity=this.table([['业务时间','Time'],['记录','Event'],['操作人','Actor'],['单据依据','Document']],
    state.slice(-4).reverse().map(event=>{
-    const detail=[event.note||event.detail,[event.from_location,event.to_location].filter(Boolean).join(' → '),
+    const detail=[this.recordedNote(event.note||event.detail),[event.from_location,event.to_location].filter(Boolean).map(value=>this.location(value)).join(' → '),
      [event.before_status,event.after_status].filter(Boolean).map(value=>this.documentState(value)).join(' → ')].filter(Boolean);
     return [this.time(event.at),this.text(Copper461.action(event.action))+(detail.length?'<small>'+esc(detail.join(' · '))+'</small>':''),
      this.text(event.actor_name),event.href?'<a href="'+esc(event.href)+'">'+this.text(event.document_no)+'</a>':this.text(event.document_no)];

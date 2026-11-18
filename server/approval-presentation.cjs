@@ -15,6 +15,8 @@ async function catalog(c){
  return roles;
 }
 function identify(path,data){
+ const preparationPlan=path.match(new RegExp('^/api/v1/(?:cobalt/)?preparation-plans/'+uuid+'$'));
+ if(preparationPlan)return {kind:'preparation-plan',id:preparationPlan[1]};
  const rules=[['receipt',`receipts/${uuid}`],['lot',`(?:allocations|v261/lots)/${uuid}`],['load',`loads/${uuid}`],['sales',`(?:cobalt/)?sales-workflow/plans/${uuid}`],['plan',`(?:loading-plan-documents|loading-plans/unified/documents)/${uuid}`],['co-preparation',`cobalt/preparations/${uuid}(?:/work)?`],['co-plan',`cobalt/loading/plans/${uuid}`],['co-load',`cobalt/execution/orders/${uuid}`],['stocktake',`(?:v27/)?stocktakes/${uuid}`],['co-stocktake',`cobalt/stocktaking/${uuid}`],['adjustment',`adjustments/${uuid}`],['correction',`v27/corrections/${uuid}`],['gate',`(?:cobalt/)?gate-permits/${uuid}`]];
  for(const[k,re]of rules){const m=path.match(new RegExp('^/api/v1/'+re+'$'));if(m)return {kind:k,id:m[1],document:data.permit||data.document||data.task||data.order||data.lot||data};}
  return null;
@@ -25,7 +27,7 @@ const titles={
  SALES_PLAN_SUBMITTED:['提交销售计划','Sales Plan Submitted'],SALES_PLAN_EDIT_SUBMITTED:['编辑后重新提交','Edited Plan Resubmitted'],SALES_PLAN_APPROVED:['销售计划审批通过','Sales Plan Approved'],SALES_PLAN_REJECTED:['销售计划退回','Sales Plan Returned'],SALES_PLAN_CLOSE_REQUESTED:['申请关闭计划','Plan Closure Requested'],SALES_PLAN_CLOSE_SALES_APPROVED:['销售经理通过关闭申请','Sales Manager Approved Closure'],SALES_PLAN_CLOSED:['商务部经理批准关闭','Commercial Manager Approved Closure'],SALES_PLAN_CLOSE_REJECTED:['关闭申请退回','Closure Request Returned'],
  DRAFT:['保存草稿','Draft Saved'],SITE_APPROVE:['现场审核通过','Site Review Approved'],SITE_REJECT:['现场审核退回','Site Review Returned'],PRODUCTION_APPROVE:['生产终审通过','Production Review Approved'],PRODUCTION_REJECT:['生产终审退回','Production Review Returned'],COMPLETE:['完工提交','Completion Submitted'],COMPLETION_APPROVE:['完工审核通过','Completion Approved'],COMPLETION_REJECT:['完工审核退回','Completion Returned'],RETURN:['退回修改','Returned for Changes'],AMEND_REQUEST:['申请更正','Correction Requested'],AMEND_APPROVE:['更正申请通过','Correction Request Approved'],AMEND_REJECT:['更正申请退回','Correction Request Returned'],
  MATCH:['匹配装车单','Loading Order Matched'],UNMATCH:['解除装车匹配','Loading Match Removed'],MATCH_CHANGE:['变更装车匹配','Loading Match Changed'],MATCH_CANCEL:['取消装车匹配','Loading Match Cancelled'],LOADING_PLAN_MATCH:['匹配装车计划','Loading Plan Matched'],START:['开始作业','Work Started'],CONFIRM:['确认实际装车','Actual Loading Confirmed'],DEPART:['提交离场申报','Departure Declared'],OUTBOUND_SUBMIT:['提交出库审核','Outbound Review Submitted'],LOGISTICS_APPROVE:['物流审核通过','Logistics Review Approved'],LOGISTICS_REJECT:['物流审核退回','Logistics Review Returned'],MANAGER_APPROVE:['生产终审通过','Production Review Approved'],MANAGER_REJECT:['生产终审退回','Production Review Returned'],OUTBOUND:['正式出库','Outbound Posted'],
- SUBMIT_REVIEW:['提交差异复核','Discrepancy Review Submitted'],REVIEW:['差异复核通过','Discrepancy Review Approved'],APPROVAL:['盘点审批通过','Stocktake Approved'],OBSERVE:['保存实盘记录','Count Saved'],REFRESH:['更新盘点轮次','Count Round Updated'],SNAPSHOT_CREATED:['建立盘点快照','Stocktake Snapshot Created'],
+ SUBMIT_REVIEW:['提交差异复核','Discrepancy Review Submitted'],REVIEW:['差异复核通过','Discrepancy Review Approved'],APPROVAL:['盘点审批通过','Inventory Count Approved'],OBSERVE:['保存实盘记录','Count Saved'],REFRESH:['更新盘点轮次','Count Round Updated'],SNAPSHOT_CREATED:['建立盘点快照','Inventory Count Snapshot Created'],
  GATE_ISSUED:['生成出门证','Gate Permit Issued'],GATE_REVISED:['修订出门证','Gate Permit Revised'],GATE_PRINT_DIALOG_REQUESTED:['打开打印窗口','Print Window Opened'],GATE_EXCEL_DOWNLOADED:['下载出门证','Gate Permit Downloaded'],GATE_ACTUAL_EXIT_CONFIRMED:['确认实际出厂','Physical Exit Confirmed'],REGISTRATION_APPROVED:['注册申请通过','Registration Approved'],REGISTRATION_REJECTED:['注册申请退回','Registration Rejected']
 };
 const key=s=>String(s||'').replace(/[- .]+/g,'_').toUpperCase();
@@ -43,12 +45,16 @@ function action(row,kind){
   else if(!row.before_data)k='CREATE';else if(!k||k===key(b.last_action))k='EDIT';
  }
  if(k.startsWith('CO_COUNT_'))k=k.slice(9);
+ if(kind==='preparation-plan'||kind==='preparation-plan-legacy'){
+  k=k.replace(/^PREPARATION_PLAN_/,'');
+  if(k==='START')return {key:k,title:['生成备货作业','Preparation Work Order Created']};
+ }
  if(k==='CREATE_PREPARATION'||k==='CREATED')k='CREATE';
  if(k==='APPROVE_COMPLETION')k='COMPLETION_APPROVE';
  if(k==='SUBMIT_COMPLETION')k='COMPLETE';
  if(k==='REVIEW_APPROVE')k='APPROVE';
  if(k==='APPROVE'&&kind==='co-stocktake'||k==='APPROVE'&&kind==='stocktake')k='APPROVAL';
- if(k==='COMPLETE'&&kind==='stocktake')return {key:k,title:['完成盘点归档','Stocktake Archived']};
+ if(k==='COMPLETE'&&kind==='stocktake')return {key:k,title:['完成盘点归档','Inventory Count Archived']};
  if(k==='APPROVE'&&kind==='co-preparation')k='COMPLETION_APPROVE';
  if(k==='SALES_PLAN_APPROVED'){const state=a.state;return {key:k,title:state==='COMMERCE_PENDING'?['销售经理审批通过','Sales Manager Approved']:['销售计划终审通过','Sales Plan Final Approval']};}
  if(titles[k])return {key:k,title:titles[k]};
@@ -68,12 +74,13 @@ function normalize(row,kind){
  return {id:row.source+':'+row.id,source:row.source,at:row.occurred_at,action:act.key,title:act.title,actor_id:row.actor_id,actor_name:row.actor_name_snapshot||row.actor_name||null,actor_name_en:E.englishName(row.actor_name_snapshot||row.actor_name||''),role_code:role,role_name:row.actor_role_name_snapshot||row.recorded_role_name||null,role_name_en:row.actor_role_name_en_snapshot||row.recorded_role_name_en||null,role_basis:role?'RECORDED':'HISTORICAL_UNKNOWN',result,note:String(reason||''),before_state:before,after_state:after,changes};
 }
 const sources={
+ 'preparation-plan-legacy':[['preparation_plan_events','plan_id']],
  lot:[['lot_work_history','allocation_id']],load:[['workflow_reviews','loading_id']],plan:[['loading_plan_match_history','document_id']],
  'co-preparation':[['co_events','preparation_id']],
  'co-plan':[['co_loading_events','plan_id']], 'co-load':[['co_execution_events','order_id'],['co_loading_events','order_id']],
  stocktake:[['stocktake_steps','stocktake_id']],'co-stocktake':[['co_stocktake_events','task_id']],adjustment:[['adjustment_steps','adjustment_id']],correction:[['outbound_correction_steps','correction_id']],gate:[['gate_events','permit_id']]
 };
-const entityTypes={receipt:['receipts'],lot:['allocations'],sales:['sales_plans','co_sales_plans','sales_plan_review','sales_plan_close'],plan:['loading_plan_documents','loading_plans','loading_plan_document'],registration:['registration_request','registration_requests']};
+const entityTypes={receipt:['receipts'],lot:['allocations'],sales:['sales_plans','co_sales_plans','sales_plan_review','sales_plan_close'],plan:['loading_plan_documents','loading_plans','loading_plan_document'],'preparation-plan':['preparation_plans'],registration:['registration_request','registration_requests']};
 async function history(c,kind,id,product,page=1){
  const selects=[];
  for(const[table,col]of sources[kind]||[]){let extra='';if(table==='co_work_events')extra=" AND e.bag_id IS NULL";if(table==='co_loading_events')extra=" AND (e.entity_type='co_loading_reviews' OR e.entity_type='co_loading_orders' AND e.before_data IS NULL OR e.entity_type='co_loading_plans' AND (e.before_data IS NULL OR e.after_data->>'last_action' IN('EDIT','UPDATE','DRAFT_EDIT','DOCUMENTS')))";if(table==='co_execution_events')extra=" AND e.entity_type IN('co_load_executions','co_load_exceptions') AND NOT(e.entity_type='co_load_executions' AND e.after_data->>'last_action'='EXCEPTION')";
@@ -108,8 +115,8 @@ function workflow(kind,data,product,roles,{draft=false}={}){
  if(kind==='co-match-review'){state=data.status;nodes=[n(String(data.kind).includes('CANCEL')?'申请取消匹配':'申请变更车辆',String(data.kind).includes('CANCEL')?'Request Match Cancellation':'Request Truck Change','loading-plan:match'),n('匹配变更审核','Match Change Review','co:loading-review')];rank=state==='APPROVED'?2:1;}
  if(kind==='lot-cancel'){state='APPROVED';nodes=[n('取消备货审核','Preparation Cancellation Review','lot:cancel-approve')];rank=1;}
  if(kind==='co-exception'){state=data.state;nodes=[n('登记装车异常','Record Loading Exception','load:write'),n('异常复核','Exception Review','load:review')];rank=state==='RESOLVED'?2:1;}
- if(kind==='stocktake'){const adjusts=state==='ADJUSTMENTS'||(data.resolutions||[]).some(r=>r.adjustment_id)||(data.adjustments||[]).length;nodes=[n('创建盘点','Create Stocktake','stocktake:write'),n('实盘作业','Physical Count','stocktake:write'),n('差异复核','Discrepancy Review','stocktake:review'),n('盘点审批','Stocktake Approval','stocktake:final'),...(adjusts?[n('调整生效','Apply Adjustments','adjust:approve')]:[]),n('完成归档','Archive Stocktake','stocktake:review')];rank=state==='COMPLETED'?nodes.length-1:({DRAFT:0,IN_PROGRESS:1,REVIEW:2,APPROVAL:3,ADJUSTMENTS:4})[state]??-1;}
- if(kind==='co-stocktake'){nodes=[n('创建及实盘','Create and Count','stocktake:write'),n('提交盘点','Submit Stocktake','stocktake:write'),n('复核','Review','stocktake:review'),n('完成归档','Archive Stocktake','stocktake:review')];rank=({OPEN:0,SUBMITTED:2,REJECTED:0,APPROVED:3})[state]??-1;}
+ if(kind==='stocktake'){const adjusts=state==='ADJUSTMENTS'||(data.resolutions||[]).some(r=>r.adjustment_id)||(data.adjustments||[]).length;nodes=[n('创建盘点','Create Inventory Count','stocktake:write'),n('实盘作业','Physical Count','stocktake:write'),n('差异复核','Discrepancy Review','stocktake:review'),n('盘点审批','Inventory Count Approval','stocktake:final'),...(adjusts?[n('调整生效','Apply Adjustments','adjust:approve')]:[]),n('完成归档','Archive Inventory Count','stocktake:review')];rank=state==='COMPLETED'?nodes.length-1:({DRAFT:0,IN_PROGRESS:1,REVIEW:2,APPROVAL:3,ADJUSTMENTS:4})[state]??-1;}
+ if(kind==='co-stocktake'){nodes=[n('创建及实盘','Create and Count','stocktake:write'),n('提交盘点','Submit Inventory Count','stocktake:write'),n('复核','Review','stocktake:review'),n('完成归档','Archive Inventory Count','stocktake:review')];rank=({OPEN:0,SUBMITTED:2,REJECTED:0,APPROVED:3})[state]??-1;}
  if(kind==='adjustment'){nodes=[n('调整申请','Request Adjustment','adjust:write'),n('调整审批','Adjustment Review','adjust:approve'),n('调整生效','Adjustment Applied','adjust:approve')];rank=({DRAFT:0,PENDING:1,SUBMITTED:1,APPROVED:2,APPLIED:2,REJECTED:1})[state]??-1;}
  if(kind==='correction'){nodes=[n('更正申请','Request Correction','load:write'),n('更正审批','Correction Review','outbound:approve'),...(d.kind==='RETURN_OUTBOUND'?[n('退回核验','Verify Return','load:review')]:[]),n('更正生效','Correction Applied','outbound:approve')];rank=({REQUESTED:1,AUTHORIZED:nodes.length-2,RETURN_VERIFIED:nodes.length-1,APPLIED:nodes.length,REJECTED:1})[state]??-1;}
  if(kind==='gate'){const permit=data.permit||d,revision=permit.current_revision;state=permit.state;nodes=[n('最终出库审批','Final Outbound Approval','outbound:production-approve'),n('生成出门证','Issue Gate Permit','gate:issue'),n('请求打印出门证','Request Gate Permit Printing','gate:print'),n('确认实际出厂','Confirm Physical Exit','gate:exit')];rank=data.exit||state==='EXITED'?4:(data.history||[]).some(e=>e.action==='gate_print_dialog_requested'&&Number(e.after_data?.revision)===revision)?3:2;}
@@ -147,6 +154,12 @@ async function enrich(c,req,data){
  const target=identify(path,data);if(!target)return data;
  const product=req.productCode||'CU_CATHODE',page=Number(req.query.approval_page||1);
  if(!Number.isInteger(page)||page<1||page>100000)throw Object.assign(Error('审批历史页码无效'),{statusCode:400});
+ if(target.kind==='preparation-plan'){
+  const audit=await history(c,target.kind,target.id,product,page);
+  const timeline=audit.total?audit:await history(c,'preparation-plan-legacy',target.id,product,page);
+  data._approval={kind:target.kind,id:target.id,product,workflows:[],history:timeline,related:[]};
+  return data;
+ }
  const[roles,events]=await Promise.all([catalog(c),history(c,target.kind,target.id,product,page)]),timeline=events.total?events:await recordedFacts(c,target.kind,target.id,data);
  let flowData=data;
  if(target.kind==='plan'&&data.loading_id){const load=(await c.query('SELECT workflow_state,logistics_review_by FROM loading_orders WHERE id=$1',[data.loading_id])).rows[0];if(load)flowData={...data,_loading_state:load.workflow_state==='DEPARTED_PENDING'&&load.logistics_review_by?'LOGISTICS_APPROVED':load.workflow_state};}

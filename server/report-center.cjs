@@ -2,7 +2,7 @@
 const D=require('./report-center-data.cjs'),M=require('./management.cjs'),C=require('./control-common.cjs');
 const W=require('./professional-workbook.cjs');
 const kindNames={shipping:['发运及单证','Shipments & Documents'],movement:['出入库流水','Inventory Movements'],
- balance:['收发存与对账','Stock Balance & Reconciliation'],stocktake:['盘点与差异','Stocktake & Variances'],sales:['销售与履约','Sales & Fulfilment']};
+ balance:['收发存与对账','Stock Balance & Reconciliation'],stocktake:['盘点与差异','Inventory Count & Variances'],sales:['销售与履约','Sales & Fulfilment']};
 const names={
  date:['日期','Date','date'],document:['单据号','Document No.'],customer:['客户','Customer'],contract:['合同号','Contract No.'],
  vehicle:['车辆','Vehicle'],lot:['批次号','Lot Number'],packing:['装箱单号','Packing List No.'],invoice:['商业发票号','Commercial Invoice No.'],

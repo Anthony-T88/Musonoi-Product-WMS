@@ -710,7 +710,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "approved",
+      "state": "approved with approval history",
       "template": "/preparation/work-plans/:id"
     },
     {
@@ -718,7 +718,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "approved",
+      "state": "approved with approval history",
       "template": "/preparation/work-plans/:id"
     },
     {

@@ -5,7 +5,7 @@ window.Reports463={
   ['shipping','发运及单证','Shipments & Documents'],
   ['movement','出入库流水','Inventory Movements'],
   ['balance','收发存与对账','Stock Balance & Reconciliation'],
-  ['stocktake','盘点与差异','Stocktake & Variances'],
+  ['stocktake','盘点与差异','Inventory Count & Variances'],
   ['sales','销售与履约','Sales & Fulfilment']
  ],
  groups:[['date','按日','By Day'],['customer','按客户','By Customer'],['contract','按合同','By Contract'],['vehicle','按车辆','By Vehicle'],['lot','按批次号','By Lot Number']],
@@ -108,7 +108,7 @@ window.Reports463={
    extra=make('document','单据号','Document No.')+lot();
   }else if(q.kind==='balance')fields+=warehouse();
   else if(q.kind==='stocktake'){
-   fields+=make('document','盘点单号','Stocktake No.');
+   fields+=make('document','盘点单号','Inventory Count No.');
    extra=fieldEnum('finding','差异类型','Finding',['MATCH','GAIN','LOSS','WEIGHT_MISMATCH','LOCATION','STATUS','UNCOUNTED','DIFFERENCE'])+
     fieldEnum('status','处理状态','Resolution',['MATCH','OPEN','RESOLVED']);
   }else fields+=terms;

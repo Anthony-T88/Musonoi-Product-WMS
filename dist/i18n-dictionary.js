@@ -198,7 +198,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 仓储管理工作台=Warehouse Workbench
 仓储管理=Warehouse Management
 库存查询=Inventory Search
-入库管理=Inbound Management
+入库管理=Stock Entry
 出库管理=Outbound Management
 取样管理=Sampling Management
 用户管理=User Management
@@ -311,13 +311,13 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 待商务复核=Awaiting commercial review
 待安保核验=Awaiting security verification
 待离场确认=Awaiting departure confirmation
-库存盘点=Stocktake
+库存盘点=Inventory Count
 库存异常=Inventory Exceptions
 库存调整审批=Inventory Adjustment Approval
 统计报表=Reports
 库存调整=Inventory adjustment
-盘点计划与任务=Stocktake Plans and Tasks
-新建盘点任务=New stocktake task
+盘点计划与任务=Inventory Count Plans and Tasks
+新建盘点任务=New Inventory Count Task
 新建独立快照盘点=New independent-snapshot stocktake
 快照覆盖厂内实物=Snapshot includes all onsite physical stock
 包括已锁定=Includes reserved stock
@@ -327,7 +327,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 盘点期间业务流水=Movements during stocktake
 实物变动单位=Physical movement unit
 关联流水=Related movement
-盘点操作历史=Stocktake activity
+盘点操作历史=Inventory Count activity
 逐捆实盘登记=Record bundle count
 逐捆录入=Record individual bundle
 实盘导入=Actual-count import
@@ -348,8 +348,8 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 流转对账原因=Movement reconciliation reason
 需核验的流转捆包编号=Bundle number requiring movement reconciliation
 核验该捆盘点期间流转=Verify movements for this counted bundle
-盘点报告=Stocktake report
-盘点=Stocktake
+盘点报告=Inventory Count report
+盘点=Inventory Count
 盘亏=Shortage
 盘盈=Surplus
 重量差异=Weight variance
@@ -369,7 +369,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 流转=Movement
 轮=pass
 下载盘点模板=Download count template
-盘点模板=Stocktake template
+盘点模板=Inventory Count template
 校验预览=Validate and preview
 整批校验=Atomic batch validation
 选择=Select
@@ -441,7 +441,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 库存流水=Inventory ledger
 入库单号=Inbound order number
 入库单=Inbound order
-新建入库单=New inbound order
+新建入库单=New Stock Entry
 入库时间=Inbound time
 入库操作人=Inbound operator
 单笔入库=Single inbound entry
@@ -471,7 +471,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 取样检验统计=Sampling and inspection report
 车辆装车及离场统计=Vehicle loading and departure report
 货位库存分布=Inventory by position
-月度库存盘点报告=Monthly stocktake report
+月度库存盘点报告=Monthly Inventory Count Report
 异常及调整汇总=Exception and adjustment summary
 历史截止与统一口径=Historical cutoff and consistent accounting
 开始日期=Start date
@@ -1280,7 +1280,7 @@ Object.assign(TRANSLATIONS.en,Object.fromEntries(`
 Object.assign(TRANSLATIONS.en,{
  '所选期间早于V2.4历史起点，当前为部分期间报表；期初采用升级基线。':'The selected period starts before the V2.4 history boundary. This is a partial-period report using the upgrade opening balance.',
  '按数据库记账版本统计，正式出库按生产最终确认时点。':'Statistics use database posting revisions. Formal dispatch uses the final production confirmation time.',
- '单据报表采用整单授权和全部捆包匹配筛选口径；盘点报告按授权捆包汇总，不泄露整仓结果。':'Document reports require whole-document authorization and all bundles to match. Stocktake totals include authorized bundles only.',
+ '单据报表采用整单授权和全部捆包匹配筛选口径；盘点报告按授权捆包汇总，不泄露整仓结果。':'Document reports require whole-document authorization and all bundles to match. Inventory Count totals include authorized bundles only.',
  '异常指标为已登记且未关闭的异常；阈值由服务端管理员配置，规则扫描由授权人员发起，非后台自动监控。':'Exception counts include registered open cases. Administrators configure thresholds; authorized staff initiate scans. No automatic background monitoring.',
  '原始入库明细和历史流水不修改，当前余额更正由独立审批事务生效。':'Original inbound details and historical movements remain unchanged. Current balances change only through independently approved transactions.',
  '原始入库单、流水和档案原始净重保留；这里只更正当前库存余额投影。':'Original inbound orders, ledger entries and declared weights are preserved. Only the current balance projection is corrected.',
@@ -1326,9 +1326,9 @@ Object.assign(TRANSLATIONS.en,{'连接中断后，页面已显示数据仅供参
 
 Object.assign(TRANSLATIONS.en,{'捆包编号（每行一捆，最多500捆）':'Bundle numbers (one per line, maximum 500)','扫码组件加载超时':'Scanner loading timed out; use manual entry','实盘净重（吨）':'Counted net weight (t)'});
 
-Object.assign(TRANSLATIONS.en,{'信息总览':'Information overview','客户管理':'Customer management','备货管理':'Preparation management','合同号':'Contract number','合同生效日期':'Contract effective date','合同截止日期':'Contract end date','有效期状态':'Contract validity','有效期内':'Valid','尚未生效':'Not yet effective','已到期':'Expired','毛重（吨）':'Gross weight (t)','包装（吨）':'Packaging (t)','历史未知':'Historical value unknown','历史未记录':'Not recorded historically','历史未关联':'No historical contract link','重量依据':'Weight basis','重量规则':'Weight rule','新增合同':'New contract','新增客户':'New customer','查看':'View','返回上一页':'Back','启停状态':'Active status','编辑 / 启停':'Edit / Activate','原始净重（吨）':'Original net weight (t)','当前净重（吨）':'Current net weight (t)'});
+Object.assign(TRANSLATIONS.en,{'信息总览':'Information overview','客户管理':'Customer Profile','备货管理':'Lot Preparation','合同号':'Contract number','合同生效日期':'Contract effective date','合同截止日期':'Contract end date','有效期状态':'Contract validity','有效期内':'Valid','尚未生效':'Not yet effective','已到期':'Expired','毛重（吨）':'Gross weight (t)','包装（吨）':'Packaging (t)','历史未知':'Historical value unknown','历史未记录':'Not recorded historically','历史未关联':'No historical contract link','重量依据':'Weight basis','重量规则':'Weight rule','新增合同':'New contract','新增客户':'New customer','查看':'View','返回上一页':'Back','启停状态':'Active status','编辑 / 启停':'Edit / Activate','原始净重（吨）':'Original net weight (t)','当前净重（吨）':'Current net weight (t)'});
 
-Object.assign(TRANSLATIONS.en,{'合同':'Contract','客户档案':'Customer records','合同档案（一客户多合同）':'Customer contracts (one to many)','新增客户合同':'New customer contract','编辑合同':'Edit contract','保存合同':'Save contract','合同已保存':'Contract saved','返回客户管理':'Back to customers','毛重扣包':'Gross less packaging','历史毛重未知':'Historical gross weight unknown','已授权净重调整':'Authorized net weight adjustment','授权调整后的净重':'Net after approved adjustment','包装重量（吨）':'Packaging weight (t)','当前净重（吨）':'Current net weight (t)','原始毛重（吨）':'Original gross weight (t)','原始档案净重（吨）':'Original recorded net weight (t)','生产批次、仓库与货位资料':'Batch warehouse and location records','启用':'Active','停用':'Inactive','已停用':'Inactive','当日生产入库':'Inbound today','当日正式出库':'Formal outbound today','合同截止日期不能早于生效日期':'Contract end date must not precede effective date','待输入有效毛重':'Enter a valid gross weight','毛重须大于包装重量':'Gross weight must exceed packaging weight','全部':'All','暂无匹配合同；历史计划未自动关联合同。':'No matching contracts. Historical plans were not assigned contracts automatically.'});
+Object.assign(TRANSLATIONS.en,{'合同':'Contract','客户档案':'Customer records','合同档案（一客户多合同）':'Customer contracts (one to many)','新增客户合同':'New customer contract','编辑合同':'Edit contract','保存合同':'Save contract','合同已保存':'Contract saved','返回客户管理':'Back to Customer Profile','毛重扣包':'Gross less packaging','历史毛重未知':'Historical gross weight unknown','已授权净重调整':'Authorized net weight adjustment','授权调整后的净重':'Net after approved adjustment','包装重量（吨）':'Packaging weight (t)','当前净重（吨）':'Current net weight (t)','原始毛重（吨）':'Original gross weight (t)','原始档案净重（吨）':'Original recorded net weight (t)','生产批次、仓库与货位资料':'Batch warehouse and location records','启用':'Active','停用':'Inactive','已停用':'Inactive','当日生产入库':'Inbound today','当日正式出库':'Formal outbound today','合同截止日期不能早于生效日期':'Contract end date must not precede effective date','待输入有效毛重':'Enter a valid gross weight','毛重须大于包装重量':'Gross weight must exceed packaging weight','全部':'All','暂无匹配合同；历史计划未自动关联合同。':'No matching contracts. Historical plans were not assigned contracts automatically.'});
 
 TRANSLATIONS.en['统计范围与截止日期（展开筛选）']='Scope and cutoff date (expand filters)';
 

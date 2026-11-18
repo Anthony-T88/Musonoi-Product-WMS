@@ -49,14 +49,29 @@ async function inspect(page,guest=false,checks=[],dialog=''){
   };
   const title=readable([...document.querySelectorAll('main h1,#login-panel h1')].find(visible))||document.title;
   const notice=[...root?.querySelectorAll('.error,[role=alert],.product-construction,.s46-state[data-sys-code="SYS-14"] h2')||[]].filter(visible).map(readable).filter(Boolean);
-  const languageCandidates=(window.I18n?.language||document.documentElement.lang)==='en'?[...new Set(
-   [...root?.querySelectorAll('h1,h2,h3,button,label,th,dt,legend,summary,[role=alert],[placeholder]')||[]]
-    .filter(visible).map(node=>{
-     const value=node.getAttribute('placeholder')||textName(node)||readable(node);
-     if(window.I18n?.protected?.has(value))return '';
-     return value.replace(/\s+/g,' ').slice(0,130);
-    }).filter(value=>/[\p{Script=Han}]/u.test(value))
-  )].slice(0,40):[];
+  const languageCandidates=[];
+  if((window.I18n?.language||document.documentElement.lang)==='en'){
+   const remaining=new Set(),han=/[\p{Script=Han}]/u;
+   const add=value=>{
+    if(!value||!han.test(value))return;
+    const original=value.trim().replace(/\s+/g,' ');
+    for(const data of window.I18n?.protected||[])if(han.test(data))value=value.replaceAll(data,'');
+    if(han.test(value))remaining.add(original.slice(0,130));
+   };
+   const localized=el=>!el.closest('[data-login-language],.language-select,script,style,textarea,pre');
+   add(document.title);
+   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),range=document.createRange();
+   for(let text=walker.nextNode();text;text=walker.nextNode()){
+    if(!han.test(text.nodeValue)||!localized(text.parentElement)||!visible(text.parentElement))continue;
+    range.selectNodeContents(text);
+    if(range.getClientRects().length)add(text.nodeValue);
+   }
+   for(const el of document.querySelectorAll('[aria-label],[title],[placeholder],[alt],select'))if(localized(el)&&visible(el)){
+    for(const attr of ['aria-label','title','placeholder','alt'])add(el.getAttribute(attr));
+    if(el.matches('select'))for(const option of el.options)add(option.label);
+   }
+   languageCandidates.push(...[...remaining].slice(0,60));
+  }
   const headings=[...root?.querySelectorAll('h2,h3')||[]].filter(visible).map(readable);
   const duplicates=headings.filter((x,i)=>x&&(x===headings[i-1]||x===title));
   const actionable=controls.filter(e=>e.matches('button,a')&&!e.disabled);

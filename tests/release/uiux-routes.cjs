@@ -138,8 +138,8 @@ function pages(ids){
  add('preparation-new','/preparation/new',BOTH,{state:'select approved preparation plan'});
  add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator']});
  add('preparation-batch','/preparation/work-plans/new',BOTH,{screenshot:true,roles:['export_supervisor','production_operator'],state:'batch draft entry'});
- add('cu-work-plan-detail','/preparation/work-plans/:id',[CU],{example:'cuApprovedWork',screenshot:true,state:'approved'});
- add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved'});
+ add('cu-work-plan-detail','/preparation/work-plans/:id',[CU],{example:'cuApprovedWork',screenshot:true,state:'approved with approval history'});
+ add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved with approval history'});
  add('cu-preparation-from-plan','/preparation/new',[CU],{query:'?preparation_plan=:id',example:'cuApprovedWork',screenshot:true,state:'approved plan'});
  add('co-preparation-from-plan','/receipts/new',[CO],{query:'?preparation_plan=:id',example:'coApprovedWork',screenshot:true,state:'approved plan'});
  add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true});

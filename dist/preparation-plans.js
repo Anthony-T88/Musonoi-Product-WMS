@@ -13,7 +13,7 @@ window.PreparationPlans={
  backLink(){
   const co=!ProductContext.isCopper();
   if(!CurrentUser.permissions.includes(co?'co:read':'allocation:read'))return '';
-  return '<a class="button secondary" href="'+(co?'/receipts':'/preparation')+'">'+this.t('返回备货管理','Back to Preparation')+'</a>';
+  return '<a class="button secondary" href="'+(co?'/receipts':'/preparation')+'">'+this.t('返回备货管理','Back to Lot Preparation')+'</a>';
  },
  state(state){return this.t(...({
   DRAFT:['草稿','Draft'],PENDING:['待物流经理审批','Pending Logistics Approval'],
@@ -291,7 +291,6 @@ window.PreparationPlans={
  },
  async detail(id){
   const t=this.t,p=await API.request(this.api()+'/'+id);
-  const labels={CREATE:['创建','Created'],EDIT:['修改','Edited'],SUBMIT:['提交审批','Submitted'],APPROVE:['审批通过','Approved'],REJECT:['退回','Returned'],START:['生成备货作业','Work Order Created']};
   const button=(id,z,e,style='secondary')=>'<button type="button" class="button '+style+'" data-plan-action="'+id+'">'+t(z,e)+'</button>';
   const work=p.allocation_id||p.co_preparation_id?'<a class="button secondary" href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':
    p.actions.start?'<a class="button primary" href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'';
@@ -300,8 +299,7 @@ window.PreparationPlans={
   const back='<a class="button secondary" data-wms-back href="'+this.route+'">'+t('返回备货计划','Back to Plans')+'</a>';
   Router.page(t('备货计划详情','Preparation Plan Details'),'<div class="wms-page" data-page-composed data-no-i18n>'+
    UI46Pages.identity(p.batch_no,UI.status(p.state,'approval',this.state(p.state)),back+actions,this.fields(p,false))+
-   ExportLicenses.section(t('办理记录','Activity'),'<ol>'+p.events.map(event=>'<li>'+t(...labels[event.action])+' · '+esc(event.actor)+' · '+esc(BusinessTime.display(event.occurred_at))+
-    (event.reason?' · '+esc(event.reason):'')+'</li>').join('')+'</ol>')+'<p id="preparation-plan-error" class="error" role="alert"></p></div>');
+   '<div class="preparation-plan-approval-slot"></div><p id="preparation-plan-error" class="error" role="alert"></p></div>');
   for(const button of document.querySelectorAll('[data-plan-action]'))button.onclick=async()=>{
    const action=button.dataset.planAction;
    if(action==='edit')return this.form(p);

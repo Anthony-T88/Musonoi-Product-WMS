@@ -7,8 +7,8 @@ const desktop={width:1366,height:768},large={width:1440,height:900},wide={width:
 const compact={width:1280,height:800};
 const fullSizes=[desktop,compact,large,wide],allSizes=[...fullSizes,phone];
 const standardSizes=[compact,large,phone];
-const narrowKeys=new Set(['overview','password-dialog','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
-const quickKeys=new Set(['overview','password-dialog','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-preparation-from-plan','co-preparation-from-plan']);
+const narrowKeys=new Set(['overview','password-dialog','inventory','map','sales','receipts','loading-search','outbounds','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-work-plan-detail','co-work-plan-detail','cu-preparation-from-plan','co-preparation-from-plan']);
+const quickKeys=new Set(['overview','password-dialog','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-work-plan-detail','co-work-plan-detail','cu-preparation-from-plan','co-preparation-from-plan']);
 const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator']};
 const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
@@ -111,8 +111,8 @@ function selectors(key,product,landing){
   'co-historical-record':['#historical-source','#historical-void'],
   'sales':['#s468-filter','#ux10-sales-table','.sales-execution-metrics'],
   'preparation-plans':['#preparation-plan-filter','#preparation-plans-table'],
-  'cu-work-plan-detail':['.wms-identity .status-pill','.wms-facts'],
-  'co-work-plan-detail':['.wms-identity .status-pill','.wms-facts'],
+  'cu-work-plan-detail':['.wms-identity .status-pill','.wms-facts','.preparation-plan-approval-slot .r10-history'],
+  'co-work-plan-detail':['.wms-identity .status-pill','.wms-facts','.preparation-plan-approval-slot .r10-history'],
   'cu-preparation-from-plan':['#v261-create','#v261-lot-no','#v261-planned'],
   'co-preparation-from-plan':['#co-create','#co-create [name=planned_location_id]'],
   'cu-sales-detail':['.sales-identity .status-pill:is([data-state-code="APPROVED"],[data-state-code="OPEN"])','.sales-related'],

@@ -51,6 +51,11 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const plan=await P.salesPlan(api,f,product),base=prefix(product)+'/preparation-plans';
    const item=n=>({sales_plan_id:plan,shipment_month:P.localMonth(),batch_no:P.batch(product,n)});
    const occupied=await P.approved(api,product,plan,item(780).batch_no);
+   const approval=(await api('export_supervisor',product,base+'/'+occupied.id))._approval;
+   assert.equal(approval.kind,'preparation-plan');
+   assert.deepEqual(approval.history.items.map(row=>[row.action,row.role_code]),[
+    ['APPROVE','logistics_manager'],['SUBMIT','export_supervisor'],['CREATE','export_supervisor']
+   ]);
    const searched=await api('export_supervisor',product,base+'/occupied?'+new URLSearchParams({search:item(780).batch_no}));
    assert.equal(searched.items.length,1);assert.equal(searched.items[0].state,'APPROVED');
    const customer=searched.items[0].customer_name;
@@ -80,6 +85,24 @@ test('copper and cobalt preparation batches and historical navigation on indepen
   assert(products.every(product=>fixtures[product]),'Required copper and cobalt fixtures were created');
   await app.listen({port,host:'127.0.0.1'});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
+  await t.test('startup and offline status use the selected language',async()=>{
+   const page=await browser.newPage();
+   let respond;
+   const release=new Promise(resolve=>{respond=resolve;});
+   try{
+    await page.addInitScript(()=>localStorage.setItem('musonoi-language','en'));
+    await page.route('**/api/v1/config',async route=>{await release;await route.continue();});
+    await page.goto(origin,{waitUntil:'domcontentloaded'});
+    await page.locator('#session-restore').getByText('Opening page…',{exact:true}).waitFor();
+    assert.doesNotMatch(await page.locator('#session-restore').innerText(),/\p{Script=Han}/u);
+    respond();
+    await page.locator('#login-panel').waitFor();
+    assert.equal(await page.locator('.login46-language-label').innerText(),'System Language');
+    await page.goto(origin+'/offline.html');
+    assert.match(await page.locator('main:visible').innerText(),/Product WMS · Offline/);
+    assert.doesNotMatch(await page.locator('main:visible').innerText(),/\p{Script=Han}/u);
+   }finally{respond();await page.close();}
+  });
   async function open(role,product,width){
    const a=f.accounts.find(x=>x.role===role),ctx=await browser.newContext({viewport:{width,height:900}});
    const r=await ctx.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}});
@@ -97,6 +120,16 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const co=cobalt(product),fx=fixtures[product],width=co?390:1440;
    const {ctx,page,errors}=await open('export_supervisor',product,width);
    try{
+    await page.evaluate(()=>I18n.change('en'));
+    await page.goto(origin+'/preparation/work-plans/'+fx.occupied.id);
+    const approvals=page.locator('.preparation-plan-approval-slot .r10-history');
+    await approvals.getByRole('heading',{name:'Approval History'}).waitFor();
+    assert.deepEqual(await approvals.locator('thead th').allTextContents(),['Time','Step / Action','Name','Role','Result','Review Note']);
+    assert.equal(await approvals.locator('tr[data-role-basis="RECORDED"]').count(),3);
+    await approvals.getByText('Submitted for Review',{exact:true}).waitFor();
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Approval history must fit the viewport');
+    await page.evaluate(()=>I18n.change('zh-CN'));
+    await approvals.getByRole('heading',{name:'审批历史'}).waitFor();
     await page.goto(origin+'/preparation/work-plans');
     await page.locator('#preparation-plan-create').click();
     await page.waitForURL('**/preparation/work-plans/new');

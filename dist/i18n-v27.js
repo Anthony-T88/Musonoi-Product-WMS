@@ -1,14 +1,14 @@
 'use strict';
 Object.assign(TRANSLATIONS.en,{
-  "库存盘点": "Stocktaking",
+  "库存盘点": "Inventory Count",
   "异常与一致性": "Exceptions and Consistency",
   "操作审计": "Operation Audit",
   "当前在库按未正式出库账面范围查询；已离场待审批单独标识，现场实物口径见信息总览。": "Current inventory uses the ledger scope before final outbound; departed goods awaiting approval are marked separately. See Overview for on-site physical inventory.",
   "备货批号": "Lot Number",
-  "盘点任务": "Stocktaking Task",
+  "盘点任务": "Inventory Count Task",
   "任务状态": "Task Status",
-  "盘点任务编号": "Stocktaking Task No.",
-  "盘点类型": "Stocktaking Type",
+  "盘点任务编号": "Inventory Count Task No.",
+  "盘点类型": "Inventory Count Type",
   "负责人": "Responsible Person",
   "快照时间": "Snapshot Time",
   "月度常规盘点": "Monthly Routine Count",
@@ -173,7 +173,7 @@ Object.assign(TRANSLATIONS.en,{
   "已授权待核验": "Authorized / Pending Verification",
   "实物退回已核验": "Physical Return Verified",
   "更正记录": "Correction Record",
-  "查看原装车与出库单": "View Original Loading and Outbound",
+  "查看原装车与出库单": "View Original Loading & Stock Issue",
   "原始单据及捆包证据": "Original Document and Bundle Evidence",
   "授权更正": "Authorize Correction",
   "确认实物退回核验": "Verify Physical Return",
@@ -225,7 +225,7 @@ Object.assign(TRANSLATIONS.en,{
   "库存导出": "Inventory Export",
   "库存调整": "Inventory Adjustment",
   "出库更正": "Outbound Correction",
-  "装车与出库": "Loading and Outbound",
+  "装车与出库": "Loading & Stock Issue",
   "角色权限": "Role Permissions",
   "捆包档案": "Bundle Record",
   "业务记录": "Business Record",
@@ -245,7 +245,7 @@ Object.assign(TRANSLATIONS.en,{'inventory.state.IN_STOCK':'In Stock','inventory.
 
 Object.assign(TRANSLATIONS.en,{'批次编号':'Lot Number','系统日志':'System Logs','未分配':'Unassigned','月份待确认':'Month Unconfirmed','备货批次':'Reserved Lots','备货月份':'Preparation Month','业务工作台':'Business Workbench'});
 
-Object.assign(TRANSLATIONS.en,{'年度盘点':'Annual Stocktake','客户 / 月份 / 批次':'Customer / Month / Lot','批次数':'Lot Count','客户数量':'Customers'});
+Object.assign(TRANSLATIONS.en,{'年度盘点':'Annual Inventory Count','客户 / 月份 / 批次':'Customer / Month / Lot','批次数':'Lot Count','客户数量':'Customers'});
 
 Object.assign(TRANSLATIONS.en,{'出口发运记录':'Export Shipments','计划数量（吨）':'Planned Quantity (MT)','已备货数量（吨）':'Prepared Quantity (MT)','已正式出库数量（吨）':'Shipped Quantity (MT)','剩余待发数量（吨）':'Remaining to Ship (MT)','发运进度':'Shipping Progress','销售计划发运进度':'Sales Plan Shipping Progress','合同号':'Contract No.','客户名称':'Customer Name','出库单号':'Outbound No.','正式出库单号':'Posted Outbound No.','车牌号':'Truck Registration','尚未生成':'Not Generated','已生成':'Generated','生成 Packing List':'Generate Packing List','重新生成 Packing List':'Regenerate Packing List','查看 Packing List':'View Packing List','下载 Excel':'Download Excel','运输与收货信息':'Transport and Delivery Information','总捆包数':'Total Bundles','总毛重（吨）':'Total Gross Weight (MT)','总净重（吨）':'Total Net Weight (MT)','单证版本':'Document Revision','生成说明':'Generation Reason','保存运输信息':'Save Transport Information','修改原因':'Reason for Change','客户联系信息':'Customer Contact Information','收货地址':'Delivery Address','货运代理':'Forwarder','司机姓名':'Driver Name','护照号':'Passport No.','出口许可证号':'Export License No.','集装箱号':'Container No.','集装箱封签号':'Container Seal No.','挂车一':'Trailer 1','挂车二':'Trailer 2','单证生成与修改记录':'Document Revision History','查看原装车单':'Original Loading Order','查看全部关联发运记录':'View All Related Shipments','关联备货批次':'Related Preparation Lots','正式出库车辆':'Posted Vehicles','计划数量':'Planned Quantity','已备货数量':'Prepared Quantity','已正式出库数量':'Shipped Quantity','剩余待发数量':'Remaining to Ship','出库开始日期':'Outbound From','出库结束日期':'Outbound To','装车 / 出库单号':'Loading / Outbound No.','当前范围无正式出库车辆':'No posted vehicles in the authorized scope','无匹配装车记录':'No matching loading records','生成后可在此预览Packing List。':'Generate a Packing List to preview it here.','运输信息已更新，请重新生成Packing List。下方预览仍为上次生成的版本。':'Transport information has changed. Regenerate the Packing List. The preview shows the last generated revision.','暂无正式出库车辆':'No posted vehicles yet','已知备货净重':'Known Prepared Net Weight'});
 

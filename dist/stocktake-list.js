@@ -14,8 +14,8 @@ window.StocktakeList={
   Object.keys(this.kinds).map(key=>this.option(key,this.type(key),selected)).join('');},
  creationFields(includeType){
   const t=this.t;
-  return (includeType?'<label class="wms-field">'+t('盘点类型','Stocktake Type')+'<select name="task_type">'+this.types('MONTHLY',false)+'</select></label>':'')+
-   '<label class="wms-field">'+t('盘点时期','Stocktake Period')+'<select name="period_month"></select></label>';
+  return (includeType?'<label class="wms-field">'+t('盘点类型','Inventory Count Type')+'<select name="task_type">'+this.types('MONTHLY',false)+'</select></label>':'')+
+   '<label class="wms-field">'+t('盘点时期','Inventory Count Period')+'<select name="period_month"></select></label>';
  },
  bindCreation(form){
   const type=form.elements.task_type,period=form.elements.period_month,t=this.t,month=BusinessTime.today().slice(0,7);
@@ -35,15 +35,15 @@ window.StocktakeList={
   const stateKey=cobalt?'status':'phase',states=cobalt?['OPEN','SUBMITTED','APPROVED','REJECTED','CANCELLED']:Object.keys(V27Counts.phases);
   const label=value=>cobalt?CobaltCount.status(value):I18n.translate(V27Counts.phases[value]||value);
   const input=(key,z,e,kind)=>'<label>'+t(z,e)+'<input name="'+key+'" type="'+kind+'" maxlength="160" value="'+esc(q.get(key)||'')+'"></label>';
-  const columns=[['单据编号','Document No.'],['盘点类型','Stocktake Type'],['盘点基准时间','Baseline Time'],['盘点时期','Stocktake Period'],['创建日期','Created Date'],['状态','Status']];
+  const columns=[['单据编号','Document No.'],['盘点类型','Inventory Count Type'],['盘点基准时间','Baseline Time'],['盘点时期','Inventory Count Period'],['创建日期','Created Date'],['状态','Status']];
   const rows=data.items.map(row=>'<tr><td><a href="'+route+'/'+row.id+'">'+esc(row.code)+'</a></td><td>'+this.type(row.task_type)+'</td><td>'+
    esc(BusinessTime.display(row.baseline_at))+'</td><td>'+esc(this.period(row.task_type,row.period_month))+'</td><td>'+
    esc(row.created_at?BusinessTime.input(row.created_at).slice(0,10):'—')+'</td><td>'+UI.status(row[stateKey],'count',label(row[stateKey]))+'</td></tr>');
-  Router.page(t('库存盘点','Stocktaking'),'<section class="wms-page" data-page-composed data-no-i18n><div class="business-toolbar">'+
-   (CurrentUser.permissions.includes('stocktake:write')?'<a class="button primary" href="'+route+'/new">'+t('新建盘点任务','New Stocktake')+'</a>':'')+
+  Router.page(t('库存盘点','Inventory Count'),'<section class="wms-page" data-page-composed data-no-i18n><div class="business-toolbar">'+
+   (CurrentUser.permissions.includes('stocktake:write')?'<a class="button primary" href="'+route+'/new">'+t('新建盘点任务','New Inventory Count')+'</a>':'')+
    '</div><form id="stocktake-list-filter" class="filters wms-filter-row">'+input('document_no','单据编号','Document No.','search')+
-   '<label>'+t('盘点类型','Stocktake Type')+'<select name="task_type">'+this.types(q.get('task_type'))+'</select></label>'+
-   '<label>'+t('盘点时期','Stocktake Period')+'<select name="period"></select></label>'+input('created_date','创建日期','Created Date','date')+
+   '<label>'+t('盘点类型','Inventory Count Type')+'<select name="task_type">'+this.types(q.get('task_type'))+'</select></label>'+
+   '<label>'+t('盘点时期','Inventory Count Period')+'<select name="period"></select></label>'+input('created_date','创建日期','Created Date','date')+
    '<label>'+t('状态','Status')+'<select name="'+stateKey+'">'+this.option('',t('全部','All'),null)+states.map(value=>this.option(value,label(value),q.get(stateKey))).join('')+'</select></label>'+
    '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+route+'">'+t('重置','Reset')+'</a></div></form>'+
    ExportLicenses.table(columns,rows,'stocktake-list-table',true,{center:[2,3,4,5]})+CobaltStockUI.pager(data.page,data.total,data.page_size)+'</section>');

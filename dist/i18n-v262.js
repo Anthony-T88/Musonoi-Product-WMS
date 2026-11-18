@@ -203,7 +203,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 当前状态按捆唯一分类；待审核入库使用单据数，已出库另列历史范围。=Current states classify each bundle once. Pending inbound counts receipts; completed outbound history is shown separately.
 入库阶段=Inbound Stage
 备货阶段=Preparation Stage
-装车及出库阶段=Loading and Outbound Stage
+装车及出库阶段=Loading & Stock Issue Stage
 已入库、可备货=Received / Available for Preparation
 其他有效锁定=Other Active Reservations
 已审核待离场=Approved / Awaiting Departure
@@ -388,7 +388,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 已核实全部捆包当前真实状态及所在位置=I have verified the actual current state and position of every bundle
 返回作业=Back to Operations
 返回历史取样=Back to Historical Sampling
-返回备货=Back to Preparation
+返回备货=Back to Lot Preparation
 机构=Organization
 规划/备货中=Planned / In Preparation
 规划堆存占用=Planned Storage Reservations
@@ -458,7 +458,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 Object.assign(TRANSLATIONS.en,{
   "吨": "MT",
   "新建备货单": "New Lot Preparation",
-  "新建入库单": "New Inbound Order",
+  "新建入库单": "New Stock Entry",
   "已知库存净重": "Known Inventory Net Weight",
   "本期正式出库批次数": "Outbound Batches This Period",
   "本期正式出库捆包数": "Outbound Bundles This Period",
