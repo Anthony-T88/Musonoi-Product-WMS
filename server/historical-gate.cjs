@@ -11,7 +11,7 @@ const eligible=`FROM historical_backfills b
  AND nullif(trim(m.source_facts->>'truck'),'') IS NOT NULL AND ${scope()}`;
 const listSql=`SELECT m.source_facts->>'batch_no' batch_number,m.id order_id,m.document_no code,
  m.source_facts->>'truck' truck_no,coalesce(customer.name,m.source_facts->>'customer') customer_name,
- NULL::timestamptz approved_at,NULL::uuid permit_id,m.source_facts->>'gate_permit_no' document_no,
+ NULL::timestamptz approved_at,b.backfilled_at created_at,NULL::uuid permit_id,m.source_facts->>'gate_permit_no' document_no,
  'EXITED'::text state,
  NULL::integer version,NULL::integer current_revision,false current_print_requested,
  NULL::timestamptz actual_exit_at,m.id historical_source_id,

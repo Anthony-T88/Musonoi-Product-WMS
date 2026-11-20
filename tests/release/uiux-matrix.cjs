@@ -81,8 +81,8 @@ function expectedLanding(spec,product,ids){
   'former-design-entry':'/workbench'
  };
  replacements['preparation-new']=co?'/receipts/new':'/preparation/new';
- if(co)Object.assign(replacements,{'overview-detail':'/inventory?stock_state=ALL',preparation:'/receipts','receipt-new':'/receipts/new'});
- if(spec.key==='inventory')replacements.inventory=copper?'/inventory?status=ALL':'/inventory?stock_state=ALL';
+ if(co)Object.assign(replacements,{'overview-detail':'/inventory?stock_state=IN_STOCK',preparation:'/receipts','receipt-new':'/receipts/new'});
+ if(spec.key==='inventory')replacements.inventory=copper?'/inventory?status=CURRENT':'/inventory?stock_state=IN_STOCK';
  if(co&&['map','co-map-expired-filter'].includes(spec.key))replacements[spec.key]='/stock-map'+(ids.coMapDefault?'?'+new URLSearchParams({project_id:ids.coMapDefault.project_id,warehouse_id:ids.coMapDefault.id}):'');
  if(copper&&['cu-plan-group-edit','cu-plan-order-new'].includes(spec.key)&&ids.cuGroupChild){
   replacements[spec.key]='/loading-plans/orders/'+ids.cuGroupChild+(ids.cuGroupLocked?'':'/edit');
@@ -119,7 +119,6 @@ function selectors(key,product,landing){
   'co-sales-detail':['.sales-identity .status-pill:is([data-state-code="APPROVED"],[data-state-code="OPEN"])','.sales-related'],
   'export-licenses':['#export-license-filter','#export-license-table'],
   'export-licenses-filtered':['#export-license-filter','#export-license-table'],
-  'legacy-export-licenses':['#export-license-filter'],
   'export-license-new':['#export-license-application','#permit-book-note','[data-book-open=issuing_bank_account]'],
   'cu-export-license-edit':['#export-license-application'],
   'co-export-license-edit':['#export-license-application'],

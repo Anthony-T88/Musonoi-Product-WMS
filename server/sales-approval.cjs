@@ -58,7 +58,7 @@ async function register({app,pool,permitted,csrf}){
     const ids=ranked.slice(offset,offset+50).map(row=>row.id);
     const param='$'+(v.length+1)+'::uuid[]';
     items=(await c.query(filtered+' AND p.id=ANY('+param+') ORDER BY array_position('+param+',p.id)',[...v,ids])).rows;
-   }else items=(await c.query(filtered+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET '+offset,v)).rows;
+   }else items=(await c.query(filtered+' ORDER BY '+B.documentOrder({pending:"a.state IN('PENDING','COMMERCE_PENDING') OR cr.state IN('PENDING','COMMERCE_PENDING')",created:'p.created_at',id:'p.id'})+' LIMIT 50 OFFSET '+offset,v)).rows;
    const customer_options=(await c.query(`SELECT DISTINCT c.id,c.name FROM ${t.plans} p JOIN ${t.customers} c ON c.id=p.customer_id
     WHERE ${scope(co)} ORDER BY c.name,c.id`,[req.user.id])).rows;
    return {customer_options,items:(await Close.enrich(c,req,items)).map(row=>({...row,execution:byId.get(row.id)})),total:byId.size,page,page_size:50,summary,execution};
@@ -81,9 +81,9 @@ async function register({app,pool,permitted,csrf}){
   summary.total+=historical.receipts;summary.received+=historical.receipts;summary.bags+=historical.bags;
   const showHistory=!work&&(!status||status==='RECEIVED');
   const offset=(page-1)*50,liveTotal=Number((await c.query('SELECT count(*)'+filtered,v)).rows[0].count);
-  const combined=`SELECT p.id,p.created_at,to_jsonb(p)||jsonb_build_object('work_status',w.status,'expected_net_kg',p.bag_count*647) data${filtered}`+
+  const combined=`SELECT p.id,p.created_at,to_jsonb(p)||jsonb_build_object('work_status',w.status,'amendment_status',w.amendment_status,'expected_net_kg',p.bag_count*647) data${filtered}`+
    (showHistory?` UNION ALL SELECT h.id,h.created_at,to_jsonb(h)||jsonb_build_object('status','RECEIVED','bag_count',h.quantity) FROM (${archive}) h`:'' );
-  const {rows}=await c.query(`SELECT data FROM (${combined}) records ORDER BY created_at DESC,id LIMIT 50 OFFSET ${offset}`,v);
+  const {rows}=await c.query(`SELECT data FROM (${combined}) records ORDER BY ${B.documentOrder({historical:"data->>'historical_import'='true'",pending:"data->>'status' IN('SITE_PENDING','PRODUCTION_PENDING','PREPARING') OR data->>'work_status'='PENDING_COMPLETION_REVIEW' OR data->>'amendment_status'='PENDING'"})} LIMIT 50 OFFSET ${offset}`,v);
   return {items:rows.map(row=>row.data),total:liveTotal+(showHistory?historical.receipts:0),page,page_size:50,summary};
  }));
 }

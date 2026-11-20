@@ -5,9 +5,10 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
  const fs=require('node:fs/promises'),PL=require('../../server/packing-list.cjs');
  const items=Array.from({length:85},(_,i)=>({bundle_no:'B-'+i,sheets_per_bundle:48,seal_no:'S-'+i,net_weight:'1.000000',gross_weight:'1.050000'}));
  const {buffer}=await PL.render({include_invoice:true,document_no:'PL-123',document_date:'2026-11-18',
-  customer_name:'Example buyer',transport:{buyer_information:'Warehouse address and delivery instructions. '.repeat(18)},
+  customer_name:'Example buyer',transport:{buyer_information:'Warehouse address and delivery instructions. '.repeat(18),forwarder:'Example International Freight\nForwarding and Consolidated Cargo Services Ltd'},
   loading_plan:{invoice_no:'INV-123'},contracts:['Example contract'],lots:['LOT-1'],items,bundle_count:items.length,
-  total_net_weight:'85.000000',total_gross_weight:'89.250000',commercial_invoice:{unit_price_usd:'100.00'}});
+  total_net_weight:'85.123500',total_gross_weight:'89.250000',commercial_invoice:{unit_price_usd:'100.00'},
+  invoice_bank_details:{offshore_bank:'Example Offshore Bank',offshore_bank_account:'000123',issuing_bank:'Example Local Bank',issuing_bank_account:'000456'}});
  const assets=['release.js','packing-print.js','v30-ui.js','packing-print.css','uiux-governance.css'];
  const site=require('node:http').createServer(async(req,res)=>{
   const asset=new URL(req.url,'http://localhost').pathname.slice(1);
@@ -37,6 +38,18 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
    const opened=page.waitForEvent('popup');await page.getByRole('button',{name:'Print Current Document'}).click();
    const popup=await opened;
    await popup.waitForFunction(()=>document.querySelector('#print-current-document')?.disabled===false);
+   if(sheet==='INV'){
+    const cells=popup.locator('[data-print-single-line]');
+    assert.equal(await cells.count(),2);
+    assert(await cells.evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).whiteSpace==='nowrap')));
+    assert.equal(await cells.last().getAttribute('colspan'),'3');
+   }
+   if(name==='invoice'){
+    assert.equal(layout.rows[29].cells[3].text,'85.124');
+    assert.equal(layout.rows[43].cells[0].text,'Account Number: 000123');
+    assert.equal(layout.rows[49].cells[0].text,'Account Number: 000456');
+    assert.equal(layout.rows[44].cells[0].text,'');
+   }
    const pdf=await popup.pdf({path:path.join(output,name+'.pdf'),preferCSSPageSize:true,printBackground:true});
    const count=pdf.toString('latin1').match(/\/Type\s*\/Page\b/g)?.length;
    if(sheet==='INV')assert.equal(count,1,name);else assert(count>1,name);
@@ -352,7 +365,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.evaluate(()=>I18n.set('zh-CN'));
  await page.locator('#stock-map-canvas [data-map-cell="P1-01"]').press('Enter');
  await page.locator('.stock-map-layout.v27-has-detail #stock-map-detail h2').first().waitFor();
- assert(await page.locator('#stock-map-detail').evaluate(el=>{const map=document.getElementById('stock-map-canvas').getBoundingClientRect(),detail=el.getBoundingClientRect();return detail.right<=map.right&&detail.left>map.left&&getComputedStyle(el).position==='absolute';}));
+ assert(await page.locator('#stock-map-detail').evaluate(el=>{const map=document.getElementById('stock-map-canvas').getBoundingClientRect(),detail=el.getBoundingClientRect();return detail.right<=map.right&&detail.left>map.left&&getComputedStyle(el).position==='sticky';}));
  assert(await page.locator('#v271-map-labels .v271-label-grid').isVisible());
  await go(page,'/stock-map?project_id='+f.project+'&warehouse_id='+f.warehouse);
  await page.locator('#co-map-canvas').waitFor();
@@ -363,7 +376,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('#map465-temporary-list').isVisible());
  await page.locator('#map465-location-list [data-map465-location="'+f.location+'"]').click();
  await page.locator('#co-map-detail').waitFor();
- assert(await page.locator('#co-map-detail').evaluate(el=>getComputedStyle(el).position==='absolute'&&el.getBoundingClientRect().right<=innerWidth));
+ assert(await page.locator('#co-map-detail').evaluate(el=>getComputedStyle(el).position==='sticky'&&el.getBoundingClientRect().right<=innerWidth));
  assert(await page.locator('#co-map-adjust').isEnabled());
  await page.screenshot({path:path.join(E.runtime,'cobalt-map-floating-detail.png')});
  await page.setViewportSize({width:390,height:844});

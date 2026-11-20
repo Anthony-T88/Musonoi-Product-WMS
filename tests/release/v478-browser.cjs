@@ -127,6 +127,8 @@ async function occupyCobaltLocation(location){
    const cu=product==='CU_CATHODE';
    await lang('zh-CN');
    await go(product,cu?'/inventory?search=TEST-CU-UNIT':'/inventory?bag=TEST-CO-UNIT');
+   assert.equal(await page.locator(cu?'#status':'#co-stock-filter [name=stock_state]').inputValue(),cu?'CURRENT':'IN_STOCK');
+   await go(product,cu?'/inventory?status=ALL&search=TEST-CU-UNIT':'/inventory?stock_state=ALL&bag=TEST-CO-UNIT');
    assert.equal(await page.locator(cu?'#status':'#co-stock-filter [name=stock_state]').inputValue(),'ALL');
    const historyRow=page.locator('table tbody tr').filter({has:page.locator('a[href^="/inventory/historical/"]')}).first();
    await historyRow.getByText('历史数据导入',{exact:true}).waitFor();

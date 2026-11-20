@@ -25,7 +25,7 @@ async function list(c,req,{cobalt=false}={}){
  const fields=cobalt?'d.id,d.code,d.title,d.status,d.created_at,d.round,d.task_type,d.period_month,(SELECT name FROM warehouses WHERE id=d.warehouse_id) warehouse_name':
   'd.*,(SELECT display_name FROM users WHERE id=d.assigned_to) assigned_name';
  const {rows:items}=await c.query(`SELECT ${fields},${baseline} baseline_at ${base}
-  ORDER BY d.created_at DESC,d.id LIMIT $7 OFFSET $8`,[...values,size,(page-1)*size]);
+  ORDER BY ${B.documentOrder({pending:cobalt?"d.status IN('OPEN','SUBMITTED')":"d.phase IN('IN_PROGRESS','REVIEW','APPROVAL','ADJUSTMENTS')",created:'d.created_at',id:'d.id'})} LIMIT $7 OFFSET $8`,[...values,size,(page-1)*size]);
  const {rows:[count]}=await c.query('SELECT count(*)::int total '+base,values);
  const {rows:periods}=await c.query('SELECT DISTINCT d.task_type,d.period_month '+scoped+' AND d.period_month IS NOT NULL ORDER BY d.period_month DESC,d.task_type',[req.user.id]);
  return {items,periods,total:count.total,page,page_size:size};

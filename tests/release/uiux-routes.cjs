@@ -110,7 +110,6 @@ function pages(ids){
  add('sales','/sales-plans',BOTH,{screenshot:true,roles:['sales_operator','sales_manager','commerce_manager','customer_admin']});
  add('export-licenses','/export-licenses',BOTH,{screenshot:true,roles:['sales_operator','commerce_manager','logistics_field_operator','production_operator']});
  add('export-licenses-filtered','/export-licenses',BOTH,{query:'?status=ACTIVE',state:'status filter',screenshot:true});
- add('legacy-export-licenses','/export-licenses',BOTH,{query:'?view=legacy',state:'historical'});
  add('export-license-new','/export-licenses/new',BOTH,{state:'new license record and record-book row actions',screenshot:true});
  add('cu-export-license','/export-licenses/:id',[CU],{example:'cuPermit',state:'quota and linked loading plans',screenshot:true});
  add('co-export-license','/export-licenses/:id',[CO],{example:'coPermit',state:'quota and linked loading plans',screenshot:true});

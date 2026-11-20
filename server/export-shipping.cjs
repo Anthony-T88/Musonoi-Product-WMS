@@ -85,7 +85,7 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false){
   }
  }
  const {rows}=await c.query(`SELECT data FROM (SELECT live.id,live.created_at,to_jsonb(live) data FROM (${live}) live${archive}) records
-  ORDER BY created_at DESC,id LIMIT 30 OFFSET ${bind((page-1)*30)}`,values);
+  ORDER BY ${require('./business-common.cjs').documentOrder({historical:"data->>'historical_import'='true'",pending:"data->>'workflow_state' IN('WAITING','LOADING','READY','DEPARTED_PENDING','DEPARTED_CORRECTION') OR data->>'posted'='false' AND data->>'status'<>'CANCELLED' OR data->>'packing_eligible'='true' AND data->>'revision' IS NULL"})} LIMIT 30 OFFSET ${bind((page-1)*30)}`,values);
  const customer_options=includeHistory?(await c.query(`SELECT DISTINCT cu.id,cu.name FROM copper_customers cu WHERE EXISTS(
   SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=cu.project_id AND(s.customer_id IS NULL OR s.customer_id=cu.id))
   ORDER BY cu.name,cu.id`,[req.user.id])).rows:undefined;
@@ -142,6 +142,7 @@ async function register({app,pool,permitted,csrf}){
   const reason=b.reason===undefined?'根据已审核装车明细生成商业发票与装箱单':C.text(b.reason,'生成原因',1000);if(reason.length<5)throw C.error(400,'生成原因至少5个字');
   const invoice=require('./commercial-invoice.cjs'),commercial_invoice={unit_price_usd:invoice.unitPrice(b.unit_price_usd),freight_price_usd:invoice.freightPrice};
   const revision=(d.document?.revision||0)+1,document_no=d.loading_plan?d.loading_plan.packing_list_no:d.document?.document_no||d.outbound_no+'-PL',snapshot={...d,transport:{...d.transport.fields},document_no,commercial_invoice,include_invoice:true,included_sheets:['INV','PL']};delete snapshot.document;delete snapshot.revisions;delete snapshot.document_stale;
+  snapshot.invoice_bank_details=await invoice.bankDetails(c,d.loading_plan);
   const activeTemplate=await require('./packing-templates.cjs').source(c,true);snapshot.template_revision=activeTemplate.revision||0;const rendered=await PL.render(snapshot,activeTemplate.content),file_name=documentFilename(snapshot);
   await c.query('INSERT INTO packing_list_documents(loading_id,document_no,revision,transport_version,generated_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT(loading_id) DO UPDATE SET document_no=excluded.document_no,revision=excluded.revision,transport_version=excluded.transport_version,generated_by=excluded.generated_by,generated_at=clock_timestamp()',[l.id,document_no,revision,d.transport.version,req.user.id]);
   await c.query('INSERT INTO packing_list_revisions(loading_id,revision,snapshot,template_sha256,file_sha256,file_name,content,generated_by,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[l.id,revision,snapshot,rendered.template_sha256,rendered.file_sha256,file_name,rendered.buffer,req.user.id,reason]);

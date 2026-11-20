@@ -27,7 +27,7 @@ async function operations(c,req,departure=false,includeHistory=false){
   }
  }
  const {rows}=await c.query(`SELECT data FROM (SELECT live.order_id id,live.created_at,to_jsonb(live) data FROM (${select} ${from}) live${archive}) records
-  ORDER BY created_at DESC,id LIMIT 50 OFFSET ${(page-1)*50}`,values);
+  ORDER BY ${B.documentOrder({historical:"data->>'historical_import'='true'",pending:"data->>'state' NOT IN('OUTBOUND','CANCELLED')"})} LIMIT 50 OFFSET ${(page-1)*50}`,values);
  const customer_options=includeHistory?(await c.query(`SELECT DISTINCT customer.id,customer.name FROM co_sales_plans p
   JOIN co_customer_profiles customer ON customer.id=p.customer_id WHERE ${scope()}
   UNION SELECT DISTINCT customer.id,customer.name FROM co_customer_profiles customer

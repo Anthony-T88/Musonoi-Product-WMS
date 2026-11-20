@@ -9,6 +9,7 @@ button { font: inherit; padding: 8px 12px; }
 .single-print-page > .packing-sheet { position: absolute; top: 0; left: 0; margin: 0; transform-origin: top left; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 td { border: 0; padding: 2px; overflow-wrap: anywhere; white-space: pre-wrap !important; }
+td[data-print-single-line] { white-space: nowrap !important; overflow-wrap: normal; }
 tr { break-inside: avoid; }
 @media print {
   nav { display: none; }

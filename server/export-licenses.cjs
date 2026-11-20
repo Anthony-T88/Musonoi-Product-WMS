@@ -93,7 +93,7 @@ async function list(c,req,eligible){
  }
  const where=' WHERE '+conditions.join(' AND ');
  const pageSize=50,checkMore=eligible&&!q.invoice_preview_id;
- const result=await c.query(projection+where+' ORDER BY l.created_at DESC,l.id LIMIT '+(checkMore?pageSize+1:pageSize)+' OFFSET '+((page-1)*pageSize),v);
+ const result=await c.query(projection+where+' ORDER BY '+B.documentOrder({pending:displayStatus+" IN('PENDING','APPLYING')",created:'l.created_at',id:'l.id'})+' LIMIT '+(checkMore?pageSize+1:pageSize)+' OFFSET '+((page-1)*pageSize),v);
  if(eligible){
   const license=result.rows[0];
   if(q.invoice_preview_id&&license){

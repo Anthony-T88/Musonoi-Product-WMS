@@ -260,7 +260,7 @@ window.DocumentDrafts={
   if(!spec||q.has('workflow')||Number(q.get('page')||1)>1||
    state&&!['ALL','DRAFT'].includes(state.toUpperCase())||q.get('work_status')||q.get('document_status')||
    route==='/loading-plans'&&(q.has('vehicle_id')||q.has('tab')&&q.get('tab')!=='arrivals')||
-   route==='/outbounds'&&view==='printers'||route==='/export-licenses'&&view==='legacy')return;
+   route==='/outbounds'&&view==='printers')return;
   const [selector,...keys]=departureList?['#cu-departures-table,#co-departures-table','cu-departure-draft','co-execution-departure']:
    documentList?['#co-execution-list,.business-table table','shipping-generate','co-packing-generate']:spec;
   const table=root.querySelector(selector);

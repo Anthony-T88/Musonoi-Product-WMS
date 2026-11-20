@@ -170,7 +170,8 @@ window.ExportLicenses={
  async routePage(path){
   this.page(this.title(),'<section class="panel export-license-loading" aria-busy="true"><p role="status">'+this.t('正在加载许可证…','Loading licenses…')+'</p><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></section>');
   if(path===this.route){
-   if(new URLSearchParams(location.search).get('view')==='legacy')return SalesReviewUI.licenses();
+   const query=new URLSearchParams(location.search);
+   if(query.get('view')==='legacy'){query.delete('view');history.replaceState(history.state,'',this.route+(query.size?'?'+query:''));}
    return this.list();
   }
   if(path.endsWith('/new'))return this.form();
@@ -181,8 +182,9 @@ window.ExportLicenses={
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q),base=this.route;
   const indicators=[['','许可证总数','Total Licenses',d.indicators.total],['ACTIVE','有效许可证','Active Licenses',d.indicators.active],['EXPIRING','即将到期','Expiring Soon',d.indicators.expiring],['CLOSED','已关证','Closed Licenses',d.indicators.closed]];
   const cards='<div class="v34-kpi-grid">'+indicators.map(([k,zh,en,n])=>'<a class="v34-kpi" href="'+base+(k?'?status='+k:'')+'"><span>'+t(zh,en)+'</span><strong>'+n+'</strong></a>').join('')+'</div>';
-  const units=d.units.length?this.table([['计量口径 / 单位','Basis / Unit'],['批准总量','Approved'],['已使用','Used'],['剩余','Remaining'],['可分配','Allocatable']],d.units.map(row=>'<tr><th scope="row">'+esc(this.t(...this.bases[row.unit_basis]))+' / '+esc(row.unit)+'</th>'+['quantity','used','remaining','available'].map(k=>'<td>'+(['used','remaining'].includes(k)?this.quantity(row[k],row,4):this.value(row[k]))+'</td>').join('')+'</tr>'),'export-license-units'):'';
-  const buttons='<div class="business-toolbar">'+(this.can('write')?'<a class="button primary" href="'+base+'/new">'+t('新建出口许可证档案','New Export License Record')+'</a>':'')+(CurrentUser.permissions.includes('loading-plan:read')?'<a class="button secondary" href="'+base+'?view=legacy">'+t('历史装车许可证号','Legacy Loading License Numbers')+'</a>':'')+'</div>';
+  const units=d.units.length?this.table([['计量口径 / 单位','Basis / Unit'],['批准总量','Approved'],['已使用','Used'],['剩余','Remaining'],['可分配','Allocatable']],d.units.map(row=>'<tr><th scope="row">'+esc(this.t(...this.bases[row.unit_basis]))+' / '+esc(row.unit)+'</th>'+['quantity','used','remaining','available'].map(k=>'<td>'+(k==='quantity'?this.value(row[k]):this.quantity(row[k],row,4))+'</td>').join('')+'</tr>'),'export-license-units'):'';
+  const settings=CurrentUser.permissions.includes('system:manage')?'<form id="export-license-settings" class="permit-reminder"><label><span>'+t('提前提醒天数','Reminder Days')+'</span><input type="number" name="expiry_days" min="1" max="365" required value="'+d.expiry_days+'"></label><button class="button secondary">'+t('保存设置','Save Settings')+'</button><span role="status" class="permit-reminder-feedback"></span></form>':'';
+  const buttons='<div class="business-toolbar permit-register-toolbar">'+(this.can('write')?'<a class="button primary" href="'+base+'/new">'+t('新建出口许可证档案','New Export License Record')+'</a>':'')+settings+'</div>';
   const searchField=(key,zh,en,type='search')=>'<label>'+t(zh,en)+'<input type="'+type+'" name="'+key+'" maxlength="160" value="'+esc(q.get(key)||'')+'"></label>';
   const selectField=(key,zh,en,options)=>'<label>'+t(zh,en)+'<select name="'+key+'"><option value="">'+t('全部','All')+'</option>'+
    options.map(([id,label])=>'<option value="'+esc(id)+'" '+(q.get(key)===id?'selected':'')+'>'+esc(label)+'</option>').join('')+'</select></label>';
@@ -204,10 +206,9 @@ window.ExportLicenses={
     UI.status(r.status,'permit',this.state(r.status)),'<a class="button secondary compact" href="'+esc(url)+'">'+t('查看','View')+'</a>'];
    return '<tr>'+cells.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>';
   });
-  const settings=CurrentUser.permissions.includes('system:manage')?'<details><summary>'+t('到期提醒设置','Expiry Reminder Settings')+'</summary><form id="export-license-settings" class="user-form"><div class="form-grid"><label>'+t('提前提醒天数','Reminder Days')+'<input type="number" name="expiry_days" min="1" max="365" required value="'+d.expiry_days+'"></label></div><div class="business-toolbar"><button class="button secondary">'+t('保存提醒设置','Save Reminder')+'</button></div></form></details>':'';
-  this.page(this.title(),buttons+cards+this.section(t('许可证台账','License Register'),filter+this.table(headings,rows,'export-license-table',true,{numeric:[4,5,6],actions:[10]})+CobaltStockUI.pager(d.page,d.total,d.page_size))+units+settings);
+  this.page(this.title(),buttons+cards+this.section(t('许可证台账','License Register'),units+filter+this.table(headings,rows,'export-license-table',true,{numeric:[4,5,6],actions:[10]})+CobaltStockUI.pager(d.page,d.total,d.page_size)));
   $('export-license-filter').onsubmit=e=>{e.preventDefault();const values=new URLSearchParams([...new FormData(e.target)].filter(([,v])=>v));Router.go(base+(values.size?'?'+values:''));};
-  if($('export-license-settings'))$('export-license-settings').onsubmit=e=>this.submit(e,async()=>{await API.request(this.api()+'/preferences',{method:'POST',body:{expiry_days:Number(e.target.elements.expiry_days.value)}});await this.list();});
+  if($('export-license-settings'))$('export-license-settings').onsubmit=e=>this.submit(e,async()=>{await API.request(this.api()+'/preferences',{method:'POST',body:{expiry_days:Number(e.target.elements.expiry_days.value)}});await this.list();$('export-license-settings')?.querySelector('[role=status]').replaceChildren(t('已保存','Saved'));});
   CobaltStockUI.bindPager(d);
  },
  async form(id){
@@ -239,7 +240,7 @@ window.ExportLicenses={
   return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+'.'+fraction;
  },
  quota(d){
-  const t=this.t,qty=key=>this.quantity(d[key],d,['used','remaining'].includes(key)?4:undefined),
+  const t=this.t,qty=key=>this.quantity(d[key],d,['used','remaining','available'].includes(key)?4:undefined),
    unit=d.unit_basis==='PHYSICAL_MT'?t('吨','MT'):d.unit_basis==='COBALT_MT'?t('金属吨','Metal MT'):esc(d.unit);
   const usable=d.license_status==='ACTIVE',rawRate=Number(d.utilization)||0;
   const amount=key=>qty(key)+' <small>'+unit+'</small>';

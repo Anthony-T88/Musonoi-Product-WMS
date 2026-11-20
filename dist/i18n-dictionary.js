@@ -1380,3 +1380,31 @@ Object.assign(TRANSLATIONS.en,{
  "服务请求失败，请重试。": "The request failed. Please try again.",
  "数据库或服务暂不可用，请稍后重试。": "The database or service is temporarily unavailable. Please try again later."
 });
+
+Object.assign(TRANSLATIONS.en,{
+ "当前授权实存 / 当前筛选": "Authorized Stock / Filtered Stock",
+ "仅授权库存，不据此判断空位和剩余容量。": "Only authorized stock is shown. Availability and remaining capacity require a full inventory view.",
+ "取样中 / 已装车（普通货位已排除）": "Sampling / Loaded (Excluded from Storage Locations)",
+ "最近业务时间": "Last Activity",
+ "打开库存查询": "Open Inventory Search",
+ "普通货位清单排除已装车未离场捆包；这些捆包仍列入厂内总量和车辆区。最近记录只显示授权捆包的操作元数据。": "Loaded bundles awaiting departure appear in the vehicle area and on-site totals. Recent activity includes authorized bundles.",
+ "在位捆包明细": "Bundles at This Location",
+ "无授权业务记录": "No Authorized Activity",
+ "当前筛选没有授权普通货位库存": "No Authorized Stock Matches the Filters",
+ "无匹配授权库存": "No Matching Authorized Stock",
+ "历史未关联 / 无匹配": "No Historical Link or Match",
+ "最大捆数 / 最大净重(t)": "Maximum Bundles / Net Weight (MT)",
+ "毛重合计(t)": "Total Gross Weight (MT)",
+ "净重合计(t)": "Total Net Weight (MT)",
+ "捆未录入": " bundles with no recorded value",
+ "捆未知": " bundles with unknown weight",
+ "正在读取P5新生产捆包堆存区…": "Loading the P5 New Production Bundles Stock Area…",
+ "公共区域，不参与单Lot独占": "Shared storage for multiple lots",
+ "创建Lot时实物可留在P5；主管审核并确认归位后才更新正式货位。未知重量不推算。": "Bundles can stay in P5 during lot creation. The formal location updates when the supervisor confirms placement. Unknown weights remain blank.",
+ "当前实物捆数": "Bundles On Site",
+ "已知毛重 / 净重(t)": "Known Gross / Net Weight (MT)",
+ "查看临时区库存": "View Temporary Area Stock",
+ "当前筛选无实物库存": "No Physical Stock Matches the Filters",
+ "已离场待出库审批 / 待纠正": "Departed, Awaiting Stock Issue Approval or Correction",
+ "当前授权范围无待审批离场货物": "No Authorized Departed Cargo Awaits Approval"
+});

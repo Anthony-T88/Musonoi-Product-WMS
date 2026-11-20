@@ -97,7 +97,6 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | sales | `/sales-plans` | 铜、钴 | 管理员、销售员、客户范围管理员、销售经理、商务经理 | 骨架、筛选、表格、指标 | 36 / 0 / 0 | — |
 | export-licenses | `/export-licenses` | 铜、钴 | 管理员、销售员、现场操作员、生产操作员、商务经理 | 骨架、筛选、表单、表格、状态、指标、反馈 | 32 / 4 / 0 | — |
 | export-licenses-filtered | `/export-licenses` | 铜、钴 | 管理员 | 骨架、筛选、表单、表格、状态、指标 | 20 / 0 / 0 | — |
-| legacy-export-licenses | `/export-licenses` | 铜、钴 | 管理员 | 骨架、筛选、表格 | 12 / 0 / 0 | — |
 | export-license-new | `/export-licenses/new` | 铜、钴 | 管理员 | 骨架、表单 | 20 / 0 / 0 | — |
 | cu-export-license | `/export-licenses/:id` | 铜 | 管理员 | 骨架、表单、表格、状态 | 10 / 0 / 0 | — |
 | co-export-license | `/export-licenses/:id` | 钴 | 管理员 | 骨架、表单、表格、状态 | 10 / 0 / 0 | — |

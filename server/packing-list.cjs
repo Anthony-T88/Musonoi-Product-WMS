@@ -74,7 +74,9 @@ async function render(snapshot,templateBuffer){
  return {buffer,template_sha256:digest(source),file_sha256:digest(buffer)};
 }
 async function preview(buffer,sheetName='PL'){
+ const invoice=sheetName==='INV'?require('./commercial-invoice.cjs'):null;
  const book=new Excel.Workbook();await book.xlsx.load(buffer);const sheet=book.getWorksheet(sheetName);if(!sheet)throw Object.assign(Error('该历史版本未包含发票页，请重新生成加入发票'),{statusCode:404});const color=c=>c?.argb?'#'+c.argb.slice(-6):null;
+ if(invoice&&!sheet.model.merges.includes(invoice.forwarderRange))sheet.mergeCellsWithoutStyle(invoice.forwarderRange);
  const mergedBorders=new Map(),coord=a=>{const m=a.match(/([A-Z]+)(\d+)/);return {row:Number(m[2]),col:[...m[1]].reduce((n,c)=>n*26+c.charCodeAt(0)-64,0)};};
  for(const merge of sheet.model.merges){const [first,last]=merge.split(':'),a=coord(first),b=coord(last),edges={};
   for(const side of ['left','right'])for(let r=a.row;r<=b.row;r++){const edge=sheet.getCell(r,side==='left'?a.col:b.col).border[side];if(edge?.style)edges[side]=edge;}
@@ -84,8 +86,10 @@ async function preview(buffer,sheetName='PL'){
  const rows=[];sheet.eachRow({includeEmpty:true},row=>{const cells=[];for(let i=1;i<=7;i++){const c=row.getCell(i),v=c.type===Excel.ValueType.Formula?c.result:c.value,borders={...c.border,...mergedBorders.get(c.address)};
   const plain=v&&typeof v==='object'&&!(v instanceof Date)?v.richText?.map(r=>r.text).join('')??v.text??v.result??'':v;
   let text=plain instanceof Date?v.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}):plain??'';
-  if(typeof v==='number'){const wholeKg=row.number>=30&&i>=6&&c.numFmt==='#,##0';text=v.toLocaleString('en-US',{minimumFractionDigits:wholeKg?0:row.number>=30&&i>=6?1:0,maximumFractionDigits:wholeKg?0:4});}
-  cells.push({address:c.address,text,font:{name:c.font.name||'Times New Roman',size:c.font.size||11,bold:c.font.bold,italic:c.font.italic,color:color(c.font.color)},fill:c.fill.type==='pattern'&&c.fill.pattern==='solid'?color(c.fill.fgColor):null,alignment:c.alignment,border:Object.fromEntries(['top','bottom','left','right'].map(k=>[k,{style:borders[k]?.style,color:color(borders[k]?.color)}]))});
+  if(typeof v==='number'){const wholeKg=row.number>=30&&i>=6&&c.numFmt==='#,##0',net=invoice?.netWeightCell.test(c.address);text=v.toLocaleString('en-US',{minimumFractionDigits:net?3:wholeKg?0:row.number>=30&&i>=6?1:0,maximumFractionDigits:net?3:wholeKg?0:4});}
+  const singleLine=!!invoice&&/^[DE]14$/.test(c.address);
+  if(singleLine)text=invoice.singleLine(text);
+  cells.push({address:c.address,text,font:{name:c.font.name||'Times New Roman',size:c.font.size||11,bold:c.font.bold,italic:c.font.italic,color:color(c.font.color)},fill:c.fill.type==='pattern'&&c.fill.pattern==='solid'?color(c.fill.fgColor):null,alignment:singleLine?{...c.alignment,shrinkToFit:true,wrapText:false}:c.alignment,singleLine,border:Object.fromEntries(['top','bottom','left','right'].map(k=>[k,{style:borders[k]?.style,color:color(borders[k]?.color)}]))});
  }rows.push({number:row.number,height:row.height||sheet.properties.defaultRowHeight||15,cells});});
  const setup=sheet.pageSetup||{},paper={1:'Letter',8:'A3',9:'A4',11:'A5'}[setup.paperSize]||'A4';
  const print={paper,orientation:setup.orientation==='landscape'?'landscape':'portrait',margins:setup.margins||null,

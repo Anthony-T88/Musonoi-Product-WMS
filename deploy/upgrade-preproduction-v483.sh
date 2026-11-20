@@ -149,6 +149,16 @@ case "${2:-base}" in
     migration=197_v485_historical_departure_and_sales_links.sql
     migration_count=197
     ;;
+  v487)
+    repo=/opt/musonoi-wms-release-v4.8.7
+    override=/etc/musonoi/preproduction-v487-build.override.yaml
+    source_revision=4.8.6-ui2
+    target_revision=4.8.7
+    target_version=4.8.7
+    release_branch=release/v4.8.7
+    migration=197_v485_historical_departure_and_sales_links.sql
+    migration_count=197
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 release_id=${target_version//./}
@@ -199,11 +209,15 @@ services:
     build:
       context: $repo
 YAML
+if [[ $target_revision == 4.8.7 ]]; then
+  sed -i '/^  app:$/a\    restart: unless-stopped' "$stage/build.yaml"
+  printf '  database:\n    restart: unless-stopped\n' >> "$stage/build.yaml"
+fi
 if [[ -e "$override" ]]; then cmp "$override" "$stage/build.yaml"; else cp "$stage/build.yaml" "$override"; fi
 new=("${old[@]}" -f "$override")
 "${old[@]}" --profile maintenance config --format json > "$stage/compose-before.json"
 "${new[@]}" --profile maintenance config --format json > "$stage/compose-after.json"
-python3 - "$stage" "$repo" <<'PY'
+python3 - "$stage" "$repo" "$target_revision" <<'PY'
 import json, sys
 from pathlib import Path
 stage=Path(sys.argv[1])
@@ -211,6 +225,10 @@ old, new=(json.loads((stage / name).read_text()) for name in ("compose-before.js
 for service in ("app","migrate"):
     assert new["services"][service]["build"]["context"]==sys.argv[2]
     new["services"][service]["build"]["context"]=old["services"][service]["build"]["context"]
+if sys.argv[3]=="4.8.7":
+    for service in ("app","database"):
+        assert new["services"][service].pop("restart")=="unless-stopped"
+        old["services"][service].pop("restart",None)
 assert old==new
 assert old["services"]["app"]["environment"]["DB_EXPECTED_NAME"]=="musonoi_preproduction_test"
 (stage / "compose-after.json").unlink()
@@ -286,5 +304,11 @@ status config | json_is frontendRevision "$target_revision"
 [[ $("${new[@]}" ps -q database) == "$old_db" ]]
 mounts "$old_db" | cmp "$stage/db-mounts"
 mounts "$("${new[@]}" ps -q app)" | cmp "$stage/app-mounts"
+if [[ $target_revision == 4.8.7 ]]; then
+  docker update --restart unless-stopped "$old_db" > /dev/null
+  for container in "$old_db" "$("${new[@]}" ps -q app)"; do
+    [[ $(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$container") == unless-stopped ]]
+  done
+fi
 trap - EXIT
 printf 'V%s_DEPLOY_VERIFIED commit=%s migration=%s evidence=%s\n' "$release_id" "$commit" "$migration" "$stage"

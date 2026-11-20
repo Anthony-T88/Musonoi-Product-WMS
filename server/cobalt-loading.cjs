@@ -33,7 +33,7 @@ async function listCurrent(c,req,exportAll=false){const q=req.query,page=Number(
   (showHistory?` UNION ALL SELECT h.id,
    to_jsonb(h)||jsonb_build_object('status','OUTBOUND','invoice_no',h.code,'planned_load_date',h.planned_load_day) FROM (${archive}) h`:'');
  const sortValue=sort==='created_at'?"(data->>'created_at')::timestamptz":`data->>'${sort}'`;
- const {rows}=await c.query(`SELECT data FROM (${combined}) documents ORDER BY ${sortValue} ${direction} NULLS LAST,id`+
+ const {rows}=await c.query(`SELECT data FROM (${combined}) documents ORDER BY ${B.documentOrder({historical:"data->>'historical_import'='true'",pending:"data->>'status'='MATCHED'",created:sortValue,direction})}`+
   (exportAll?'':' LIMIT '+size+' OFFSET '+(page-1)*size),values);
  return {customer_options,state_counts,scope_total:counts.reduce((sum,r)=>sum+r.n,0)+historyCount,items:rows.map(row=>row.data),
   total:Number((await c.query('SELECT count(*)'+from+' WHERE '+where,values)).rows[0].count)+(showHistory?historyCount:0),page,page_size:size,sort,direction};

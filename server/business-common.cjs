@@ -13,4 +13,8 @@ async function mutate(pool,req,fn,{exclusiveAuthorization=false}={}){const key=r
  const route=req.method+' '+req.url.split('?')[0],hash=createHash('sha256').update(canonical(req.body)).digest('hex');const c=await pool.connect();try{await c.query('BEGIN');if(exclusiveAuthorization){await c.query('SELECT pg_advisory_xact_lock(21002)');await require('./management-security.cjs').actor(c,req,null);}await c.query('SELECT v24_revision()');await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[req.user.id+route+key]);const old=(await c.query('SELECT * FROM idempotency_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,route,key])).rows[0];if(old){if(old.request_hash!==hash)throw error(409,'同一幂等键不能用于不同请求内容');require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return old.response;}
  require('./authorization-lease.cjs').healthy(req);const result=await fn(c);await c.query('INSERT INTO idempotency_requests VALUES($1,$2,$3,$4,$5,now())',[req.user.id,route,key,hash,result]);require('./authorization-lease.cjs').healthy(req);await c.query('COMMIT');return result;
  }catch(e){await c.query('ROLLBACK');if(require('./v265.cjs').businessError(e,req)){e.statusCode=e.statusCode||409;throw e;}if(['23505','23503','23514','40001','40P01'].includes(e.code))throw error(409,'数据重复、已占用或状态冲突：'+(e.code==='23514'?e.message:'请刷新后重试'));throw e;}finally{c.release();}}
-module.exports={error,text,uuid,version,date,weight,audit,scope,mutate};
+function documentOrder({pending='false',historical='false',created='created_at',id='id',direction='DESC'}={}){
+ return `CASE WHEN ${historical} THEN 2 WHEN ${pending} THEN 0 ELSE 1 END,(${created}) ${direction==='asc'?'ASC':'DESC'} NULLS LAST,${id}`;
+}
+function documentPriority(row,pending){return row.historical_import?2:pending(row)?0:1;}
+module.exports={error,text,uuid,version,date,weight,audit,scope,mutate,documentOrder,documentPriority};

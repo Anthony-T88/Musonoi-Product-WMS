@@ -90,14 +90,14 @@ function register({app,pool,auth,csrf}){
    const all=req.query.all_products==='1';
    const matching=all?where.replace('d.product_code=$1','$1::text IS NOT NULL'):where;
    const {rows:[result]}=await pool.query(`WITH filtered AS MATERIALIZED (
-    SELECT d.id,d.business_date FROM historical_movement_documents d ${matching}
+    SELECT d.id,d.imported_at FROM historical_movement_documents d ${matching}
    ), page_ids AS (
-    SELECT id FROM filtered ORDER BY business_date DESC,id LIMIT $9 OFFSET $10
+    SELECT id FROM filtered ORDER BY imported_at DESC,id LIMIT $9 OFFSET $10
    ), page_rows AS (
     ${select} JOIN page_ids ids ON ids.id=d.id
    )
    SELECT (SELECT count(*)::int FROM filtered) total,
-    coalesce((SELECT jsonb_agg(r ORDER BY r.business_date DESC,r.id) FROM page_rows r),'[]') items`,
+    coalesce((SELECT jsonb_agg(r ORDER BY r.imported_at DESC,r.id) FROM page_rows r),'[]') items`,
     [...values,size,(page-1)*size]);
    return {...result,page,page_size:size,has_next:page*size<result.total};
   });

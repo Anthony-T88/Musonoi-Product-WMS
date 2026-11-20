@@ -709,13 +709,22 @@ html[data-release-ui="46"] #business-page > .page-heading {
 .wms-map-reviewed :is(.stock-map-layout,.map465-grid) { position: relative; min-inline-size: 0; }
 .map-app.wms-map-reviewed .stock-map-layout.v27-has-detail:has(>.map-detail:not([hidden])) { grid-template-columns: minmax(0,1fr); }
 .wms-map-reviewed .map465-grid { display: block; }
+.wms-map-reviewed :is(.stock-map-layout.v27-has-detail,.map465-grid):has(>[id$="-detail"]:not([hidden])) {
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+}
+.wms-map-reviewed :is(.map-visual-column,.map465-stage) { grid-area: 1 / 1; min-inline-size: 0; }
 .map-app.wms-map-reviewed .stock-map-layout #stock-map-detail:not([hidden]),
 .map465.wms-map-reviewed .map465-grid #co-map-detail:not([hidden]) {
-  position: absolute;
-  inset: var(--uix-gap) var(--uix-gap) auto auto;
+  position: sticky;
+  inset: var(--uix-gap) auto auto;
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: end;
+  margin: var(--uix-gap);
   inline-size: min(24rem, 42%);
   min-inline-size: 0;
-  max-block-size: 32rem;
+  max-block-size: min(32rem, calc(100dvh - 2 * var(--uix-gap)));
   overflow: auto;
   z-index: 3;
   background: var(--uix-surface);
@@ -751,13 +760,21 @@ html[data-release-ui="46"] #business-page > .page-heading {
   .map-app.wms-map-reviewed .stock-map-layout #stock-map-detail:not([hidden]),
   .map465.wms-map-reviewed .map465-grid #co-map-detail:not([hidden]) {
     position: static;
+    grid-area: auto;
+    justify-self: stretch;
     inline-size: auto;
     max-block-size: none;
+    margin: 0;
     box-shadow: none;
   }
   .wms-map-reviewed .wms-map-controls :is(button,input) { min-block-size: var(--uix-touch); }
   .wms-map-reviewed .v271-location-label.v31-temporary-summary { display: grid; grid-template-columns: minmax(0,1fr); }
 }
+.business-toolbar.permit-register-toolbar { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+.permit-reminder { display: flex; align-items: center; gap: var(--uix-gap-sm); margin-inline-start: auto; flex: 0 0 auto; }
+.permit-reminder label { display: flex; align-items: center; gap: var(--uix-gap-sm); }
+.permit-reminder input { width: 4.25rem; }
+.permit-reminder-feedback:empty { display: none; }
 @media (max-width: 640px) {
   html[data-release-ui="46"] #page-content .wms-table.permit-sales-table td[data-wms-column="number"] > div {
     text-align: end;

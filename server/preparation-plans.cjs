@@ -58,7 +58,7 @@ async function list(c,req){
  const ready=executable?" AND p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL AND coalesce(cu.status,co.status)='OPEN' AND NOT EXISTS(SELECT 1 FROM sales_plan_approvals a WHERE a.plan_id=coalesce(cu.id,co.id) AND a.product_code=p.product_code AND a.state<>'APPROVED')":'';
  const where=' WHERE '+visibility+" AND ($3::text='' OR p.state=$3) AND ($4::text='' OR strpos(lower(concat_ws(' ',p.batch_no,cu.code,co.code,customer.name)),lower($4))>0)"+ready;
  const values=[...params(req),state,search];
- const {rows}=await c.query(projection+where+' ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET $5',[...values,(page-1)*50]);
+ const {rows}=await c.query(projection+where+' ORDER BY '+B.documentOrder({pending:"p.state='PENDING' OR (p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL)",created:'p.created_at',id:'p.id'})+' LIMIT 50 OFFSET $5',[...values,(page-1)*50]);
  const {rows:[total]}=await c.query('SELECT count(*)::int n FROM ('+projection+where+') results',values);
  return {items:rows.map(plan=>({...plan,actions:actions(req,plan)})),can_create:canCreate(req),page,total:total.n,page_size:50};
 }

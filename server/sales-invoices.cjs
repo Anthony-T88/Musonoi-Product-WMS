@@ -3,7 +3,7 @@ const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),shipping=requ
 const copper='CU_CATHODE',cobalt='CO_HYDROXIDE';
 const roles=['sales_operator','sales_manager','admin'];
 const canConfirm=req=>roles.includes(req.user.role_code)&&req.user.permissions.includes('plan:write');
-const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/export-licenses'||
+const allowed=(path,method)=>
  ['GET','POST'].includes(method)&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/historical-matches$/i.test(path)||
  method==='POST'&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/confirm-invoice$/i.test(path);
 const archiveScope=`EXISTS (SELECT 1 FROM historical_backfills h JOIN user_scopes u ON u.project_id=h.project_id
@@ -111,30 +111,9 @@ async function confirm(c,req){
  return saved;
 }
 
-async function licenses(c,req){
- const co=req.productCode===cobalt,page=Number(req.query.page||1);
- if(!Number.isInteger(page)||page<1||page>100000)throw B.error(400,'页码无效');
- const search=typeof req.query.search==='string'?req.query.search.trim():'';
- if(search.length>160)throw B.error(400,'搜索条件过长');
- const source=co?`co_loading_plans d JOIN co_sales_plans p ON p.id=d.sales_plan_id JOIN co_customer_profiles customer ON customer.id=p.customer_id`:
-  `loading_plan_documents d JOIN loading_plan_groups g ON g.id=d.group_id JOIN sales_plans p ON p.id=g.sales_plan_id JOIN copper_customers customer ON customer.id=p.customer_id`;
- const active=co?'true':'d.cancelled_at IS NULL AND g.cancelled_at IS NULL';
- const warehouse=co?'(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id)':'s.warehouse_id IS NULL';
- const match=`FROM ${source} WHERE ${active} AND nullif(trim(d.export_license_no),'') IS NOT NULL
-  AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND ${warehouse}
-   AND(s.customer_id IS NULL OR s.customer_id=p.customer_id))
-  AND strpos(lower(concat_ws(' ',d.export_license_no,d.code,customer.name)),lower($2))>0`;
- const args=[req.user.id,search];
- const {rows}=await c.query(`SELECT d.id,d.code,d.export_license_no,d.planned_load_date::text,customer.name customer_name
-  ${match} ORDER BY d.planned_load_date DESC,d.id LIMIT 50 OFFSET $3`,[...args,(page-1)*50]);
- const {rows:[count]}=await c.query('SELECT count(*)::int total '+match,args);
- return {items:rows,total:count.total,page,page_size:50};
-}
-
 function register({app,pool,permitted,csrf}){
  const archive=require('./historical-sales.cjs');
  for(const prefix of ['/api/v1','/api/v1/cobalt']){
-  app.get(prefix+'/export-licenses',{preHandler:permitted('loading-plan:read')},req=>C.readTransaction(pool,c=>licenses(c,req)));
   const match=prefix+'/sales-workflow/plans/:id/historical-matches';
   app.get(match,{preHandler:[permitted('plan:read'),permitted('plan:write')]},req=>{
    if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');

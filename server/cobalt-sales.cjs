@@ -48,7 +48,7 @@ async function arrivals(c,req,all=false){
  const filtered=' FROM ('+rows+') r'+(q.arrival_state?' WHERE '+stateColumn+'=$'+args.push(q.arrival_state):'');
  const options=await filter(c,{...req,query:{}},true);
  return {state_counts,customer_options:(await c.query('SELECT DISTINCT p.customer_id id,c.name '+plansSql+' WHERE '+options.where+' ORDER BY c.name',options.values)).rows,
-  items:(await c.query('SELECT *'+filtered+' ORDER BY shipment_month DESC,customer_name,truck_no,id'+(all?' LIMIT 10001':' LIMIT 50 OFFSET '+((f.page-1)*50)),args)).rows,
+  items:(await c.query('SELECT *'+filtered+' ORDER BY '+B.documentOrder({pending:"registration_state IN('WAITING_ARRIVAL','PENDING_CONFIRMATION','WAITING_PLAN')"})+(all?' LIMIT 10001':' LIMIT 50 OFFSET '+((f.page-1)*50)),args)).rows,
   total:Number((await c.query('SELECT count(*)'+filtered,args)).rows[0].count),page:f.page,page_size:50};
 }
 async function register({app,pool,permitted,csrf,auth}){

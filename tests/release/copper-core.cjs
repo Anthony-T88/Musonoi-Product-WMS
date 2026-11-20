@@ -253,6 +253,12 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(inv.pageSetup.fitToWidth,1);
  assert.equal(inv.pageSetup.fitToHeight,1);
  assert.equal(invoiceBook.getWorksheet('PL').pageSetup.fitToHeight,0);
+ assert.equal(inv.getCell('D30').numFmt,'#,##0.000');
+ assert.equal(inv.getCell('D30').result,2.0325);
+ assert.equal(inv.getCell('E14').alignment.shrinkToFit,true);
+ assert.equal(inv.getCell('A48').text,'Bank Name: Synthetic issuing bank 1');
+ assert.equal(inv.getCell('A50').text,'Account Number: SYNTH-ACCT-001');
+ assert.equal(inv.getCell('A51').text,'');
  assert.equal(inv.getCell('F30').value,1234.56);
  assert.equal(inv.getCell('F31').value,50);
  assert.equal(inv.getCell('G30').result,2509.24);
