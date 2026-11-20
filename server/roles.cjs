@@ -3,11 +3,11 @@ const B=require('./business-common.cjs'),transaction=require('./account-transact
 const S=require('./management-security.cjs');
 function names(b){const name=typeof b.name==='string'?b.name.trim():'',name_en=typeof b.name_en==='string'?b.name_en.trim():'';if(!name||name.length>80||name_en.length>120||/[\x00-\x1f]/.test(name+name_en))throw B.error(400,'请输入有效角色名称');return {name,name_en:name_en||require('./employee-identity.cjs').englishName(name)};}
 async function actor(c,req){return S.actor(c,req,'roles:manage');}
-async function selected(c,values,roleCode){const all=(await c.query('SELECT code FROM permissions ORDER BY code')).rows.map(r=>r.code);if(!Array.isArray(values)||values.some(v=>!all.includes(v)||!P.active(v)||roleCode&&!P.assignable(roleCode,v))||new Set(values).size!==values.length)throw B.error(400,'角色权限无效');return {all,permissions:R.expand(values)};}
+async function selected(c,values,roleCode){const all=(await c.query('SELECT code FROM permissions ORDER BY code')).rows.map(r=>r.code);if(!Array.isArray(values)||values.some(v=>!all.includes(v)||!P.active(v)||roleCode&&!P.assignable(roleCode,v))||new Set(values).size!==values.length)throw B.error(400,'角色权限无效');const permissions=R.expand(values);if(permissions.some(p=>P.active(p)&&!P.assignable(roleCode,p)))throw B.error(400,'该角色无法启用所需的关联权限');return {all,permissions};}
 async function register({app,pool,permitted,csrf}){
  // Counts include assigned, non-deleted accounts. Scope names are restricted to
  // the viewing administrator's own data scope; this does not grant new rights.
- app.get('/api/v1/security/roles',{preHandler:permitted('roles:manage')},req=>S.read(pool,req,'roles:manage',async(c,authority)=>({catalog:{legacy:P.retired,dependencies:R.deps,presets:R.presets,workflow:P.catalog},items:(await S.visibleRoles(c,authority,(await c.query(`SELECT r.*,
+ app.get('/api/v1/security/roles',{preHandler:permitted('roles:manage')},req=>S.read(pool,req,'roles:manage',async(c,authority)=>({catalog:{legacy:P.retired,dependencies:Object.fromEntries(Object.entries(R.deps).filter(([p])=>P.active(p)).map(([p,ps])=>[p,ps.filter(P.active)])),presets:R.presets,workflow:P.catalog},items:(await S.visibleRoles(c,authority,(await c.query(`SELECT r.*,
  ARRAY(SELECT code FROM permissions ORDER BY code) caps,
  ARRAY(SELECT permission_code FROM role_permission_caps WHERE role_code=r.code ORDER BY permission_code) recommended_permissions,
  ARRAY(SELECT permission_code FROM role_permissions WHERE role_code=r.code ORDER BY permission_code) permissions,

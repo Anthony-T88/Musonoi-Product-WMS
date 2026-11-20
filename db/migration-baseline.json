@@ -793,6 +793,10 @@
     {
       "version": "198_v487_preparation_batch_reuse.sql",
       "checksum": "58e063da8c5c31f42ca64b299140ae30992dead76d1309cb7084fc6f6b4ea5aa"
+    },
+    {
+      "version": "199_v487_bundle_corrections.sql",
+      "checksum": "f267707792b08594e593b58c987188be877513bcb93a36ec9950321122e9e2ed"
     }
   ]
 }

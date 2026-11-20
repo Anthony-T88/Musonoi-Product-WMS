@@ -169,6 +169,16 @@ case "${2:-base}" in
     migration=198_v487_preparation_batch_reuse.sql
     migration_count=198
     ;;
+  v487-ui2)
+    repo=/opt/musonoi-wms-release-v4.8.7-ui2
+    override=/etc/musonoi/preproduction-v487-ui2-build.override.yaml
+    source_revision=4.8.7-ui1
+    target_revision=4.8.7-ui2
+    target_version=4.8.7
+    release_branch=release/v4.8.7
+    migration=199_v487_bundle_corrections.sql
+    migration_count=199
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 release_id=${target_version//./}
@@ -195,6 +205,7 @@ status config | json_is frontendRevision "$source_revision"
 before=$(query -d "$target" -c 'SELECT version FROM security_schema_status')
 case "$before" in
   "$migration") added=0 ;;
+  198_v487_preparation_batch_reuse.sql) [[ $target_revision == 4.8.7-ui2 ]]; added=1 ;;
   197_v485_historical_departure_and_sales_links.sql) [[ $target_revision == 4.8.7-ui1 ]]; added=1 ;;
   196_v485_vehicle_arrival_confirmation.sql) [[ $target_revision == 4.8.5-ui9 ]]; added=1 ;;
   195_v482_dispatch_vehicle_month.sql) [[ $target_revision == 4.8.5-ui2 ]]; added=1 ;;
@@ -224,9 +235,9 @@ if [[ $target_revision == 4.8.7 ]]; then
   sed -i '/^  app:$/a\    restart: unless-stopped' "$stage/build.yaml"
   printf '  database:\n    restart: unless-stopped\n' >> "$stage/build.yaml"
 fi
-if [[ $target_revision == 4.8.7-ui1 ]]; then
-  sed -i "/^  app:$/a\    image: musonoi-wms:v487-ui1-${commit:0:12}" "$stage/build.yaml"
-  sed -i "/^  migrate:$/a\    image: musonoi-wms:v487-ui1-migrate-${commit:0:12}" "$stage/build.yaml"
+if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 ]]; then
+  sed -i "/^  app:$/a\    image: musonoi-wms:${target_revision}-${commit:0:12}" "$stage/build.yaml"
+  sed -i "/^  migrate:$/a\    image: musonoi-wms:${target_revision}-migrate-${commit:0:12}" "$stage/build.yaml"
 fi
 if [[ -e "$override" ]]; then cmp "$override" "$stage/build.yaml"; else cp "$stage/build.yaml" "$override"; fi
 new=("${old[@]}" -f "$override")
@@ -240,8 +251,8 @@ old, new=(json.loads((stage / name).read_text()) for name in ("compose-before.js
 for service in ("app","migrate"):
     assert new["services"][service]["build"]["context"]==sys.argv[2]
     new["services"][service]["build"]["context"]=old["services"][service]["build"]["context"]
-    if sys.argv[3]=="4.8.7-ui1":
-        assert new["services"][service].pop("image").startswith("musonoi-wms:v487-ui1-")
+    if sys.argv[3] in ("4.8.7-ui1","4.8.7-ui2"):
+        assert new["services"][service].pop("image").startswith("musonoi-wms:"+sys.argv[3]+"-")
         old["services"][service].pop("image",None)
 if sys.argv[3]=="4.8.7":
     for service in ("app","database"):
@@ -281,7 +292,7 @@ SELECT 'vehicle_arrivals',count(*),md5(coalesce(string_agg((to_jsonb(x)-'registr
 SELECT 'co_vehicle_arrivals',count(*),md5(coalesce(string_agg((to_jsonb(x)-'registration_phase')::text,E'\n' ORDER BY id),'')) FROM co_vehicle_arrivals x;
 SELECT 'loads',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM loading_orders x;
 SQL
-if [[ $target_revision == 4.8.7-ui1 ]]; then
+if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 ]]; then
   sed -i "/^SELECT 'preparation_plans',/s/to_jsonb(x)::text/(to_jsonb(x)-'state'-'version')::text/" "$stage/reconcile.sql"
   cat >> "$stage/reconcile.sql" <<'SQL'
 SELECT 'copper_lots',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM allocations x;
@@ -290,6 +301,9 @@ SELECT 'copper_stock',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' O
 SELECT 'cobalt_preparations',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM co_preparations x;
 SELECT 'cobalt_bags',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM co_bags x;
 SQL
+fi
+if [[ $target_revision == 4.8.7-ui2 ]]; then
+  sed -i "/^SELECT 'permissions',/s/FROM role_permissions x;/FROM role_permissions x WHERE permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review');/" "$stage/reconcile.sql"
 fi
 tar -czf "$stage/configs.tgz" "$envfile" "${files[@]}" "$override"
 trap 'rc=$?; if ((rc)); then
@@ -310,7 +324,7 @@ query -d "$restore" < "$stage/reconcile.sql" > "$stage/restored"
 cmp "$stage/before" "$stage/restored"
 [[ $(query -d "$restore" -c 'SELECT version FROM security_schema_status') == "$before" ]]
 printf 'RESTORE_VERIFIED\n'
-if [[ $target_revision == 4.8.7-ui1 ]] && ((added)); then
+if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 ]] && ((added)); then
   # Exercise the exact migration and application startup on the restored copy first.
   "${new[@]}" run --rm --no-deps -e DB_EXPECTED_NAME="$restore" -e TEST_BACKUP_VERIFIED=yes migrate node -e '
     const name=process.env.DB_EXPECTED_NAME;
@@ -358,7 +372,7 @@ status config | json_is frontendRevision "$target_revision"
 [[ $("${new[@]}" ps -q database) == "$old_db" ]]
 mounts "$old_db" | cmp "$stage/db-mounts"
 mounts "$("${new[@]}" ps -q app)" | cmp "$stage/app-mounts"
-if [[ $target_revision == 4.8.7 || $target_revision == 4.8.7-ui1 ]]; then
+if [[ $target_revision == 4.8.7 || $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 ]]; then
   docker update --restart unless-stopped "$old_db" > /dev/null
   for container in "$old_db" "$("${new[@]}" ps -q app)"; do
     [[ $(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$container") == unless-stopped ]]

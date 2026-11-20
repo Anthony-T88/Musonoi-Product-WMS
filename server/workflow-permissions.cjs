@@ -1,10 +1,12 @@
 'use strict';
 // Current user-facing operations. Compatibility grants remain in historical data.
 const R=require('./role-catalog.cjs');
-const retired=[...R.legacy,'label:print','exception:read','exception:write','exception:review','exception:configure'];
+const retired=[...R.legacy,'printer:manage','label:print','exception:read','exception:write','exception:review','exception:configure'];
 const definitions={
  'dashboard:read':['铜钴信息总览查看','View Copper and Cobalt Overview'],
  'inventory:read':['铜钴库存与地图查看、铜捆包详情档案','View Copper and Cobalt Stock and Maps, and Copper Bundle Archives'],
+ 'inventory:correct-request':['申请捆包信息更正','Request Copper Bundle Corrections'],
+ 'inventory:correct-review':['审核捆包信息更正','Review Copper Bundle Corrections'],
  'inventory:export':['库存、到厂及装车计划数据导出','Export Stock, Arrivals and Loading Plans'],
  'report:read':['铜钴统计报表查看','View Copper and Cobalt Reports'],
  'master:read':['授权项目、仓库及业务选项读取','Read Authorized Business Options'],
@@ -62,7 +64,6 @@ const definitions={
  'gate:issue':['最终出库审批后生成及修订出门证','Generate or Revise Permits after Final Outbound Approval'],
  'gate:print':['出门证预览、Excel 下载及 9.5 × 5.5 英寸打印','Preview, Download and Print Gate Permits at 9.5 × 5.5 Inches'],
  'gate:exit':['销售确认车辆实际出厂','Sales Confirmation of Physical Gate Exit'],
- 'printer:manage':['出门证历史打印配置及连接检测','Legacy Gate Printer Configuration and Connectivity'],
  'stocktake:read':['铜钴盘点任务及差异查看','View Inventory Counts and Differences'],
  'stocktake:write':['铜钴盘点草稿、建单、实盘及提交','Draft, Create, Count and Submit Inventory Counts'],
  'stocktake:review':['铜钴盘点审核','Review Inventory Counts'],
@@ -76,16 +77,18 @@ const definitions={
  'audit:read':['系统操作及授权变更日志查看','View Operation and Authorization Audit Logs']
 };
 const fixedRoles={
+ 'inventory:correct-request':['production_operator','logistics_field_operator'],'inventory:correct-review':['production_manager'],
  'dispatch:month':['sales_operator','sales_manager'],
  'plan:write':['sales_operator','sales_manager'],'plan:approve':['sales_manager'],'plan:commerce-approve':['commerce_manager'],
  'co:site-review':['site_supervisor'],'co:production-review':['production_manager'],
  'co:completion-review':['site_supervisor'],'co:amend-review':['site_supervisor'],'co:loading-review':['site_supervisor'],
  'gate:exit':['sales_operator','sales_manager']
 };
-const copperOnly=new Set(['receipt:read','receipt:write','receipt:review','allocation:read','allocation:write','allocation:review','lot:revoke','lot:cancel-approve','move:write','adjust:read','adjust:write','adjust:approve']);
-const catalog=Object.fromEntries(Object.entries(definitions).map(([code,[zh,en]])=>[code,{zh,en,products:code.startsWith('co:')?['CO_HYDROXIDE']:copperOnly.has(code)?['CU_CATHODE']:['CU_CATHODE','CO_HYDROXIDE'],...(fixedRoles[code]?{roles:code==='co:loading-review'?fixedRoles[code]:[...fixedRoles[code],'admin']}:{})}]));
-const modules={"dashboard":["overview","信息总览","Overview"],"plan":["sales","销售计划及审批","Sales Plans and Approvals"],"dispatch":["dispatch","客户派车管理","Customer Dispatch"],"customer":["customers","客户与合同","Customers and Contracts"],"receipt":["copper-intake","阴极铜入库","Copper Receipts"],"allocation":["copper-preparation","阴极铜备货","Copper Preparation"],"lot":["copper-preparation","阴极铜备货","Copper Preparation"],"co":["cobalt-preparation","氢氧化钴入库与备货","Cobalt Intake and Preparation"],"vehicle-arrival":["arrivals","车辆到厂登记","Vehicle Arrival"],"export-license":["export-licenses","出口许可证管理","Export License Management"],"loading-plan":["loading-plans","装车计划与匹配","Loading Plans and Matching"],"load":["loading-orders","装车单及装车作业","Loading Orders and Operations"],"outbound":["outbound","出库审批与归档","Outbound Approvals and Records"],"gate":["gate","车辆出厂与出门证","Gate Exit and Permits"],"document":["shipping","装箱单生成","Packing List Generation"],"packing-template":["shipping","装箱单模板","Packing List Templates"],"printer":["printing","打印设备设置","Printer Settings"],"inventory":["inventory","库存查询与导出","Stock Queries and Export"],"move":["placement","实际货位调整","Physical Stock Placement"],"stocktake":["stocktaking","库存盘点","Inventory Count"],"adjust":["adjustment","库存调整","Stock Adjustments"],"master":["master-data","项目仓库与基础资料","Master Data"],"users":["accounts","账户与注册审批","Accounts and Registration"],"roles":["roles","岗位与权限","Roles and Permissions"],"system":["system","系统设置与预警","System and Alerts"],"audit":["audit","操作日志","Audit Log"],"report":["reports","统计报表","Reports"]};for(const [code,entry]of Object.entries(catalog)){const [module,module_zh,module_en]=code.startsWith('co:')&&['co:locate','co:location-manage','co:temp-locate'].includes(code)?['cobalt-placement','氢氧化钴货位与地图','Cobalt Locations and Map']:modules[code.split(':')[0]];Object.assign(entry,{module,module_zh,module_en,protected_admin:['users:manage','roles:manage'].includes(code)});}
+const copperOnly=new Set(['inventory:correct-request','inventory:correct-review','receipt:read','receipt:write','receipt:review','allocation:read','allocation:write','allocation:review','lot:revoke','lot:cancel-approve','move:write','adjust:read','adjust:write','adjust:approve']);
+const strictRoles=new Set(['co:loading-review','inventory:correct-request','inventory:correct-review']);
+const catalog=Object.fromEntries(Object.entries(definitions).map(([code,[zh,en]])=>[code,{zh,en,products:code.startsWith('co:')?['CO_HYDROXIDE']:copperOnly.has(code)?['CU_CATHODE']:['CU_CATHODE','CO_HYDROXIDE'],...(fixedRoles[code]?{roles:strictRoles.has(code)?fixedRoles[code]:[...fixedRoles[code],'admin']}:{})}]));
+const modules={"dashboard":["overview","信息总览","Overview"],"plan":["sales","销售计划及审批","Sales Plans and Approvals"],"dispatch":["dispatch","客户派车管理","Customer Dispatch"],"customer":["customers","客户与合同","Customers and Contracts"],"receipt":["copper-intake","阴极铜入库","Copper Receipts"],"allocation":["copper-preparation","阴极铜备货","Copper Preparation"],"lot":["copper-preparation","阴极铜备货","Copper Preparation"],"co":["cobalt-preparation","氢氧化钴入库与备货","Cobalt Intake and Preparation"],"vehicle-arrival":["arrivals","车辆到厂登记","Vehicle Arrival"],"export-license":["export-licenses","出口许可证管理","Export License Management"],"loading-plan":["loading-plans","装车计划与匹配","Loading Plans and Matching"],"load":["loading-orders","装车单及装车作业","Loading Orders and Operations"],"outbound":["outbound","出库审批与归档","Outbound Approvals and Records"],"gate":["gate","车辆出厂与出门证","Gate Exit and Permits"],"document":["shipping","装箱单生成","Packing List Generation"],"packing-template":["shipping","装箱单模板","Packing List Templates"],"inventory":["inventory","库存查询与导出","Stock Queries and Export"],"move":["placement","实际货位调整","Physical Stock Placement"],"stocktake":["stocktaking","库存盘点","Inventory Count"],"adjust":["adjustment","库存调整","Stock Adjustments"],"master":["master-data","项目仓库与基础资料","Master Data"],"users":["accounts","账户与注册审批","Accounts and Registration"],"roles":["roles","岗位与权限","Roles and Permissions"],"system":["system","系统设置与预警","System and Alerts"],"audit":["audit","操作日志","Audit Log"],"report":["reports","统计报表","Reports"]};for(const [code,entry]of Object.entries(catalog)){const [module,module_zh,module_en]=code.startsWith('co:')&&['co:locate','co:location-manage','co:temp-locate'].includes(code)?['cobalt-placement','氢氧化钴货位与地图','Cobalt Locations and Map']:modules[code.split(':')[0]];Object.assign(entry,{module,module_zh,module_en,protected_admin:['users:manage','roles:manage'].includes(code)});}
 catalog['load:review'].product_roles={CO_HYDROXIDE:['site_supervisor','admin']};catalog['outbound:production-approve'].product_roles={CO_HYDROXIDE:['production_manager','admin']};
-const active=code=>Object.hasOwn(catalog,code),assignable=(role,code)=>active(code)&&(code==='co:loading-review'?role==='site_supervisor':role==='admin'||!fixedRoles[code]||fixedRoles[code].includes(role));
+const active=code=>Object.hasOwn(catalog,code),assignable=(role,code)=>active(code)&&(strictRoles.has(code)?fixedRoles[code].includes(role):role==='admin'||!fixedRoles[code]||fixedRoles[code].includes(role));
 function present(role){const applicable=p=>assignable(role.code,p);return {...role,caps:role.caps.filter(applicable),permissions:role.permissions.filter(applicable),recommended_permissions:(role.recommended_permissions||[]).filter(applicable)};}
 module.exports={catalog,retired,active,assignable,present};

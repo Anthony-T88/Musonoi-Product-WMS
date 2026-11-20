@@ -8,7 +8,7 @@ window.System46={
  can:p=>!!window.CurrentUser?.permissions.includes(p),
  enabled:()=>!!window.UI46?.enabled()&&!!window.AppSignedIn&&!UI46.copperMap(),
  route(){return location.pathname+location.search;},
- systemPermission(){return ['users:manage','roles:manage','audit:read','printer:manage','master:write','system:manage'].find(p=>this.can(p));},
+ systemPermission(){return ['users:manage','roles:manage','audit:read','master:write','system:manage'].find(p=>this.can(p));},
  isSystem(){return location.pathname.startsWith('/workbench')||location.pathname==='/audit'||location.pathname.startsWith('/customers/master-data');},
  init(){if(this.ready)return;this.ready=true;
   const request=API.request.bind(API);API.request=async(url,options={})=>{const at=performance.now(),route=this.route(),method=options.method||'GET';try{const data=await request(url,options);if(url==='/health')this.connection={ok:true,ms:Math.round(performance.now()-at),at:new Date().toISOString(),environment:data.environment,database:data.database};return data;}catch(e){if(!/^\/(auth|me)(\/|$)/.test(url)){const failure={route,path:url.split('?')[0],method,status:e.statusCode||0,code:e.code||'',message:e.message,uncertain:!!e.uncertain,at:new Date().toISOString()};this.lastFailure=failure;this.history.unshift(failure);this.history.length=Math.min(10,this.history.length);}throw e;}};

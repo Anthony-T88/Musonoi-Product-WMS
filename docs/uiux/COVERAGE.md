@@ -71,7 +71,7 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | overview-detail | `/overview/details` | 铜、钴 | 管理员 | 骨架、表格、筛选 | 12 / 0 / 0 | — |
 | warnings | `/overview/warning-settings` | 铜 | 管理员 | 公共主题 | 6 / 0 / 0 | — |
 | inventory | `/inventory` | 铜、钴 | 管理员、生产操作员、客户范围管理员 | 筛选、表格、状态、指标、反馈 | 28 / 0 / 0 | — |
-| cu-bag | `/inventory/:id` | 铜 | 管理员 | 表格 | 6 / 0 / 0 | — |
+| cu-bag | `/inventory/:id` | 铜 | 管理员 | 表格 | 6 / 0 / 0 | 可用库存捆包更正申请与生产管理审批 |
 | cu-bag-history | `/inventory/:id/history` | 铜 | 管理员 | 表格 | 6 / 0 / 0 | — |
 | co-stock-detail | `/inventory/:id` | 钴 | 管理员 | 筛选、表格 | 10 / 0 / 0 | — |
 | co-stock-history-alias | `/inventory/:id/history` | 钴 | 管理员 | 筛选、表格 | 6 / 0 / 0 | — |

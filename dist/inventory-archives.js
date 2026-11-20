@@ -37,6 +37,87 @@ window.InventoryArchives={
    ['类别','Type'],['单据编号','Document No.'],['业务日期','Business Date'],['状态','Status'],['操作','Actions']
   ],rows.map(row=>[this.text(row.label),this.text(row.code),this.time(row.at),this.text(row.state),this.action(row.href)])));
  },
+ correctionFields:{
+  sheets_per_bundle:['捆包片数','Sheets'],seal_no:['铅封号','Seal No.'],production_date:['生产日期','Production Date']
+ },
+ correctionError(error){
+  const english={
+   '捆包已锁定或库存资料已变化，请核对后重新申请':'The bundle is locked or has changed. Check its details before submitting a new request.',
+   '此捆包已有待审核的更正申请':'A correction request is already pending for this bundle.',
+   '请至少修改一项捆包资料':'Change at least one bundle field.',
+   '该铅封号已有使用记录，请核对':'The seal number has a prior record. Please check it.',
+   '请填写有效的捆包资料及更正原因':'Enter valid bundle details and a reason.',
+   '该申请已办理，请刷新页面':'This request has already been reviewed. Refresh the page.'
+  };
+  return this.t(error.message,english[error.message]||I18n.translate(error.message,true));
+ },
+ correctionChanges(row){
+  return Object.entries(row.changes).map(([field,value])=>
+   [this.t(...this.correctionFields[field]),(row.original[field]??'—')+' → '+value]);
+ },
+ async corrections(archive,id,number){
+  const t=this.t,actions=archive.querySelector('#bundle-correction-actions'),slot=archive.querySelector('#bundle-correction-records');
+  const api='/bundles/'+id+'/corrections';
+  let data;
+  try{data=await API.request(api);}catch(error){
+   if(archive.isConnected&&['inventory:correct-request','inventory:correct-review'].some(p=>Business.can(p)))
+    slot.textContent=this.correctionError(error);
+   return;
+  }
+  if(!archive.isConnected)return;
+  actions.replaceChildren();
+  if(data.can_request){
+   const button=document.createElement('button');
+   button.className='button secondary';button.type='button';button.id='bundle-correction-request';
+   button.textContent=t('申请捆包信息更正','Request Bundle Correction');
+   button.onclick=()=>this.correctionForm(api,data.bundle,number);
+   actions.append(button);
+  }
+  if(!data.items.length){slot.replaceChildren();return;}
+  const states={PENDING:['待审核','Pending Review'],APPROVED:['已通过','Approved'],REJECTED:['已退回','Returned']};
+  const rows=data.items.map(row=>{
+   const changes=this.correctionChanges(row).map(([label,value])=>'<div>'+esc(label)+' · '+esc(value)+'</div>').join('');
+   const buttons=data.can_review&&row.state==='PENDING'?'<button type="button" class="button primary compact" data-bundle-correction="'+row.id+'" data-decision="APPROVED">'+t('审核通过','Approve')+
+    '</button> <button type="button" class="button secondary compact" data-bundle-correction="'+row.id+'" data-decision="REJECTED">'+t('退回','Return')+'</button>':'—';
+   return [changes,esc(row.reason),this.time(row.requested_at)+' · '+this.text(row.requester),
+    esc(t(...states[row.state])),this.text(row.reviewer)+(row.reviewed_at?' · '+this.time(row.reviewed_at):'')+
+     (row.review_note?'<div>'+esc(row.review_note)+'</div>':''),buttons];
+  });
+  slot.innerHTML=this.section('捆包信息更正记录','Bundle Correction History',this.table([
+   ['更正项目','Changes'],['更正原因','Reason'],['申请时间及申请人','Requested At / By'],['状态','Status'],
+   ['审核记录','Review'],['操作','Actions']],rows)+'<p class="error" role="alert"></p>');
+  for(const button of slot.querySelectorAll('button[data-bundle-correction]'))button.onclick=async()=>{
+   const row=data.items.find(item=>item.id===button.dataset.bundleCorrection),decision=button.dataset.decision,approve=decision==='APPROVED';
+   let note='';
+   if(!await OperationConfirm.ask({title:approve?t('通过捆包信息更正','Approve Bundle Correction'):t('退回更正申请','Return Correction Request'),
+    rows:[[t('捆包号','Bundle No.'),number],...this.correctionChanges(row)],comment:true,commentRequired:!approve,
+    commentLabel:approve?t('审核说明（选填）','Review Note (Optional)'):t('退回原因（必填）','Return Reason (Required)'),onComment:value=>{note=value;}}))return;
+   button.disabled=true;
+   try{await API.request(api+'/'+row.id+'/review',{method:'POST',body:{decision,note}});await Router.show();}
+   catch(error){if(slot.isConnected)slot.querySelector('[role="alert"]').textContent=this.correctionError(error);}
+   finally{button.disabled=false;}
+  };
+ },
+ correctionForm(api,bundle,number){
+  const t=this.t,attributes={sheets_per_bundle:'type="number" min="1" max="2147483647" step="1" inputmode="numeric"',
+   seal_no:'type="text" maxlength="512"',production_date:'type="date"'};
+  const details=Object.keys(this.correctionFields).map(field=>'<label class="wms-field">'+esc(t(...this.correctionFields[field]))+
+   '<input name="'+field+'" '+attributes[field]+' value="'+esc(bundle[field]??'')+'"></label>').join('');
+  dialog(t('申请捆包信息更正','Request Bundle Correction'),'<form id="bundle-correction-form" class="user-form" data-no-i18n data-wms-validation>'+
+   this.facts([['捆包号','Bundle No.',number]])+'<div class="form-grid wms-field-grid">'+details+
+   '<label class="wms-field" data-field-span="full">'+t('更正原因','Reason for Correction')+'<textarea name="reason" maxlength="1000" required></textarea></label></div>'+
+   '<p class="error" role="alert"></p><div class="business-toolbar wms-form-actions"><button class="button primary" type="submit">'+t('提交审核','Submit for Review')+'</button></div></form>');
+  const form=$('bundle-correction-form');
+  form.onsubmit=event=>UI46Pages.submit(event,async()=>{
+   try{
+    const {reason,...values}=Object.fromEntries(new FormData(form));
+    const changes=Object.fromEntries(Object.entries(values).filter(([field,value])=>value!==''&&value!==String(bundle[field]??'')));
+    await API.request(api,{method:'POST',body:{version:bundle.version,changes,reason}});
+    $('dialog').close();
+    await Router.show();
+   }catch(error){throw new Error(this.correctionError(error));}
+  });
+ },
  copper(root,s,history,events,refs,original){
   const b=history.bundle,doc=b.id||b.bundle_no,t=this.t;
   const archive=UI46Pages.el('div','c461-page inventory-archive',root,s);archive.dataset.c461Page='CU-06';
@@ -72,7 +153,7 @@ window.InventoryArchives={
   const filters=new URLSearchParams(location.search);filters.delete('archive');
   const actions='<a class="button secondary" href="/inventory'+(filters.size?'?'+esc(filters):'')+'">'+t('返回库存明细','Back to Inventory')+'</a>'+
    (Business.can('inventory:export')?'<button type="button" id="c461-bundle-export" class="button secondary">'+t('导出','Export')+'</button>':'')+
-   '<span id="c461-bundle-actions"></span>';
+   '<span id="c461-bundle-actions"></span><span id="bundle-correction-actions"></span>';
   const activity=this.table([['业务时间','Time'],['记录','Event'],['操作人','Actor'],['单据依据','Document']],
    state.slice(-4).reverse().map(event=>{
     const detail=[this.recordedNote(event.note||event.detail),[event.from_location,event.to_location].filter(Boolean).map(value=>this.location(value)).join(' → '),
@@ -80,15 +161,16 @@ window.InventoryArchives={
     return [this.time(event.at),this.text(Copper461.action(event.action))+(detail.length?'<small>'+esc(detail.join(' · '))+'</small>':''),
      this.text(event.actor_name),event.href?'<a href="'+esc(event.href)+'">'+this.text(event.document_no)+'</a>':this.text(event.document_no)];
    }));
-  archive.innerHTML=UI46Pages.identity(doc,status,actions,summary,'archive-identity')+this.documents(linkRows)+
+  archive.innerHTML=UI46Pages.identity(doc,status,actions,summary,'archive-identity')+'<div id="bundle-correction-records"></div>'+this.documents(linkRows)+
    this.section('业务记录与历史依据','Activity and Historical Evidence',secondary+activity+
     '<a class="button secondary" href="/inventory/'+encodeURIComponent(doc)+'/history">'+t('查看完整流水','Open Full Ledger')+'</a>'+
     '<p class="wms-feedback">'+t('资料来源　库存档案、关联单据和库存流水','Sources: inventory archive, linked documents and stock ledger')+'</p>');
   for(const id of ['v262-correct-sheets','v262-correct-seal']){
    const button=root.querySelector('#'+id);
-   if(button)UI46Pages.move(button,archive.querySelector('#c461-bundle-actions'),s);
+   if(button&&!(id==='v262-correct-sheets'&&b.inventory_state_code==='AVAILABLE'))UI46Pages.move(button,archive.querySelector('#c461-bundle-actions'),s);
   }
   for(const node of original)if(node.nodeType===1)UI46Pages.hide(node,s);
+  void this.corrections(archive,b.uuid,doc);
   archive.querySelector('#c461-bundle-export')?.addEventListener('click',async e=>{
    const button=e.currentTarget;button.disabled=true;
    try{Copper461.download(await API.request('/inventory/export',{method:'POST',body:{ids:[doc],format:'csv',filters:{lifecycle:'ALL'}},binary:true}));}

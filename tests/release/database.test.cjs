@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195,198]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -60,7 +60,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
      const projected=['vehicle_arrivals','co_vehicle_arrivals'].includes(table)?"(to_jsonb(t)-'registration_phase')":table==='stocktakes'?"(to_jsonb(t)-'period_month')":table==='co_stocktakes'?"(to_jsonb(t)-'task_type'-'period_month')":table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":table==='export_license_record_books'?"(to_jsonb(t)-'archived_at'-'version'-'account_name')":table==='export_license_actions'?"(to_jsonb(t)-'processing_snapshot')":table==='export_licenses'?"(to_jsonb(t)-'issuing_bank_account'-'offshore_bank'-'offshore_bank_account'-'processing_records'-'issuing_bank_account_name'-'offshore_bank_account_name'-'standard_amount')":"to_jsonb(t)";
-     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%' AND NOT(role_code IN('sales_operator','sales_manager') AND permission_code IN('dispatch:read','dispatch:month'))":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%' AND NOT(role_code IN('sales_operator','sales_manager','admin') AND permission_code IN('dispatch:read','dispatch:month'))":table==='permissions'?"WHERE code NOT LIKE 'export-license:%' AND code<>'dispatch:month'":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
+     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review') AND NOT(role_code IN('sales_operator','sales_manager') AND permission_code IN('dispatch:read','dispatch:month'))":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review') AND NOT(role_code IN('sales_operator','sales_manager','admin') AND permission_code IN('dispatch:read','dispatch:month'))":table==='permissions'?"WHERE code NOT LIKE 'export-license:%' AND code<>'dispatch:month' AND code NOT IN('inventory:correct-request','inventory:correct-review')":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
     return result;
@@ -68,7 +68,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const catalog=async()=>{
     const {rows}=await c.query(`
      SELECT 'constraint' AS kind, conrelid::regclass::text AS relation, conname AS name, pg_get_constraintdef(oid) AS definition
-     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND NOT (conrelid=to_regclass('export_license_record_books') AND confrelid=conrelid AND cardinality(conkey)=5) AND NOT (conrelid=to_regclass('co_dispatch_vehicles') AND confrelid=to_regclass('co_dispatch_imports') AND cardinality(conkey)=3) AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key','sales_plan_approvals_check1','sales_plan_approvals_check3','sales_plan_close_requests_check1','sales_plan_close_requests_check2','export_license_actions_check1','co_preparations_check1','co_preparations_check2','stock_adjustments_check','co_vehicle_arrivals_trailer_one_check','co_vehicle_arrivals_driver_name_check','co_vehicle_arrivals_passport_no_check','co_vehicle_arrivals_transporter_check')
+     FROM pg_constraint WHERE connamespace='public'::regnamespace AND conrelid<>0 AND NOT (conrelid=to_regclass('export_license_record_books') AND confrelid=conrelid AND cardinality(conkey)=5) AND NOT (conrelid=to_regclass('co_dispatch_vehicles') AND confrelid=to_regclass('co_dispatch_imports') AND cardinality(conkey)=3) AND conname NOT IN('co_sales_plans_destination_check','locations_map_usage_check','customer_contracts_contract_no_key','sales_plan_approvals_check1','sales_plan_approvals_check3','sales_plan_close_requests_check1','sales_plan_close_requests_check2','export_license_actions_check1','co_preparations_check1','co_preparations_check2','stock_adjustments_check','co_vehicle_arrivals_trailer_one_check','co_vehicle_arrivals_driver_name_check','co_vehicle_arrivals_passport_no_check','co_vehicle_arrivals_transporter_check','allocations_lot_no_key','co_preparations_preparation_batch_no_key','preparation_plans_product_code_batch_no_key','preparation_plans_state_check','preparation_plans_check1','preparation_plan_events_action_check')
      UNION ALL
      SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
      FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
@@ -86,6 +86,11 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
+   const correctionPermissions=(await c.query(
+    "SELECT role_code,permission_code FROM role_permissions WHERE permission_code IN('inventory:correct-request','inventory:correct-review','printer:manage') ORDER BY role_code"
+   )).rows.map(row=>[row.role_code,row.permission_code]);
+   assert.deepEqual(correctionPermissions,[['logistics_field_operator','inventory:correct-request'],['production_manager','inventory:correct-review'],['production_operator','inventory:correct-request']]);
+   assert.equal((await c.query("SELECT count(*)::int n FROM pg_indexes WHERE indexname IN('allocations_reserved_lot_no','co_preparations_reserved_batch_no','preparation_plans_reserved_batch_no') AND indexdef LIKE '% WHERE %'")).rows[0].n,3);
    if(from>=182){
     const result=await c.query("SELECT kind,value FROM export_license_record_books WHERE product_code='CU_CATHODE' AND customer_id=$1",[fixture.customers.CU_CATHODE.id]);
     assert.deepEqual(result.rows,[{kind:'issuing_bank',value:'Synthetic legacy bank'}]);
@@ -308,7 +313,10 @@ test('isolated migration, initialization, business permission and concurrency ac
  });
  await check('both products: configurable admin review, revocation, two authorized sales and closure stages',async()=>{
   const role=async()=>(await api('admin','CU_CATHODE','/security/roles')).items.find(r=>r.code==='admin'),original=await role();
-  assert.equal(Object.keys((await api('admin','CU_CATHODE','/security/roles')).catalog.workflow).length,71);const set=async permissions=>{const r=await role();await api('admin','CU_CATHODE','/security/roles/admin',{version:r.version,permissions},200,'PUT');await login('admin');};
+   const workflow=(await api('admin','CU_CATHODE','/security/roles')).catalog.workflow;
+   for(const permission of ['roles:manage','plan:approve','inventory:correct-request','inventory:correct-review']) assert.ok(workflow[permission],permission);
+   assert.equal(workflow['printer:manage'],undefined);
+   const set=async permissions=>{const r=await role();await api('admin','CU_CATHODE','/security/roles/admin',{version:r.version,permissions},200,'PUT');await login('admin');};
   await api('admin','CU_CATHODE','/security/roles/admin',{version:original.version,permissions:original.permissions.filter(p=>p!=='roles:manage')},400,'PUT');
   const today=(await business.client.query("SELECT (clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')::date::text d")).rows[0].d;
   for(const co of [false,true]){const product=co?'CO_HYDROXIDE':'CU_CATHODE',customer=f.customers[product],base=(co?'/cobalt':'')+'/sales-workflow',save=co?'/cobalt/sales/plans':'/plans',body={project_id:f.project,customer_id:customer.id,contract_id:customer.contract,target_weight:'100',remark:'Synthetic audit plan',...(co?{warehouse_id:f.warehouse,shipment_month:today.slice(0,7),planned_vehicle_count:1,destination:'Synthetic audit destination',status:'OPEN'}:{quantity_tolerance:'5',preparation_month:today.slice(0,7)})};

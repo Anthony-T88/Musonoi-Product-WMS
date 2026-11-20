@@ -3,12 +3,12 @@ const builtins=['admin','export_supervisor','logistics_manager','site_supervisor
 const legacy=['allocation:release','sample:read','sample:write','weigh:read','weigh:write','outbound:approve','outbound:packing','outbound:commerce','outbound:gate','outbound:depart','outbound:supervise'];
 const deps={
  'plan:approve':['plan:read','customer:read','master:read'],'plan:commerce-approve':['plan:read','customer:read','master:read'],
- 'gate:issue':['gate:read'],'gate:print':['gate:read'],'gate:exit':['gate:read','gate:print'],'printer:manage':['gate:read','gate:print'],
+ 'gate:issue':['gate:read'],'gate:print':['gate:read'],'gate:exit':['gate:read'],
  'co:loading-review':['loading-plan:read'],
  'co:locate':['co:read'],'co:location-manage':['co:read'],'co:temp-locate':['co:read','inventory:read'],
  'co:work-edit':['co:read'],'co:work-submit':['co:read'],'co:completion-review':['co:read'],'co:amend-request':['co:read'],'co:amend-review':['co:read'],
  'co:create':['co:read'],'co:submit':['co:read'],'co:site-review':['co:read'],'co:production-review':['co:read'],'co:withdraw':['co:read'],
- 'inventory:export':['inventory:read'],'receipt:write':['receipt:read','inventory:read','master:read'],'receipt:review':['receipt:read','master:read'],
+ 'inventory:export':['inventory:read'],'inventory:correct-request':['inventory:read'],'inventory:correct-review':['inventory:read'],'receipt:write':['receipt:read','inventory:read','master:read'],'receipt:review':['receipt:read','master:read'],
  'customer:write':['customer:read','master:read'],'plan:write':['plan:read','customer:read','master:read'],
  'dispatch:month':['dispatch:read'],'dispatch:write':['dispatch:read','plan:read','customer:read','master:read'],'dispatch:read':['plan:read'],
  'allocation:write':['allocation:read','plan:read','customer:read','inventory:read','master:read'],'allocation:review':['allocation:read','plan:read','master:read'],
