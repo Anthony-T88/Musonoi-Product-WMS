@@ -36,7 +36,7 @@ const V261={
   if(missing)throw Error('部分已保存捆包已不可备货，请核对当前库存后继续。');
  };
  form.onsubmit=async e=>{e.preventDefault();if(submit.disabled)return;if(!chosen.size){error.textContent='请选择捆包';return;}submit.disabled=true;submit.textContent='正在创建…';error.textContent='';
- try{const a=await API.request('/v261/lots',{method:'POST',body:{preparation_plan_id:approved.id,planned_location_id:$('v261-planned').value,items:[...chosen.values()].map(r=>({bundle_id:r.uuid,sample_required:!!r.sample_required}))}});await Router.go('/preparation/'+a.id);}
+ try{const a=await API.request('/v261/lots',{method:'POST',body:{preparation_plan_id:approved.id,preparation_plan_version:approved.version,planned_location_id:$('v261-planned').value,items:[...chosen.values()].map(r=>({bundle_id:r.uuid,sample_required:!!r.sample_required}))}});await Router.go('/preparation/'+a.id);}
  catch(err){if(form.isConnected){error.textContent=err.message;if(err.statusCode===409)hint.textContent='请核对计划状态和货位占用后重试。';}}
  finally{if(form.isConnected){submit.disabled=false;submit.textContent='创建备货单';}}
  };planField.onchange();

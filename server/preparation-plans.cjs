@@ -19,7 +19,7 @@ const allowed=(path,method)=>method==='GET'&&['/operations/status','/occupied'].
  /^\/api\/v1\/cobalt\/preparation-plans(?:\/[0-9a-f-]{36}(?:\/(?:submit|approve|reject))?)?$/i.test(path)&&['GET','POST','PATCH'].includes(method);
 
 const visibility="p.product_code=$2 AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND (s.customer_id IS NULL OR s.customer_id=p.customer_id) AND (p.warehouse_id IS NULL OR s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id))";
-const projection="SELECT p.*,coalesce(cu.code,co.code) sales_plan_no,coalesce(ck.contract_no,ok.contract_no) contract_no,coalesce(cu.preparation_month,co.shipment_month) sales_shipment_month,customer.name customer_name FROM preparation_plans p JOIN customers customer ON customer.id=p.customer_id LEFT JOIN sales_plans cu ON cu.id=p.cu_sales_plan_id LEFT JOIN co_sales_plans co ON co.id=p.co_sales_plan_id LEFT JOIN customer_contracts ck ON ck.id=cu.contract_id LEFT JOIN co_sales_contracts ok ON ok.id=co.contract_id";
+const projection="SELECT p.*,coalesce(cu.code,co.code) sales_plan_no,coalesce(ck.contract_no,ok.contract_no) contract_no,coalesce(cu.preparation_month,co.shipment_month) sales_shipment_month,customer.name customer_name,r.batch_no reversal_batch_no FROM preparation_plans p LEFT JOIN preparation_reversals r ON r.id=p.reversal_id JOIN customers customer ON customer.id=p.customer_id LEFT JOIN sales_plans cu ON cu.id=p.cu_sales_plan_id LEFT JOIN co_sales_plans co ON co.id=p.co_sales_plan_id LEFT JOIN customer_contracts ck ON ck.id=cu.contract_id LEFT JOIN co_sales_contracts ok ON ok.id=co.contract_id";
 const params=req=>[req.user.id,req.productCode];
 async function access(c,req,id,lock=false){
  const {rows:[plan]}=await c.query(projection+' WHERE '+visibility+' AND p.id=$3'+(lock?' FOR UPDATE OF p':''),[...params(req),B.uuid(id)]);
@@ -41,13 +41,13 @@ function actions(req,plan){
   start:canStart(req)&&plan.state==='APPROVED'&&!plan.allocation_id&&!plan.co_preparation_id};
 }
 async function event(c,req,plan,action,reason=''){
- await c.query('INSERT INTO preparation_plan_events(plan_id,action,actor_id,reason) VALUES($1,$2,$3,$4)',[plan.id,action,req.user.id,reason]);
+ await c.query('INSERT INTO preparation_plan_events(plan_id,action,actor_id,reason,allocation_id,co_preparation_id) VALUES($1,$2,$3,$4,$5,$6)',[plan.id,action,req.user.id,reason,plan.allocation_id,plan.co_preparation_id]);
  await B.audit(c,req,'preparation_plan_'+action.toLowerCase(),'preparation_plans',plan.id,null,
   {product_code:plan.product_code,project_id:plan.project_id,customer_id:plan.customer_id,state:plan.state,version:plan.version,reason});
 }
 async function detail(c,req,id){
  const plan=await access(c,req,id);
- const {rows:events}=await c.query('SELECT e.action,e.reason,e.occurred_at,u.display_name actor FROM preparation_plan_events e JOIN users u ON u.id=e.actor_id WHERE e.plan_id=$1 ORDER BY e.occurred_at DESC,e.id',[id]);
+ const {rows:events}=await c.query('SELECT e.action,e.reason,e.occurred_at,e.allocation_id,e.co_preparation_id,r.id reversal_id,u.display_name actor FROM preparation_plan_events e JOIN users u ON u.id=e.actor_id LEFT JOIN preparation_reversals r ON r.original_plan_id=e.plan_id AND r.state=\'APPROVED\' AND e.action=\'FINAL_REVERSE\' WHERE e.plan_id=$1 ORDER BY e.occurred_at DESC,e.id',[id]);
  return {...plan,actions:actions(req,plan),events};
 }
 async function list(c,req){
@@ -140,7 +140,7 @@ async function saveBatch(c,req){
 }
 async function save(c,req,id=null,body=req.body,{preview=false,bulk=false}={}){
  if(!canCreate(req))throw B.error(403,'由出口主管创建和修改备货计划');
- fields(body,id?['sales_plan_id','customer_id','batch_no','shipment_month','version']:['sales_plan_id','customer_id','batch_no','shipment_month']);
+ fields(body,id?['sales_plan_id','customer_id','batch_no','shipment_month','version']:['sales_plan_id','customer_id','batch_no','shipment_month','reversal_id']);
  const prior=id?await access(c,req,id,true):null;
  if(prior&&(!actions(req,prior).edit||prior.version!==B.version(body.version)))throw B.error(409,'备货计划状态或版本已变化');
  const plan=await sales(c,req,B.uuid(body.sales_plan_id),!preview),co=cobalt(req),month=body.shipment_month;
@@ -149,15 +149,25 @@ async function save(c,req,id=null,body=req.body,{preview=false,bulk=false}={}){
  const batch=B.text(body.batch_no,'备货批次号',48).toUpperCase();
  const pattern=co?/^RMM-CO-[0-9]{4}-[0-9]{3,}$/:/^RMM-CU-[0-9]{4}-(0[1-9]|[1-9][0-9]{1,35})$/;
  if(!pattern.test(batch)||!/[1-9]/.test(batch.split('-').at(-1)))throw B.error(400,'备货批次号格式无效');
+ const reversalId=prior?.reversal_id||(body.reversal_id?B.uuid(body.reversal_id):null);
+ if(reversalId){
+  const source=(await c.query(`SELECT r.* FROM preparation_reversals r WHERE r.id=$1 AND r.state='APPROVED'
+   AND r.product_code=$2 AND r.project_id=$3 AND (r.customer_id IS NULL OR r.customer_id=$4)
+   AND ($2='CU_CATHODE' OR r.warehouse_id=$5) AND EXISTS(SELECT 1 FROM user_scopes x
+    WHERE x.user_id=$6 AND x.project_id=r.project_id AND (x.customer_id IS NULL OR x.customer_id=r.customer_id)
+    AND (x.warehouse_id IS NULL OR x.warehouse_id=r.warehouse_id))`,[reversalId,req.productCode,plan.project_id,plan.customer_id,co?plan.warehouse_id:null,req.user.id])).rows[0];
+  if(!source||source.batch_no===batch)throw B.error(409,'PREPARATION_REVERSAL_SOURCE_INVALID');
+ }
  const used=await c.query(co?"SELECT 1 FROM co_preparations WHERE preparation_batch_no=$1 AND status<>'WITHDRAWN'":
   'SELECT 1 FROM allocations WHERE lot_no=$1 AND NOT copper_preparation_batch_released(workflow_state,status,cancellation_observation)',[batch]);
- if(used.rowCount||(await c.query("SELECT 1 FROM preparation_plans WHERE product_code=$1 AND batch_no=$2 AND state<>'CANCELLED' AND id IS DISTINCT FROM $3",[req.productCode,batch,id])).rowCount)
+ if(used.rowCount||(await c.query(`SELECT 1 FROM preparation_plans WHERE product_code=$1 AND batch_no=$2 AND state<>'CANCELLED' AND id IS DISTINCT FROM $3
+  UNION ALL SELECT 1 FROM preparation_reversals WHERE product_code=$1 AND batch_no=$2 AND state='APPROVED'`,[req.productCode,batch,id])).rowCount)
   throw B.error(409,'备货批次号已占用');
  if(preview)return;
  const values=[req.productCode,plan.project_id,plan.customer_id,co?plan.warehouse_id:null,co?null:plan.id,co?plan.id:null,batch,month];
  const result=prior?await c.query('UPDATE preparation_plans SET product_code=$1,project_id=$2,customer_id=$3,warehouse_id=$4,cu_sales_plan_id=$5,co_sales_plan_id=$6,batch_no=$7,shipment_month=$8,version=version+1 WHERE id=$9 RETURNING *',[...values,id]):
-  await c.query(`INSERT INTO preparation_plans(product_code,project_id,customer_id,warehouse_id,cu_sales_plan_id,co_sales_plan_id,batch_no,shipment_month,created_by)
-   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(product_code,batch_no) WHERE state<>'CANCELLED' DO NOTHING RETURNING *`,[...values,req.user.id]);
+  await c.query(`INSERT INTO preparation_plans(product_code,project_id,customer_id,warehouse_id,cu_sales_plan_id,co_sales_plan_id,batch_no,shipment_month,created_by,reversal_id)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(product_code,batch_no) WHERE state<>'CANCELLED' DO NOTHING RETURNING *`,[...values,req.user.id,reversalId]).catch(err=>{if(err.constraint==='preparation_plans_reversal_id_key')throw B.error(409,'PREPARATION_REVERSAL_ALREADY_LINKED');throw err;});
  const saved=result.rows[0];
  if(!saved)throw B.error(409,'备货批次号已占用');
  await event(c,req,saved,prior?'EDIT':'CREATE');

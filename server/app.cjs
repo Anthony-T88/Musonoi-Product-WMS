@@ -125,6 +125,7 @@ async function build(options={}){
  await require('./approval-summary.cjs')({app,pool,permitted});
  await require('./bundle-history.cjs')({app,pool,cfg,permitted});
  await require('./bundle-corrections.cjs').register({app,pool,permitted,csrf});
+ require('./preparation-reversals.cjs').register({app,pool,permitted,csrf});
  await require('./sampling.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./weighing.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./workflow-attachments.cjs')({app,pool,cfg,permitted,csrf});

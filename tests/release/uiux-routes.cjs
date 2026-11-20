@@ -130,7 +130,7 @@ function pages(ids){
  add('cu-receipt','/receipts/:id',[CU],{example:'cuReceipt'});
  add('cu-receipt-edit','/receipts/:id/edit',[CU],{example:'cuReceiptDraft',state:'draft'});
  add('cu-receipt-import','/receipts/import',[CU],{state:'single Excel drop'});
- add('co-prep','/receipts/:id',[CO],{example:'coPrep',screenshot:true,state:'completed'});
+ add('co-prep','/receipts/:id',[CO],{example:'coPrep',screenshot:true,state:'completed or whole-batch reversal',roles:['site_supervisor','logistics_manager']});
  add('co-prep-work','/receipts/:id',[CO],{example:'coPrepEditable',screenshot:true,state:'editable',roles:['logistics_field_operator','site_supervisor']});
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
  add('co-prep-alias','/receipts/:id/work',[CO],{example:'coPrepEditable'});
@@ -142,7 +142,7 @@ function pages(ids){
  add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved with approval history'});
  add('cu-preparation-from-plan','/preparation/new',[CU],{query:'?preparation_plan=:id',example:'cuApprovedWork',screenshot:true,state:'approved plan'});
  add('co-preparation-from-plan','/receipts/new',[CO],{query:'?preparation_plan=:id',example:'coApprovedWork',screenshot:true,state:'approved plan'});
- add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true});
+ add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true,state:'preparation detail including whole-batch reversal',roles:['site_supervisor','logistics_manager']});
  add('co-preparation-alias','/preparation/:id',[CO],{example:'coPrep'});
  add('co-work-alias','/preparation/:id/work',[CO],{example:'coPrepEditable'});
  add('cu-sampling','/preparation/history-sampling',[CU],{state:'retired permission'});

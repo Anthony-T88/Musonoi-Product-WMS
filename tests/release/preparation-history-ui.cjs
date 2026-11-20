@@ -83,7 +83,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    fixtures[product]={plan,customer,occupied,item,history:await archive(api,f,product)};
   });
   assert(products.every(product=>fixtures[product]),'Required copper and cobalt fixtures were created');
-  for(const product of products)await t.test(product+' reuses only formally cancelled preparation batches',async()=>{
+  for(const product of products)await t.test(product+' reopens the same approved plan after formal work cancellation',async()=>{
    const co=cobalt(product),fx=fixtures[product],base=prefix(product)+'/preparation-plans';
    const item=fx.item(798),work=await P.approved(api,product,fx.plan,item.batch_no);
    let url,payload;
@@ -124,25 +124,21 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.equal(cancelled.workflow_state,'CANCELLED');
    }
    const old=await api('export_supervisor',product,base+'/'+work.id);
-   assert.equal(old.state,'CANCELLED');
-   assert.equal(old[co?'co_preparation_id':'allocation_id'],first.id);
-   assert(!old.actions.start&&!old.actions.edit);
-   assert.deepEqual(old.events.filter(event=>event.action==='CANCEL').map(event=>event.reason),[reason]);
-   assert(old._approval.history.items.some(row=>row.action==='CANCEL'&&row.note===reason));
+   assert.equal(old.state,'APPROVED');
+   assert.equal(old[co?'co_preparation_id':'allocation_id'],null);
+   assert(!old.actions.edit);
+   assert.deepEqual(old.events.filter(event=>event.action==='WORK_CANCEL').map(event=>event.reason),[reason]);
+   assert(old._approval.history.items.some(row=>row.action==='WORK_CANCEL'&&row.note===reason));
    assert(old._approval.history.items.some(row=>row.action==='APPROVE'));
-   assert(!(await api('export_supervisor',product,lookup)).items.some(row=>row.batch_no===item.batch_no));
-   assert.equal((await batch(item)).items[0].error,null);
-   const replacements=await Promise.all([1,2].map(()=>request('export_supervisor',product,base+'/batch',{items:[item],submit:true})));
-   assert.deepEqual(replacements.map(reply=>reply.statusCode).sort(),[200,409],replacements.map(reply=>reply.body).join(' '));
-   const pending=replacements.find(reply=>reply.statusCode===200).json().items[0];
-   const snapshot=await api('logistics_manager',product,base+'/'+pending.id);
-   const approved=await api('logistics_manager',product,base+'/'+pending.id+'/approve',{version:snapshot.version});
-   const second=await create(approved.id);
+   assert((await api('export_supervisor',product,lookup)).items.some(row=>row.batch_no===item.batch_no));
+   assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
+   const available=await api('admin',product,base+'?executable=1&search='+item.batch_no);
+   assert.equal(available.items[0].id,work.id);
+   const second=await create(work.id);
    assert.notEqual(second.id,first.id);
    assert.equal(second[co?'preparation_batch_no':'lot_no'],item.batch_no);
    const legacy=await api('admin',product,url+'/'+first.id);
    assert.equal(co?legacy.status:legacy.workflow_state,co?'WITHDRAWN':'CANCELLED');
-   assert.equal((await api('export_supervisor',product,base+'?state=CANCELLED&search='+item.batch_no)).items[0].id,old.id);
    assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
   });
   for(const product of products)await t.test(product+' links reviewed historical trips, confirms invoices and records historical exits',async()=>{

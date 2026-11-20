@@ -27,6 +27,7 @@ module.exports={enabled,detail,planning,register:async({app,pool,permitted,csrf}
  app.post('/api/v1/v261/lots',{preHandler:[permitted('allocation:write'),csrf]},req=>B.mutate(pool,req,async c=>{
   const plans=require('./preparation-plans.cjs'),body=req.body||{},plan=await plans.claim(c,req,body.preparation_plan_id);
   if(body.plan_id&&B.uuid(body.plan_id).toLowerCase()!==plan.sales_plan_id||body.lot_no&&body.lot_no!==plan.batch_no)throw B.error(400,'作业批次或销售计划与已审批计划不一致');
+  if(body.preparation_plan_version!==undefined&&plan.version!==B.version(body.preparation_plan_version))throw B.error(409,'PREPARATION_PLAN_STALE');
   const work=await call(c,req,'v261_create',[req.user.id,plan.sales_plan_id,plan.batch_no,B.uuid(body.planned_location_id),JSON.stringify(body.items)]);
   await plans.bind(c,req,plan,work.id);
   return work;

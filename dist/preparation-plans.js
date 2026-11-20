@@ -17,7 +17,7 @@ window.PreparationPlans={
  },
  state(state){return this.t(...({
   DRAFT:['草稿','Draft'],PENDING:['待物流经理审批','Pending Logistics Approval'],
-  APPROVED:['已批准','Approved'],REJECTED:['已退回','Returned'],CANCELLED:['作业已取消','Work Cancelled']
+  APPROVED:['已批准','Approved'],REJECTED:['已退回','Returned'],CANCELLED:['已取消','Cancelled']
  }[state]||[state,state]));},
  salesPlanLabel(plan){return [plan.code,this.t('发运月份','Shipment Month')+' '+(plan.shipment_month||'—'),plan.customer_name].join(' · ');},
  orderRoute(p){return (ProductContext.isCopper()?'/preparation/':'/receipts/')+(p.allocation_id||p.co_preparation_id);},
@@ -242,6 +242,7 @@ window.PreparationPlans={
  },
  fields(p,includeBatch=true){
   const t=this.t,rows=[['销售计划','Sales Plan',p.sales_plan_no],['发运月','Shipment Month',p.shipment_month],['客户','Customer',p.customer_name]];
+  if(p.reversal_batch_no)rows.push(['原备货批次','Original Preparation Batch',p.reversal_batch_no]);
   if(includeBatch)rows.unshift(['备货批次号','Preparation Lot Number',p.batch_no]);
   return UI46Pages.factList(rows.map(([z,e,value])=>[t(z,e),esc(value||'—')]));
  },
@@ -295,12 +296,17 @@ window.PreparationPlans={
   const button=(id,z,e,style='secondary')=>'<button type="button" class="button '+style+'" data-plan-action="'+id+'">'+t(z,e)+'</button>';
   const work=p.allocation_id||p.co_preparation_id?'<a class="button secondary" href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':
    p.actions.start?'<a class="button primary" href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'';
+  const previous=p.events.filter(e=>['WORK_CANCEL','REUSE','FINAL_REVERSE'].includes(e.action)&&(e.allocation_id||e.co_preparation_id));
+  const workHistory=previous.length?'<section class="wms-section"><h2>'+t('历史备货作业','Previous Preparation Work')+'</h2><ul>'+previous.map(e=>
+   '<li><a href="'+this.orderRoute(e)+(e.reversal_id?'?reversal='+e.reversal_id+'#preparation-reversal':'')+'">'+
+   (e.action==='FINAL_REVERSE'?t('查看整批撤销记录','View Whole-Batch Reversal'):t('查看已取消的备货单','View Cancelled Preparation Order'))+
+   '</a> · '+esc(BusinessTime.display(e.occurred_at))+'</li>').join('')+'</ul></section>':'';
   const actions=work+(p.actions.edit?button('edit','修改','Edit')+button('submit','提交审批','Submit for Approval','primary'):'')+
    (p.actions.review?button('approve','审批通过','Approve','primary')+button('reject','退回','Return','danger-outline'):'');
   const back='<a class="button secondary" data-wms-back href="'+this.route+'">'+t('返回备货计划','Back to Plans')+'</a>';
   Router.page(t('备货计划详情','Preparation Plan Details'),'<div class="wms-page" data-page-composed data-no-i18n>'+
    UI46Pages.identity(p.batch_no,UI.status(p.state,'approval',this.state(p.state)),back+actions,this.fields(p,false))+
-   '<div class="preparation-plan-approval-slot"></div><p id="preparation-plan-error" class="error" role="alert"></p></div>');
+   workHistory+'<div class="preparation-plan-approval-slot"></div><p id="preparation-plan-error" class="error" role="alert"></p></div>');
   for(const button of document.querySelectorAll('[data-plan-action]'))button.onclick=async()=>{
    const action=button.dataset.planAction;
    if(action==='edit')return this.form(p);
@@ -312,10 +318,11 @@ window.PreparationPlans={
   };
   ProductContext.dirty=false;
  },
- form(prior){
+ form(prior,source=null){
   const t=this.t,base=(ProductContext.isCopper()?'':'/cobalt')+'/sales-workflow/plans';
   dialog(prior?t('修改备货计划','Edit Preparation Plan'):t('新建备货计划','New Preparation Plan'),
-   '<form id="preparation-plan-form" class="user-form" data-no-i18n data-wms-validation><div class="form-grid wms-field-grid">'+
+   '<form id="preparation-plan-form" class="user-form" data-no-i18n data-wms-validation>'+
+   (source?'<p>'+t('关联已撤销批次','Related Reversed Batch')+' · '+esc(source.batch_no)+'</p>':'')+'<div class="form-grid wms-field-grid">'+
    '<label class="wms-field">'+t('搜索销售计划','Search Sales Plans')+'<input id="preparation-sales-search" type="search" maxlength="160"></label>'+
    '<label class="wms-field">'+t('销售计划','Sales Plan')+'<select name="sales_plan_id" required></select></label>'+
    '<label class="wms-field">'+t('客户','Customer')+'<input name="customer" readonly></label>'+
@@ -334,7 +341,8 @@ window.PreparationPlans={
    try{
     const d=await API.request(base+'?'+new URLSearchParams({status:'OPEN',search:search.value.trim()}));
     if(!form.isConnected||n!==sequence)return;
-    plans=d.items;
+    plans=source?d.items.filter(p=>p.project_id===source.project_id&&(!source.customer_id||p.customer_id===source.customer_id)&&
+     (ProductContext.isCopper()||p.warehouse_id===source.warehouse_id)):d.items;
     if(prior&&!plans.some(row=>row.id===prior.sales_plan_id))plans=[{id:prior.sales_plan_id,code:prior.sales_plan_no,customer_name:prior.customer_name,shipment_month:prior.sales_shipment_month},...plans];
     select.replaceChildren(new Option(t('请选择','Select'),''));
     for(const p of plans)select.add(new Option(this.salesPlanLabel(p),p.id));
@@ -347,8 +355,10 @@ window.PreparationPlans={
   select.onchange=()=>{form.elements.shipment_month.value='';apply();};
   form.onsubmit=e=>UI46Pages.submit(e,async()=>{
    const {sales_plan_id,shipment_month,batch_no}=Object.fromEntries(new FormData(form));
-   const r=await API.request(this.api()+(prior?'/'+prior.id:''),{method:prior?'PATCH':'POST',
-    body:{sales_plan_id,shipment_month,batch_no,...(prior?{version:prior.version}:{})}});
+   let r;
+   try{r=await API.request(this.api()+(prior?'/'+prior.id:''),{method:prior?'PATCH':'POST',
+    body:{sales_plan_id,shipment_month,batch_no,...(prior?{version:prior.version}:source?{reversal_id:source.id}:{})}});}
+   catch(err){throw Error(PreparationReversal.message(err.message));}
    $('dialog').close();ProductContext.dirty=false;
    if(prior)await this.detail(r.id);else await Router.go(this.route+'/'+r.id);
   });

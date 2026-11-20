@@ -642,7 +642,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "completed",
+      "state": "completed or whole-batch reversal",
       "template": "/receipts/:id"
     },
     {
@@ -742,7 +742,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "preparation detail including whole-batch reversal",
       "template": "/preparation/:id"
     },
     {

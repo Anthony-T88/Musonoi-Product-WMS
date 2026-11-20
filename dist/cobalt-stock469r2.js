@@ -22,7 +22,7 @@ window.CobaltStock469R2={
    const url=esc(this.link(b.preparation_id,{bag_page:1,batch_page:d.list.page,page:null,bag_size:null})),archiveUrl=esc(this.link(b.preparation_id+'/archive',{batch_page:d.list.page,page:null,bag_page:null,bag_size:null})),selected=b.preparation_id===d.id;
    const receiptDate=b.received_at?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(b.received_at)):'—';
    const sample=b.batch_sampled_bags===b.batch_total_bags?t('已完成','Complete'):b.batch_sampled_bags?t('部分完成','Partially Complete'):t('待取样','Pending');
-   const business=['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED'].includes(b.lifecycle_state)?CobaltWorkUI.status(b.lifecycle_state):CobaltExecutionUI.state(b.lifecycle_state);
+   const business=['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED','REVERSED'].includes(b.lifecycle_state)?CobaltWorkUI.status(b.lifecycle_state):CobaltExecutionUI.state(b.lifecycle_state);
    return '<tr class="'+(selected?'co2-selected':'')+'">'+[
     '<a href="'+url+'">'+esc(b.preparation_batch_no)+'</a>',esc(b.location_codes?.join(' / ')||t('未定位','Unlocated')),esc(CountValues.display(b.bags)),
     CobaltMetal.format(b.effective_net_mt,4)+(b.unconfirmed_bags&&b.effective_net_mt!=null?' <small title="'+t('含预计重量','Includes estimated weight')+'">'+t('含预计','Incl. est.')+'</small>':''),

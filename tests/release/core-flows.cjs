@@ -70,6 +70,10 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
    planned_load_date:today,destination:'Synthetic destination',invoice_no:'DUPLICATE-'+salt,export_license_no:'RC2-LICENSE',remark:'',...preview.versions},409);
   const match=async()=>{const d=await api('/cobalt/loading/plans/'+plan.id),p=await api('/cobalt/loading/preview?plan_id='+plan.id+'&sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);await api('/cobalt/loading/plans/'+plan.id+'/match','logistics_field_operator',{version:d.plan.version,preview_hash:p.preview_hash});return api('/cobalt/loading/plans/'+plan.id);};
   f.rc2match=match;matched=await match();
+  const blocked=await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor');
+  assert.equal(blocked.block,'MATCHED');
+  await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor',
+   {version:blocked.version,reason:'Synthetic guarded reversal',observation:'Validation only',verified:true},409);
   const scopedMap=id=>api('/cobalt/stock/map?'+new URLSearchParams({warehouse_id:f.warehouse,preparation_id:prep.id,customer_id:id}));
   assert.equal((await scopedMap(customer.id)).summary.bags,1);
   assert.equal((await scopedMap(crypto.randomUUID())).summary.bags,0);
@@ -102,6 +106,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(approvals[1].statusCode,200,approvals[1].body);
   assert.deepEqual(approvals[0].json(),approvals[1].json());
   assert.equal((await c.query('SELECT count(*)::int n FROM co_outbounds WHERE order_id=$1',[matched.order.id])).rows[0].n,1);
+  assert.equal((await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor')).block,'LOADED');
   assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
   assert.equal(await trend(prep.id),0);
   await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET reason='tamper' WHERE id=$1",[review.id]));
