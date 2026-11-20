@@ -124,7 +124,7 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | co-prep-alias | `/receipts/:id/work` | 钴 | 管理员 | 表格、指标 | 6 / 0 / 0 | 现场逐捆、逐袋或匹配 |
 | preparation | `/preparation` | 铜、钴 | 管理员、现场操作员、现场主管 | 筛选、表格、状态、指标、预览 | 28 / 0 / 0 | 列表与只读预览 |
 | preparation-new | `/preparation/new` | 铜、钴 | 管理员 | 骨架、筛选、表格、状态 | 12 / 0 / 0 | — |
-| preparation-plans | `/preparation/work-plans` | 铜、钴 | 管理员、物流经理、现场操作员、出口主管 | 骨架、筛选、表格、状态 | 32 / 0 / 0 | — |
+| preparation-plans | `/preparation/work-plans` | 铜、钴 | 管理员、物流经理、现场操作员、出口主管 | 骨架、筛选、表格、状态 | 32 / 0 / 0 | 可查看已取消作业的旧计划；新建备货计划支持在选项中核对销售计划发运月份。 |
 | cu-work-plan-detail | `/preparation/work-plans/:id` | 铜 | 管理员 | 骨架、状态 | 10 / 0 / 0 | 共用单据页眉 |
 | co-work-plan-detail | `/preparation/work-plans/:id` | 钴 | 管理员 | 骨架、状态 | 10 / 0 / 0 | 共用单据页眉 |
 | cu-preparation-from-plan | `/preparation/new` | 铜 | 管理员 | 骨架、表单、表格 | 10 / 0 / 0 | 现场逐捆、逐袋或匹配 |

@@ -2,7 +2,7 @@
 
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs');
 const cobalt=req=>req.productCode==='CO_HYDROXIDE';
-const stateLabels=['DRAFT','PENDING','APPROVED','REJECTED'];
+const stateLabels=['DRAFT','PENDING','APPROVED','REJECTED','CANCELLED'];
 const holds=(user,role)=>user.role_code==='admin'||user.role_code===role;
 const canCreate=req=>holds(req.user,'export_supervisor')&&req.user.permissions.includes('plan:read');
 const canReview=req=>holds(req.user,'logistics_manager')&&req.user.permissions.includes('allocation:review');
@@ -19,7 +19,7 @@ const allowed=(path,method)=>method==='GET'&&['/operations/status','/occupied'].
  /^\/api\/v1\/cobalt\/preparation-plans(?:\/[0-9a-f-]{36}(?:\/(?:submit|approve|reject))?)?$/i.test(path)&&['GET','POST','PATCH'].includes(method);
 
 const visibility="p.product_code=$2 AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND (s.customer_id IS NULL OR s.customer_id=p.customer_id) AND (p.warehouse_id IS NULL OR s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id))";
-const projection="SELECT p.*,coalesce(cu.code,co.code) sales_plan_no,coalesce(ck.contract_no,ok.contract_no) contract_no,customer.name customer_name FROM preparation_plans p JOIN customers customer ON customer.id=p.customer_id LEFT JOIN sales_plans cu ON cu.id=p.cu_sales_plan_id LEFT JOIN co_sales_plans co ON co.id=p.co_sales_plan_id LEFT JOIN customer_contracts ck ON ck.id=cu.contract_id LEFT JOIN co_sales_contracts ok ON ok.id=co.contract_id";
+const projection="SELECT p.*,coalesce(cu.code,co.code) sales_plan_no,coalesce(ck.contract_no,ok.contract_no) contract_no,coalesce(cu.preparation_month,co.shipment_month) sales_shipment_month,customer.name customer_name FROM preparation_plans p JOIN customers customer ON customer.id=p.customer_id LEFT JOIN sales_plans cu ON cu.id=p.cu_sales_plan_id LEFT JOIN co_sales_plans co ON co.id=p.co_sales_plan_id LEFT JOIN customer_contracts ck ON ck.id=cu.contract_id LEFT JOIN co_sales_contracts ok ON ok.id=co.contract_id";
 const params=req=>[req.user.id,req.productCode];
 async function access(c,req,id,lock=false){
  const {rows:[plan]}=await c.query(projection+' WHERE '+visibility+' AND p.id=$3'+(lock?' FOR UPDATE OF p':''),[...params(req),B.uuid(id)]);
@@ -74,16 +74,16 @@ async function occupied(c,req){
   LEFT JOIN co_work_batches work ON work.preparation_id=w.id
   LEFT JOIN LATERAL (SELECT s.customer_id,s.shipment_month FROM co_loading_orders l
    JOIN co_sales_plans s ON s.id=l.sales_plan_id WHERE l.preparation_id=w.id AND l.status<>'CANCELLED'
-   ORDER BY l.created_at DESC,l.id LIMIT 1) sale ON true`:`
+   ORDER BY l.created_at DESC,l.id LIMIT 1) sale ON true WHERE w.status<>'WITHDRAWN'`:`
   SELECT w.lot_no batch_no,sale.customer_id,sale.project_id,location.warehouse_id,
    coalesce(p.shipment_month,sale.preparation_month) shipment_month,
    coalesce(w.workflow_state,w.status) state,CASE WHEN p.id IS NULL THEN 'HISTORICAL_WORK' ELSE 'WORK' END source
   FROM allocations w JOIN sales_plans sale ON sale.id=w.plan_id
   LEFT JOIN preparation_plans p ON p.allocation_id=w.id LEFT JOIN locations location ON location.id=w.planned_location_id
-  WHERE w.lot_no IS NOT NULL`;
+  WHERE w.lot_no IS NOT NULL AND NOT copper_preparation_batch_released(w.workflow_state,w.status,w.cancellation_observation)`;
  const {rows}=await c.query(`WITH lots AS (
    SELECT batch_no,customer_id,project_id,warehouse_id,shipment_month,state,'PLAN' source
-   FROM preparation_plans WHERE product_code=$2 AND allocation_id IS NULL AND co_preparation_id IS NULL
+   FROM preparation_plans WHERE product_code=$2 AND state<>'CANCELLED' AND allocation_id IS NULL AND co_preparation_id IS NULL
    UNION ALL ${work}
   ), visible AS (
    SELECT DISTINCT ON (x.batch_no) x.batch_no,x.shipment_month,x.state,x.source,customer.name customer_name
@@ -149,13 +149,15 @@ async function save(c,req,id=null,body=req.body,{preview=false,bulk=false}={}){
  const batch=B.text(body.batch_no,'备货批次号',48).toUpperCase();
  const pattern=co?/^RMM-CO-[0-9]{4}-[0-9]{3,}$/:/^RMM-CU-[0-9]{4}-(0[1-9]|[1-9][0-9]{1,35})$/;
  if(!pattern.test(batch)||!/[1-9]/.test(batch.split('-').at(-1)))throw B.error(400,'备货批次号格式无效');
- const used=await c.query(co?'SELECT 1 FROM co_preparations WHERE preparation_batch_no=$1':'SELECT 1 FROM allocations WHERE lot_no=$1',[batch]);
- if(used.rowCount||(await c.query('SELECT 1 FROM preparation_plans WHERE product_code=$1 AND batch_no=$2 AND id IS DISTINCT FROM $3',[req.productCode,batch,id])).rowCount)
+ const used=await c.query(co?"SELECT 1 FROM co_preparations WHERE preparation_batch_no=$1 AND status<>'WITHDRAWN'":
+  'SELECT 1 FROM allocations WHERE lot_no=$1 AND NOT copper_preparation_batch_released(workflow_state,status,cancellation_observation)',[batch]);
+ if(used.rowCount||(await c.query("SELECT 1 FROM preparation_plans WHERE product_code=$1 AND batch_no=$2 AND state<>'CANCELLED' AND id IS DISTINCT FROM $3",[req.productCode,batch,id])).rowCount)
   throw B.error(409,'备货批次号已占用');
  if(preview)return;
  const values=[req.productCode,plan.project_id,plan.customer_id,co?plan.warehouse_id:null,co?null:plan.id,co?plan.id:null,batch,month];
  const result=prior?await c.query('UPDATE preparation_plans SET product_code=$1,project_id=$2,customer_id=$3,warehouse_id=$4,cu_sales_plan_id=$5,co_sales_plan_id=$6,batch_no=$7,shipment_month=$8,version=version+1 WHERE id=$9 RETURNING *',[...values,id]):
-  await c.query('INSERT INTO preparation_plans(product_code,project_id,customer_id,warehouse_id,cu_sales_plan_id,co_sales_plan_id,batch_no,shipment_month,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(product_code,batch_no) DO NOTHING RETURNING *',[...values,req.user.id]);
+  await c.query(`INSERT INTO preparation_plans(product_code,project_id,customer_id,warehouse_id,cu_sales_plan_id,co_sales_plan_id,batch_no,shipment_month,created_by)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(product_code,batch_no) WHERE state<>'CANCELLED' DO NOTHING RETURNING *`,[...values,req.user.id]);
  const saved=result.rows[0];
  if(!saved)throw B.error(409,'备货批次号已占用');
  await event(c,req,saved,prior?'EDIT':'CREATE');

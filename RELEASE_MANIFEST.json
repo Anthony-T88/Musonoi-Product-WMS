@@ -39,8 +39,8 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "bytes": 30187,
-      "sha256": "eeae25384be8d5e2f78a08c87b7d9d8a776d18d5f53a9d3275e9bf4f7e5bf203"
+      "bytes": 30346,
+      "sha256": "dc27cc274b0802cbac694d2e18d498c6ef984cb1f6c060e24b02637d406e2c60"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -1504,8 +1504,8 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "8a72ff3556a17eb01fc8b49e983db71bb48d6443fcba9635dc60f3a501fc2a38",
-      "bytes": 14047
+      "sha256": "00240ff16d23fad172430bce7c1ee119df0eebf338e76b24c2067dcdd1ea8c25",
+      "bytes": 14467
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1724,8 +1724,8 @@
     },
     {
       "path": "dist/preparation-plans.js",
-      "sha256": "0b5d6513cfe7b1f1b9845b4208334d6347d8e9b4b3dbda036072a9e42cc69eed",
-      "bytes": 29726
+      "sha256": "51e3ac1c16f857b7cf7aced519cfd6183e9fd22797edb8fd97974d2aff2e96c9",
+      "bytes": 29963
     },
     {
       "path": "dist/product-context.js",
@@ -1774,8 +1774,8 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "969c6a35e7d8da7ae053a9048565954a729e5dc3b18079b23021dd1ed0bbf9e9",
-      "bytes": 414
+      "sha256": "a5552c00be2d610be6753bb38e4a4534b5a2ca6aa6ef29243b0713da886e624e",
+      "bytes": 418
     },
     {
       "path": "dist/reports463.js",
@@ -1834,8 +1834,8 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "bdda9388fe9c825f53c34b061380d587a67c9eb8e84256652792a9402db4fe27",
-      "bytes": 2911
+      "sha256": "62678054df6cd850dc27338b2e3e29c4aacda2634ba551f31747439ce1d58c54",
+      "bytes": 2915
     },
     {
       "path": "dist/system46-pages.js",
@@ -2414,13 +2414,13 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "sha256": "f65ed2a4723b44a0f9f2e2d6c607a4415967e4ca747d0b5e8a8036a6474c3ecb",
-      "bytes": 30146
+      "sha256": "c413ebdfc7b524e344a695b70d31ef637c4e139fea10395a0f9f260dbf3dbb22",
+      "bytes": 30251
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "sha256": "a085826395d93f1d5f34c43145533aa43433a1c163caeff99e83a9b02bbe9b3f",
-      "bytes": 14873
+      "sha256": "5459c4d1a315ce4cee0f2ccedc470b88612bc648bc3ed12917c1520aca496802",
+      "bytes": 15089
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3004,8 +3004,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "2a74b652fd00b62fe4465e6b4866e401c5a1620b714bbadd15e89b2640512035",
-      "bytes": 4750
+      "sha256": "121b3ec2adec81bf58ae0e7ab9718b6e2b7541757ec5f2b3115be632a7866eae",
+      "bytes": 4903
     },
     {
       "path": "scripts/db.cjs",
@@ -3094,8 +3094,8 @@
     },
     {
       "path": "server/approval-presentation.cjs",
-      "sha256": "f90e8387b59bd582131880f8cf800a8875d2b6286dd8d17fca9d711ab78e2f9a",
-      "bytes": 32056
+      "sha256": "aed4045bdb21e372842b510e7495f2fced3f1d4186e9a662acfad0e6f5247cc1",
+      "bytes": 32266
     },
     {
       "path": "server/approval-summary.cjs",
@@ -3489,8 +3489,8 @@
     },
     {
       "path": "server/preparation-plans.cjs",
-      "bytes": 18887,
-      "sha256": "babc8a312b4ac8bd140509947feb5f673b755b2b90ed69605f124fd125e04e7f"
+      "bytes": 19284,
+      "sha256": "e996d19d526406ac4a8819bf873c89b49adee841d2736426f8b3ed284dd7b534"
     },
     {
       "path": "server/preparation-tree.cjs",
@@ -3544,8 +3544,8 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "c8fa2aacd6ca088593ba30a02461d2591079ec5e0bcec54a73d50e192bfdd4a3",
-      "bytes": 223
+      "sha256": "e95a1752330a81e8f55a2dd9983eec16c04fe556b75d43074a3c3c326e26139c",
+      "bytes": 214
     },
     {
       "path": "server/report-center-data.cjs",
@@ -3754,8 +3754,8 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "b71129a0799a4fbb541c802a40f60027d68192b9d2c420f3b51d8c6d478ad6c2",
-      "bytes": 96470
+      "sha256": "029559cbe9335e39d2ca3f298bbaf0395fe6cbcad0b821f52fe90b825b87f639",
+      "bytes": 96638
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
@@ -4123,19 +4123,24 @@
       "bytes": 2619
     },
     {
+      "path": "db/migrations/198_v487_preparation_batch_reuse.sql",
+      "sha256": "58e063da8c5c31f42ca64b299140ae30992dead76d1309cb7084fc6f6b4ea5aa",
+      "bytes": 6021
+    },
+    {
       "path": "docs/uiux/备货计划和历史单据详情改版方案.md",
       "bytes": 3815,
       "sha256": "37d8a4755bae75a1a4ddc670b69d57b569fe9871ebf84d0cfb1e58b92da64434"
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "4591747f01a4f6061bf9fb7fd4aa02dafa3500893cd85256ccebc8b2ecf65149",
-      "bytes": 14696
+      "sha256": "6eb14970ef238d9fc4c9b3dc56af7f3794ee923098b1dafc624baa561e298a9c",
+      "bytes": 17714
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "bytes": 51425,
-      "sha256": "286a4f5798bb3119f8fd3f9d23d1fd962cc3cb24cdc1990614d9b83f51ce9645"
+      "bytes": 57232,
+      "sha256": "719795dfb2eb124ce5fddc3d68ebcb9c36a88a3b929209bb0651ada8de4fab88"
     },
     {
       "path": "docs/v4.8.3-release.md",
@@ -4178,8 +4183,8 @@
       "bytes": 3523
     }
   ],
-  "sourceFiles": 667,
-  "runtimeRequiredMigrations": 197,
+  "sourceFiles": 668,
+  "runtimeRequiredMigrations": 198,
   "format": 2,
   "status": "Local TEST verified"
 }

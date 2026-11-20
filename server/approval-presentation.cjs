@@ -48,6 +48,7 @@ function action(row,kind){
  if(kind==='preparation-plan'||kind==='preparation-plan-legacy'){
   k=k.replace(/^PREPARATION_PLAN_/,'');
   if(k==='START')return {key:k,title:['生成备货作业','Preparation Work Order Created']};
+  if(k==='CANCEL')return {key:k,title:['备货作业取消，批次号已释放','Preparation Work Cancelled and Lot Released']};
  }
  if(k==='CREATE_PREPARATION'||k==='CREATED')k='CREATE';
  if(k==='APPROVE_COMPLETION')k='COMPLETION_APPROVE';
@@ -63,7 +64,8 @@ function action(row,kind){
  return {key:k,title:['单据变更记录','Document Change Recorded']};
 }
 function normalize(row,kind){
- const a=row.after_data||{},b=row.before_data||{},act=action(row,kind),role=row.actor_role_snapshot||row.actor_role||null;
+ const a=row.after_data||{},b=row.before_data||{},act=action(row,kind);
+ const role=kind==='preparation-plan'&&act.key==='CANCEL'&&a.reconciled===true?null:row.actor_role_snapshot||row.actor_role||null;
  const reason=row.reason||row.note||a.review_note||a.reason||a.note||a.last_note||a.commerce_reason||a.sales_reason||a.request_reason||'';
  const result=act.key!=='VERIFY_RETURN'&&/REJECT|(?:^|_)RETURN$/.test(act.key)?['已退回','Returned']:/SUBMIT|REQUEST/.test(act.key)&&!/APPROV/.test(act.key)?['已提交','Submitted']:/CANCEL/.test(act.key)?['已取消','Cancelled']:/WITHDRAW/.test(act.key)?['已撤回','Withdrawn']:/APPROV|AUTHORIZE/.test(act.key)?['已通过','Approved']:/CONFIRM|APPLY|APPLIED|OUTBOUND|CLOSED|EXIT_CONFIRMED|VERIFY_RETURN/.test(act.key)?['已完成','Completed']:['已记录','Recorded'];
  const before=row.from_status||b.workflow_state||b.state||b.status||null,after=row.to_status||a.workflow_state||a.state||a.status||null;

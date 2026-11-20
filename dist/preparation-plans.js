@@ -17,8 +17,9 @@ window.PreparationPlans={
  },
  state(state){return this.t(...({
   DRAFT:['草稿','Draft'],PENDING:['待物流经理审批','Pending Logistics Approval'],
-  APPROVED:['已批准','Approved'],REJECTED:['已退回','Returned']
+  APPROVED:['已批准','Approved'],REJECTED:['已退回','Returned'],CANCELLED:['作业已取消','Work Cancelled']
  }[state]||[state,state]));},
+ salesPlanLabel(plan){return [plan.code,this.t('发运月份','Shipment Month')+' '+(plan.shipment_month||'—'),plan.customer_name].join(' · ');},
  orderRoute(p){return (ProductContext.isCopper()?'/preparation/':'/receipts/')+(p.allocation_id||p.co_preparation_id);},
  startRoute(p){return (ProductContext.isCopper()?'/preparation/new':'/receipts/new')+'?preparation_plan='+p.id;},
  async selected(){
@@ -86,12 +87,12 @@ window.PreparationPlans={
    '请选择授权范围内已获批且执行中的销售计划':t('请选择授权范围内已获批且执行中的销售计划','Choose an authorized, approved and open sales plan')
   };
   const translate=message=>messages[message]||I18n.translate(message,true);
-  function renderOptions(select,row){
+  const renderOptions=(select,row)=>{
    const ids=[...new Set([row.sales_plan_id,...shown])].filter(id=>salesOptions.has(id));
    select.replaceChildren(new Option(t('请选择','Select'),''));
-   for(const id of ids){const p=salesOptions.get(id);select.add(new Option(p.code+' · '+p.customer_name,id));}
+   for(const id of ids){const p=salesOptions.get(id);select.add(new Option(this.salesPlanLabel(p),id));}
    select.value=row.sales_plan_id;
-  }
+  };
   function render(){
    tbody.innerHTML=data.map((r,i)=>'<tr data-preparation-row="'+i+'">'+
     '<td><input type="text" name="batch_no" data-field="batch_no" aria-label="'+t('第 '+(i+1)+' 行备货批次号','Row '+(i+1)+' preparation lot number')+
@@ -246,7 +247,7 @@ window.PreparationPlans={
  },
  async list(){
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q);
-  const status=['DRAFT','PENDING','APPROVED','REJECTED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
+  const status=['DRAFT','PENDING','APPROVED','REJECTED','CANCELLED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
   const headings=[['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
   const operations=[['submit','submit',t('一键提交审核','Submit Selected')],['approve','review',t('一键审批','Approve Selected')]];
   const available=operations.filter(([,action])=>d.items.some(p=>p.actions[action]));
@@ -334,9 +335,9 @@ window.PreparationPlans={
     const d=await API.request(base+'?'+new URLSearchParams({status:'OPEN',search:search.value.trim()}));
     if(!form.isConnected||n!==sequence)return;
     plans=d.items;
-    if(prior&&!plans.some(row=>row.id===prior.sales_plan_id))plans=[{id:prior.sales_plan_id,code:prior.sales_plan_no,customer_name:prior.customer_name},...plans];
+    if(prior&&!plans.some(row=>row.id===prior.sales_plan_id))plans=[{id:prior.sales_plan_id,code:prior.sales_plan_no,customer_name:prior.customer_name,shipment_month:prior.sales_shipment_month},...plans];
     select.replaceChildren(new Option(t('请选择','Select'),''));
-    for(const p of plans)select.add(new Option(p.code+' · '+p.customer_name,p.id));
+    for(const p of plans)select.add(new Option(this.salesPlanLabel(p),p.id));
     select.value=plans.some(p=>p.id===selected)?selected:'';
     apply();
    }catch(err){if(form.isConnected&&n===sequence)message.textContent=err.message;}

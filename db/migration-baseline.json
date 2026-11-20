@@ -789,6 +789,10 @@
     {
       "version": "197_v485_historical_departure_and_sales_links.sql",
       "checksum": "6c8611add5f24f1fe5a3d9e527f23092b51eb7484b56fce954ce60d4aa87522d"
+    },
+    {
+      "version": "198_v487_preparation_batch_reuse.sql",
+      "checksum": "58e063da8c5c31f42ca64b299140ae30992dead76d1309cb7084fc6f6b4ea5aa"
     }
   ]
 }

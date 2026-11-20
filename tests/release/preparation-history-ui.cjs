@@ -83,6 +83,68 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    fixtures[product]={plan,customer,occupied,item,history:await archive(api,f,product)};
   });
   assert(products.every(product=>fixtures[product]),'Required copper and cobalt fixtures were created');
+  for(const product of products)await t.test(product+' reuses only formally cancelled preparation batches',async()=>{
+   const co=cobalt(product),fx=fixtures[product],base=prefix(product)+'/preparation-plans';
+   const item=fx.item(798),work=await P.approved(api,product,fx.plan,item.batch_no);
+   let url,payload;
+   if(co){
+    url='/cobalt/preparations';
+    payload={project_id:f.project,warehouse_id:f.warehouse,total_bags:1};
+   }else{
+    const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const draft=await api('production_operator',product,'/receipts',{project_id:f.project,
+     lines:[{bundle_no:'MUS-'+day.slice(0,4)+'-035-798',sheets_per_bundle:48,production_date:day,inbound_at:new Date().toISOString()}]});
+    const submitted=await api('production_operator',product,'/receipts/'+draft.id+'/submit',{version:draft.version});
+    await api('production_manager',product,'/receipts/'+draft.id+'/confirm',{version:submitted.version});
+    const {rows:[bundle]}=await c.query('SELECT id FROM bundles WHERE receipt_id=$1',[draft.id]);
+    await c.query("UPDATE stock_map_source SET status='VERIFIED',source_sha256=$1,source_name='Synthetic CI geometry',notes='Synthetic test only'",[crypto.createHash('sha256').update('PREPARATION REUSE GEOMETRY').digest('hex')]);
+    await c.query("UPDATE stock_map_cells SET x=0,y=0,width=100,height=100 WHERE code='P1-01'");
+    const slot=await api('admin',product,'/masters/locations',{project_id:f.project,warehouse_id:f.warehouse,code:'P1-01',active:true});
+    await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-01' WHERE id=$1",[slot.id]);
+    url='/v261/lots';
+    payload={planned_location_id:slot.id,items:[{bundle_id:bundle.id,sample_required:false}]};
+   }
+   const create=plan=>api('admin',product,url,{...payload,preparation_plan_id:plan});
+   const first=await create(work.id),lookup=base+'/occupied?'+new URLSearchParams({search:item.batch_no});
+   const batch=body=>api('export_supervisor',product,base+'/batch/preview',{items:[body]});
+   assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
+   assert((await api('export_supervisor',product,lookup)).items.some(row=>row.batch_no===item.batch_no));
+   const reason='Synthetic pre-final-approval cancellation';
+   if(co){
+    const withdrawn=await api('admin',product,url+'/'+first.id+'/withdraw',{version:first.version,reason});
+    assert.equal(withdrawn.status,'WITHDRAWN');
+   }else{
+    const weighed=(await api('admin',product,'/v262/lots/'+first.id+'/weigh',{version:first.version,
+     items:(await api('admin',product,url+'/'+first.id)).items.map(row=>({bundle_id:row.id,item_version:row.item_version,gross_weight:'2.0350',seal_no:'REUSE-798'}))})).lot;
+    const pending=await api('admin',product,url+'/'+first.id+'/submit',{version:weighed.version});
+    const withdrawn=await api('admin',product,'/v262/lots/'+first.id+'/withdraw',{version:pending.version});
+    assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
+    const cancelled=await api('admin',product,'/v262/lots/'+first.id+'/revoke',
+     {version:withdrawn.version,reason,work_stopped:true,physical_state_verified:true,observation:'Synthetic physical state checked'});
+    assert.equal(cancelled.workflow_state,'CANCELLED');
+   }
+   const old=await api('export_supervisor',product,base+'/'+work.id);
+   assert.equal(old.state,'CANCELLED');
+   assert.equal(old[co?'co_preparation_id':'allocation_id'],first.id);
+   assert(!old.actions.start&&!old.actions.edit);
+   assert.deepEqual(old.events.filter(event=>event.action==='CANCEL').map(event=>event.reason),[reason]);
+   assert(old._approval.history.items.some(row=>row.action==='CANCEL'&&row.note===reason));
+   assert(old._approval.history.items.some(row=>row.action==='APPROVE'));
+   assert(!(await api('export_supervisor',product,lookup)).items.some(row=>row.batch_no===item.batch_no));
+   assert.equal((await batch(item)).items[0].error,null);
+   const replacements=await Promise.all([1,2].map(()=>request('export_supervisor',product,base+'/batch',{items:[item],submit:true})));
+   assert.deepEqual(replacements.map(reply=>reply.statusCode).sort(),[200,409],replacements.map(reply=>reply.body).join(' '));
+   const pending=replacements.find(reply=>reply.statusCode===200).json().items[0];
+   const snapshot=await api('logistics_manager',product,base+'/'+pending.id);
+   const approved=await api('logistics_manager',product,base+'/'+pending.id+'/approve',{version:snapshot.version});
+   const second=await create(approved.id);
+   assert.notEqual(second.id,first.id);
+   assert.equal(second[co?'preparation_batch_no':'lot_no'],item.batch_no);
+   const legacy=await api('admin',product,url+'/'+first.id);
+   assert.equal(co?legacy.status:legacy.workflow_state,co?'WITHDRAWN':'CANCELLED');
+   assert.equal((await api('export_supervisor',product,base+'?state=CANCELLED&search='+item.batch_no)).items[0].id,old.id);
+   assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
+  });
   for(const product of products)await t.test(product+' links reviewed historical trips, confirms invoices and records historical exits',async()=>{
    const co=cobalt(product),plan=fixtures[product].plan,alternate=await P.salesPlan(api,f,product);
    const plate=co?'AUDIT-CO-REPEAT':'AUDIT-CU-REPEAT',month=P.localMonth(),day=month+'-01';
@@ -214,7 +276,16 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await page.waitForURL('**/preparation/work-plans/new');
     const body=page.locator('#preparation-batch-table tbody');
     const saveDrafts=page.locator('#preparation-plan-batch').getByRole('button',{name:/^(保存草稿|Save Drafts)$/});
-    const sales=body.locator('select').first();await sales.locator('option[value="'+fx.plan+'"]').waitFor({state:'attached'});await sales.selectOption(fx.plan);
+    const sales=body.locator('select').first(),option=sales.locator('option[value="'+fx.plan+'"]');
+    await option.waitFor({state:'attached'});
+    await page.evaluate(()=>I18n.change('en'));
+    await page.waitForFunction(id=>document.querySelector('#preparation-plan-batch option[value="'+id+'"]')?.textContent.includes('Shipment Month'),fx.plan);
+    assert((await option.textContent()).includes('Shipment Month '+P.localMonth()));
+    await page.evaluate(()=>I18n.change('zh-CN'));
+    await page.waitForFunction(id=>document.querySelector('#preparation-plan-batch option[value="'+id+'"]')?.textContent.includes('发运月份'),fx.plan);
+    assert((await option.textContent()).includes('发运月份 '+P.localMonth()));
+    await sales.selectOption(fx.plan);
+    assert.equal(await body.locator('input[name=shipment_month]').first().inputValue(),P.localMonth());
     assert.equal(await body.locator('input[name=customer]').first().inputValue(),fx.customer);
     const lookup=page.locator('#preparation-occupied-filter');await lookup.locator('input').fill(fx.occupied.batch_no);
     await lookup.locator('button[type=submit]').click();
