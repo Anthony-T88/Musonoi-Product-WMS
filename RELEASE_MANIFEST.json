@@ -3754,7 +3754,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "029559cbe9335e39d2ca3f298bbaf0395fe6cbcad0b821f52fe90b825b87f639",
+      "sha256": "abb3fbb57428761629d4faf3edec6fc71f6bdce9bce3738d4c20d131335f7159",
       "bytes": 96638
     },
     {
@@ -3914,8 +3914,8 @@
     },
     {
       "path": "tests/release/migrations.test.cjs",
-      "bytes": 3373,
-      "sha256": "d9d42be7f2a3313d1be22649acbb284219d10f2f03c8f152e9d23de8b37d560e"
+      "bytes": 3360,
+      "sha256": "ac11a6d261e7bf63e12678307533798b4eaaf76caef190135179804657ab41bc"
     },
     {
       "path": "tests/release/pool-reliability.cjs",

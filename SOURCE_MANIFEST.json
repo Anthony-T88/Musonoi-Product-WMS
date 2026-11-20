@@ -2481,7 +2481,7 @@
     },
     {
       "path": "tests/release/migrations.test.cjs",
-      "sha256": "d9d42be7f2a3313d1be22649acbb284219d10f2f03c8f152e9d23de8b37d560e"
+      "sha256": "ac11a6d261e7bf63e12678307533798b4eaaf76caef190135179804657ab41bc"
     },
     {
       "path": "tests/release/pool-reliability.cjs",
