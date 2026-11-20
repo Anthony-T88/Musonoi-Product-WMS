@@ -57,6 +57,63 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
   }
  }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
 });
+test('copper and cobalt gate permits print on one landscape continuous form',async()=>{
+ const fs=require('node:fs/promises'),http=require('node:http'),Gate=require('../../server/gate-render.cjs');
+ const permits=new Map(),output=path.join(E.runtime,'gate-print');
+ const driver='SYNTHETIC DRIVER WITH AN EXTENDED NAME FOR LONG TEXT';
+ const packingList='SYNTHETIC-CONTINUOUS-FORM-LONG-PACKING-LIST-1234567890-PL';
+ for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+  const draft=await Gate.render({product_code:product,business_date:'2026-11-20',document_no:'TEST-'+product,
+   truck_no:'TEST-PLATE',driver_name:driver,packing_list_no:packingList,quantity:15,sheets:784,net_kg:'30895.5',remark:'Synthetic permit'});
+  const layout=await Gate.preview(draft.buffer);
+  permits.set('/'+product,Gate.html(layout,'Synthetic Gate Permit'));
+ }
+ const script=await fs.readFile(path.resolve('dist/gate-print.js'));
+ const site=http.createServer((req,res)=>{
+  const url=new URL(req.url,'http://localhost');
+  if(url.pathname==='/gate-print.js'){res.setHeader('Content-Type','application/javascript');return res.end(script);}
+  const html=permits.get(url.pathname);
+  if(!html){res.writeHead(404);return res.end();}
+  res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(html);
+ });
+ await new Promise(resolve=>site.listen(0,'127.0.0.1',resolve));
+ let browser;
+ try{
+  await fs.mkdir(output,{recursive:true});
+  browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await page.addInitScript(()=>{window.print=()=>{window.gatePrintRequested=true;};});
+  const origin='http://127.0.0.1:'+site.address().port;
+  for(const route of permits.keys()){
+   await page.goto(origin+route);
+   await page.locator('.sheet[data-fit-ready="1"]').waitFor();
+   await page.getByRole('button',{name:'打印 / Print',exact:true}).click();
+   assert(await page.evaluate(()=>window.gatePrintRequested));
+   await page.emulateMedia({media:'print'});
+   assert(await page.locator('.print-tools').isHidden());
+   assert.match(await page.locator('.sheet table').innerText(),/Security Inspector/i);
+   assert.match(await page.locator('.sheet table').innerText(),/SYNTHETIC DRIVER/);
+   const fit=await page.locator('.print-area').evaluate(area=>{
+    const frame=area.getBoundingClientRect();
+    const nodes=[...area.querySelectorAll('table,img')];
+    return nodes.map(node=>{
+     const bounds=node.getBoundingClientRect();
+     return {node:node.tagName,bounds:bounds.toJSON(),frame:frame.toJSON(),fits:bounds.left>=frame.left-1&&bounds.right<=frame.right+1&&bounds.top>=frame.top-1&&bounds.bottom<=frame.bottom+1};
+    });
+   });
+   assert(fit.every(x=>x.fits),route+' table and logo fit into the printable area '+JSON.stringify(fit));
+   // Check the document paper and the same medium presented as portrait by the printer.
+   for(const [mode,options] of [['document',{preferCSSPageSize:true}],['driver',{width:'5.5in',height:'9.5in'}]]){
+    const pdf=await page.pdf({path:path.join(output,route.slice(1)+'-'+mode+'.pdf'),printBackground:true,...options});
+    const bytes=pdf.toString('latin1'),size=bytes.match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/);
+    assert.equal(bytes.match(/\/Type\s*\/Page\b/g)?.length,1,route+' '+mode);
+    assert(size,route+' '+mode+' media box');
+    assert(Math.abs(Number(size[1])-684)<1&&Math.abs(Number(size[2])-396)<1,route+' '+mode+' '+size[0]);
+   }
+   await page.emulateMedia({media:'screen'});
+  }
+ }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
+});
 test('real browser: current cobalt stock, independent permissions and both languages at desktop/mobile widths',async()=>{
  const f=E.fixture(),origin=f.appCfg.origin,app=await require('../../server/app.cjs').build({config:f.appCfg});let browser;const errors=[],shapes=[];
  try{

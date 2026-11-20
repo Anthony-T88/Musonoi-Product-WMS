@@ -1414,8 +1414,8 @@
     },
     {
       "path": "dist/gate-print.js",
-      "sha256": "69859a3b9bc77be5f043d3e4028b22a16ca8340db954f618b9172489e8761f2f",
-      "bytes": 713
+      "sha256": "301d7881822e97d2f6946dbcf051740b40cc295a45184b57d7885e383c51b6b3",
+      "bytes": 709
     },
     {
       "path": "dist/gate-ui.js",
@@ -2414,13 +2414,13 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "sha256": "cdcbeecd2b2ff9767ba34faeaa65940e8d206bdea6be88d381c639e6fc31a797",
-      "bytes": 30122
+      "sha256": "f65ed2a4723b44a0f9f2e2d6c607a4415967e4ca747d0b5e8a8036a6474c3ecb",
+      "bytes": 30146
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "sha256": "d8db5447fe3300c79ed4aec8e70a4bc8b907249a9015c789fb9e6bd4ba69eb6e",
-      "bytes": 14699
+      "sha256": "a085826395d93f1d5f34c43145533aa43433a1c163caeff99e83a9b02bbe9b3f",
+      "bytes": 14873
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3004,8 +3004,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "5bd1960fc4dfcb3ef7efbc2109b73450191f2f22931fa1fe5eca564f0e718503",
-      "bytes": 4621
+      "sha256": "2a74b652fd00b62fe4465e6b4866e401c5a1620b714bbadd15e89b2640512035",
+      "bytes": 4750
     },
     {
       "path": "scripts/db.cjs",
@@ -3319,8 +3319,8 @@
     },
     {
       "path": "server/gate-render.cjs",
-      "sha256": "ff51755258ee477adfb98cdb643040f01186666d94018ca1fc49f6ddb3f286f5",
-      "bytes": 9157
+      "sha256": "bef86a39c52934fd9e343cbaf67a3f70f5a0204921c5f826cf978ca2676a6963",
+      "bytes": 9736
     },
     {
       "path": "server/handover467.cjs",
@@ -3754,7 +3754,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "41bfa833388bae8f8e3e29c2aa7833e4697d3e2772202e9095cd9fe7e5857685",
+      "sha256": "b71129a0799a4fbb541c802a40f60027d68192b9d2c420f3b51d8c6d478ad6c2",
       "bytes": 96470
     },
     {
@@ -3964,8 +3964,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "bytes": 55703,
-      "sha256": "093adb519cd51f5eeef4fa611a93c71498409539ee4e9fe69c8169073965a579"
+      "bytes": 59378,
+      "sha256": "be52d4bccf2354d4936a7bfba6f638505410c7c2199e5d40ee99db1c62a55858"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

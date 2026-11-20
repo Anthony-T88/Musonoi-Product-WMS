@@ -51,7 +51,8 @@ async function render(snapshot){
 function html(layout,title){
  const {widthIn,heightIn,marginMm}=gatePaper;
  const widths=layout.columns.map(w=>w*7.1),width=widths.reduce((a,b)=>a+b,0),rows=layout.rows,height=rows.reduce((n,r)=>n+r.height*4/3,0);
- const fitWidth=widthIn*96-2*marginMm*96/25.4-8,fitHeight=heightIn*96-2*marginMm*96/25.4-8;
+ const fitWidth=widthIn*96-2*marginMm*96/25.4;
+ const fitHeight=heightIn*96-2*marginMm*96/25.4-1;
  const scale=Math.min(1,fitWidth/width,fitHeight/height),merges=new Map(),skip=new Set();
  for(const m of layout.merges){const [aa,bb]=m.split(':'),a=coord(aa),b=coord(bb);merges.set(aa,{rows:b.row-a.row+1,cols:b.col-a.col+1});for(let r=a.row;r<=b.row;r++)for(let c=a.col;c<=b.col;c++)if(r!==a.row||c!==a.col)skip.add(r+':'+c);}
  const border=b=>!b?.style?'none':(['medium','thick','double'].includes(b.style)?'2px':'1px')+' '+(b.style==='double'?'double':b.style==='dashed'?'dashed':'solid')+' '+(b.color||'#000000');
@@ -62,6 +63,40 @@ function html(layout,title){
  }).join('')+'</tr>').join('')+'</tbody></table>';
  const position=(v,arr)=>arr.slice(0,Math.floor(v)).reduce((a,b)=>a+b,0)+(arr[Math.floor(v)]||0)*(v%1),rh=rows.map(r=>r.height*4/3);
  const images=(layout.images||[]).map(i=>{const x=position(i.tl.col,widths)+(i.tl.x||0),y=position(i.tl.row,rh)+(i.tl.y||0),w=i.br?position(i.br.col,widths)+(i.br.x||0)-x:i.ext?.width||80,h=i.br?position(i.br.row,rh)+(i.br.y||0)-y:i.ext?.height||70;return '<img alt="Company logo" src="data:image/'+escape(i.extension)+';base64,'+i.base64+'" style="position:absolute;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;object-fit:contain">';}).join('');
- return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escape(title)+'</title><style>@page{size:'+widthIn+'in '+heightIn+'in;margin:'+marginMm+'mm}*{box-sizing:border-box}body{margin:0;background:#edf2ef}.print-tools{font:14px Arial,"Microsoft YaHei",sans-serif;padding:14px 20px;background:#f8faf9;border-bottom:1px solid #d6e2da;display:flex;align-items:center;gap:16px}.print-tools button{background:#276c60;color:white;padding:10px 22px;border:0;border-radius:5px;cursor:pointer;white-space:nowrap}.print-tools span{line-height:1.6;color:#425a4e}.sheet{position:relative;background:white;width:'+width+'px;min-height:'+height+'px;zoom:'+scale+';margin:24px auto}table{border-collapse:collapse;table-layout:fixed;width:'+width+'px}td{padding:2px;line-height:normal} @media print{body{background:white}.print-tools{display:none}.sheet{margin:0;break-inside:avoid}td{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div class="print-tools"><button id="gate-print">打印 / Print</button><span>纸型 9.5 × 5.5 英寸（241.3 × 139.7 毫米）。请在打印机驱动中选择同尺寸纸型。<br>Use the matching 9.5 × 5.5 in paper size in the printer driver.</span></div><main class="sheet" data-fit-width="'+fitWidth+'" data-fit-height="'+fitHeight+'" data-minimum-height="'+height+'">'+table+images+'</main><script src="/gate-print.js"></script></body></html>';
+ return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escape(title)}</title>
+<style>
+@page{size:${widthIn}in ${heightIn}in;margin:0}
+*{box-sizing:border-box}
+body{margin:0;background:#edf2ef}
+.print-tools{font:14px Arial,"Microsoft YaHei",sans-serif;padding:14px 20px;background:#f8faf9;border-bottom:1px solid #d6e2da;display:flex;align-items:center;gap:16px}
+.print-tools button{background:#276c60;color:white;padding:10px 22px;border:0;border-radius:5px;cursor:pointer;white-space:nowrap}
+.print-tools button:disabled{opacity:.55;cursor:wait}
+.print-tools span{line-height:1.6;color:#425a4e}
+.print-viewport{overflow-x:auto;padding:24px}
+.print-page{width:${widthIn}in;height:${heightIn}in;padding:${marginMm}mm;background:white;margin:0 auto;box-shadow:0 2px 12px #0002}
+.print-area{position:relative;width:100%;height:100%}
+.sheet{position:absolute;top:0;left:0;width:${width}px;min-height:${height}px;transform-origin:top left;transform:scale(var(--gate-print-scale,${scale}))}
+table{border-collapse:collapse;table-layout:fixed;width:100%}
+td{padding:2px;line-height:normal}
+@media print{
+ body{background:white}
+ .print-tools{display:none}
+ .print-viewport{overflow:visible;padding:0}
+ .print-page{height:calc(${heightIn}in - 1px);margin:0;box-shadow:none;break-inside:avoid;overflow:hidden}
+ td{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="print-tools"><button id="gate-print" type="button" disabled>打印 / Print</button><span>一联横向连续纸（241.3 × 139.7 毫米）。打印窗口请选择同尺寸纸型、横向和实际大小（100%）。<br><span lang="en">Single landscape form (9.5 × 5.5 in). Select matching paper, Landscape and Actual size (100%).</span></span></div>
+<div class="print-viewport"><div class="print-page"><div class="print-area"><main class="sheet">${table}${images}</main></div></div></div>
+<script src="/gate-print.js?layout=single-landscape"></script>
+</body>
+</html>`;
 }
 module.exports={render,html,escape,preview};

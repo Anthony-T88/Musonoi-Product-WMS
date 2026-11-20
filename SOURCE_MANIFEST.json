@@ -1113,7 +1113,7 @@
     },
     {
       "path": "dist/gate-print.js",
-      "sha256": "69859a3b9bc77be5f043d3e4028b22a16ca8340db954f618b9172489e8761f2f"
+      "sha256": "301d7881822e97d2f6946dbcf051740b40cc295a45184b57d7885e383c51b6b3"
     },
     {
       "path": "dist/gate-ui.js",
@@ -1761,7 +1761,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "5bd1960fc4dfcb3ef7efbc2109b73450191f2f22931fa1fe5eca564f0e718503"
+      "sha256": "2a74b652fd00b62fe4465e6b4866e401c5a1620b714bbadd15e89b2640512035"
     },
     {
       "path": "scripts/db.cjs",
@@ -2009,7 +2009,7 @@
     },
     {
       "path": "server/gate-render.cjs",
-      "sha256": "ff51755258ee477adfb98cdb643040f01186666d94018ca1fc49f6ddb3f286f5"
+      "sha256": "bef86a39c52934fd9e343cbaf67a3f70f5a0204921c5f826cf978ca2676a6963"
     },
     {
       "path": "server/handover467.cjs",
@@ -2521,7 +2521,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "093adb519cd51f5eeef4fa611a93c71498409539ee4e9fe69c8169073965a579"
+      "sha256": "be52d4bccf2354d4936a7bfba6f638505410c7c2199e5d40ee99db1c62a55858"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
