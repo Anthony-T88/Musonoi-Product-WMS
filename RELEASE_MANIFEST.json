@@ -3414,8 +3414,8 @@
     },
     {
       "path": "server/management.cjs",
-      "sha256": "14659b0dd6343c4a6648f0a69dbc5643debbb6c41b6d5e8964354899c2858094",
-      "bytes": 43090
+      "sha256": "a549aa25b1030294265a9ae5e963df9ab3c7375531a817029b76822535af840c",
+      "bytes": 43498
     },
     {
       "path": "server/masters.cjs",
@@ -3754,7 +3754,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "a5bb39a191e8093fe781cd24db061e38f2628643101eb8d7cffd959acdb1afe7",
+      "sha256": "41bfa833388bae8f8e3e29c2aa7833e4697d3e2772202e9095cd9fe7e5857685",
       "bytes": 96470
     },
     {

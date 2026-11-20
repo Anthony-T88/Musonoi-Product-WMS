@@ -10,7 +10,31 @@ const projectDate=value=>value?new Date(value).toLocaleDateString('en-CA',{timeZ
 const fmt=n=>(n<0n?'-':'')+(abs(n)/1000000n)+'.'+String(abs(n)%1000000n).padStart(6,'0'),abs=n=>n<0n?-n:n;
 function sum(rows,key='net_weight'){let total=0n,unknown=0;for(const r of rows)if(r[key]==null)unknown++;else total+=T.scaled(String(r[key]),6);return {net_weight:rows.length&&unknown===rows.length?null:fmt(total),known_net_weight:fmt(total),unknown_weights:unknown,bundles:rows.length};}
 function group(rows,keys,extra){const map=new Map();for(const r of rows){const key=JSON.stringify(keys.map(k=>r[k]??''));if(!map.has(key))map.set(key,{...Object.fromEntries(keys.map(k=>[k,r[k]??''])),items:[]});map.get(key).items.push(r);}return [...map.values()].map(({items,...g})=>({...g,...sum(items),...(extra?extra(items):{})}));}
-function page(rows,q,allowed,all=false,pending){const p=Number(q.page||1),size=Number(q.page_size||25);if(!Number.isInteger(p)||p<1||p>100000||![10,25,50,100].includes(size))throw C.error(400,'分页参数无效');const key=q.sort||allowed[0];if(!allowed.includes(key)||q.direction&&!['asc','desc'].includes(q.direction))throw C.error(400,'排序参数无效');const sign=q.direction==='desc'?-1:1,sorted=rows.map((r,i)=>({r,i})).sort((a,b)=>{if(pending){const rank=documentPriority(a.r,pending)-documentPriority(b.r,pending);if(rank)return rank;}const x=a.r[key],y=b.r[key];let n;if(/weight|_net$/.test(key)&&x!=null&&y!=null){const ax=T.scaled(String(x),6),by=T.scaled(String(y),6);n=ax<by?-1:ax>by?1:0;}else n=String(x??'').localeCompare(String(y??''),'en',{numeric:true});return sign*n||String(a.r.id||a.r.document_no||a.r.bundle_no||JSON.stringify(a.r)).localeCompare(String(b.r.id||b.r.document_no||b.r.bundle_no||JSON.stringify(b.r)))||a.i-b.i;}).map(x=>x.r);return {items:all?sorted:sorted.slice((p-1)*size,p*size),total:rows.length,page:p,page_size:size,sort:key,direction:q.direction||'asc'};}
+function page(rows,q,allowed,all=false,pending){
+ const p=Number(q.page||1),size=Number(q.page_size||25);
+ if(!Number.isInteger(p)||p<1||p>100000||![10,25,50,100].includes(size))throw C.error(400,'分页参数无效');
+ const key=q.sort||allowed[0];
+ if(!allowed.includes(key)||q.direction&&!['asc','desc'].includes(q.direction))throw C.error(400,'排序参数无效');
+ const sign=q.direction==='desc'?-1:1,sortByCreatedTime=pending&&key==='created_at';
+ const sorted=rows.map((r,i)=>({r,i,createdAt:sortByCreatedTime&&r.created_at!=null?new Date(r.created_at).getTime():null})).sort((a,b)=>{
+  if(pending){
+   const rank=documentPriority(a.r,pending)-documentPriority(b.r,pending);
+   if(rank)return rank;
+  }
+  const x=a.r[key],y=b.r[key];
+  let n;
+  if(sortByCreatedTime){
+   const xKnown=Number.isFinite(a.createdAt),yKnown=Number.isFinite(b.createdAt);
+   if(xKnown!==yKnown)return xKnown?-1:1;
+   n=xKnown?a.createdAt-b.createdAt:0;
+  }else if(/weight|_net$/.test(key)&&x!=null&&y!=null){
+   const ax=T.scaled(String(x),6),by=T.scaled(String(y),6);
+   n=ax<by?-1:ax>by?1:0;
+  }else n=String(x??'').localeCompare(String(y??''),'en',{numeric:true});
+  return sign*n||String(a.r.id||a.r.document_no||a.r.bundle_no||JSON.stringify(a.r)).localeCompare(String(b.r.id||b.r.document_no||b.r.bundle_no||JSON.stringify(b.r)))||a.i-b.i;
+ }).map(x=>x.r);
+ return {items:all?sorted:sorted.slice((p-1)*size,p*size),total:rows.length,page:p,page_size:size,sort:key,direction:q.direction||'asc'};
+}
 async function context(c,req,q={},overview=false){const today=(await c.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi','YYYY-MM-DD') today,clock_timestamp() now")).rows[0],planned=['loading','fulfilment'].includes(q.type),f=C.filter(q);if(q.contract_no)f.contract_no=C.text(q.contract_no,'合同号',160);let w;if(planned){const from=C.date(q.from||today.today.slice(0,8)+'01'),to=C.date(q.to||today.today);if(from>to||(Date.parse(to)-Date.parse(from))/86400000>366)throw C.error(400,'计划报表日期范围无效');w=await R.window(c,{from:today.today.slice(0,8)+'01',to:today.today,...(q.as_of?{as_of:q.as_of}:{})});w={...w,from,to};}else w=await R.window(c,q,overview);return {w,f,today:today.today,now:today.now,req};}
 async function inventory(c,x){if(x.inventory)return x.inventory;const f={...x.f};delete f.customer_id;const rows=await R.inventory(c,x.req.user.id,f,x.w);x.inventory=rows.filter(s=>!x.f.customer_id||(s.allocated_customer_id||s.dispatched_customer_id||s.customer_id)===x.f.customer_id).filter(s=>contractMatch(x.f.contract_no,s.contract_no)).map(s=>({...s,id:s.bundle_id||s.uuid,bundle_no:s.bundle_no,customer_id:s.allocated_customer_id||s.dispatched_customer_id||s.customer_id,customer_name:s.current_customer||s.allocated_customer||s.dispatched_customer||s.customer||'',net_weight:s.weight,inventory_state:require('./inventory.cjs').isPreparing(s)?'备货作业中':states[s.inventory_state_code]||s.business_status,href:'/inventory/'+encodeURIComponent(s.bundle_no)}));return x.inventory;}
 // Whole-document visibility reuses the existing report predicate, including every bundle.

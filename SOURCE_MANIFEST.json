@@ -2085,7 +2085,7 @@
     },
     {
       "path": "server/management.cjs",
-      "sha256": "14659b0dd6343c4a6648f0a69dbc5643debbb6c41b6d5e8964354899c2858094"
+      "sha256": "a549aa25b1030294265a9ae5e963df9ab3c7375531a817029b76822535af840c"
     },
     {
       "path": "server/masters.cjs",
