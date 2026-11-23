@@ -97,11 +97,12 @@ async function build(options={}){
   productionReceiptSelfReviewEnabled:cfg.environment==='test'&&(await AccountPolicy.policy(pool)).production_receipt_self_review}));
  app.get('/api/v1/health',async()=>{await dbEnvironment();await pool.query('SELECT 1');return {database:'ok',environment:cfg.environment};});
  for(const path of ['/customs','/customs/bp','/customs/templates','/customs/packing-list','/customs/packing-list/:id']){
-  const entryPermissions=['customs:bp','load:read','packing-template:write'];
-  const permission=path==='/customs'?async req=>{
+  const bpPermissions=['customs:bp','customs:bp-template'];
+  const entryPermissions=path==='/customs'?[...bpPermissions,'load:read','packing-template:write']:bpPermissions;
+  const permission=['/customs','/customs/bp'].includes(path)?async req=>{
    await auth(req);
    if(!entryPermissions.some(code=>req.user.permissions.includes(code)))throw Object.assign(Error('当前账号没有此页面权限'),{statusCode:403});
-  }:path==='/customs/bp'?'customs:bp':path==='/customs/templates'?'packing-template:write':'load:read';
+  }:path==='/customs/templates'?'packing-template:write':'load:read';
   app.get(path,(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{auth,permitted,permission}));
  }
  app.post('/api/v1/auth/login',{config:{rateLimit:{max:10,timeWindow:'1 minute'}},schema:{body:{type:'object',additionalProperties:false,required:['username','password'],properties:{username:{type:'string',maxLength:80},password:{type:'string',maxLength:128},language:{type:'string',enum:['zh-CN','en']}}}}},async(req,reply)=>{

@@ -3,7 +3,9 @@
 window.CustomsWorkspace={
  t:(zh,en)=>I18n.language==='en'?en:zh,
  can:p=>CurrentUser.permissions.includes(p),
- permission(){return ['customs:bp','load:read','packing-template:write'].find(p=>this.can(p));},
+ bpPermission(){return ['customs:bp','customs:bp-template'].find(p=>this.can(p));},
+ permission(){return ['load:read',this.bpPermission(),'packing-template:write'].find(p=>p&&this.can(p));},
+ pagePermission(path){return path==='/customs'?this.permission():{bp:this.bpPermission(),packing:'load:read',templates:'packing-template:write'}[this.tab(path)];},
  base(){return (ProductContext.isCopper()?'':'/cobalt')+'/customs';},
  tab(path){
   if(path.startsWith('/customs/templates'))return 'templates';
@@ -12,13 +14,12 @@ window.CustomsWorkspace={
  },
  nav(tab){
   const t=this.t,options=[
-   ['packing','/customs/packing-list','装箱单','Packing Lists','load:read'],
-   ['bp','/customs/bp','BP表','BP Sheet','customs:bp'],
-   ['templates','/customs/templates','装箱单模板','Packing List Template','packing-template:write']
+   ['packing',this.can('load:read')?'/customs/packing-list':'/customs/templates','装箱单','Packing Lists',this.can('load:read')||this.can('packing-template:write')],
+   ['bp','/customs/bp','BP表','BP Sheet',!!this.bpPermission()]
   ];
   return '<nav class="business-toolbar" aria-label="'+t('清关单据导航','Customs Documents Navigation')+'" data-customs-nav data-no-i18n>'+
-   options.filter(x=>this.can(x[4])).map(([key,url,zh,en])=>'<a class="button secondary" href="'+url+'"'+
-    (tab===key?' aria-current="page"':'')+'>'+t(zh,en)+'</a>').join('')+'</nav>';
+   options.filter(x=>x[4]).map(([key,url,zh,en])=>'<a class="button secondary" href="'+url+'"'+
+    (key===(tab==='templates'?'packing':tab)?' aria-current="page"':'')+'>'+t(zh,en)+'</a>').join('')+'</nav>';
  },
  decorate(tab){
   const root=$('page-content');
@@ -43,8 +44,9 @@ window.CustomsWorkspace={
   Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page customs-packing-workspace" data-no-i18n data-page-composed>'+this.nav('packing')+
    this.packingFilters(q,data.customer_options)+
    '<div class="customs-packing-split"><section class="wms-section packing-list-panel" aria-labelledby="customs-packing-list-heading">'+
-   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('装箱单列表','Packing Lists')+'</h2><span>'+
-   esc(t('共 '+data.total+' 条',data.total+' records'))+'</span></header>'+
+   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('装箱单列表','Packing Lists')+'</h2><div class="bp-archive-actions"><span>'+
+   esc(t('共 '+data.total+' 条',data.total+' records'))+'</span>'+(this.can('packing-template:write')?
+    '<a class="button secondary compact" data-packing-template href="/customs/templates">'+t('装箱单模板','Packing List Template')+'</a>':'')+'</div></header>'+
    ExportLicenses.table(labels,entries,'customs-packing-list',true,{numeric:[2],actions:[6]})+Management.pager(data)+'</section>'+
    '<aside id="customs-packing-preview" class="wms-preview" aria-labelledby="customs-packing-preview-heading" tabindex="-1">'+
    '<header class="packing-panel-heading"><h2 id="customs-packing-preview-heading">'+t('装箱单预览','Packing List Preview')+'</h2><span>'+
@@ -153,11 +155,11 @@ window.CustomsWorkspace={
   const old=/^\/outbounds\/(?:(?:packing-list\/([0-9a-f-]{36}))|(?:([0-9a-f-]{36})\/packing-list))$/i.exec(path);
   if(old)return '/customs/packing-list/'+(old[1]||old[2]);
   if(/^\/export-shipments\/[0-9a-f-]{36}$/i.test(path))return '/customs/packing-list/'+path.split('/').pop();
-  if(path==='/customs')return this.can('customs:bp')?'/customs/bp':this.can('load:read')?'/customs/packing-list':'/customs/templates';
+  if(path==='/customs')return this.can('load:read')?'/customs/packing-list':this.bpPermission()?'/customs/bp':'/customs/templates';
   return path.startsWith('/customs/')?path:null;
  },
  async render(path){
-  const tab=this.tab(path),required={bp:'customs:bp',packing:'load:read',templates:'packing-template:write'}[tab],t=this.t;
+  const tab=this.tab(path),required=this.pagePermission(path),t=this.t;
   if(!this.can(required))throw Object.assign(Error(t('当前账号没有此页面权限','This account does not have permission for this page')),{statusCode:403});
   if(path==='/customs/bp')return CustomsBP.open();
   if(path==='/customs/templates'){
@@ -176,7 +178,7 @@ window.CustomsWorkspace={
  },
  install(){
   Router.add(/^\/customs(?:\/(?:bp|templates|packing-list(?:\/[0-9a-f-]{36})?))?$/,()=>this.render(location.pathname));
-  RoutePermissions.register('customs',path=>/^\/customs(?:\/|$)/.test(path),path=>path==='/customs'?this.permission():({bp:'customs:bp',packing:'load:read',templates:'packing-template:write'})[this.tab(path)]);
+  RoutePermissions.register('customs',path=>/^\/customs(?:\/|$)/.test(path),path=>this.pagePermission(path)||'customs:bp');
   const previous=Router.performShow.bind(Router);
   Router.performShow=async(...args)=>{
    const path=this.route(location.pathname);

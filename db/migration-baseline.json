@@ -805,6 +805,14 @@
     {
       "version": "201_v488_customs_dispatch.sql",
       "checksum": "e120a82bbcdcb8e9469b96006b22391ca996cef42f4bd9093c587375d137ff1d"
+    },
+    {
+      "version": "202_v488_bp_revisions.sql",
+      "checksum": "325198063c688f4e2a5ede458e9678bf88cd92cb908093d256c08fcd97e0b5cb"
+    },
+    {
+      "version": "203_v488_bp_templates.sql",
+      "checksum": "3d9178b594ee1d450fe0acbb51a8a4a4cfe14af901188280b5f680e9d91aa1b1"
     }
   ]
 }

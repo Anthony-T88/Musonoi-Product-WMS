@@ -102,23 +102,29 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await api(bp+'/preview','admin',{ids},409);
   await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
   await api(bp,'sales_operator',undefined,403);
+  const template=await api(bp+'/template');
+  await api(bp+'/template','admin',{revision:template.revision,fields:{...template.fields,rccm:'SYNTHETIC-RCCM',id_nat:'SYNTHETIC-ID',nif:'SYNTHETIC-NIF',contact:'Synthetic contact'}});
   assert((await api(bp)).items.some(row=>row.source_ids.includes(ids[0])));
   const bpData=await api(bp+'/preview','admin',{ids});
-  assert.equal(bpData.header.destination,'Synthetic destination');
-  const bpRows=bpData.rows.map(({id,code,...row})=>({...row,driver:'Verified driver <example>'}));
-  const bpBody={ids,token:bpData.token,header:bpData.header,rows:bpRows,number:''};
+  assert.equal(bpData.header.destination,'CHINA');
+  assert.equal(bpData.header.loading_date,today);
+  const bpRows=bpData.rows;
+  const agent=await api(bp+'/agencies','admin',{project_id:f.project,name:'Synthetic Cobalt Agency'});
+  const bpBody={ids,token:bpData.token,header:{mode:'ROAD',border:'Kasumbalesa',signature_date:today},number:'',agency_id:agent.id,agency_version:agent.version};
   assert.match(bpData.number,/^\d{3}\/\d{4}\/CO$/);
   const proof=await api(bp+'/print/preview','admin',bpBody);
   assert.equal(proof.number,bpData.number);
-  assert.match(proof.content,/Verified driver &lt;example&gt;/);
+  assert(proof.content.includes(bpRows[0].truck));
   assert.equal((await c.query('SELECT count(*)::int n FROM customs_bp_documents')).rows[0].n,0);
   const bpDoc=await api(bp,'admin',bpBody);
   assert.equal(bpDoc.document_no,bpData.number);
+  assert(!(await api(bp)).items.some(row=>row.source_ids.includes(ids[0])));
+  await api(bp+'/preview','admin',{ids},409);
   const filters={document_no:bpDoc.document_no,batch_no:bpRows[0].batch,customer_id:customer.id,generated_date:today};
   const listed=await api(bp+'?'+new URLSearchParams(filters));
   assert.deepEqual(listed.documents.map(row=>[row.id,row.customer]),[[bpDoc.id,bpData.header.customer]]);
   assert.deepEqual((await api(bp+'/'+bpDoc.id+'/batches')).items,
-   [{batch:bpRows[0].batch,truck:bpRows[0].truck,code:matched.order.code}]);
+   [{batch:bpRows[0].batch,truck:bpRows[0].truck,code:matched.order.code,packing_list_no:bpRows[0].packing_list_no,net_mt:bpRows[0].net_mt,gross_mt:bpRows[0].gross_mt}]);
   await api(bp+'/'+bpDoc.id+'/batches','sales_operator',undefined,403);
   await api(bp+'/'+bpDoc.id+'/batches','customer_admin',undefined,404);
   assert.equal((await api(bp+'?'+new URLSearchParams({...filters,generated_date:'2000-01-01'}))).document_total,0);
@@ -127,6 +133,10 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const print=await request(bp+'/'+bpDoc.id+'/print');
   assert.equal(print.statusCode,200);assert(print.body.includes(proof.content));
   await api(bp+'/'+bpDoc.id+'/print','customer_admin',undefined,404);
+  const edit=await app.inject({method:'PATCH',url:'/api/v1'+bp+'/'+bpDoc.id,headers:{...sessions.admin,'x-product-code':co,'idempotency-key':crypto.randomUUID()},
+   payload:{revision:1,header:{mode:'RAILWAY',border:'Mokambo',signature_date:today}}});
+  assert.equal(edit.statusCode,200,edit.body);assert.equal(edit.json().revision,2);
+  assert.match((await request(bp+'/'+bpDoc.id+'/print')).body,/RAILWAY[\s\S]*Mokambo/);
   assert.equal(await trend(prep.id),0.647123);
   assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);const d=await api(base),key=crypto.randomUUID(),body={version:d.execution.version,note:'Synthetic rc3 final approval'};
   const approvals=await Promise.all([request(base+'/production-approve','production_manager',body,key),request(base+'/production-approve','production_manager',body,key)]);

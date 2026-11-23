@@ -945,12 +945,30 @@
       "template": "/outbounds"
     },
     {
+      "key": "customs-entry",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "default to packing list",
+      "template": "/customs"
+    },
+    {
       "key": "customs",
       "products": [
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "single-customer selection and generated sheets",
+      "state": "pending lots, net weights and scoped template controls",
+      "template": "/customs/bp"
+    },
+    {
+      "key": "customs-bp-archive",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "issued BP weights and archive expansion",
       "template": "/customs/bp"
     },
     {

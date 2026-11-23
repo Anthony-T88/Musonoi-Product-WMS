@@ -55,12 +55,17 @@ window.ExportLicenses={
  bookParents:{issuing_bank_account:'issuing_bank',offshore_bank_account:'offshore_bank'},
  bookControls(){
   const t=this.t;
-  return '<div class="form-grid wms-field-grid permit-books" data-permit-books>'+Object.keys(this.bookFields).map(key=>
-   '<div class="permit-book-field"><label for="permit-book-'+key+'">'+this.label(key)+'</label><div>'+
+  const record=key=>'<div class="permit-book-field"><label for="permit-book-'+key+'">'+this.label(key)+'</label><div>'+
    '<select id="permit-book-'+key+'" data-book-field="'+key+'" disabled><option value="">'+t('请选择','Select')+'</option></select>'+
-   '<button type="button" class="button secondary compact" data-book-open="'+key+'" aria-label="'+esc(this.label(key)+' · '+t('记录簿','Record Book'))+'" disabled>'+t('记录簿','Record Book')+'</button></div></div>'+
-   (this.bookParents[key]?'<label class="wms-field">'+this.label(key+'_name')+'<input data-account-holder="'+key+'" readonly></label>':'')
-  ).join('')+'<p class="permit-book-status" data-book-status role="status"></p></div>';
+   '<button type="button" class="button secondary compact" data-book-open="'+key+'" aria-label="'+esc(this.label(key)+' · '+t('记录簿','Record Book'))+'" disabled>'+t('记录簿','Record Book')+'</button></div></div>';
+  const bankRow=bank=>{
+   const account=bank+'_account';
+   return '<div class="permit-bank-fields">'+record(bank)+record(account)+'<div class="permit-book-field">'+
+    '<label for="permit-holder-'+account+'">'+this.label(account+'_name')+'</label><div>'+
+    '<input id="permit-holder-'+account+'" data-account-holder="'+account+'" readonly></div></div></div>';
+  };
+  return '<div class="permit-books" data-permit-books><div class="permit-other-fields">'+['clearing_agent','destination','note'].map(record).join('')+'</div>'+
+   ['issuing_bank','offshore_bank'].map(bankRow).join('')+'<p class="permit-book-status" data-book-status role="status"></p></div>';
  },
  bookDialog(){
   const t=this.t;
@@ -73,19 +78,20 @@ window.ExportLicenses={
   let values={...initial},records=[],revision=0,ready=false,scope,kind='',editing=null;
   const status=root.querySelector('[data-book-status]'),alert=form.querySelector('[role=alert]');
   const options=key=>records.filter(row=>row.kind===key&&(!this.bookParents[key]||row.bank_id===values[this.bookParents[key]]));
+  const activeAccount=key=>options(key).find(row=>row.id===values[key]);
   const paint=()=>{
    for(const [key,select] of Object.entries(controls)){
     const rows=options(key),selected=values[key];
     select.replaceChildren(new Option(t('请选择','Select'),''));
     if(d[key]&&selected===initial[key]&&!rows.some(row=>row.id===selected))select.add(new Option(d[key],selected));
-    for(const row of rows)select.add(new Option(d[key]&&row.id===initial[key]?d[key]:row.value,row.id));
+    for(const row of rows)select.add(new Option(this.bookParents[key]?row.value:d[key]&&row.id===initial[key]?d[key]:row.value,row.id));
     select.value=selected||'';
     const enabled=ready&&(!this.bookParents[key]||records.some(row=>row.id===values[this.bookParents[key]]));
     select.disabled=!enabled;
     root.querySelector('[data-book-open='+key+']').disabled=!enabled;
     if(this.bookParents[key]){
-     const row=rows.find(item=>item.id===selected);
-     root.querySelector('[data-account-holder='+key+']').value=(selected===initial[key]?d[key+'_name']:row?.account_name)||'';
+     const row=activeAccount(key);
+     root.querySelector('[data-account-holder='+key+']').value=(row?row.account_name:selected===initial[key]?d[key+'_name']:'')||'';
     }
    }
   };
@@ -164,7 +170,14 @@ window.ExportLicenses={
   load();
   return {load,selection:()=>{
    if(!ready)throw Error(t('请等待办证资料加载完成。','Wait for the processing records to load.'));
-   return Object.fromEntries(fields.filter(key=>values[key]!=='legacy'&&(values[key]||'')!==initial[key]).map(key=>[key,values[key]||null]));
+   const changed=key=>{
+    if(values[key]==='legacy')return false;
+    if((values[key]||'')!==initial[key])return true;
+    if(!this.bookParents[key])return false;
+    const row=activeAccount(key);
+    return row&&(row.value!==(d[key]||'')||row.account_name!==(d[key+'_name']||''));
+   };
+   return Object.fromEntries(fields.filter(changed).map(key=>[key,values[key]||null]));
   }};
  },
  async routePage(path){

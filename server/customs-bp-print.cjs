@@ -28,7 +28,8 @@ function content(snapshot){
  const identification=[[null,h.issuer],[null,h.address],['RCCM',h.rccm],['ID-NAT',h.id_nat],['NIF',h.nif],['Contact',h.contact]]
   .filter(([,field])=>field).map(([label,field])=>'<p>'+(label?label+': ':'')+escape(field)+'</p>').join('');
  const details=pairs=>'<dl>'+pairs.map(([label,key])=>'<div><dt>'+label+':</dt><dd>'+escape(h[key])+'</dd></div>').join('')+'</dl>';
- return '<article class="bp-sheet'+(rows.length<=10?' bp-short':'')+'" lang="fr"><h2>BULLETIN DE PESAGE / WEIGHTING SHEET : N°'+escape(number)+'</h2>'+
+ const title=snapshot.template_title||'BULLETIN DE PESAGE / WEIGHTING SHEET';
+ return '<article class="bp-sheet'+(rows.length<=10?' bp-short':'')+'" lang="fr"><h2>'+escape(title)+' : N°'+escape(number)+'</h2>'+
   '<div class="bp-issuer"><div>'+identification+'</div><img src="/customs-bp-logo.png?rev='+revision()+'" alt="Metorex · Ruashi Mining"></div>'+
   '<div class="bp-details">'+details([['Client','customer'],['Product','product'],['Transport mode','mode'],['Final Destination','destination'],['Exit Border','border']])+
   details([['Customs Agency','agency'],['License','license'],['Loading Point','loading_point'],['Loading Date','loading_date']])+'</div>'+

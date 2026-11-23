@@ -59,6 +59,7 @@ function expectedLanding(spec,product,ids){
  const url=localUrl(spec.url);
  const copper=product===R.CU,co=product===R.CO;
  const replacements={
+  'customs-entry':'/customs/packing-list',
   'historical-former-entry':'/workbench/historical-movements',
   'historical-former-record':'/workbench/historical-movements/'+ids.cuHistorical,
   'master-customers-edit':'/customers',
@@ -93,6 +94,9 @@ function selectors(key,product,landing){
  const co=product===R.CO;
  const main=co?'#business-title, #dashboard h1, #inventory h1':'#business-title, #dashboard h1, #inventory h1, #field h1';
  const checks={
+  'customs-entry':['#customs-packing-list','#customs-packing-preview'],
+  customs:['#customs-bp-pending','[data-bp-agency-book]'],
+  'customs-bp-archive':['#customs-bp-documents','#customs-bp-filter'],
   login:['#login-username','#login-password'],
   'register-dialog':['#registration-modal[open] input[name="username"]'],
   'password-dialog':['#change-password-form input[name="current_password"]','#change-password-form input[name="new_password"]','#change-password-form input[name="confirm_password"]','#change-password-form button[type="submit"]'],

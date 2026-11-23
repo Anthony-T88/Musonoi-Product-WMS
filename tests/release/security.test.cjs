@@ -193,7 +193,7 @@ test('first batch management security regressions',async t=>{
    const dispatchGrants=['admin/dispatch:month','sales_manager/dispatch:month','sales_manager/dispatch:read','sales_operator/dispatch:month','sales_operator/dispatch:read'];
    const laterGrants=[...dispatchGrants,'production_operator/inventory:correct-request','logistics_field_operator/inventory:correct-request',
     'production_manager/inventory:correct-review','site_supervisor/lot:reverse-request','logistics_manager/lot:reverse-review',
-    'logistics_office_operator/customs:bp','admin/customs:bp'].sort();
+    'logistics_office_operator/customs:bp','admin/customs:bp','admin/customs:bp-template'].sort();
    const {rows:added}=await old.client.query('SELECT '+grantKey+' AS key FROM role_permissions WHERE '+grantKey+'=ANY($1::text[])',[laterGrants]);
    assert.deepEqual(added.map(row=>row.key).sort(),laterGrants);
    assert.equal((await old.client.query("SELECT 1 FROM role_permissions WHERE permission_code='printer:manage'")).rowCount,0);
