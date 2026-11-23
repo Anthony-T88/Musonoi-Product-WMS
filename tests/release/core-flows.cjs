@@ -107,10 +107,16 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(bpData.header.destination,'Synthetic destination');
   const bpRows=bpData.rows.map(({id,code,...row})=>({...row,driver:'Verified driver <example>'}));
   const bpBody={ids,token:bpData.token,header:bpData.header,rows:bpRows,number:''};
+  assert.match(bpData.number,/^\d{3}\/\d{4}\/CO$/);
+  const proof=await api(bp+'/print/preview','admin',bpBody);
+  assert.equal(proof.number,bpData.number);
+  assert.match(proof.content,/Verified driver &lt;example&gt;/);
+  assert.equal((await c.query('SELECT count(*)::int n FROM customs_bp_documents')).rows[0].n,0);
   const bpDoc=await api(bp,'admin',bpBody);
-  assert.match(bpDoc.document_no,/^\d{3}\/\d{4}\/CO$/);
+  assert.equal(bpDoc.document_no,bpData.number);
+  await api(bp+'/print/preview','admin',{...bpBody,number:bpDoc.document_no.toLowerCase()},409);
   const print=await request(bp+'/'+bpDoc.id+'/print');
-  assert.equal(print.statusCode,200);assert.match(print.body,/Verified driver &lt;example&gt;/);
+  assert.equal(print.statusCode,200);assert(print.body.includes(proof.content));
   await api(bp+'/'+bpDoc.id+'/print','customer_admin',undefined,404);
   assert.equal(await trend(prep.id),0.647123);
   assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);const d=await api(base),key=crypto.randomUUID(),body={version:d.execution.version,note:'Synthetic rc3 final approval'};

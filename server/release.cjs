@@ -1,3 +1,3 @@
 'use strict';
 const version=require('../package.json').version;
-module.exports=Object.freeze({version,displayVersion:version,frontendRevision:'4.8.8-ui1',requiredMigration:'201_v488_customs_dispatch.sql'});
+module.exports=Object.freeze({version,displayVersion:version,frontendRevision:'4.8.8-ui2',requiredMigration:'201_v488_customs_dispatch.sql'});

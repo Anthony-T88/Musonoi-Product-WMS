@@ -1,7 +1,7 @@
 'use strict';
 
 window.CustomsBP={
- selected:new Set(),product:null,preview:null,
+ selected:new Set(),product:null,preview:null,proof:null,editing:null,
  t:(zh,en)=>I18n.language==='en'?en:zh,
  base(){return CustomsWorkspace.base()+'/bp';},
  feedback(error){
@@ -17,7 +17,7 @@ window.CustomsBP={
   return labels[error.message]?this.t(...labels[error.message]):error.message;
  },
  async page(){
-  if(this.product!==ProductContext.code){this.product=ProductContext.code;this.selected.clear();this.preview=null;}
+  if(this.product!==ProductContext.code){this.product=ProductContext.code;this.selected.clear();this.preview=null;this.proof=null;this.editing=null;}
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.base()+'?'+q);
   if(location.pathname!=='/customs/bp')return;
   const headers=[['选择','Select'],['备货批次','Preparation Lot'],['客户','Customer'],['车头号','Truck Plate'],['车辆数','Vehicles'],['物流审批时间','Logistics Approval']];
@@ -48,7 +48,7 @@ window.CustomsBP={
   button.onclick=async()=>{
    button.disabled=true;
    const ids=[...this.selected].sort();
-   try{const data=await API.request(this.base()+'/preview',{method:'POST',body:{ids}});if(button.isConnected){this.preview={...data,ids};this.editor();}}
+   try{const data=await API.request(this.base()+'/preview',{method:'POST',body:{ids}});if(button.isConnected){this.preview={...data,ids,suggestion:data.number};this.editor();}}
    catch(error){if(button.isConnected)$('customs-bp-error').textContent=this.feedback(error);}
    finally{if(button.isConnected)sync();}
   };
@@ -66,60 +66,174 @@ window.CustomsBP={
     ['quantity','件数','Packages',8],['net_mt','净重（吨）','Net Weight (MT)',32],['gross_mt','毛重（吨）','Gross Weight (MT)',32]]
   };
  },
+ open(){
+  if(this.product===ProductContext.code&&this.preview)return this.translateEditor();
+  return this.page();
+ },
+ frame(title,content){
+  Router.page(title,'<div class="wms-page customs-bp-review" data-page-composed data-no-i18n>'+CustomsWorkspace.nav('bp')+content+'</div>');
+ },
+ required(section){
+  return section==='header'?['issuer','customer','product']:['batch','truck','quantity','net_mt','gross_mt'];
+ },
+ issues(){
+  const d=this.preview;
+  const header=this.required('header').filter(key=>!d.header[key]);
+  const rows=d.rows.flatMap((row,index)=>{
+   const fields=this.required('rows').filter(key=>!row[key]);
+   return fields.length?[{index,fields}]:[];
+  });
+  return {header,rows};
+ },
+ displayWeight(value){
+  return value?Tonnes.fixed(Tonnes.scaled(value,3),3)+' MT':'—';
+ },
+ total(key){
+  const values=this.preview.rows.map(row=>row[key]);
+  if(values.some(v=>!v))return this.t('待补齐','Pending');
+  if(key==='quantity')return values.reduce((sum,v)=>sum+BigInt(v),0n)+' '+this.t('件','pcs');
+  const weight=values.reduce((sum,v)=>sum+Tonnes.scaled(v,6),0n);
+  return this.displayWeight(Tonnes.fixed(weight,6));
+ },
  editor(){
-  const t=this.t,d=this.preview,l=this.labels();if(!d)return;
-  const input=(key,label,value,max,required=false,mode='text')=>'<input name="'+key+'" aria-label="'+esc(label)+'" value="'+
-   esc(value||'')+'" maxlength="'+max+'" inputmode="'+mode+'"'+(required?' required':'')+'>';
-  const values=[['number','BP编号','BP Number',80],...l.header].map(([k,z,e,max])=>'<label class="wms-field">'+t(z,e)+
-   input(k,t(z,e),k==='number'?d.number:d.header[k],max,['issuer','customer','product'].includes(k))+
-   (k==='number'?'<small>'+t('留空时自动编号','Leave blank for automatic numbering')+'</small>':'')+'</label>').join('');
-  const rows=d.rows.map((row,index)=>'<tr><td>'+esc(row.code)+'</td>'+l.rows.map(([k,z,e,max])=>'<td>'+
-   input('row-'+index+'-'+k,t(z,e)+' · '+row.code,row[k],max,['batch','truck','quantity','net_mt','gross_mt'].includes(k),
-    k==='quantity'?'numeric':k.endsWith('_mt')?'decimal':'text')+'</td>').join('')+'</tr>');
-  Router.page(t('编制BP表','Prepare BP Sheet'),'<div class="wms-page" data-page-composed data-no-i18n>'+
-   '<form id="customs-bp-form" class="user-form" data-wms-validation><section class="wms-section"><h2>'+t('申报表头','Declaration Header')+
-   '</h2><div class="form-grid wms-field-grid">'+values+'</div></section><section class="wms-section"><h2>'+t('车辆与重量明细','Vehicle and Weight Details')+
-   '</h2><div class="customs-bp-table-scroll" role="region" tabindex="0" aria-label="'+t('车辆与重量明细','Vehicle and Weight Details')+'">'+
-   ExportLicenses.table([['装车单号','Loading Order'],...l.rows.map(([,z,e])=>[z,e])],rows,'customs-bp-edit-rows',false)+'</div>'+
-   '<p class="wms-feedback" id="customs-bp-totals" role="status"></p></section><p id="customs-bp-save-error" class="error" role="alert"></p>'+
-   '<div class="business-toolbar wms-form-actions"><button type="button" class="button secondary" id="customs-bp-back">'+t('返回选择','Back to Selection')+
-   '</button><button class="button primary">'+t('生成BP表','Generate BP Sheet')+'</button></div></form></div>');
-  const form=$('customs-bp-form');
-  const sync=()=>{
-   const v=this.read(form,d,l);
-   try{
-    if(v.rows.some(r=>!/^\d+$/.test(r.quantity)||!r.net_mt||!r.gross_mt))throw Error();
-    let units=0n,net=0n,gross=0n;
-    for(const row of v.rows){units+=BigInt(row.quantity);net+=Tonnes.scaled(row.net_mt,6);gross+=Tonnes.scaled(row.gross_mt,6);}
-    $('customs-bp-totals').textContent=t('合计','Total')+' · '+units+' '+t('件','packages')+' · '+t('净重','Net')+' '+Tonnes.fixed(net,6)+' MT · '+t('毛重','Gross')+' '+Tonnes.fixed(gross,6)+' MT';
-   }catch{$('customs-bp-totals').textContent=t('请补全件数和重量后核对合计。','Complete the package counts and weights to see totals.');}
+  const t=this.t,d=this.preview,l=this.labels(),issues=this.issues();
+  const summary=['customer','product','loading_date','destination','license'];
+  const productLabel={'CATHODE DE CUIVRE':t('阴极铜','Copper Cathodes'),'HYDROXYDE DE COBALT':t('氢氧化钴','Cobalt Hydroxide')};
+  const summaryValue=key=>key==='product'&&Object.hasOwn(productLabel,d.header.product)?productLabel[d.header.product]:d.header[key];
+  const heading=[[t('车辆','Vehicles'),d.rows.length],[t('件数','Packages'),this.total('quantity')],
+   [t('总净重','Total Net'),this.total('net_mt')],[t('总毛重','Total Gross'),this.total('gross_mt')]];
+  const columns=[['批次号','Lot No.'],['车头号','Truck Plate'],['运输商','Transporter'],['件数','Packages'],
+   ['净重','Net Weight'],['毛重','Gross Weight'],['操作','Actions']];
+  const edit=(index,caption)=>'<button type="button" class="button secondary compact" data-bp-edit="'+index+
+   '" aria-label="'+esc(caption+' '+(d.rows[index].batch||d.rows[index].code))+'">'+caption+'</button>';
+  const rows=d.rows.map((row,i)=>'<tr>'+[row.batch,row.truck,row.transporter,row.quantity,this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt)]
+   .map(v=>'<td>'+esc(v||'—')+'</td>').join('')+'<td>'+edit(i,t('编辑','Edit'))+'</td></tr>');
+  const fieldNames=(keys,labels)=>labels.filter(([key])=>keys.includes(key)).map(([,z,e])=>t(z,e)).join(t('、',', '));
+  const issueRows=issues.rows.map(({index,fields})=>'<li><span>'+esc((d.rows[index].batch||d.rows[index].code)+' · '+
+   t('待补齐 ','Missing ')+fieldNames(fields,l.rows))+'</span><button type="button" class="button secondary compact" data-bp-missing="'+
+   index+'">'+t('补充','Complete')+'</button></li>');
+  if(issues.header.length)issueRows.unshift('<li><span>'+esc(t('表头待补齐 ','Header missing ')+fieldNames(issues.header,l.header))+
+   '</span><button type="button" class="button secondary compact" id="bp-missing-header">'+t('补充','Complete')+'</button></li>');
+  this.frame(t('编制BP表','Prepare BP Sheet'),
+   '<form id="customs-bp-form" class="user-form" data-wms-validation>'+
+   '<section class="wms-section"><div class="bp-review-heading"><h2>'+t('申报信息','Declaration Details')+'</h2>'+
+   '<button type="button" id="bp-edit-header" class="button secondary compact">'+t('编辑表头','Edit Header')+'</button></div>'+
+   '<div class="bp-review-overview"><label class="wms-field">'+t('BP编号','BP Number')+
+   '<input id="bp-number" name="number" maxlength="80" value="'+esc(d.number)+'" aria-describedby="bp-number-hint customs-bp-save-error" required>'+
+   '<small id="bp-number-hint"></small></label>'+UI46Pages.factList(l.header.filter(([key])=>summary.includes(key))
+    .sort((a,b)=>summary.indexOf(a[0])-summary.indexOf(b[0])).map(([key,z,e])=>[t(z,e),esc(summaryValue(key)||'—')]))+'</div></section>'+
+   '<section class="wms-section"><div class="bp-review-heading"><h2>'+t('车辆明细','Vehicles')+'</h2><span>'+
+   esc(t('已选 '+d.rows.length+' 辆车',d.rows.length+(d.rows.length===1?' vehicle':' vehicles')))+'</span></div>'+
+   ExportLicenses.table(columns,rows,'customs-bp-review-rows',true,{numeric:[3,4,5],actions:[6]})+
+   (issueRows.length?'<ul class="bp-review-missing">'+issueRows.join('')+'</ul>':'')+'</section>'+
+   '<section class="wms-section bp-review-footer">'+UI46Pages.factList(heading.map(([name,value])=>[name,esc(value)]))+
+   '<div class="business-toolbar wms-form-actions"><button type="button" id="customs-bp-back" class="button secondary">'+
+   t('返回批次','Back to Lots')+'</button><button class="button primary">'+t('预览BP表','Preview BP Sheet')+'</button></div>'+
+   '<p id="customs-bp-save-error" class="error" role="alert"></p></section></form>');
+  const form=$('customs-bp-form'),input=$('bp-number'),hint=$('bp-number-hint');
+  const syncNumber=()=>{hint.textContent=input.value.trim()===d.suggestion?
+   t('系统建议 · 生成时确认','Suggested · confirmed on generation'):t('手工编号','Manual number');};
+  input.oninput=()=>{d.number=input.value;syncNumber();form.querySelector('[role=alert]').textContent='';};
+  syncNumber();
+  $('bp-edit-header').onclick=()=>this.edit('header');
+  if($('bp-missing-header'))$('bp-missing-header').onclick=()=>this.edit('header',null,issues.header);
+  for(const button of form.querySelectorAll('[data-bp-edit]'))button.onclick=()=>this.edit('rows',Number(button.dataset.bpEdit));
+  for(const button of form.querySelectorAll('[data-bp-missing]'))button.onclick=()=>{
+   const index=Number(button.dataset.bpMissing);
+   this.edit('rows',index,issues.rows.find(item=>item.index===index).fields);
   };
-  form.oninput=sync;sync();
-  $('customs-bp-back').onclick=()=>{this.preview=null;this.page();};
+  $('customs-bp-back').onclick=()=>{this.preview=null;this.proof=null;this.page();};
+  form.onsubmit=e=>UI46Pages.submit(e,async()=>{
+   if(issues.header.length)return this.edit('header',null,issues.header);
+   if(issues.rows.length){const {index,fields}=issues.rows[0];return this.edit('rows',index,fields);}
+   try{
+    const payload=this.payload();
+    const outline=await API.request(this.base()+'/print/preview',{method:'POST',body:payload});
+    if(!form.isConnected)return;
+    if(JSON.stringify(payload)!==JSON.stringify(this.payload()))throw Error(t('资料已修改，请重新预览。','Details changed. Open the preview again.'));
+    if(d.number.trim()===d.suggestion)d.number=d.suggestion=outline.number;
+    this.proof={...outline,payload};this.printPreview();
+   }catch(error){
+    if(error.message==='BP_NUMBER_IN_USE'){input.setAttribute('aria-invalid','true');input.focus();}
+    throw Error(this.feedback(error));
+   }
+  });
+ },
+ edit(section,index=null,subset=null){
+  const d=this.preview,t=this.t,record=section==='header'?d.header:d.rows[index],required=this.required(section);
+  const fields=this.labels()[section].filter(([key])=>!subset||subset.includes(key));
+  const weight=key=>key.endsWith('_mt');
+  const input=([key,z,e,max])=>'<label class="wms-field">'+t(z,e)+'<input name="'+key+'" maxlength="'+max+
+   '" value="'+esc(record[key]||'')+'"'+(required.includes(key)?' required':'')+
+   (key==='quantity'?' inputmode="numeric" pattern="[1-9][0-9]{0,7}"':weight(key)?' inputmode="decimal" pattern="[0-9]{1,9}(\\.[0-9]{1,6})?"':'')+'></label>';
+  const title=section==='header'?t('编辑表头','Edit Header'):t('编辑车辆资料','Edit Vehicle')+' · '+(record.batch||record.code);
+  this.editing={section,index,subset};
+  dialog(title,'<form class="user-form" id="customs-bp-edit-fields" data-no-i18n data-wms-validation>'+
+   '<div class="form-grid wms-field-grid">'+fields.map(input).join('')+'</div><p class="error" role="alert"></p>'+
+   '<div class="business-toolbar wms-form-actions"><button type="button" id="bp-edit-cancel" class="button secondary">'+t('取消','Cancel')+
+   '</button><button class="button primary">'+t('应用修改','Apply Changes')+'</button></div></form>');
+  const form=$('customs-bp-edit-fields');
+  $('bp-edit-cancel').onclick=()=>$('dialog').close();
+  form.onsubmit=e=>UI46Pages.submit(e,async()=>{
+   const values={...record,...Object.fromEntries([...new FormData(form)].map(([key,v])=>[key,v.trim()]))};
+   if(section==='rows'){
+    const net=values.net_mt?Tonnes.scaled(values.net_mt,6):null,gross=values.gross_mt?Tonnes.scaled(values.gross_mt,6):null;
+    if((net!==null&&net<=0n)||(gross!==null&&gross<=0n)||(net!==null&&gross!==null&&net>gross))throw Error(this.feedback(Error('BP_INVALID_WEIGHT')));
+   }
+   if(required.some(key=>fields.some(([field])=>field===key)&&!values[key]))throw Error(this.feedback(Error('BP_REQUIRED_DETAILS')));
+   Object.assign(record,values);this.editing=null;
+   $('dialog').close();ProductContext.dirty=true;this.editor();
+   const target=section==='header'?$('bp-edit-header'):document.querySelector('[data-bp-edit="'+index+'"]');
+   target?.focus();
+  });
+  form.querySelector('input')?.focus();
+ },
+ payload(){
+  const d=this.preview;
+  return {ids:d.ids,token:d.token,number:d.number.trim()===d.suggestion?'':d.number,header:{...d.header},
+   rows:d.rows.map(({id,code,...fields})=>fields)};
+ },
+ printPreview(){
+  const t=this.t;
+  this.frame(t('BP表打印预览','BP Print Preview'),'<section class="wms-section">'+
+   '<div class="bp-proof-sheet" role="region" tabindex="0" aria-label="'+t('A4横向打印样张','A4 Landscape Preview')+'">'+this.proof.content+'</div>'+
+   '<form id="customs-bp-proof" class="user-form"><p class="error" role="alert"></p>'+
+   '<div class="business-toolbar wms-form-actions"><button type="button" class="button secondary" id="customs-bp-back-edit">'+
+   t('返回编辑','Back to Editor')+'</button><button class="button primary">'+t('生成BP表','Generate BP Sheet')+'</button></div></form></section>');
+  $('customs-bp-back-edit').onclick=()=>{this.proof=null;this.editor();$('bp-number')?.focus();};
+  const form=$('customs-bp-proof');
   form.onsubmit=e=>UI46Pages.submit(e,async()=>{
    try{
-    const saved=await API.request(this.base(),{method:'POST',body:this.read(form,d,l)});
-    this.preview=null;this.selected.clear();ProductContext.dirty=false;this.saved(saved);
-   }catch(error){throw Error(this.feedback(error));}
+    const saved=await API.request(this.base(),{method:'POST',body:this.proof.payload});
+    if(!form.isConnected)return;
+    this.preview=null;this.proof=null;this.selected.clear();ProductContext.dirty=false;this.saved(saved);
+   }catch(error){
+    if(error.message==='BP_NUMBER_IN_USE'&&form.isConnected){
+     this.proof=null;this.editor();$('customs-bp-save-error').textContent=this.feedback(error);
+     $('bp-number').setAttribute('aria-invalid','true');$('bp-number').focus();
+     return;
+    }
+    throw Error(this.feedback(error));
+   }
   });
  },
  saved(saved){
   const t=this.t;
-  Router.page(t('BP表已生成','BP Sheet Generated'),'<div class="wms-page" data-page-composed data-no-i18n><section class="wms-section">'+
+  this.frame(t('BP表已生成','BP Sheet Generated'),'<section class="wms-section">'+
    UI46Pages.factList([[t('BP编号','BP Number'),esc(saved.document_no)]])+'<div class="business-toolbar">'+
    '<button type="button" id="customs-bp-return" class="button secondary">'+t('返回BP表列表','Back to BP Sheets')+'</button>'+
    '<a class="button primary" target="_blank" rel="noopener" href="/api/v1'+this.base()+'/'+saved.id+'/print?print=1">'+
-   t('打开打印窗口','Open Print Window')+'</a></div></section></div>');
+   t('打开打印窗口','Open Print Window')+'</a></div></section>');
   $('customs-bp-return').onclick=()=>this.page();
  },
- read(form,d,l){
-  const data=new FormData(form);
-  return {ids:d.ids,token:d.token,number:data.get('number'),header:Object.fromEntries(l.header.map(([k])=>[k,data.get(k)])),
-   rows:d.rows.map((_,i)=>Object.fromEntries(l.rows.map(([k])=>[k,data.get('row-'+i+'-'+k)])))};
- },
  translateEditor(){
-  const d=this.preview,v=this.read($('customs-bp-form'),d,this.labels());
-  this.preview={...d,header:v.header,rows:d.rows.map((row,i)=>({...row,...v.rows[i]})),number:v.number};
+  if(this.proof)return this.printPreview();
+  const form=$('customs-bp-edit-fields'),active=form&&$('dialog').open?this.editing:null;
+  const values=active?new FormData(form):null;
   this.editor();
+  if(active){
+   this.edit(active.section,active.index,active.subset);
+   for(const [key,value] of values)$('customs-bp-edit-fields').elements[key].value=value;
+  }
  }
 };

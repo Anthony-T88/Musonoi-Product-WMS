@@ -6,7 +6,7 @@ const E=require('./customs-bp-print.cjs');
 const CO='CO_HYDROXIDE';
 const cuUrl='/api/v1/customs/bp',coUrl='/api/v1/cobalt/customs/bp';
 const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/customs/packing-list'||method==='GET'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/[0-9a-f-]{36}\/print)?$/i.test(path)||
- method==='POST'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/preview)?$/.test(path);
+ method==='POST'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/(?:preview|print\/preview))?$/.test(path);
 const clearanceScope=`NOT EXISTS(SELECT 1 FROM jsonb_array_elements(d.source_context) f WHERE NOT EXISTS(
  SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=(f->>'project_id')::uuid
  AND(s.customer_id IS NULL OR s.customer_id=(f->>'customer_id')::uuid)
@@ -137,8 +137,39 @@ async function chosen(c,req,ids){
  return {token:hash(rows),rows,header:defaultHeader(rows,co),data:rows.map(row=>fieldMap(rowFieldsFrom(row),rowFields))};
 }
 const rowFieldsFrom=row=>Object.fromEntries(Object.keys(rowFields).map(k=>[k,row[k]??'']));
+const draftFields={ids:0,token:0,number:0,header:0,rows:0};
+
+function draft(body,source){
+ if(body.token!==source.token)throw B.error(409,'BP_SOURCE_CHANGED');
+ if(!Array.isArray(body.rows)||body.rows.length!==source.rows.length)throw B.error(400,'BP_INVALID_FIELD');
+ const rows=body.rows.map(row=>fieldMap(row,rowFields)),header=fieldMap(body.header,headerFields);
+ if(rows.some(row=>!row.batch||!row.truck)||!header.issuer||!header.customer||!header.product)throw B.error(400,'BP_REQUIRED_DETAILS');
+ return {header,total:totals(rows,true),rows:rows.map((row,i)=>({...row,order_id:source.rows[i].id,code:source.rows[i].code})),
+  original:{header:source.header,rows:source.data}};
+}
+
+async function documentNumber(c,product,value='',reserve=false){
+ const requested=text(value,80);
+ if(reserve)await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['customs-bp-number/'+product]);
+ if(requested){
+  const used=await c.query('SELECT 1 FROM customs_bp_documents WHERE product_code=$1 AND upper(document_no)=upper($2)',[product,requested]);
+  if(used.rowCount)throw B.error(409,'BP_NUMBER_IN_USE');
+  return requested;
+ }
+ const year=Number(date().slice(0,4)),suffix='/'+year+'/'+(product===CO?'CO':'CU');
+ const {rows:[counter]}=await c.query(`SELECT coalesce((SELECT last_number FROM customs_bp_counters WHERE product_code=$1 AND business_year=$2),0) last_number,
+  ARRAY(SELECT upper(document_no) FROM customs_bp_documents WHERE product_code=$1 AND upper(document_no) LIKE $3) used`,[product,year,'%'+suffix]);
+ const format=serial=>String(serial).padStart(3,'0')+suffix;
+ const used=new Set(counter.used);
+ let serial=counter.last_number+1;
+ while(used.has(format(serial)))serial++;
+ if(reserve)await c.query(`INSERT INTO customs_bp_counters(product_code,business_year,last_number) VALUES($1,$2,$3)
+  ON CONFLICT(product_code,business_year) DO UPDATE SET last_number=EXCLUDED.last_number`,[product,year,serial]);
+ return format(serial);
+}
+
 async function save(c,req){
- const body=req.body;keys(body,{ids:0,token:0,number:0,header:0,rows:0});
+ const body=req.body;keys(body,draftFields);
  const ids=selection(body);
  if(req.productCode===CO){
   await chosen(c,req,ids);
@@ -146,22 +177,9 @@ async function save(c,req){
   await c.query('SELECT order_id FROM co_load_executions WHERE order_id=ANY($1::uuid[]) ORDER BY order_id FOR UPDATE',[ids]);
  }else await c.query('SELECT customs_bp_lock_cu($1,$2)',[req.user.id,ids]);
  const source=await chosen(c,req,ids);
- if(body.token!==source.token)throw B.error(409,'BP_SOURCE_CHANGED');
- if(!Array.isArray(body.rows)||body.rows.length!==ids.length)throw B.error(400,'BP_INVALID_FIELD');
- const rows=body.rows.map(row=>fieldMap(row,rowFields)),header=fieldMap(body.header,headerFields);
- if(rows.some(row=>!row.batch||!row.truck)||!header.issuer||!header.customer||!header.product)throw B.error(400,'BP_REQUIRED_DETAILS');
- const total=totals(rows,true);let number=text(body.number??'',80);
- if(!number){
-  const year=Number(date().slice(0,4)),suffix=req.productCode===CO?'CO':'CU';
-  for(let attempt=0;!number&&attempt<20;attempt++){
-   const {rows:[counter]}=await c.query(`INSERT INTO customs_bp_counters(product_code,business_year,last_number) VALUES($1,$2,1)
-    ON CONFLICT(product_code,business_year) DO UPDATE SET last_number=customs_bp_counters.last_number+1 RETURNING last_number`,[req.productCode,year]);
-   const proposed=String(counter.last_number).padStart(3,'0')+'/'+year+'/'+suffix;
-   if(!(await c.query('SELECT 1 FROM customs_bp_documents WHERE product_code=$1 AND document_no=$2',[req.productCode,proposed])).rowCount)number=proposed;
-  }
- }
- if(!number)throw B.error(409,'BP_NUMBER_IN_USE');
- const snapshot={number,header,total,rows:rows.map((row,i)=>({...row,order_id:source.rows[i].id,code:source.rows[i].code})),original:{header:source.header,rows:source.data}};
+ const snapshot=draft(body,source);
+ const number=await documentNumber(c,req.productCode,body.number??'',true);
+ snapshot.number=number;
  const context=scopeFor(source.rows);
  let doc;
  try{doc=(await c.query(`INSERT INTO customs_bp_documents(product_code,document_no,source_ids,source_context,snapshot,created_by)
@@ -183,7 +201,14 @@ function register({app,pool,permitted,csrf}){
   app.get(url,{preHandler:permission},req=>C.readTransaction(pool,c=>list(c,req)));
   app.post(url+'/preview',{preHandler:[permission,csrf]},req=>C.readTransaction(pool,async c=>{
    const source=await chosen(c,req,selection(req.body));
-   return {header:source.header,rows:source.data.map((row,i)=>({...row,id:source.rows[i].id,code:source.rows[i].code})),token:source.token};
+   return {header:source.header,rows:source.data.map((row,i)=>({...row,id:source.rows[i].id,code:source.rows[i].code})),
+    token:source.token,number:await documentNumber(c,req.productCode)};
+  }));
+  app.post(url+'/print/preview',{preHandler:[permission,csrf]},req=>C.readTransaction(pool,async c=>{
+   const body=req.body;keys(body,draftFields);
+   const snapshot=draft(body,await chosen(c,req,selection(body)));
+   snapshot.number=await documentNumber(c,req.productCode,body.number??'');
+   return {number:snapshot.number,content:E.content(snapshot)};
   }));
   app.post(url,{preHandler:[permission,csrf]},req=>B.mutate(pool,req,c=>save(c,req)));
   app.get(url+'/operations/status',{preHandler:permission},async req=>{

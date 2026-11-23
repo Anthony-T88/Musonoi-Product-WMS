@@ -12,12 +12,12 @@ window.CustomsWorkspace={
  },
  nav(tab){
   const t=this.t,options=[
-   ['bp','/customs/bp','BP表','BP Sheet','customs:bp'],
    ['packing','/customs/packing-list','装箱单','Packing Lists','load:read'],
+   ['bp','/customs/bp','BP表','BP Sheet','customs:bp'],
    ['templates','/customs/templates','装箱单模板','Packing List Template','packing-template:write']
   ];
   return '<nav class="business-toolbar" aria-label="'+t('清关单据导航','Customs Documents Navigation')+'" data-customs-nav data-no-i18n>'+
-   options.filter(x=>this.can(x[4])).map(([key,url,zh,en])=>'<a class="button '+(tab===key?'primary':'secondary')+'" href="'+url+'"'+
+   options.filter(x=>this.can(x[4])).map(([key,url,zh,en])=>'<a class="button secondary compact" href="'+url+'"'+
     (tab===key?' aria-current="page"':'')+'>'+t(zh,en)+'</a>').join('')+'</nav>';
  },
  decorate(tab){
@@ -63,7 +63,7 @@ window.CustomsWorkspace={
  async render(path){
   const tab=this.tab(path),required={bp:'customs:bp',packing:'load:read',templates:'packing-template:write'}[tab],t=this.t;
   if(!this.can(required))throw Object.assign(Error(t('当前账号没有此页面权限','This account does not have permission for this page')),{statusCode:403});
-  if(path==='/customs/bp')return CustomsBP.page();
+  if(path==='/customs/bp')return CustomsBP.open();
   if(path==='/customs/templates'){
    await UnifiedOutbound.templates();
   }else if(path==='/customs/packing-list')return this.packing();
@@ -95,7 +95,7 @@ window.CustomsWorkspace={
   CobaltUI.languageChanged=()=>location.pathname.startsWith('/customs/')?this.language():language();
  },
  async language(){
-  if(location.pathname==='/customs/bp'&&$('customs-bp-form'))return CustomsBP.translateEditor();
+  if(location.pathname==='/customs/bp'&&($('customs-bp-form')||$('customs-bp-proof')))return CustomsBP.translateEditor();
   if(/^\/customs\/packing-list\/[0-9a-f-]{36}$/i.test(location.pathname)&&!ProductContext.isCopper()){
    await CobaltPackingUI.language();this.decorate('packing');return;
   }

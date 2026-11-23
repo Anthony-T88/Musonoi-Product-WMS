@@ -1,28 +1,42 @@
-:root{color:#162122;background:#eef2ef;font-family:Arial,sans-serif;font-size:12px}
-body{max-width:1080px;margin:16px auto;padding:0 12px}
-main{background:#fff;padding:20px}
-h1{text-align:center;font-size:1.35rem;margin:0 0 .65rem;border-bottom:2px solid #143f35;padding-bottom:.6rem}
-.bp-issuer p{margin:.12rem 0}
-.bp-issuer p:first-child{font-weight:bold}
-.bp-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:column;grid-template-rows:repeat(5,auto);gap:.2rem 1rem;margin:1rem 0}
-.bp-details div{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:.2rem}
-.bp-details dt{font-weight:bold}
-.bp-details dd{margin:0;overflow-wrap:anywhere}
-.bp-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-variant-numeric:tabular-nums}
-.bp-table :is(th,td){padding:.36rem .2rem;border:1px solid #323b37;overflow-wrap:anywhere}
-.bp-table thead{background:#e1eee7;display:table-header-group}
-.bp-table thead th:first-child{width:3%}
-.bp-table thead th:nth-child(2){width:14%}
-.bp-table thead th:nth-child(7),.bp-table thead th:nth-child(8){width:11%}
-.bp-total{font-weight:bold}
-tr,.bp-details,footer{break-inside:avoid}
-footer{display:flex;justify-content:space-between;padding:.9rem .3rem 2rem}
-#bp-print{padding:.55rem 1rem;margin-bottom:.5rem}
-@page{size:A4 landscape;margin:10mm}
+.bp-print-document{background:#eef2ef}
+.bp-print-document body{max-width:1080px;margin:16px auto;padding:0 12px}
+#bp-print{font:14px Arial,sans-serif;padding:.55rem 1rem;margin-bottom:.6rem}
+.bp-sheet{box-sizing:border-box;min-width:720px;background:#fff;color:#111;font:10pt/1.24 "Times New Roman","Microsoft YaHei",serif;padding:6mm}
+.bp-sheet h2{font:700 15pt/1.16 "Times New Roman",serif;text-align:center;margin:0 0 2mm;overflow-wrap:anywhere}
+.bp-sheet :is(p,dl,dd){margin:0}
+.bp-sheet .bp-issuer{display:flex;align-items:center;justify-content:space-between;gap:5mm;padding-bottom:2mm}
+.bp-sheet .bp-issuer p{overflow-wrap:anywhere}
+.bp-sheet .bp-issuer p:first-child{font-size:12pt;font-weight:700}
+.bp-sheet .bp-issuer img{display:block;width:25mm;height:18mm;object-fit:contain;flex:none}
+.bp-sheet .bp-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm;margin:0 0 3mm}
+.bp-sheet .bp-details dl{display:grid;gap:.6mm;align-content:start}
+.bp-sheet .bp-details dl div{display:grid;grid-template-columns:30mm minmax(0,1fr);gap:1mm}
+.bp-sheet .bp-details dt{font-weight:700}
+.bp-sheet .bp-details dd{overflow-wrap:anywhere}
+.bp-sheet .bp-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-variant-numeric:tabular-nums;font-size:9pt}
+.bp-sheet .bp-table :is(th,td){padding:1.05mm .65mm;border:1px solid #242424;overflow-wrap:anywhere;vertical-align:middle}
+.bp-sheet .bp-table thead{display:table-header-group}
+.bp-sheet .bp-table thead th,.bp-sheet .bp-total{font-weight:700}
+.bp-sheet .bp-width-4{width:4%}
+.bp-sheet .bp-width-7{width:7%}
+.bp-sheet .bp-width-8{width:8%}
+.bp-sheet .bp-width-9{width:9%}
+.bp-sheet .bp-width-10{width:10%}
+.bp-sheet .bp-width-11{width:11%}
+.bp-sheet .bp-signature{display:flex;justify-content:space-between;gap:10mm;padding:5mm 4mm 0;font-weight:700}
+.bp-sheet :is(tr,.bp-details,.bp-issuer,.bp-signature){break-inside:avoid}
+.bp-sheet .bp-signature{break-before:avoid}
+.bp-sheet.bp-short .bp-table td{padding-block:.6mm}
+.bp-sheet.bp-short .bp-signature{padding-block-start:3mm}
+/* Keep the preview inside the app aligned with the print window's document styles. */
+html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-sheet>h2{display:block;width:100%;text-align:center;margin:0 0 2mm}
+html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-table :is(th,td){white-space:normal;text-align:center;color:inherit;background:transparent}
+html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-signature{color:#111;font:700 10pt/1.24 "Times New Roman",serif}
+html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-signature p{color:inherit;font:inherit}
+@page customs-bp-sheet{size:A4 landscape;margin:12mm 6mm}
 @media print{
- :root{font-size:10pt;background:#fff}
- body{max-width:none;padding:0;margin:0}
- main{padding:0}
+ .bp-print-document,.bp-print-document body{background:#fff}
+ .bp-print-document body{page:customs-bp-sheet;max-width:none;padding:0;margin:0}
+ .bp-print-document .bp-sheet{min-width:0;padding:0}
  #bp-print{display:none}
- .bp-table thead{print-color-adjust:exact}
 }

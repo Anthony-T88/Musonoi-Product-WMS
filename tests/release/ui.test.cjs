@@ -57,6 +57,55 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
   }
  }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
 });
+test('BP sheets omit placeholder rows, keep short lists on one A4 landscape page and paginate long lists',async()=>{
+ const fs=require('node:fs/promises'),BP=require('../../server/customs-bp-print.cjs'),http=require('node:http');
+ const output=path.join(E.runtime,'bp-print');
+ const assets={
+  '/customs-bp-print.css':'text/css',
+  '/customs-bp-print.js':'application/javascript',
+  '/customs-bp-logo.png':'image/png'
+ };
+ const documents=new Map();
+ for(const count of [1,3,10,70]){
+  const rows=Array.from({length:count},(_,i)=>({batch:'SYNTHETIC-LOT-'+(i+1),truck:'DEMO-'+i,
+   trailer_one:'TRAILER-'+i,container:'CONTAINER-'+i,transporter:'Example Logistics Company',driver:'Demo Driver Surname',
+   quantity:16,net_mt:'30.123451',gross_mt:'31.123456'}));
+  documents.set('/'+count,BP.html({number:'001/2026/CU',header:{issuer:'RUASHI MINING SAS',address:'Musonoi Project site, Kolwezi, Lualaba Province',
+   rccm:'Example RCCM',id_nat:'Example identifier',nif:'Example NIF',contact:'Example office contact',
+   customer:'Example Warehouse Customer',product:'CATHODE DE CUIVRE',mode:'ROAD',destination:'Port of Lobito, Angola',
+   border:'Example crossing',agency:'Example Customs Agent',license:'SYNTH-EB-001',loading_point:'RUASHI MINING MUSONOI PLANT',
+   loading_date:'2026-11-23',signature_date:'2026-11-23'},rows,total:require('../../server/customs-bp.cjs').totals(
+    rows.map(r=>({...r,quantity:String(r.quantity)})),true)}));
+ }
+ const site=http.createServer(async(req,res)=>{
+  const name=new URL(req.url,'http://localhost').pathname;
+  if(assets[name]){
+   res.setHeader('Content-Type',assets[name]);return res.end(await fs.readFile(path.resolve('dist',name.slice(1))));
+  }
+  if(!documents.has(name)){res.writeHead(404);return res.end();}
+  res.setHeader('Content-Type','text/html; charset=utf-8');res.end(documents.get(name));
+ });
+ await new Promise(resolve=>site.listen(0,'127.0.0.1',resolve));
+ let browser;
+ try{
+  await fs.mkdir(output,{recursive:true});
+  browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
+  const page=await browser.newPage(),origin='http://127.0.0.1:'+site.address().port;
+  for(const [pathname]of documents){
+   const count=Number(pathname.slice(1));await page.goto(origin+pathname);
+   await page.locator('.bp-issuer img').evaluate(image=>image.decode());
+   assert.equal(await page.locator('.bp-vehicles tr').count(),count);
+   assert.equal(await page.locator('.bp-total tr').count(),1);
+   assert.equal(await page.locator('.bp-signature').count(),1);
+   assert.equal(await page.locator('.bp-vehicles tr').first().locator('td').nth(10).textContent(),'30.123');
+   const pdf=await page.pdf({path:path.join(output,'vehicles-'+count+'.pdf'),preferCSSPageSize:true});
+   const bytes=pdf.toString('latin1'),pages=bytes.match(/\/Type\s*\/Page\b/g)?.length;
+   const size=bytes.match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/);
+   assert(size);assert(Math.abs(Number(size[1])-841.89)<1&&Math.abs(Number(size[2])-595.28)<1);
+   if(count<=10)assert.equal(pages,1,count+' vehicles');else assert(pages>1,count+' vehicles');
+  }
+ }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
+});
 test('copper and cobalt gate permits print on one landscape continuous form',async()=>{
  const fs=require('node:fs/promises'),http=require('node:http'),Gate=require('../../server/gate-render.cjs');
  const permits=new Map(),output=path.join(E.runtime,'gate-print');
