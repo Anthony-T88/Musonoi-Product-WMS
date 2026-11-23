@@ -2,8 +2,8 @@
 const C='CO_HYDROXIDE';
 const prefix=product=>product===C?'/cobalt':'';
 const localMonth=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).slice(0,7);
-async function salesPlan(api,f,product){
- const co=product===C,customer=f.customers[product],month=localMonth();
+async function salesPlan(api,f,product,month=localMonth()){
+ const co=product===C,customer=f.customers[product];
  const plan=await api('sales_operator',product,co?'/cobalt/sales/plans':'/plans',{
   project_id:f.project,customer_id:customer.id,contract_id:customer.contract,target_weight:'30',remark:'Synthetic preparation plan validation',
   ...(co?{shipment_month:month,planned_vehicle_count:1,status:'OPEN'}:{preparation_month:month,quantity_tolerance:'5'})

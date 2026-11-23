@@ -60,7 +60,7 @@ const definitions={
  'outbound:read':['铜钴出库进度及正式出库记录查看','View Outbound Progress and Posted Records'],
  'outbound:logistics-review':['装车离场申报的物流经理审核','Logistics Review of the Outbound Declaration'],
  'outbound:production-approve':['正式出库终审','Final Outbound Approval'],
- 'customs:bp':['编制、修订及打印BP表，维护清关代理记录簿','Prepare, Revise and Print BP Sheets and Maintain the Customs Agency Book'],
+ 'customs:bp':['编制、修订、下载及打印BP表，维护清关代理记录簿','Prepare, Revise, Download and Print BP Sheets and Maintain the Customs Agency Book'],
  'customs:bp-template':['BP表模板维护','Maintain BP Sheet Templates'],
  'document:generate':['商业发票与装箱单办理草稿、生成及版本归档','Draft, Generate and Archive Commercial Invoices and Packing Lists'],
  'packing-template:write':['装箱单模板维护','Maintain Packing List Templates'],

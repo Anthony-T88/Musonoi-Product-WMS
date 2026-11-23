@@ -3,10 +3,11 @@
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),S=require('./export-shipping.cjs');
 const crypto=require('node:crypto'),T=require('../dist/tonnes.js');
 const E=require('./customs-bp-print.cjs'),Agencies=require('./customs-bp-agencies.cjs'),Templates=require('./customs-bp-templates.cjs');
+const Excel=require('./customs-bp-excel.cjs');
 const CO='CO_HYDROXIDE';
 const cuUrl='/api/v1/customs/bp',coUrl='/api/v1/cobalt/customs/bp';
 const allowed=(path,method)=>method==='GET'&&(/^\/api\/v1\/cobalt\/customs\/packing-list(?:\/[0-9a-f-]{36}\/revisions)?$/i.test(path)||
- /^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/agencies|\/template|\/[0-9a-f-]{36}(?:\/(?:print|batches))?)?$/i.test(path))||
+ /^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/agencies|\/template|\/[0-9a-f-]{36}(?:\/(?:print|batches|excel))?)?$/i.test(path))||
  method==='POST'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/(?:agencies|template|preview|print\/preview|[0-9a-f-]{36}\/print\/preview))?$/i.test(path)||
  method==='PATCH'&&/^\/api\/v1\/cobalt\/customs\/bp\/(?:agencies\/)?[0-9a-f-]{36}$/i.test(path)||
  method==='DELETE'&&/^\/api\/v1\/cobalt\/customs\/bp\/agencies\/[0-9a-f-]{36}$/i.test(path);
@@ -290,6 +291,13 @@ async function withPrintIdentification(c,product,snapshot){
  for(const field of missing)header[field]=snapshot.original?.header?.[field]?.trim()||template?.[field]||'';
  return {...snapshot,header};
 }
+function archiveForOutput(pool,req){
+ const revision=req.query.revision===undefined?null:B.version(Number(req.query.revision));
+ return C.readTransaction(pool,async c=>{
+  const doc=await archived(c,req,revision);
+  return {...doc,snapshot:await withPrintIdentification(c,req.productCode,doc.snapshot)};
+ });
+}
 
 function editorData(doc,basis){
  const {snapshot}=doc;
@@ -416,10 +424,12 @@ function register({app,pool,permitted,csrf}){
   app.patch(url+'/:id',{preHandler:[permission,csrf]},req=>B.mutate(pool,req,c=>editArchive(c,req)));
   app.get(url+'/:id/batches',{preHandler:permission},req=>C.readTransaction(pool,async c=>archiveBatches(c,req,(await archived(c,req)).snapshot.rows)));
   app.get(url+'/:id/print',{preHandler:permission},async(req,reply)=>{
-   const revision=req.query.revision===undefined?null:B.version(Number(req.query.revision));
-   const doc=await archived(pool,req,revision);
-   const snapshot=await withPrintIdentification(pool,req.productCode,doc.snapshot);
-   return reply.type('text/html; charset=utf-8').send(E.html(snapshot,req.query.print==='1'));
+   const doc=await archiveForOutput(pool,req);
+   return reply.type('text/html; charset=utf-8').send(E.html(doc.snapshot,req.query.print==='1'));
+  });
+  app.get(url+'/:id/excel',{preHandler:permission},async(req,reply)=>{
+   const doc=await archiveForOutput(pool,req);
+   return Excel.send(reply,doc,await Excel.workbook(doc.snapshot));
   });
  }
 }

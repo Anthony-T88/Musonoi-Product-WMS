@@ -9,6 +9,12 @@ const columns=[
  ['DRIVER NAME','driver',11],['PASSPORT NO.','passport',8],['PACKAGE N°','quantity',7],
  ['Net Weight (MT)','net_mt',9],['Gross Weight (MT)','gross_mt',9]
 ];
+const companyFields=[[null,'issuer'],[null,'address'],['RCCM','rccm'],['ID-NAT','id_nat'],['NIF','nif'],['Contact','contact']];
+const declarationFields=[
+ [['Client','customer'],['Product','product'],['Transport mode','mode'],['Final Destination','destination'],['Exit Border','border']],
+ [['Customs Agency','agency'],['License','license'],['Loading Point','loading_point'],['Loading Date','loading_date']]
+];
+const sheetTitle=snapshot=>(snapshot.template_title||'BULLETIN DE PESAGE / WEIGHTING SHEET')+' : N°'+snapshot.number;
 const value=(row,key)=>{
  const field=row[key];
  if(field==null||field==='')return '';
@@ -28,15 +34,13 @@ function table(rows,total,signatureDate){
   '<tbody class="bp-closing">'+(vehicles.at(-1)||'')+totals+signature+'</tbody></table>';
 }
 function content(snapshot){
- const {number,header:h,rows,total}=snapshot;
- const identification=[[null,h.issuer],[null,h.address],['RCCM',h.rccm],['ID-NAT',h.id_nat],['NIF',h.nif],['Contact',h.contact]]
+ const {header:h,rows,total}=snapshot;
+ const identification=companyFields.map(([label,key])=>[label,h[key]])
   .filter(([,field])=>field).map(([label,field])=>'<p>'+(label?label+': ':'')+escape(field)+'</p>').join('');
  const details=pairs=>'<dl>'+pairs.map(([label,key])=>'<div><dt>'+label+':</dt><dd>'+escape(h[key])+'</dd></div>').join('')+'</dl>';
- const title=snapshot.template_title||'BULLETIN DE PESAGE / WEIGHTING SHEET';
- return '<article class="bp-sheet'+(rows.length<=10?' bp-short':'')+'" lang="fr"><h2>'+escape(title)+' : N°'+escape(number)+'</h2>'+
+ return '<article class="bp-sheet'+(rows.length<=10?' bp-short':'')+'" lang="fr"><h2>'+escape(sheetTitle(snapshot))+'</h2>'+
   '<div class="bp-issuer"><div>'+identification+'</div><img src="/customs-bp-logo.png?rev='+revision()+'" alt="Metorex · Ruashi Mining"></div>'+
-  '<div class="bp-details">'+details([['Client','customer'],['Product','product'],['Transport mode','mode'],['Final Destination','destination'],['Exit Border','border']])+
-  details([['Customs Agency','agency'],['License','license'],['Loading Point','loading_point'],['Loading Date','loading_date']])+'</div>'+
+  '<div class="bp-details">'+declarationFields.map(details).join('')+'</div>'+
   table(rows,total,h.signature_date)+'</article>';
 }
 function html(snapshot,auto=false){
@@ -47,4 +51,4 @@ function html(snapshot,auto=false){
   '<script src="/customs-bp-print.js?rev='+rev+'"></script></body></html>';
 }
 
-module.exports={html,content};
+module.exports={html,content,columns,companyFields,declarationFields,sheetTitle};

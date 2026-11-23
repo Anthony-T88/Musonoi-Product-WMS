@@ -56,7 +56,7 @@ const paths={
  allocations:'JOIN sales_plans p ON p.id=x.plan_id',loading_plan_documents:'JOIN loading_plan_groups g ON g.id=x.group_id JOIN sales_plans p ON p.id=g.sales_plan_id',
  co_loading_plans:'JOIN co_sales_plans p ON p.id=x.sales_plan_id',co_loading_orders:'JOIN co_sales_plans p ON p.id=x.sales_plan_id',
  co_bags:'JOIN co_preparations p ON p.id=x.preparation_id',
- sales_dispatch_vehicles:'JOIN sales_dispatch_imports i ON i.id=x.import_id JOIN sales_plans p ON p.id=i.sales_plan_id',
+ sales_dispatch_vehicles:'JOIN sales_dispatch_imports i ON i.id=x.import_id LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=x.id JOIN sales_plans p ON p.id=coalesce(k.sales_plan_id,i.sales_plan_id)',
  co_dispatch_vehicles:'JOIN co_sales_plans p ON p.id=x.sales_plan_id'
 };
 function checkRoute(req,key,input){

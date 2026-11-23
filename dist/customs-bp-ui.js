@@ -113,10 +113,14 @@ window.CustomsBP={
     '</td><td><div class="bp-archive-actions"><button type="button" class="button secondary compact" data-bp-expand="'+id+'" data-bp-number="'+number+
     '" aria-expanded="false" aria-controls="'+panel+'" aria-label="'+t('展开批次','Expand Batches')+' '+number+'">'+t('展开批次','Expand Batches')+
     '</button><button type="button" class="button secondary compact" data-bp-edit-doc="'+id+'" aria-label="'+t('编辑BP表 ','Edit BP Sheet ')+number+'">'+t('编辑','Edit')+
-    '</button><a class="button secondary compact" href="/api/v1'+this.base()+'/'+id+'/print" target="_blank" rel="noopener">'+t('预览 / 打印','Preview / Print')+'</a></div></td></tr>',
+    '</button>'+this.excelLink(id,row.revision)+'<a class="button secondary compact" href="/api/v1'+this.base()+'/'+id+'/print" target="_blank" rel="noopener">'+t('预览 / 打印','Preview / Print')+'</a></div></td></tr>',
     '<tr class="bp-batch-expansion" id="'+panel+'" hidden><td colspan="7"><div class="bp-batch-panel" aria-live="polite"></div></td></tr>'];
   });
   return ExportLicenses.table(headers,rows,'customs-bp-documents',true,{numeric:[1,3,4],actions:[6]});
+ },
+ excelLink(id,revision,classes='button secondary compact'){
+  return '<a class="'+classes+'" data-bp-excel href="/api/v1'+this.base()+'/'+esc(id)+'/excel?revision='+revision+
+   '" download>'+this.t('下载 Excel','Download Excel')+'</a>';
  },
  async editDocument(button){
   button.disabled=true;
@@ -337,7 +341,7 @@ window.CustomsBP={
   const facts=keys=>UI46Pages.factList(keys.map(key=>[labels.get(key),esc((key==='product'?product:header[key])||'—')]));
   const history=d.versions?'<details class="bp-versions"><summary>'+t('历史版本','Revision History')+'</summary><ul>'+
    d.versions.map(v=>'<li><a href="/api/v1'+this.base()+'/'+esc(d.id)+'/print?revision='+v.revision+'" target="_blank" rel="noopener">r'+v.revision+'</a> · '+
-   esc(BusinessTime.display(v.created_at))+'</li>').join('')+'</ul></details>':'';
+   esc(BusinessTime.display(v.created_at))+' · '+this.excelLink(d.id,v.revision,'bp-version-download')+'</li>').join('')+'</ul></details>':'';
   const select=(key,entries,selected,placeholder,required=true)=>'<label class="wms-field">'+labels.get(key)+
    '<select name="'+key+'"'+(required?' required':'')+'><option value="">'+esc(placeholder)+'</option>'+
    entries.map(([id,name])=>'<option value="'+esc(id)+'"'+(id===selected?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>';
@@ -436,6 +440,7 @@ window.CustomsBP={
   this.frame(saved.revision>1?t('BP表修订已保存','BP Sheet Revision Saved'):t('BP表已生成','BP Sheet Generated'),'<section class="wms-section">'+
    UI46Pages.factList([[t('BP编号','BP Number'),esc(saved.document_no)],[t('版本','Revision'),'r'+saved.revision]])+'<div class="business-toolbar">'+
    '<button type="button" id="customs-bp-return" class="button secondary">'+t('返回BP表列表','Back to BP Sheets')+'</button>'+
+   this.excelLink(saved.id,saved.revision,'button secondary')+
    '<a class="button primary" target="_blank" rel="noopener" href="/api/v1'+this.base()+'/'+saved.id+'/print?print=1">'+
    t('打开打印窗口','Open Print Window')+'</a></div></section>');
   $('customs-bp-return').onclick=()=>Router.go('/customs/bp?view=documents');

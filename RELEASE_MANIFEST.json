@@ -39,8 +39,8 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "bytes": 31403,
-      "sha256": "633072e8391ed31c04051ab8c1ac1898b9679167561619ec8ef15064c56f8c39"
+      "bytes": 31561,
+      "sha256": "ab68a338e2b2d06e2cf0b46a4f45e3d6f254f7b61028ec90b1057c5e22379ebe"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -1319,8 +1319,8 @@
     },
     {
       "path": "dist/cobalt-sales-ui.js",
-      "sha256": "57dcf6d3ce3309a641ab6a689be25d0bd1299cf05d9036aec017c2d14459eb32",
-      "bytes": 34832
+      "sha256": "3adf7232d95344fccfb774601c40a054c953871dd3058e491569697e8205b684",
+      "bytes": 34853
     },
     {
       "path": "dist/cobalt-stock-ui.js",
@@ -1474,8 +1474,8 @@
     },
     {
       "path": "dist/i18n-v31.js",
-      "sha256": "1d18924f09acc3a182a4e33896677299029054205136d598db2640e76dd44a9e",
-      "bytes": 21669
+      "sha256": "942004ccf90c91bd8ab42113a7b87e68fb1f8c545ff285591d0abdbec99c1d4c",
+      "bytes": 21973
     },
     {
       "path": "dist/i18n-v32.js",
@@ -1504,7 +1504,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "c5fbda6d727aa719ebbdcd54f45ef5478ad47b4c9469cbd688d94d0edc477d8b",
+      "sha256": "722fddb79e05e6b677a8f8ca20e080ec24d134bce46d53d1b3671781c7114410",
       "bytes": 14533
     },
     {
@@ -1589,8 +1589,8 @@
     },
     {
       "path": "dist/customs-bp-ui.js",
-      "sha256": "204012cb1688ac51134ac98d81c9ab12cbc8e4f2e08d932306be991085e9efd1",
-      "bytes": 32018
+      "sha256": "147ace77f28595d5396097acb6d207145322b0c8190631e764e15d1137466ee0",
+      "bytes": 32408
     },
     {
       "path": "dist/customs-workspace.js",
@@ -1789,7 +1789,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "80b7bb712d9f9d87c2b8cdee748cd9bb664bbf6fe585dc0b785cc89c947bd671",
+      "sha256": "f9c59ace5d4b08008b0a0cb10708037f8fc1412b7dbddab2aa22bff2867c7040",
       "bytes": 418
     },
     {
@@ -1849,7 +1849,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "bd4922d32fda54b9cc72f2e976aeea849e238f96ada6b611e535d46b305df02a",
+      "sha256": "2d0c0ce7b1cd50bb8c36077ae0475a422693b85cc072fb33cb321195e7e1ec7d",
       "bytes": 2915
     },
     {
@@ -2099,8 +2099,8 @@
     },
     {
       "path": "dist/v31-sales.js",
-      "sha256": "e865f5bd9e41e91ba98d90431a839248e871e5ccac1a73965f6215e53ae4e5ec",
-      "bytes": 11195
+      "sha256": "1727b55e2d713b7c6ec9e6079a27e19f68e0059acf8a9ebe1fb4fb9508e4edd6",
+      "bytes": 13310
     },
     {
       "path": "dist/v31-single-plan.js",
@@ -2449,13 +2449,13 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "sha256": "1dafcd83173579d5971022265cf0928c7001fb3fd8560185d38e7ef0af7275e7",
-      "bytes": 31564
+      "sha256": "05dd1c67ae87075352cf595e55eb4ba845b246133ac4f65da2d2687c3ea1caa4",
+      "bytes": 31733
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "sha256": "7ebabc17fb9961491a01764e76bba0e91252b8d1529d844a2249b367c5a2bc52",
-      "bytes": 19228
+      "sha256": "cf39cef2399efd071cbd1f912725958dc4db3f03ad4ba12f51452e8b536663ef",
+      "bytes": 19615
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3039,8 +3039,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "8abc5f440fa3703c563cc41a9de7d309ebd9cbdce1e9faceb6e487b6a84e1827",
-      "bytes": 8443
+      "sha256": "7b10498e661ee0bca6938a2c0d44387653058ee48e02cde06f080ca9c853e509",
+      "bytes": 8682
     },
     {
       "path": "scripts/db.cjs",
@@ -3234,8 +3234,8 @@
     },
     {
       "path": "server/cobalt-sales.cjs",
-      "sha256": "15b55bf341f702526fb8c2f1c16b52767375b40408c2585bbeb4d1f834bb2ffe",
-      "bytes": 29631
+      "sha256": "73e8bb44758a9037ad572d8b35f3de48edf8f00a8f84e9a7d8d34b31750e044b",
+      "bytes": 30461
     },
     {
       "path": "server/cobalt-stock-archive.cjs",
@@ -3319,8 +3319,8 @@
     },
     {
       "path": "server/document-drafts.cjs",
-      "bytes": 16260,
-      "sha256": "ce13aa06932dea4893b2118e4215fbf7321d07e5ad2222d3672cd93e42c356c9"
+      "bytes": 16347,
+      "sha256": "691736922d2c3e659c3ff61033f9111263b5f819ecef85cbfa3f7a5c20204468"
     },
     {
       "path": "server/employee-identity.cjs",
@@ -3349,13 +3349,18 @@
     },
     {
       "path": "server/customs-bp-print.cjs",
-      "sha256": "bed3f0413067df5e468496071a8b9841bfc0f1c0f42fda9773f789e8ef51f3db",
-      "bytes": 3610
+      "sha256": "0aafdd7048560e1489ad8161f64a871c388167d577eda2bca32ccc151a5c022f",
+      "bytes": 3807
+    },
+    {
+      "path": "server/customs-bp-excel.cjs",
+      "sha256": "c06a3a6c34b57d4ed011c4073a8bc0cd9c052be3750e763195b4e32ee3c89be6",
+      "bytes": 5237
     },
     {
       "path": "server/customs-bp.cjs",
-      "sha256": "f9871bcc892e8a7d57bf684df9705bd3b80681750ffb65cfe24baa9f1346d371",
-      "bytes": 30205
+      "sha256": "d8b3e2f2bb62d88f61074102142d4aba82c326c3237282519583d951cc070db0",
+      "bytes": 30587
     },
     {
       "path": "server/customs-bp-agencies.cjs",
@@ -3609,8 +3614,8 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "063ec71e51d66fc38cb5c5a9ae17e2d06acf4b9291517c9afa98ddefc25e0ae8",
-      "bytes": 208
+      "sha256": "6168efd95cc40a847d7a4f036c41ce862ad35397b7684fcda75c86e6acdc6817",
+      "bytes": 213
     },
     {
       "path": "server/report-center-data.cjs",
@@ -3664,13 +3669,13 @@
     },
     {
       "path": "server/dispatch-transport.cjs",
-      "sha256": "7dab0adea28cdf321d9af9969b54da4364d7fcce1b78442ac22fdcb02d532686",
-      "bytes": 7220
+      "sha256": "8bed903a57bb28b3f40e09858b67a8ac27a9457b52ac6882b28ca4cc2de233f7",
+      "bytes": 7311
     },
     {
       "path": "server/sales-dispatch.cjs",
-      "sha256": "2aa29774a742f65eaec034763f3753211027dd266d01fb0967f90aef58e06b9a",
-      "bytes": 12862
+      "sha256": "c83cb044118692b7c58d75560b4eee64d66633c3a961b58816e08f203a552cb8",
+      "bytes": 13037
     },
     {
       "path": "server/sales-invoices.cjs",
@@ -3819,13 +3824,13 @@
     },
     {
       "path": "server/workflow-permissions.cjs",
-      "sha256": "86fb50c4b6b69a740df375e47969ee8b54ca61a898fe92ed0d8acbc9c5c70714",
-      "bytes": 13094
+      "sha256": "45d1e4daef7e8657d840a0d21de510a59563a92d54a7ce2cf196fda7489937e0",
+      "bytes": 13113
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "3d42dd54ccbfd2dc956cf15faff0bb9a43e66f58fa14ecbf03bb55d131e1dabf",
-      "bytes": 100154
+      "sha256": "21748cfb2248ff8da0f2117379a98b7d5166dce703e6f04fd7fd148539b08dff",
+      "bytes": 100458
     },
     {
       "path": "templates/cobalt-packing-list/FIELD_MAPPING.json",
@@ -3919,8 +3924,8 @@
     },
     {
       "path": "tests/release/business.test.cjs",
-      "sha256": "886f26a5798b1ac9fee3234ffe4dfe1d4bdd57a2484b3446592e2df9ef654481",
-      "bytes": 2876
+      "sha256": "ef3ee03325795c575f6e3de9d2619d7983b2b617d28e4a1eebacd7adecdd2ce1",
+      "bytes": 3073
     },
     {
       "path": "tests/release/ci-setup.cjs",
@@ -3944,8 +3949,8 @@
     },
     {
       "path": "tests/release/database.test.cjs",
-      "bytes": 56097,
-      "sha256": "e20532a05e676a2f940e28748b4db107bb311935c96a919cfd67cf010020a6d2"
+      "bytes": 62691,
+      "sha256": "b078fe9c943a5864e91d4c18ea01145eb4751cf497ed06100867eaabc67554ca"
     },
     {
       "path": "tests/release/deployment.test.cjs",
@@ -3999,7 +4004,7 @@
     },
     {
       "path": "tests/release/preparation-fixture.cjs",
-      "sha256": "fdd70bed626899a1c58715f966c0b29de1d4870a9c439db437f2758244bd92bd",
+      "sha256": "1bae9ecbcf9bf97419f2891014a6a0afbae57a1f6a123cd4215390798bef6dc3",
       "bytes": 1719
     },
     {
@@ -4104,8 +4109,8 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "58a98149a658c29a82b79d5d3013e0c2b407cddca58a1aa18e831ac28fca72a7",
-      "bytes": 34515
+      "sha256": "87d02afc48cd4af881bac6bf6368cbd343d8c685d17c7516fdd02e4760a78ba8",
+      "bytes": 34526
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -4119,8 +4124,8 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "064a06876ff02951b04e3b996cf804e72ad640a1dd970da81ca7aa2ace8cc450",
-      "bytes": 21677
+      "sha256": "f764255244b178e68103fa7030661e1475c86d893887a8f09207a8665f9496d9",
+      "bytes": 21685
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -4179,8 +4184,8 @@
     },
     {
       "path": "server/dispatch-month.cjs",
-      "bytes": 1296,
-      "sha256": "797b4de8f0451e6777536949f05602627408930e6061b374b3554805daf04ec9"
+      "bytes": 4965,
+      "sha256": "2a001bdf4b446fad801d6b5ea56c083a623dece08b6c288309e02196e5dc48d3"
     },
     {
       "path": "db/migrations/195_v482_dispatch_vehicle_month.sql",
@@ -4238,14 +4243,19 @@
       "bytes": 692
     },
     {
+      "path": "db/migrations/206_v488_dispatch_plan_transfer.sql",
+      "sha256": "33d9add3555ee66bcf7ecd81a3b490630b491f8a06864887e47f658e2037399d",
+      "bytes": 2008
+    },
+    {
       "path": "docs/uiux/备货计划和历史单据详情改版方案.md",
       "bytes": 3815,
       "sha256": "37d8a4755bae75a1a4ddc670b69d57b569fe9871ebf84d0cfb1e58b92da64434"
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "1b5187d07b6a1688948f696af2c4b340a46f51a19db1fc6d3962c5f4f75381cc",
-      "bytes": 27669
+      "sha256": "a7c4de245e0de33f85dc83a610b65d947c2c62ccbabf0392dcd91922812b70a6",
+      "bytes": 28620
     },
     {
       "path": "tests/release/bundle-corrections-ui.cjs",
@@ -4303,8 +4313,8 @@
       "bytes": 3523
     }
   ],
-  "sourceFiles": 692,
-  "runtimeRequiredMigrations": 205,
+  "sourceFiles": 694,
+  "runtimeRequiredMigrations": 206,
   "format": 2,
   "status": "Local TEST verified"
 }

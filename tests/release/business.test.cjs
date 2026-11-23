@@ -12,11 +12,14 @@ test('loading order recognises multilingual weight headings and excludes trailer
 test('formula weight cells are rejected rather than treated as dispatch capacity',()=>{const wb=X.utils.book_new(),ws=X.utils.aoa_to_sheet([['HORSE','TON'],['ACT3434',36]]);ws.B2={t:'n',v:36,f:'18+18'};X.utils.book_append_sheet(wb,ws,'Dispatch');assert.throws(()=>R.read(wb,null,D.capacity));});
 test('dispatch imports use the plan month and vehicle edits reject invalid, unauthorized and stale values',()=>{
  const plan={status:'OPEN',preparation_month:'2026-11'},req={user:{role_code:'sales_manager',permissions:['dispatch:month']},
-  body:{previous_month:'2026-11',shipment_month:'2026-12'}};
+  body:{previous_month:'2026-11',shipment_month:'2026-12',target_plan_id:'adec86f7-26d6-4c24-a1cd-c936b85e643d'}};
  assert.deepEqual(Month.settings(req,plan),{month:'2026-11',can_change:true});
- assert.equal(Month.validate(req,plan,'2026-11'),'2026-12');
- assert.throws(()=>Month.validate(req,plan,'2026-12'),{statusCode:409});
- assert.throws(()=>Month.validate({...req,user:{...req.user,role_code:'logistics_manager'}},plan,'2026-11'),{statusCode:403});
- assert.throws(()=>Month.validate({...req,body:{...req.body,shipment_month:'2026-13'}},plan,'2026-11'),{statusCode:400});
+ const transfer=Month.transferInput(req);
+ assert.deepEqual(transfer,req.body);
+ Month.validate(transfer,'2026-11');
+ assert.throws(()=>Month.validate(transfer,'2026-12'),{statusCode:409});
+ assert.equal(Month.settings({...req,user:{...req.user,role_code:'logistics_manager'}},plan).can_change,false);
+ assert.throws(()=>Month.transferInput({...req,body:{...req.body,target_plan_id:undefined}}),{statusCode:400});
+ assert.throws(()=>Month.transferInput({...req,body:{...req.body,shipment_month:'2026-13'}}),{statusCode:400});
  assert.throws(()=>Month.effective(plan,'2026-12'),{statusCode:409});
 });

@@ -16,7 +16,7 @@ const plate=v=>B.text(v,'CO_SALES_PLATE',80).toUpperCase();
 async function filter(c,req,arrivals=false){const q=req.query||{},values=[req.user.id],where=[visible()];for(const k of ['project_id','warehouse_id','customer_id','sales_plan_id'])if(q[k])B.uuid(q[k]);if(q.sales_plan_id)await access(c,req,'plan',q.sales_plan_id);if(q.warehouse_id){const w=(await c.query('SELECT * FROM warehouses WHERE id=$1',[q.warehouse_id])).rows[0];if(!w)throw error(403,'CO_SALES_SCOPE');await B.scope(c,req,w.project_id,w.id,q.customer_id||null);if(q.project_id&&q.project_id!==w.project_id)throw error(403,'CO_SALES_SCOPE');}else if(q.project_id&&!(await c.query('SELECT 1 FROM user_scopes WHERE user_id=$1 AND project_id=$2',[req.user.id,q.project_id])).rowCount)throw error(403,'CO_SALES_SCOPE');const add=(sql,v)=>{values.push(v);where.push(sql.replace('?', '$'+values.length));};for(const k of ['project_id','warehouse_id','customer_id'])if(q[k])add('p.'+k+'=?',q[k]);if(q.sales_plan_id)add('p.id=?',q.sales_plan_id);if(q.shipment_month&&!arrivals)add('p.shipment_month=?',month(q.shipment_month));if(q.search)add("strpos(lower(p.code||' '||c.name||' '||k.contract_no),lower(?))>0",B.text(q.search,'CO_SALES_SEARCH',160));if(q.status){if(!['OPEN','CLOSED'].includes(q.status))throw error(400,'CO_SALES_INPUT');add('p.status=?',q.status);}const page=Number(q.page||1);if(!Number.isInteger(page)||page<1||page>100000)throw error(400,'CO_SALES_INPUT');return {where:where.join(' AND '),values,page};}
 const plansSql=`FROM co_sales_plans p JOIN co_customer_profiles c ON c.id=p.customer_id JOIN co_sales_contracts k ON k.id=p.contract_id`;
 const planSelect=`SELECT p.*,(SELECT display_name FROM users WHERE id=p.created_by) creator_name,c.name customer_name,k.contract_no,(SELECT count(*)::int FROM co_dispatch_vehicles v WHERE v.sales_plan_id=p.id AND v.cancelled_at IS NULL) dispatched_vehicles,(SELECT count(*)::int FROM co_vehicle_arrivals a WHERE a.sales_plan_id=p.id AND a.registration_phase='CONFIRMED') arrived_vehicles ${plansSql}`;
-async function vehicle(c,req,vid){const v=(await c.query('SELECT * FROM co_dispatch_vehicles WHERE id=$1',[B.uuid(vid)])).rows[0];if(!v)throw error(404,'CO_SALES_NOT_FOUND');const p=await access(c,req,'plan',v.sales_plan_id,true);const locked=(await c.query('SELECT * FROM co_dispatch_vehicles WHERE id=$1 FOR UPDATE',[v.id])).rows[0];if(p.status!=='OPEN'||locked.cancelled_at)throw error(409,'CO_SALES_LOCKED');return {v:locked,p};}
+async function vehicle(c,req,vid){const v=(await c.query('SELECT * FROM co_dispatch_vehicles WHERE id=$1',[B.uuid(vid)])).rows[0];if(!v)throw error(404,'CO_SALES_NOT_FOUND');const p=await access(c,req,'plan',v.sales_plan_id,true);const locked=(await c.query('SELECT * FROM co_dispatch_vehicles WHERE id=$1 FOR UPDATE',[v.id])).rows[0];if(locked.sales_plan_id!==p.id)throw error(409,'CO_SALES_STALE');if(p.status!=='OPEN'||locked.cancelled_at)throw error(409,'CO_SALES_LOCKED');return {v:locked,p};}
 function vehicleFields(b){const v={trailer_no:optional(b.trailer_no,80),transporter:optional(b.transporter,160),destination:optional(b.destination,1000),driver_name:optional(b.driver_name,160),passport_no:optional(b.passport_no,80),remark:optional(b.remark,1000),planned_arrival_date:b.planned_arrival_date?B.date(b.planned_arrival_date):null,capacity_tonnes:b.capacity_tonnes===undefined||b.capacity_tonnes===null||b.capacity_tonnes===''?null:D.capacity(b.capacity_tonnes)};return v;}
 async function saveVehicle(c,req,p,b,source=null){const truck=plate(b.truck_no),f=vehicleFields(b),columns=['sales_plan_id','shipment_month','truck_no','created_by','updated_by',...Object.keys(f)],values=[p.id,source?b.shipment_month:Month.effective(p,b.shipment_month),truck,req.user.id,req.user.id,...Object.values(f)];if(source){Object.assign(f,{});columns.push('import_id','source_row','source_sheet');values.push(source.id,b.source_row,source.sheet);}return (await c.query('INSERT INTO co_dispatch_vehicles('+columns.join(',')+') VALUES('+values.map((_,i)=>'$'+(i+1)).join(',')+') RETURNING *',values)).rows[0];}
 async function importPlan(c,req,plan,body,parsed){
@@ -39,6 +39,29 @@ async function importPlan(c,req,plan,body,parsed){
  }
  const {new_count:added_count,...results}=tally;
  return {id:plan.id,...metadata(plan),import_id:imported?.id||null,added_count,...results,cancelled_count};
+}
+const transferHistory=`EXISTS(SELECT 1 FROM co_vehicle_arrivals a WHERE a.dispatch_vehicle_id=v.id)
+ OR EXISTS(SELECT 1 FROM historical_sales_dispatch_links h WHERE h.co_dispatch_id=v.id)`;
+async function listDispatch(c,req){
+ const plan=await access(c,req,'plan',req.params.id),shipmentMonth=req.query.shipment_month?month(req.query.shipment_month):null;
+ const {rows:vehicles}=await c.query(`SELECT v.*,${Transport.cobaltTransportLocked} transport_locked,a.id arrival_id,a.arrived_at,
+  NOT (${transferHistory}) AND v.cancelled_at IS NULL can_transfer,
+  CASE WHEN v.cancelled_at IS NOT NULL THEN 'CANCELLED' WHEN a.id IS NOT NULL THEN 'WAITING_PLAN' ELSE 'WAITING_ARRIVAL' END arrival_state
+  FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id
+  WHERE v.sales_plan_id=$1 AND ($2::text IS NULL OR v.shipment_month=$2) ORDER BY v.created_at DESC,v.id`,[plan.id,shipmentMonth]);
+ const byImport=new Map();
+ for(const v of vehicles){
+  if(!v.import_id)continue;
+  if(!byImport.has(v.import_id))byImport.set(v.import_id,[]);
+  byImport.get(v.import_id).push(v.shipment_month);
+ }
+ const imports=byImport.size?(await c.query('SELECT * FROM co_dispatch_imports WHERE id=ANY($1::uuid[]) ORDER BY created_at DESC,id',[[...byImport.keys()]])).rows:[];
+ return {plan:(await c.query(planSelect+' WHERE p.id=$1',[plan.id])).rows[0],
+  dispatch_month:{...Month.settings(req,plan),targets:await Month.targets(c,req,plan,true)},vehicles,
+  imports:imports.map(row=>{
+   const months=byImport.get(row.id);
+   return {...row,row_count:months.length,current_months:[...new Set(months)].sort()};
+  })};
 }
 async function arrivals(c,req,all=false){
  const q=req.query,loading=await require('./cobalt-loading.cjs').enabled(c),execution=await require('./cobalt-execution.cjs').enabled(c),f=await filter(c,req,true);
@@ -89,20 +112,21 @@ async function register({app,pool,permitted,csrf,auth}){
   ORDER BY EXISTS(SELECT 1 FROM co_zones z WHERE z.warehouse_id=w.id AND z.active) DESC,w.name,w.id LIMIT 1`,[req.user.id,project,customer])).rows[0]?.id;
  if(!warehouse)throw error(403,'CO_SALES_SCOPE');
  const p={project_id:project,warehouse_id:warehouse,customer_id:customer,contract_id:B.uuid(b.contract_id)};await B.scope(c,req,p.project_id,p.warehouse_id,p.customer_id);if(old){if(Object.keys(p).some(k=>old[k]!==p[k]))throw error(409,'CO_SALES_IDENTITY');if(old.version!==B.version(b.version))throw error(409,'CO_SALES_STALE');}if(!Number.isInteger(b.planned_vehicle_count)||b.planned_vehicle_count<1||b.planned_vehicle_count>2147483647)throw error(400,'CO_SALES_COUNT');if(!['OPEN','CLOSED'].includes(b.status||'OPEN'))throw error(400,'CO_SALES_INPUT');const f={...p,shipment_month:month(b.shipment_month),target_weight:B.weight(b.target_weight),planned_metal_mt:b.planned_metal_mt===null||b.planned_metal_mt===''||b.planned_metal_mt===undefined?null:B.weight(b.planned_metal_mt),planned_vehicle_count:b.planned_vehicle_count,destination:b.destination===undefined?old?.destination||'':optional(b.destination,1000),remark:optional(b.remark,1000),status:b.status||'OPEN',updated_by:req.user.id};let row;if(old){const keys=Object.keys(f);row=(await c.query('UPDATE co_sales_plans SET '+keys.map((k,i)=>k+'=$'+(i+1)).join(',')+',version=version+1,updated_at=clock_timestamp() WHERE id=$'+(keys.length+1)+' RETURNING *',[...Object.values(f),old.id])).rows[0];}else{f.created_by=req.user.id;const keys=Object.keys(f);row=(await c.query('INSERT INTO co_sales_plans('+keys.join(',')+') VALUES('+keys.map((_,i)=>'$'+(i+1)).join(',')+') RETURNING *',Object.values(f))).rows[0];}return row;}));
- app.get(prefix+'/plans/:id/dispatch',{preHandler:permitted('dispatch:read')},req=>C.readTransaction(pool,async c=>{const p=await access(c,req,'plan',req.params.id),m=req.query.shipment_month?month(req.query.shipment_month):null;return {dispatch_month:Month.settings(req,p),plan:(await c.query(planSelect+' WHERE p.id=$1',[p.id])).rows[0],vehicles:(await c.query(`SELECT v.*,${Transport.cobaltTransportLocked} transport_locked,a.id arrival_id,a.arrived_at,CASE WHEN v.cancelled_at IS NOT NULL THEN 'CANCELLED' WHEN a.id IS NOT NULL THEN 'WAITING_PLAN' ELSE 'WAITING_ARRIVAL' END arrival_state FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id WHERE v.sales_plan_id=$1 AND($2::text IS NULL OR v.shipment_month=$2) ORDER BY v.created_at DESC,v.id`,[p.id,m])).rows,imports:(await c.query('SELECT i.* FROM co_dispatch_imports i WHERE i.sales_plan_id=$1 AND($2::text IS NULL OR i.shipment_month=$2 OR EXISTS(SELECT 1 FROM co_dispatch_vehicles v WHERE v.import_id=i.id AND v.shipment_month=$2)) ORDER BY i.created_at DESC',[p.id,m])).rows};}));
+ app.get(prefix+'/plans/:id/dispatch',{preHandler:permitted('dispatch:read')},
+  req=>C.readTransaction(pool,c=>listDispatch(c,req)));
  app.post(prefix+'/plans/:id/dispatch/vehicles/:vehicle/month',{preHandler:writes('dispatch:month')},req=>mutation(pool,req,'dispatch:month',async c=>{
-  const p=await access(c,req,'plan',req.params.id,true),id=B.uuid(req.params.vehicle);
-  const {rows:[v]}=await c.query('SELECT * FROM co_dispatch_vehicles WHERE sales_plan_id=$1 AND id=$2 FOR UPDATE',[p.id,id]);
+  const {body,source,target}=await Month.lockTransfer(c,req,true,(conn,request,id,lock)=>access(conn,request,'plan',id,lock));
+  const id=B.uuid(req.params.vehicle);
+  const {rows:[v]}=await c.query('SELECT v.*,'+transferHistory+' transfer_history FROM co_dispatch_vehicles v WHERE v.sales_plan_id=$1 AND v.id=$2 FOR UPDATE OF v',
+   [source.id,id]);
   if(!v)throw error(404,'CO_SALES_NOT_FOUND');
-  const next=Month.validate(req,p,v.shipment_month);
-  if(v.cancelled_at||(await c.query('SELECT 1 FROM co_vehicle_arrivals WHERE dispatch_vehicle_id=$1 AND registration_phase<>\'CLEARED\'',[id])).rowCount)
-   throw B.error(409,'车辆已取消或已关联到厂、装车业务，不能调整派车月份');
-  if(next!==v.shipment_month){
-   if((await c.query('SELECT 1 FROM co_dispatch_vehicles WHERE sales_plan_id=$1 AND shipment_month=$2 AND truck_key=$3',[p.id,next,v.truck_key])).rowCount)
-    throw B.error(409,'目标月份已存在相同车牌');
-   await c.query('UPDATE co_dispatch_vehicles SET shipment_month=$2,version=version+1,updated_by=$3,updated_at=clock_timestamp() WHERE id=$1',[id,next,req.user.id]);
-  }
-  return {id,shipment_month:next,...metadata(p)};
+  Month.validate(body,v.shipment_month);
+  if(v.cancelled_at||v.transfer_history)throw B.error(409,'车辆已取消或已关联到厂、装车业务，不能调整派车月份');
+  if((await c.query('SELECT 1 FROM co_dispatch_vehicles WHERE sales_plan_id=$1 AND shipment_month=$2 AND truck_key=$3',
+   [target.id,target.shipment_month,v.truck_key])).rowCount)throw B.error(409,'目标销售计划已存在相同车牌');
+  await c.query('UPDATE co_dispatch_vehicles SET sales_plan_id=$2,shipment_month=$3,version=version+1,updated_by=$4,updated_at=clock_timestamp() WHERE id=$1',
+   [id,target.id,target.shipment_month,req.user.id]);
+  return Month.audit(c,req,true,v,source,target);
  }));
  app.post(prefix+'/plans/:id/dispatch/import-preview',{bodyLimit:3000000,preHandler:writes('dispatch:write')},req=>C.readTransaction(pool,async c=>{
   const plan=await access(c,req,'plan',req.params.id);

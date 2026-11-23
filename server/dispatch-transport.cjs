@@ -104,7 +104,9 @@ async function save(c,req,co){
  const p=co?await require('./cobalt-sales.cjs').access(c,req,'plan',req.params.id,true):await require('./allocations.cjs').planAccess(c,req,req.params.id,true);
  const table=co?'co_dispatch_vehicles':'sales_dispatch_vehicles';
  const versionField=co?'version':'transport_version';
- const visible=co?'v.sales_plan_id=$2':'EXISTS(SELECT 1 FROM sales_dispatch_imports x WHERE x.id=v.import_id AND x.sales_plan_id=$2)';
+ const visible=co?'v.sales_plan_id=$2':`EXISTS(SELECT 1 FROM sales_dispatch_imports i
+  LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id
+  WHERE i.id=v.import_id AND coalesce(k.sales_plan_id,i.sales_plan_id)=$2)`;
  const {rows:[old]}=await c.query('SELECT v.* FROM '+table+' v WHERE v.id=$1 AND '+visible+' FOR UPDATE',[id,p.id]);
  if(!old)throw B.error(404,'DISPATCH_TRANSPORT_NOT_FOUND');
  if(old.cancelled_at||old[versionField]!==version)throw B.error(409,'DISPATCH_TRANSPORT_STALE');

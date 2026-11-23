@@ -538,7 +538,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "dispatch Excel drop and transport backfill",
+      "state": "dispatch transfer by month and Excel reimport",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -562,7 +562,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "dispatch Excel drop and transport backfill",
+      "state": "dispatch transfer by month and Excel reimport",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -968,7 +968,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "issued BP weights and expanded batch loading dates",
+      "state": "issued BP weights, expanded batches and Excel downloads",
       "template": "/customs/bp"
     },
     {

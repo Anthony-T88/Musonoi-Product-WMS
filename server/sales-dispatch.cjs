@@ -1,6 +1,7 @@
 'use strict';
 const X=require('xlsx'),B=require('./business-common.cjs'),A=require('./allocations.cjs'),{createHash}=require('crypto');
 const Month=require('./dispatch-month.cjs'),Transport=require('./dispatch-transport.cjs');
+const {readTransaction}=require('./cobalt.cjs');
 const {truckKey}=Transport;
 const digest=b=>createHash('sha256').update(b).digest('hex');
 
@@ -18,37 +19,64 @@ async function parse(body){
 }
 async function summary(c,planId,month){return (await c.query("SELECT count(*)::int vehicle_count,count(v.capacity_tonnes)::int known_capacity_count,count(*) FILTER(WHERE v.capacity_tonnes IS NULL)::int unknown_capacity_count,coalesce(sum(v.capacity_tonnes),0)::text total_capacity_tonnes FROM sales_dispatch_vehicle_keys k JOIN sales_dispatch_vehicles v ON v.id=k.vehicle_id WHERE v.cancelled_at IS NULL AND k.sales_plan_id=$1 AND($2::text IS NULL OR k.shipment_month=$2)",[planId,month||null])).rows[0];}
 function monthValue(v,required=false){if(v===undefined||v===''){if(required)throw B.error(400,'请选择发运月份');return null;}if(typeof v!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v))throw B.error(400,'请选择有效发运月份');return v;}
-async function vehicleOccupied(c,id,plan,key){
- const {rows:[row]}=await c.query(`SELECT EXISTS(SELECT 1 FROM vehicle_arrivals WHERE dispatch_vehicle_id=$1 AND registration_phase<>'CLEARED')
+const occupied=(id,plan,key)=>`EXISTS(SELECT 1 FROM vehicle_arrivals WHERE dispatch_vehicle_id=${id} AND registration_phase<>'CLEARED')
   OR EXISTS(SELECT 1 FROM loading_plan_documents d JOIN loading_plan_groups g ON g.id=d.group_id
-   WHERE g.sales_plan_id=$2 AND upper(regexp_replace(d.vehicle_no,'[[:space:]-]','','g'))=$3)
+   WHERE g.sales_plan_id=${plan} AND upper(regexp_replace(d.vehicle_no,'[[:space:]-]','','g'))=${key})
   OR EXISTS(SELECT 1 FROM loading_orders l JOIN loading_order_lots q ON q.loading_id=l.id JOIN allocations a ON a.id=q.allocation_id
-   WHERE a.plan_id=$2 AND upper(regexp_replace(l.vehicle_no,'[[:space:]-]','','g'))=$3) blocked`,[id,plan,key]);
+   WHERE a.plan_id=${plan} AND upper(regexp_replace(l.vehicle_no,'[[:space:]-]','','g'))=${key})`;
+const recorded=id=>`EXISTS(SELECT 1 FROM vehicle_arrivals WHERE dispatch_vehicle_id=${id})
+ OR EXISTS(SELECT 1 FROM historical_sales_dispatch_links WHERE cu_dispatch_id=${id})`;
+async function vehicleOccupied(c,id,plan,key){
+ const {rows:[row]}=await c.query(`SELECT ${occupied('$1','$2','$3')} blocked`,[id,plan,key]);
  return row.blocked;
+}
+async function list(c,req){
+ const plan=await A.planAccess(c,req,req.params.id),month=monthValue(req.query.shipment_month);
+ const {rows:vehicles}=await c.query(`WITH selected AS (
+  SELECT vehicle_id,shipment_month,truck_key FROM sales_dispatch_vehicle_keys WHERE sales_plan_id=$1
+  UNION ALL
+  SELECT v.id,d.shipment_month,NULL::text FROM sales_dispatch_imports d JOIN sales_dispatch_vehicles v ON v.import_id=d.id
+  WHERE d.sales_plan_id=$1 AND NOT EXISTS(SELECT 1 FROM sales_dispatch_vehicle_keys k WHERE k.vehicle_id=v.id)
+ )
+ SELECT v.*,s.shipment_month,(s.truck_key IS NOT NULL) counted,
+  NOT (${occupied('v.id','$1',"coalesce(s.truck_key,upper(regexp_replace(v.truck_no,'[[:space:]-]','','g')))")}) can_remove,
+  NOT (${recorded('v.id')}) without_history
+  FROM selected s JOIN sales_dispatch_vehicles v ON v.id=s.vehicle_id JOIN sales_dispatch_imports d ON d.id=v.import_id
+  WHERE v.cancellation_reason IS DISTINCT FROM 'MANUAL_DELETE'
+  AND ($2::text IS NULL OR s.shipment_month=$2) ORDER BY d.created_at DESC,v.source_row`,[plan.id,month]);
+ const importIds=[...new Set(vehicles.map(v=>v.import_id))];
+ const imports=importIds.length?(await c.query(`SELECT d.*,u.display_name created_by_name FROM sales_dispatch_imports d
+  JOIN users u ON u.id=d.created_by WHERE d.id=ANY($1::uuid[]) ORDER BY d.created_at DESC,d.id`,[importIds])).rows:[];
+ return {plan,dispatch_month:{...Month.settings(req,plan),targets:await Month.targets(c,req,plan,false)},
+  summary:await summary(c,plan.id,month),imports,vehicles:vehicles.map(({without_history,...row})=>({
+   ...row,can_transfer:row.counted&&row.can_remove&&without_history&&!row.cancelled_at
+  }))};
 }
 async function register({app,pool,permitted,csrf}){
  const path='/api/v1/plans/:id/dispatch';
  app.post(path+'/vehicles/:vehicle/month',{preHandler:[permitted('dispatch:month'),csrf]},req=>B.mutate(pool,req,async c=>{
   await c.query('SELECT pg_advisory_xact_lock(21004)');
-  const plan=await A.planAccess(c,req,req.params.id,true),id=B.uuid(req.params.vehicle);
-  const {rows:[vehicle]}=await c.query(`SELECT k.shipment_month,k.truck_key,v.cancelled_at FROM sales_dispatch_vehicle_keys k
-   JOIN sales_dispatch_vehicles v ON v.id=k.vehicle_id WHERE k.sales_plan_id=$1 AND k.vehicle_id=$2 FOR UPDATE OF k,v`,[plan.id,id]);
+  const {body,source,target}=await Month.lockTransfer(c,req,false,A.planAccess),id=B.uuid(req.params.vehicle);
+  const {rows:[vehicle]}=await c.query(`SELECT k.shipment_month,k.truck_key,v.id,v.import_id,v.cancelled_at
+   FROM sales_dispatch_vehicle_keys k JOIN sales_dispatch_vehicles v ON v.id=k.vehicle_id
+   WHERE k.sales_plan_id=$1 AND k.vehicle_id=$2 FOR UPDATE OF k,v`,[source.id,id]);
   if(!vehicle)throw B.error(404,'派车车辆不存在或不属于当前销售计划');
-  const next=Month.validate(req,plan,vehicle.shipment_month);
-  if(vehicle.cancelled_at||await vehicleOccupied(c,id,plan.id,vehicle.truck_key))
+  Month.validate(body,vehicle.shipment_month);
+  const {rows:[state]}=await c.query(`SELECT ${occupied('$1','$2','$3')} OR ${recorded('$1')} blocked`,[id,source.id,vehicle.truck_key]);
+  if(vehicle.cancelled_at||state.blocked)
    throw B.error(409,'车辆已取消或已关联到厂、装车业务，不能调整派车月份');
-  if(next!==vehicle.shipment_month){
-   if((await c.query('SELECT 1 FROM sales_dispatch_vehicle_keys WHERE sales_plan_id=$1 AND shipment_month=$2 AND truck_key=$3',[plan.id,next,vehicle.truck_key])).rowCount)
-    throw B.error(409,'目标月份已存在相同车牌');
-   await c.query('UPDATE sales_dispatch_vehicle_keys SET shipment_month=$2 WHERE vehicle_id=$1',[id,next]);
-   await B.audit(c,req,'dispatch_vehicle_month_changed','sales_dispatch_vehicles',id,{shipment_month:vehicle.shipment_month},
-    {shipment_month:next,sales_plan_id:plan.id,project_id:plan.project_id,customer_id:plan.customer_id});
-  }
-  return {id,shipment_month:next,project_id:plan.project_id,customer_id:plan.customer_id};
+  if((await c.query('SELECT 1 FROM sales_dispatch_vehicle_keys WHERE sales_plan_id=$1 AND shipment_month=$2 AND truck_key=$3',
+   [target.id,target.shipment_month,vehicle.truck_key])).rowCount)throw B.error(409,'目标销售计划已存在相同车牌');
+  await c.query('UPDATE sales_dispatch_vehicle_keys SET sales_plan_id=$2,shipment_month=$3 WHERE vehicle_id=$1',
+   [id,target.id,target.shipment_month]);
+  return Month.audit(c,req,false,vehicle,source,target);
  }));
  app.delete(path+'/vehicles/:vehicle',{preHandler:[permitted('dispatch:write'),csrf]},req=>B.mutate(pool,req,async c=>{
   await c.query('SELECT pg_advisory_xact_lock(21004)');const plan=await A.planAccess(c,req,req.params.id,true);
-  const v=(await c.query('SELECT v.* FROM sales_dispatch_vehicles v JOIN sales_dispatch_imports i ON i.id=v.import_id WHERE v.id=$1 AND i.sales_plan_id=$2 FOR UPDATE OF v',[B.uuid(req.params.vehicle),plan.id])).rows[0];if(!v)throw B.error(404,'派车车辆不存在或不属于当前销售计划');
+  const v=(await c.query(`SELECT v.* FROM sales_dispatch_vehicles v JOIN sales_dispatch_imports i ON i.id=v.import_id
+   LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id WHERE v.id=$1 AND coalesce(k.sales_plan_id,i.sales_plan_id)=$2 FOR UPDATE OF v`,
+   [B.uuid(req.params.vehicle),plan.id])).rows[0];
+  if(!v)throw B.error(404,'派车车辆不存在或不属于当前销售计划');
   if(v.cancellation_reason==='MANUAL_DELETE')return {deleted:true,already_deleted:true,id:v.id,summary:await summary(c,plan.id)};
   const occupied=await vehicleOccupied(c,v.id,plan.id,truckKey(v.truck_no));
   if(occupied)throw B.error(409,'车辆已到厂登记或已关联装车业务，不能删除派车记录');
@@ -56,7 +84,7 @@ async function register({app,pool,permitted,csrf}){
   const after=(await c.query("UPDATE sales_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason='MANUAL_DELETE' WHERE id=$1 RETURNING *",[v.id])).rows[0];
   await B.audit(c,req,'sales_dispatch_vehicle_removed','sales_dispatch_vehicles',v.id,v,{...after,removal_reason:reason});return {deleted:true,id:v.id,summary:await summary(c,plan.id)};
  }));
- app.get(path,{preHandler:permitted('dispatch:read')},async req=>{const plan=await A.planAccess(pool,req,req.params.id),month=monthValue(req.query.shipment_month);return {plan,dispatch_month:await Month.settings(req,plan),summary:await summary(pool,plan.id,month),imports:(await pool.query('SELECT d.*,u.display_name created_by_name FROM sales_dispatch_imports d JOIN users u ON u.id=d.created_by WHERE sales_plan_id=$1 AND($2::text IS NULL OR shipment_month=$2 OR EXISTS(SELECT 1 FROM sales_dispatch_vehicles v JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id WHERE v.import_id=d.id AND k.shipment_month=$2)) ORDER BY created_at DESC',[plan.id,month])).rows,vehicles:(await pool.query('SELECT v.*,coalesce(k.shipment_month,d.shipment_month) shipment_month,(k.vehicle_id IS NOT NULL) counted,NOT EXISTS(SELECT 1 FROM vehicle_arrivals a WHERE a.dispatch_vehicle_id=v.id AND a.registration_phase<>\'CLEARED\') AND NOT EXISTS(SELECT 1 FROM loading_plan_documents lp JOIN loading_plan_groups g ON g.id=lp.group_id WHERE g.sales_plan_id=d.sales_plan_id AND upper(regexp_replace(lp.vehicle_no,\'[[:space:]-]\',\'\',\'g\'))=upper(regexp_replace(v.truck_no,\'[[:space:]-]\',\'\',\'g\'))) AND NOT EXISTS(SELECT 1 FROM loading_orders lo JOIN loading_order_lots ll ON ll.loading_id=lo.id JOIN allocations lot ON lot.id=ll.allocation_id WHERE lot.plan_id=d.sales_plan_id AND upper(regexp_replace(lo.vehicle_no,\'[[:space:]-]\',\'\',\'g\'))=upper(regexp_replace(v.truck_no,\'[[:space:]-]\',\'\',\'g\'))) can_remove FROM sales_dispatch_vehicles v JOIN sales_dispatch_imports d ON d.id=v.import_id LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id WHERE v.cancellation_reason IS DISTINCT FROM \'MANUAL_DELETE\' AND d.sales_plan_id=$1 AND($2::text IS NULL OR coalesce(k.shipment_month,d.shipment_month)=$2) ORDER BY d.created_at DESC,v.source_row',[plan.id,month])).rows};});
+ app.get(path,{preHandler:permitted('dispatch:read')},req=>readTransaction(pool,c=>list(c,req)));
  app.post(path+'/import-preview',{bodyLimit:3000000,preHandler:[permitted('dispatch:write'),csrf]},async req=>{
   const plan=await A.planAccess(pool,req,req.params.id),body=req.body||{},month=Transport.importMonth(plan,body);
   const parsed=await parse(body);
