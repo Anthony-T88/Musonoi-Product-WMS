@@ -1,5 +1,23 @@
 'use strict';
 Object.assign(TRANSLATIONS.en,{
+ '缺少运输商或目的地的车辆':'Vehicles missing a transporter or destination',
+ '请重新导入派车单，系统会批量补全。':'Reimport the dispatch file to complete these details in bulk.',
+ '请具备派车导入权限的人员重新导入派车单。':'Ask a colleague with dispatch import permission to reimport the file.',
+ '重新导入派车单':'Reimport Dispatch File','返回普通导入':'Back to Standard Import',
+ '原派车月份':'Original Dispatch Month','请选择原派车月份':'Select the original dispatch month',
+ '补全运输资料':'Complete Route Details','未匹配 · 跳过':'No Match · Skipped',
+ '运输资料冲突 · 跳过':'Conflicting Route Details · Skipped',
+ '已有装车单 · 跳过':'Loading Order Exists · Skipped',
+ '重复车辆 · 跳过':'Duplicate · Skipped','取消行 · 跳过':'Cancellation Row · Skipped',
+ '已取消 · 不计入':'Cancelled · Excluded','重复车辆 · 不计入':'Duplicate · Excluded',
+ '销售计划已关闭':'Sales plan closed.',
+ '未匹配':'Unmatched','资料冲突':'Route Conflicts','装车单锁定':'Locked by Loading Order',
+ '取消行':'Cancellation Rows','已读取':'Read','重复跳过':'Duplicates Skipped','已保存':'Saved','新增':'New',
+ '运输商列号（选填，A=1）':'Transporter Column (Optional, A=1)',
+ '目的地列号（选填，A=1）':'Destination Column (Optional, A=1)',
+ '请核对车牌格式异常的行。':'Review rows with unusual plate formats.',
+ '未识别运输商或目的地列。请调整识别列，或重新上传包含运输资料的派车单。':
+  'Transporter and destination columns were not found. Adjust the column mapping or upload a dispatch file with these details.',
  '派车月份':'Dispatch Month','删除车辆':'Delete Vehicle','派车月份调整':'Adjust Dispatch Month',
  '当前账号不能调整此车辆的派车月份':'This account cannot change this vehicle’s dispatch month.',
  '车辆的派车月份已变化，请刷新后重试':'The vehicle’s dispatch month changed. Refresh and try again.',

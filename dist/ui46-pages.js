@@ -343,7 +343,11 @@ window.UI46Pages={
  },
  dispatch(host,nodes,shell,s){this.banner(shell,nodes,s);const toolbar=this.el('div','p46-toolbar',shell,s),filter=nodes.find(n=>this.isFilter(n)),stats=nodes.find(n=>this.isStats(n));for(const n of nodes)if(n.matches?.('.business-toolbar')&&!this.isFilter(n))this.move(n,toolbar,s);
   if(stats){this.cls(stats,'p46-stat-strip',s);this.move(stats,shell,s);}if(filter){this.cls(filter,'p46-filter',s);this.move(filter,shell,s);}
-  const {left,aside}=this.grid(shell,s),form=host.querySelector('#dispatch-form,#co-dispatch-form,form.user-form:not(.filters)'),importBox=form?.closest('.lp-load-summary,section')||form;if(importBox){const card=this.card(left,this.t('导入客户派车单','Import Dispatch File'),s,'p46-import');this.move(importBox,card,s);this.arrangeForm(form,s);}
+  const {left,aside}=this.grid(shell,s),form=host.querySelector('[data-dispatch-excel-import]');
+  if(form){
+   const card=this.card(left,'',s,'p46-import'),importBox=form.closest('.lp-load-summary');
+   this.move(importBox,card,s);this.arrangeForm(form,s);
+  }
   const card=this.card(left,this.t('派车记录','Dispatch Records'),s,'p46-table-card');let guidance;for(const n of nodes){if(shell.contains(n)||n.matches?.('.ux10-workflow'))continue;if(n.matches?.('.lp-context,.lot-context-grid')){const summary=this.card(aside,this.t('关联销售计划','Related Sales Plan'),s);this.move(n,summary,s);this.cls(n,'p46-context',s);}else if(n.matches?.('h3'))this.hide(n,s);else if(n.matches?.('p')&&!n.classList.contains('error')){if(/暂无|No .*record|No Record/i.test(n.textContent)){this.move(n,card,s);this.cls(card,'p46-empty',s);}else{guidance||=this.card(aside,this.t('派车规则','Dispatch Rules'),s,'p46-guidance');this.move(n,guidance,s);}}else this.move(n,card,s);}
   if(!aside.querySelector('.p46-context')){const plan=this.record();if(plan){const summary=this.card(aside,this.t('关联销售计划','Related Sales Plan'),s),rows=[[this.t('计划号','Plan'),plan.code],[this.t('客户','Customer'),plan.customer_name],[this.t('合同号','Contract'),plan.contract_no],[this.t('发运月份','Shipment Month'),plan.shipment_month]].filter(([,value])=>value);this.cls(this.facts(summary,rows,s),'p46-context',s);aside.prepend(summary);}}
   // Dispatch has no separate six-step outbound approval. It inherits its plan.

@@ -21,7 +21,7 @@ window.Business461={ready:false,
   if(!id)return null;return {code:prefix+id,id,entity,co,form};
  },
  init(){if(this.ready)return;this.ready=true;const P=UI46Pages,arrange=P.arrangeForm.bind(P),form=P.form.bind(P),compose=P.compose.bind(P),inventory=P.inventory.bind(P),refresh=P.refresh.bind(P);
-  P.arrangeForm=(f,s)=>this.profile()?this.arrange(f,s):arrange(f,s);
+  P.arrangeForm=(f,s)=>this.profile()&&!f.matches('[data-dispatch-excel-import]')?this.arrange(f,s):arrange(f,s);
   P.form=(host,nodes,shell,s)=>this.profile()?this.form(host,nodes,shell,s):form(host,nodes,shell,s);
   P.inventory=(root,s)=>{if(ProductContext.isCopper())return inventory(root,s);const host=root.querySelector('.co-stock-page')||root,nodes=[...host.childNodes].filter(n=>n.nodeType===1||n.nodeType===3&&n.textContent.trim()),shell=P.el('div','p46-composition b461-inventory',host,s);s.composition.anchor=shell;P.list(host,nodes,shell,s);P.decorate(root,s);P.finish(root,s);};
   P.compose=(root,s)=>{compose(root,s);const profile=this.profile();if(profile&&!UI46.copperMap()&&!['managed-document','operations468r4'].includes(s.composition.family)){this.enhance(root,s,profile);DocumentLayouts.mergePreparation(root,s);}};
@@ -37,7 +37,7 @@ window.Business461={ready:false,
   if(profile.entity==='receipt')return /remark|description|reason|备注|说明/i.test(key)?1:0;
   return /remark|reason|note|备注|说明|原因|Comments|Remarks/i.test(key)?1:0;
  },
- arrange(form,s){const P=UI46Pages,profile=this.profile();if(!profile||form.dataset.b461Arranged||form.matches('.wms-map-search'))return;form.dataset.b461Arranged='';(s.composition.businessForms||=[]).push(form);P.cls(form,'p46-native-form',s);P.cls(form,'b461-native-form',s);
+ arrange(form,s){const P=UI46Pages,profile=this.profile();if(!profile||form.dataset.b461Arranged||form.matches('.wms-map-search,[data-dispatch-excel-import]'))return;form.dataset.b461Arranged='';(s.composition.businessForms||=[]).push(form);P.cls(form,'p46-native-form',s);P.cls(form,'b461-native-form',s);
   const titles=this.sections(profile),grids=[...form.querySelectorAll('.form-grid')].filter(g=>!g.closest('table')&&!g.closest('.b461-native-form:not(:scope) fieldset fieldset')),blocks=[];
   const valid=n=>n.matches('label')&&n.querySelector('input,select,textarea')&&!n.closest('table');
   for(const grid of grids){const labels=[...grid.children].filter(valid);if(labels.length)blocks.push({container:grid,labels,grid:true});}

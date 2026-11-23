@@ -117,6 +117,11 @@ html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) t
 html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) .button {
   white-space: normal;
 }
+#page-content [data-dispatch-preview-rows] .business-table table { min-width: 0; }
+#page-content [data-dispatch-preview-rows] .business-table :is(th, td) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 html[data-release-ui="46"] :is(#page-content, #inventory) .v34-sort,
 html[data-release-ui="46"] body #inventory th[data-sort] > button {
   color: var(--uix-text);

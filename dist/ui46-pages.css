@@ -103,7 +103,6 @@ html[data-release-ui="46"] .p46-root .p46-empty{text-align:center;min-height:180
 html[data-release-ui="46"] .p46-root .p46-empty>.p46-card-title{text-align:center}
 html[data-release-ui="46"] .p46-root .p46-empty>p{font-size:12px;color:#94a18b;margin:0}
 html[data-release-ui="46"] .p46-root .p46-import :is(.lp-load-summary,section:not(.p46-card)){background:transparent;border:0;box-shadow:none;padding:0;margin:0}
-html[data-release-ui="46"] .p46-root .p46-import h3{display:none}
 html[data-release-ui="46"] .p46-root .p46-import input[type=file]{width:100%;font-size:12px;padding:13px;height:auto;min-height:45px;border:1px dashed #c8d8bf;background:#fafcf8;border-radius:7px}
 html[data-release-ui="46"] .p46-root .account-role-layout.p46-permissions{display:grid;grid-template-columns:225px minmax(0,1fr);gap:24px}
 html[data-release-ui="46"] .p46-root .p46-permission-form{background:white;border:1px solid #e5e8eb;border-radius:12px;padding:22px;min-width:0}

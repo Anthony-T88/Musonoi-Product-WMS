@@ -538,7 +538,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "dispatch and Excel drop",
+      "state": "dispatch Excel drop and transport backfill",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -562,7 +562,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "dispatch and Excel drop",
+      "state": "dispatch Excel drop and transport backfill",
       "template": "/sales-plans/:id/dispatch"
     },
     {

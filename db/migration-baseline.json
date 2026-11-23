@@ -817,6 +817,10 @@
     {
       "version": "204_v488_bank_swift.sql",
       "checksum": "0abe678dd0c343fb39052021a856b49731e77566e6180c5518053722b04e5ad4"
+    },
+    {
+      "version": "205_v488_dispatch_reimport.sql",
+      "checksum": "a670f85964911b0237fdc5909d7c173df634878bd726878cf4539f9311b15a12"
     }
   ]
 }
