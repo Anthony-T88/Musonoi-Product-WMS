@@ -2,7 +2,8 @@
 const fs=require('fs'),path=require('path'),Zip=require('jszip'),PL=require('./packing-list.cjs'),Excel=require('exceljs');
 const escape=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const coord=a=>{const m=a.match(/([A-Z]+)(\d+)/);return {row:Number(m[2]),col:[...m[1]].reduce((n,c)=>n*26+c.charCodeAt(0)-64,0)};};
-const gatePaper={widthIn:9.5,heightIn:5.5,marginMm:8};
+const gatePaper={widthMm:241.3,heightMm:139.7,sideMm:12.7,endMm:8.5};
+const pxPerMm=96/25.4;
 
 // Read the archived workbook itself: historical revisions retain their own layout.
 async function preview(buffer,sheetName='Sheet1 (2)'){
@@ -31,7 +32,7 @@ async function preview(buffer,sheetName='Sheet1 (2)'){
   }
   rows.push({number:n,height:row.height||sheet.properties.defaultRowHeight||15,cells});
  }
- return {columns:Array.from({length:7},(_,i)=>sheet.getColumn(i+1).width||8.43),rows,merges:sheet.model.merges,paper_size:gatePaper.widthIn+' × '+gatePaper.heightIn+' in',orientation:'landscape',
+ return {columns:Array.from({length:7},(_,i)=>sheet.getColumn(i+1).width||8.43),rows,merges:sheet.model.merges,paper_size:gatePaper.widthMm+' × '+gatePaper.heightMm+' mm',orientation:'landscape',
   images:sheet.getImages().map(x=>{const i=book.getImage(x.imageId),anchor=a=>({row:a.nativeRow,col:a.nativeCol,x:(a.nativeColOff||0)/9525,y:(a.nativeRowOff||0)/9525});return {extension:i.extension,base64:i.buffer.toString('base64'),tl:anchor(x.range.tl),br:x.range.br?anchor(x.range.br):null,ext:x.range.ext?{width:x.range.ext.width,height:x.range.ext.height}:null};})};
 }
 
@@ -49,11 +50,11 @@ async function render(snapshot){
 }
 
 function html(layout,title){
- const {widthIn,heightIn,marginMm}=gatePaper;
+ const {widthMm,heightMm,sideMm,endMm}=gatePaper;
  const widths=layout.columns.map(w=>w*7.1),width=widths.reduce((a,b)=>a+b,0),rows=layout.rows,height=rows.reduce((n,r)=>n+r.height*4/3,0);
- const fitWidth=widthIn*96-2*marginMm*96/25.4;
- const fitHeight=heightIn*96-2*marginMm*96/25.4-1;
- const scale=Math.min(1,fitWidth/width,fitHeight/height),merges=new Map(),skip=new Set();
+ const fitWidth=(widthMm-2*sideMm)*pxPerMm-2;
+ const fitHeight=(heightMm-2*endMm)*pxPerMm-2;
+ const scale=Math.min(fitWidth/width,fitHeight/height),merges=new Map(),skip=new Set();
  for(const m of layout.merges){const [aa,bb]=m.split(':'),a=coord(aa),b=coord(bb);merges.set(aa,{rows:b.row-a.row+1,cols:b.col-a.col+1});for(let r=a.row;r<=b.row;r++)for(let c=a.col;c<=b.col;c++)if(r!==a.row||c!==a.col)skip.add(r+':'+c);}
  const border=b=>!b?.style?'none':(['medium','thick','double'].includes(b.style)?'2px':'1px')+' '+(b.style==='double'?'double':b.style==='dashed'?'dashed':'solid')+' '+(b.color||'#000000');
  const table='<table><colgroup>'+widths.map(w=>'<col style="width:'+w+'px">').join('')+'</colgroup><tbody>'+rows.map(r=>'<tr style="height:'+r.height+'pt">'+r.cells.map((c,i)=>{
@@ -69,8 +70,9 @@ function html(layout,title){
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(title)}</title>
+<style id="gate-paper-size">@page{size:${widthMm}mm ${heightMm}mm}</style>
 <style>
-@page{size:${widthIn}in ${heightIn}in;margin:0}
+@page{page-orientation:upright;margin:0}
 *{box-sizing:border-box}
 body{margin:0;background:#edf2ef}
 .print-tools{font:14px Arial,"Microsoft YaHei",sans-serif;padding:14px 20px;background:#f8faf9;border-bottom:1px solid #d6e2da;display:flex;align-items:center;gap:16px}
@@ -78,24 +80,28 @@ body{margin:0;background:#edf2ef}
 .print-tools button:disabled{opacity:.55;cursor:wait}
 .print-tools span{line-height:1.6;color:#425a4e}
 .print-viewport{overflow-x:auto;padding:24px}
-.print-page{width:${widthIn}in;height:${heightIn}in;padding:${marginMm}mm;background:white;margin:0 auto;box-shadow:0 2px 12px #0002}
+.print-page{width:${widthMm}mm;height:${heightMm}mm;padding:${endMm}mm ${sideMm}mm;background:white;margin:0 auto;box-shadow:0 2px 12px #0002}
 .print-area{position:relative;width:100%;height:100%}
-.sheet{position:absolute;top:0;left:0;width:${width}px;min-height:${height}px;transform-origin:top left;transform:scale(var(--gate-print-scale,${scale}))}
-table{border-collapse:collapse;table-layout:fixed;width:100%}
+.sheet{position:absolute;top:0;left:50%;width:${width}px;min-height:${height}px;transform-origin:top center;transform:translateX(-50%) scale(var(--gate-print-scale,${scale}))}
+table{border-collapse:collapse;table-layout:fixed;width:${width}px}
 td{padding:2px;line-height:normal}
 @media print{
  body{background:white}
  .print-tools{display:none}
  .print-viewport{overflow:visible;padding:0}
- .print-page{height:calc(${heightIn}in - 1px);margin:0;box-shadow:none;break-inside:avoid;overflow:hidden}
+ .print-page{width:100%;max-width:${widthMm}mm;height:calc(${heightMm}mm - 1px);margin:0;box-shadow:none;break-inside:avoid;overflow:hidden}
+ .print-area{container-type:inline-size}
+ @supports (width:calc(10px * (10px / 10px))){
+  .sheet{transform:translateX(-50%) scale(min(var(--gate-print-scale,${scale}),calc((100cqw - 2px) / var(--gate-sheet-width,${width}px))))}
+ }
  td{print-color-adjust:exact;-webkit-print-color-adjust:exact}
 }
 </style>
 </head>
 <body>
-<div class="print-tools"><button id="gate-print" type="button" disabled>打印 / Print</button><span>一联横向连续纸（241.3 × 139.7 毫米）。打印窗口请选择同尺寸纸型、横向和实际大小（100%）。<br><span lang="en">Single landscape form (9.5 × 5.5 in). Select matching paper, Landscape and Actual size (100%).</span></span></div>
-<div class="print-viewport"><div class="print-page"><div class="print-area"><main class="sheet">${table}${images}</main></div></div></div>
-<script src="/gate-print.js?layout=single-landscape"></script>
+<div class="print-tools"><button id="gate-print" type="button" disabled>打印 / Print</button><span>三联二等分连续纸。选择宽 ${widthMm} 毫米、走纸 ${heightMm} 毫米的纸型，使用纸型原方向和实际大小（100%），打印 1 份。<br><span lang="en">3-part half-page tractor forms. Select ${widthMm} mm wide × ${heightMm} mm feed, native orientation, Actual size (100%) and 1 copy.</span></span></div>
+<div class="print-viewport"><div class="print-page"><div class="print-area" data-fit-width="${fitWidth}" data-fit-height="${fitHeight}"><main class="sheet">${table}${images}</main></div></div></div>
+<script src="/gate-print.js?rev=${require('./release.cjs').frontendRevision}"></script>
 </body>
 </html>`;
 }

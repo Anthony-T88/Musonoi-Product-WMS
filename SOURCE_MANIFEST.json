@@ -1,7 +1,7 @@
 {
   "version": "4.8.8",
   "auditRevision": "v488",
-  "revision": "4.8.8",
+  "revision": "4.8.8-ui1",
   "files": [
     {
       "path": ".dockerignore",
@@ -1113,7 +1113,7 @@
     },
     {
       "path": "dist/gate-print.js",
-      "sha256": "301d7881822e97d2f6946dbcf051740b40cc295a45184b57d7885e383c51b6b3"
+      "sha256": "eb09bdd75980c4b71bded10c3f22be78da6b8a2dc7dd1cc254867c8831a01703"
     },
     {
       "path": "dist/gate-ui.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "6395265bc83f2d2f96033234c67d9af7254674d7a7bde13bde1e6acd6bc3dc88"
+      "sha256": "8fa3e53785f853cdddf5e8a578a87b12c7f61d65ace6450a15991df3768e3987"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1413,7 +1413,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "4a90583aeca67996f5b02772d145a8717936e943cd8048cc86fb3bdb196607ba"
+      "sha256": "382d6aebec15b9841de4fb85b8be7fbabae22c16505c859cf03834b7cc2b9478"
     },
     {
       "path": "dist/reports463.js",
@@ -1461,7 +1461,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "90f55d2aa79b6b87b61c534250546dfab7abd3d479cb04c6ceebb470924edef7"
+      "sha256": "39c1c5d4765d55037bb9ed6779ffe635af3e89fe8fc0dabfc64610cfcc7c3bff"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1785,7 +1785,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "118724d9bb8811c275f05aa76c5c237f73b024c0c0c4a4ae79f4243268ddbaa3"
+      "sha256": "93bff635cb710a471b82fde356e28fa2e070f8de1f25ba11342390ef34866a26"
     },
     {
       "path": "scripts/db.cjs",
@@ -2045,7 +2045,7 @@
     },
     {
       "path": "server/gate-render.cjs",
-      "sha256": "bef86a39c52934fd9e343cbaf67a3f70f5a0204921c5f826cf978ca2676a6963"
+      "sha256": "9570f12fae8fe9e45eb2ef7ca2b2d7e8a8908b7eb1d6ebe71c15723ca5a54f82"
     },
     {
       "path": "server/handover467.cjs",
@@ -2229,7 +2229,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "b447d056fff5ecad11f8b1f33273e3cfd451104a2d611fdd063f785699fcb89a"
+      "sha256": "1f14e3d42fdcc2ff49bb6c9c92693bf52dee157f6aa6f5159fbe09ea42e7c9cd"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2565,7 +2565,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "be52d4bccf2354d4936a7bfba6f638505410c7c2199e5d40ee99db1c62a55858"
+      "sha256": "204e7ac9e9214a4d2d767fa03b632cc84aabfbd6e9e2d6728f5ac68ac19e23af"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
@@ -2705,7 +2705,7 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "ac33ae665ea4a4a425616e290062bec637f929ab35f834294ce05e3e143f243b"
+      "sha256": "22600e35ea605f4c8aed7f0f05ba949fd3b213b7bf12b5ca878e153f5b15c903"
     },
     {
       "path": "tests/release/bundle-corrections-ui.cjs",

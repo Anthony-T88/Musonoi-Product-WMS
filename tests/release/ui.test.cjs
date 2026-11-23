@@ -87,8 +87,12 @@ test('copper and cobalt gate permits print on one landscape continuous form',asy
   for(const route of permits.keys()){
    await page.goto(origin+route);
    await page.locator('.sheet[data-fit-ready="1"]').waitFor();
-   await page.getByRole('button',{name:'打印 / Print',exact:true}).click();
-   assert(await page.evaluate(()=>window.gatePrintRequested));
+   assert.match(await page.locator('.print-tools').innerText(),/241\.3 毫米、走纸 139\.7 毫米/);
+   const print=page.getByRole('button',{name:'打印 / Print',exact:true});
+   await print.click();
+   assert(await page.evaluate(()=>window.gatePrintRequested&&document.getElementById('gate-paper-size').sheet.disabled));
+   await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
+   assert(await page.evaluate(()=>!document.getElementById('gate-paper-size').sheet.disabled));
    await page.emulateMedia({media:'print'});
    assert(await page.locator('.print-tools').isHidden());
    assert.match(await page.locator('.sheet table').innerText(),/Security Inspector/i);
@@ -102,13 +106,24 @@ test('copper and cobalt gate permits print on one landscape continuous form',asy
     });
    });
    assert(fit.every(x=>x.fits),route+' table and logo fit into the printable area '+JSON.stringify(fit));
-   // Check the document paper and the same medium presented as portrait by the printer.
-   for(const [mode,options] of [['document',{preferCSSPageSize:true}],['driver',{width:'5.5in',height:'9.5in'}]]){
+   // A dedicated tractor form supplies its physical width and feed length in that order.
+   for(const [mode,options,expectedHeight] of [
+    ['document',{preferCSSPageSize:true},396],
+    ['tractor-half',{width:'9.5in',height:'5.5in'},396],
+    ['tractor-full',{width:'9.5in',height:'11in'},792]
+   ]){
+    if(mode!=='document'){
+     await page.emulateMedia({media:'screen'});
+     await print.click();
+     await page.emulateMedia({media:'print'});
+    }
+    assert(await page.locator('.print-tools').isHidden());
     const pdf=await page.pdf({path:path.join(output,route.slice(1)+'-'+mode+'.pdf'),printBackground:true,...options});
     const bytes=pdf.toString('latin1'),size=bytes.match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/);
     assert.equal(bytes.match(/\/Type\s*\/Page\b/g)?.length,1,route+' '+mode);
     assert(size,route+' '+mode+' media box');
-    assert(Math.abs(Number(size[1])-684)<1&&Math.abs(Number(size[2])-396)<1,route+' '+mode+' '+size[0]);
+    assert(Math.abs(Number(size[1])-684)<1&&Math.abs(Number(size[2])-expectedHeight)<1,route+' '+mode+' '+size[0]);
+    assert.doesNotMatch(bytes,/\/Rotate\s+(90|180|270)\b/,route+' '+mode+' rotated');
    }
    await page.emulateMedia({media:'screen'});
   }

@@ -218,7 +218,7 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | `/preparation/new`、`/receipts/new` | 选取可执行备货计划、直接带入计划和权限拒绝 |
 | `/preparation/work-plans/new` | 铜钴的按客户或批次查询、批量录入、冲突校验、整批草稿和权限 |
 | `/:area/historical/:id`、`/workbench/historical-movements/:id` | 历史入库、装车计划、装车、出库、库存档案和原件来源相互跳转，恢复上一页上下文 |
-| `/outbounds?view=departures` | 铜、钴出门证以 9.5 × 5.5 英寸横向单联独立打印，历史打印入口转到出厂列表 |
+| `/outbounds?view=departures` | 铜钴当前及已签发版本的出门证使用 241.3 × 139.7 毫米三联二等分纸，验证原生纸型无旋转、表格与签字栏留在首联。历史导入记录仍从出厂列表查看。 |
 | `/workbench/accounts?registrations=pending` | 注册申请审批待办、单角标和审批后刷新 |
 | `/stocktaking` | 两产品编号、类型、时期、创建日期与状态组合筛选 |
 
