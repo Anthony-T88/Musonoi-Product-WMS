@@ -10,7 +10,7 @@ window.GateWorkspace468={
   const t=this.t;
   const input=(key,zh,en,type='search')=>'<label>'+t(zh,en)+'<input name="'+key+'" type="'+type+'" maxlength="160" value="'+esc(q.get(key)||'')+'"></label>';
   const options=(values,key,label)=>values.map(value=>'<option value="'+esc(value)+'" '+((q.get(key)||'')===value?'selected':'')+'>'+esc(label(value))+'</option>').join('');
-  return '<form id="gate-filter" class="filters wms-filter-row"><div class="form-grid">'+input('permit_no','出门证编号','Gate Permit No.')+
+  return '<form id="gate-filter" class="filters wms-filter-row"><div class="form-grid">'+input('batch_no','批次号','Lot Number')+
    input('truck_no','车牌号','Truck Plate')+'<label>'+t('客户','Customer')+'<select name="customer">'+
    options(['',...(list.customers||[])],'customer',value=>value||t('全部客户','All Customers'))+'</select></label>'+
    input('approved_on','出库审批时间','Approval Date','date')+'<label>'+t('状态','State')+'<select name="state">'+
@@ -21,7 +21,7 @@ window.GateWorkspace468={
   const t=this.t;
   const link=row.historical_detail_id&&GateUI.can('load:read')?
    '<a class="button secondary" href="/stock-outbound/historical/'+esc(row.historical_detail_id)+'">'+t('查看历史单据','View Historical Document')+'</a>':'—';
-  return '<tr data-gate-order="'+esc(row.order_id)+'"><td data-no-i18n><strong>'+esc(row.document_no||'—')+'</strong><small>'+
+  return '<tr data-gate-order="'+esc(row.order_id)+'"><td data-no-i18n><strong>'+esc(row.batch_number||'—')+'</strong><small>'+
    t('历史装箱单','Historical Packing List')+' '+esc(row.code)+'</small></td>'+
    '<td data-no-i18n>'+esc(row.truck_no)+'</td><td data-no-i18n>'+esc(row.customer_name||'—')+'</td><td>—<small data-no-i18n>'+
    t('发运日期 ','Shipping date ')+esc(row.shipping_date)+'</small></td><td><span class="g468-badge" data-state="EXITED">'+this.state('EXITED')+'</span></td>'+
@@ -44,8 +44,8 @@ window.GateWorkspace468={
   if(detail){if(GateUI.preserveVersion?.id===id)detail.permit.version=GateUI.preserveVersion.version;GateUI.detailVersion={id,version:detail.permit.version};}
   const counts=list.counts||{},states=['','MISSING','READY','EXITED'];
   const cards='<nav class="g468-states" aria-label="'+t('出厂状态','Gate State')+'">'+states.map(s=>'<a class="g468-state" '+((q.get('state')||'')===s?'aria-current="page"':'')+' href="'+esc(this.link({state:s,page:null}))+'"><span>'+(s?this.state(s):t('全部车辆','All Vehicles'))+'</span><strong>'+Number(s?counts[s]||0:Object.values(counts).reduce((n,v)=>n+Number(v),0))+'</strong></a>').join('')+'</nav>';
-  const rows=list.items.map(r=>{if(r.historical_source_id)return this.historyRow(r);const s=r.state||'MISSING',href=this.link(r.permit_id?{permit:r.permit_id,pane:s==='EXITED'?'history':r.current_print_requested?'exit':'print'}:{order:r.order_id}),label=s==='MISSING'?t('核对并生成','Verify and Generate'):s==='EXITED'?t('查看记录','View Record'):r.current_print_requested?t('确认出厂','Confirm Exit'):t('打印出门证','Print Permit');return '<tr data-gate-order="'+r.order_id+'">'+'<td data-no-i18n><strong>'+esc(r.document_no||'—')+'</strong><small>'+esc(r.permit_id?t('当前版本','Current Version')+' V'+r.current_revision:t('待生成出门证','Permit Not Generated'))+'</small></td><td data-no-i18n>'+esc(r.truck_no||'—')+'</td><td data-no-i18n>'+esc(r.customer_name||'—')+'</td><td data-no-i18n>'+esc(BusinessTime.display(r.approved_at))+'</td><td><span class="g468-badge" data-state="'+s+'">'+this.state(s)+'</span>'+(s==='READY'?'<small>'+t(r.current_print_requested?'当前版本打印窗口已请求':'待打开当前版本打印窗口',r.current_print_requested?'Current Print Window Requested':'Current Print Window Required')+'</small>':'')+'</td><td><div class="g468-row-actions"><a class="button '+(s==='EXITED'?'secondary':'primary')+'" href="'+esc(href)+'">'+label+'</a>'+(s==='READY'?'<a class="g468-text-link" href="'+esc(this.link({permit:r.permit_id,pane:'print'}))+'">'+t('查看 / 打印','View / Print')+'</a>':'')+'</div></td></tr>';});
-  const heads=[t('出门证编号','Gate Permit No.'),t('车牌号','Truck Plate'),t('客户','Customer'),
+  const rows=list.items.map(r=>{if(r.historical_source_id)return this.historyRow(r);const s=r.state||'MISSING',href=this.link(r.permit_id?{permit:r.permit_id,pane:s==='EXITED'?'history':r.current_print_requested?'exit':'print'}:{order:r.order_id}),label=s==='MISSING'?t('核对并生成','Verify and Generate'):s==='EXITED'?t('查看记录','View Record'):r.current_print_requested?t('确认出厂','Confirm Exit'):t('打印出门证','Print Permit');return '<tr data-gate-order="'+r.order_id+'">'+'<td data-no-i18n><strong>'+esc(r.batch_number||'—')+'</strong><small>'+esc(r.permit_id?t('当前版本','Current Version')+' V'+r.current_revision:t('待生成出门证','Permit Not Generated'))+'</small></td><td data-no-i18n>'+esc(r.truck_no||'—')+'</td><td data-no-i18n>'+esc(r.customer_name||'—')+'</td><td data-no-i18n>'+esc(BusinessTime.display(r.approved_at))+'</td><td><span class="g468-badge" data-state="'+s+'">'+this.state(s)+'</span>'+(s==='READY'?'<small>'+t(r.current_print_requested?'当前版本打印窗口已请求':'待打开当前版本打印窗口',r.current_print_requested?'Current Print Window Requested':'Current Print Window Required')+'</small>':'')+'</td><td><div class="g468-row-actions"><a class="button '+(s==='EXITED'?'secondary':'primary')+'" href="'+esc(href)+'">'+label+'</a>'+(s==='READY'?'<a class="g468-text-link" href="'+esc(this.link({permit:r.permit_id,pane:'print'}))+'">'+t('查看 / 打印','View / Print')+'</a>':'')+'</div></td></tr>';});
+  const heads=[t('批次号','Lot Number'),t('车牌号','Truck Plate'),t('客户','Customer'),
    t('出库审批时间','Approval Time'),t('状态','State'),t('操作','Actions')];
   const content=cards+'<section class="g468-list">'+this.filters(q,list,states)+
    this.table(heads,rows.length?rows:['<tr><td colspan="'+heads.length+'">'+t('暂无符合条件的车辆','No Vehicles Match These Filters')+'</td></tr>'],'gate-list')+

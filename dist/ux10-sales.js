@@ -37,7 +37,7 @@ window.SalesReviewUI={
    sections.push(['plans','装车计划','Loading Plans',rows.length?ExportLicenses.table([['计划号 / 发票号','Plan / Invoice No.'],['备货批次','Preparation Batch'],['状态','Status']],rows,'sales-related-loads',true):'<p>'+t('暂无关联单据','No linked documents')+'</p>']);
   }
   if(has('export-license:read'))sections.push(['licenses','出口许可证','Export Licenses',links(r.licenses,row=>'/export-licenses/'+row.id,row=>row.license_no||row.proforma_no)]);
-  if(has('load:read'))sections.push(['packing','装箱单','Packing Lists',links(r.packing,row=>this.co()?'/outbounds/'+row.order_id+'/packing-list':'/outbounds/packing-list/'+row.order_id,row=>row.document_no)]);
+  if(has('load:read'))sections.push(['packing','装箱单','Packing Lists',links(r.packing,row=>'/customs/packing-list/'+row.order_id,row=>row.document_no)]);
   sections.push(['approvals','审批记录','Approval History','<div class="business-toolbar"><a class="button secondary compact" href="/sales-plans/'+p.id+'?view=approval">'+t('查看完整审批记录','View Approval History')+'</a></div>']);
   return '<section class="panel sales-related" data-no-i18n><h2>'+t('关联单据与审批记录','Related Documents and Approvals')+'</h2>'+
    '<div class="sales-inline-actions" role="group" aria-label="'+t('关联单据与审批记录','Related Documents and Approvals')+'">'+
@@ -48,7 +48,8 @@ window.SalesReviewUI={
   if(!Array.isArray(plan.posted_batches))return '';
   const t=this.t,rows=plan.posted_batches,title=t('正式出库与开票确认','Formal Outbound and Invoice Confirmation');
   const search=plan.can_confirm_invoice?'<div class="business-toolbar"><button type="button" class="button secondary" id="sales-history-find">'+
-   t('按派车单查找历史装箱单','Find Historical Packing Lists by Dispatch')+'</button></div>':'';
+   t('核对历史装箱单','Review Historical Packing Lists')+'</button><button type="button" class="button secondary" id="sales-history-auto">'+
+   t('自动关联历史装箱单','Auto-Link Historical Packing Lists')+'</button></div>':'';
   const headings=[['装车单','Loading Order'],['备货批次','Preparation Batch'],['车辆','Truck'],['出库净重','Outbound Net Weight'],['装车发票号','Shipment Invoice No.'],['开票状态','Invoice Status'],['操作','Actions']];
   const cells=rows.map((row,index)=>{
    const invoice=row.invoice_no||row.source_invoice_no||'',edit=plan.can_confirm_invoice&&!row.confirmed_at&&!invoice;
@@ -63,7 +64,7 @@ window.SalesReviewUI={
   const table=rows.length?ExportLicenses.table(headings,cells,'sales-invoice-table',true,{numeric:[3],actions:[6]}):
    '<p>'+t('暂无正式出库或已关联历史批次。','No posted or linked historical batches.')+'</p>';
   return '<section class="panel user-form" id="sales-invoice-batches" data-no-i18n><h2>'+title+'</h2>'+search+
-   '<p>'+t('销售确认开票后，该批次净重计入履约。','Net weight counts toward fulfilment after Sales confirms the invoice.')+'</p>'+table+'<p class="error" id="sales-invoice-error" role="alert"></p></section>';
+   '<p>'+t('销售确认开票后，该批次净重计入履约。','Net weight counts toward fulfilment after Sales confirms the invoice.')+'</p>'+table+'<p class="wms-feedback" id="sales-history-result" role="status"></p><p class="error" id="sales-invoice-error" role="alert"></p></section>';
  },
  async historicalMatches(plan,button){
   const t=this.t,path=this.base()+'/plans/'+plan.id+'/historical-matches',error=$('sales-invoice-error');
@@ -99,6 +100,18 @@ window.SalesReviewUI={
   const t=this.t;
   const history=$('sales-history-find');
   if(history)history.onclick=()=>this.historicalMatches(plan,history);
+  const automatic=$('sales-history-auto');
+  if(automatic)automatic.onclick=async()=>{
+   const error=$('sales-invoice-error');automatic.disabled=true;error.textContent='';
+   try{
+    const result=await API.request(this.base()+'/plans/'+plan.id+'/historical-matches',{method:'POST',body:{automatic:true},idempotencyKey:crypto.randomUUID()});
+    if(!automatic.isConnected)return;
+    if(result.linked)await this.form(plan.id);
+    const message=$('sales-history-result');
+    if(message)message.textContent=I18n.language==='en'?`${result.linked} linked. ${result.ambiguous} need trip verification.`:`已关联 ${result.linked} 条，另有 ${result.ambiguous} 条需核对趟次。`;
+   }catch(e){if(error.isConnected)error.textContent=e.message;}
+   finally{automatic.disabled=false;}
+  };
   for(const button of document.querySelectorAll('[data-confirm-invoice]'))button.onclick=async()=>{
    const index=Number(button.dataset.confirmInvoice),row=plan.posted_batches[index],error=$('sales-invoice-error'),input=$('sales-invoice-'+index);
    const invoice_no=row.source_invoice_no||input?.value.trim();error.textContent='';

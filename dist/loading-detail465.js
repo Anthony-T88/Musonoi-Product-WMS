@@ -18,7 +18,29 @@ window.LoadingDetails465={
    P.move(n,corrections,s);
   };
   P.facts(facts,[[t('备货批次号','Preparation Lot Number'),batch],[t('客户','Customer'),customer],[t('装车单号','Loading Order No.'),order.code],[t('装箱单号','Packing List No.'),plan.packing_list_no||'—'],[t('车牌','Truck'),transport.truck_no||transport.vehicle_no||d.shipping_vehicle_no||order.vehicle_no||'—'],[t('司机','Driver'),transport.driver_name?.trim()||plan.driver_name?.trim()||'—'],[t('销售计划','Sales Plan'),co?d.plan.sales_plan_code:d.plan_code||plan.sales_plan_code||'—'],[t('创建时间','Created At'),order.created_at?BusinessTime.display(order.created_at):'—'],...(co?[[t('合同号','Contract No.'),d.outbound?.snapshot?.contract?.contract_no||d.plan.contract_no||'—'],[t('挂车1 / 挂车2','Trailer 1 / Trailer 2'),[transport.trailer_one,transport.trailer_two].filter(Boolean).join(' / ')||'—'],[t('运输商','Transporter'),transport.transporter||'—'],[t('集装箱号','Container No.'),transport.container_no||'—']]:[])],s);
-  let currentTitle='',bagCard=null,transportDetails=null;
+  const transportDetails=P.el('details','loading465-transport',facts,s);
+  P.el('summary','',transportDetails,s).textContent=t('运输与装车计划资料','Transport and Loading Plan Details');
+  const planId=co?d.plan.id:plan.id;
+  const planFacts=P.el('div','loading465-plan-facts',transportDetails,s);
+  P.facts(planFacts,[
+   [t('装车计划号','Loading Plan No.'),plan.code||d.plan?.code],
+   [t('计划装车日期','Planned Loading Date'),plan.planned_load_date||d.plan?.planned_load_date],
+   [t('发运月','Shipment Month'),plan.shipment_month||d.plan?.shipment_month],
+   [t('销售计划号','Sales Plan No.'),plan.sales_plan_code||d.plan?.sales_plan_code||d.plan_code],
+   [t('合同号','Contract No.'),plan.contract_no||d.plan?.contract_no||d.contract_nos?.join(' / ')],
+   [t('运输商','Transporter'),plan.transporter||d.plan?.transporter||transport.transporter||order.carrier],
+   [t('目的地','Destination'),plan.destination||d.plan?.destination],
+   [t('出口许可证号','Export License No.'),plan.export_license_no||d.plan?.export_license_no],
+   [t('发票号','Invoice No.'),plan.invoice_no||d.plan?.invoice_no],
+   [t('装箱单号','Packing List No.'),plan.packing_list_no||d.plan?.packing_list_no],
+   [t('挂车 1','Trailer 1'),transport.trailer_one],[t('挂车 2','Trailer 2'),transport.trailer_two],
+   [t('集装箱号','Container No.'),transport.container_no],[t('司机证件号','Driver ID / Passport'),transport.passport_no]
+  ].map(([label,value])=>[label,value||'—']),s);
+  if(planId&&CurrentUser.permissions.includes('loading-plan:read')){
+   const link=P.el('a','button secondary',transportDetails,s);
+   link.href='/loading-plans/orders/'+planId;link.textContent=t('查看装车计划','View Loading Plan');
+  }
+  let currentTitle='',bagCard=null;
   for(const n of nodes){if(n.matches('.ux10-workflow')){P.move(n,shell,s);shell.insertBefore(n,left.parentElement);P.cls(n,'p46-flow',s);}
    else if(n.matches('h2,.co-execution-meta,.co-execution-progress'))P.hide(n,s);
    else if(n.matches('h3')){currentTitle=n.textContent.trim();P.hide(n,s);}
@@ -31,7 +53,7 @@ window.LoadingDetails465={
    else if(n.matches('#co-execution-exceptions,#ux11-load-corrections,#ux11-co-corrections'))addCorrection(n);
    else if(n===weightNode)continue;
    else if(n.matches('p.co-execution-policy'))P.hide(n,s);
-   else if(n.matches('.lp-load-summary')){if(!transportDetails){transportDetails=P.el('details','loading465-transport',facts,s);const summary=P.el('summary','',transportDetails,s);summary.textContent=t('运输与装车计划资料','Transport and Loading Plan Details');}for(const child of [...n.children])if(!child.matches('h3'))P.move(child,transportDetails,s);P.hide(n,s);}
+   else if(n.matches('.lp-load-summary'))P.hide(n,s);
    else if(n.matches('#co-execution-departures,details,section.panel')){
     if(n.id==='co-execution-departures'&&!d.departures.length||n.querySelector('#co-execution-history')&&!d.history_total){P.hide(n,s);continue;}
     P.move(n,left,s);P.cls(n,'loading465-history',s);currentTitle='';
@@ -50,10 +72,6 @@ window.LoadingDetails465={
    else {if(n.matches('p,.co-execution-policy'))P.cls(n,'loading465-note',s);P.move(n,left,s);}}
   if(co)for(const n of root.querySelectorAll(':scope>#ux11-co-corrections'))addCorrection(n);
   if(corrections)left.append(corrections);
-  if(co&&d.outbound&&AppConfig.cobaltPackingV44&&!actionRow.querySelector('[href$="/packing-list"]')){
-   const link=P.el('a','button secondary',actionRow,s);
-   link.href='/outbounds/'+id+'/packing-list';link.textContent=t('装箱单','Packing List');
-  }
   if(!actionRow.children.length)P.hide(actionRow,s);
   if(!weightNode&&!actions.querySelector('button,input:not([type=hidden]),form,a'))P.hide(actions,s);
   P.finish(root,s);return true;

@@ -49,6 +49,7 @@ function action(row,kind){
  if(k==='REVERSAL_RESTART')return {key:k,title:['关联新批次并重新备货','Restarted Preparation Under New Batch']};
  if(kind==='preparation-plan'||kind==='preparation-plan-legacy'){
   k=k.replace(/^PREPARATION_PLAN_/,'');
+  if(k==='AVAILABLE_AGAIN')k=a.reconciled===true?'REUSE':'WORK_CANCEL';
   if(k==='WORK_CANCEL'||k==='REUSE')return {key:k,title:['作业已取消，计划可重新执行','Work Cancelled and Plan Available Again']};
   if(k==='START')return {key:k,title:['生成备货作业','Preparation Work Order Created']};
   if(k==='CANCEL')return {key:k,title:['备货作业取消，批次号已释放','Preparation Work Cancelled and Lot Released']};

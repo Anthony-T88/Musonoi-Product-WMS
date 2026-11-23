@@ -18,6 +18,7 @@ function candidateSql(co){
   SELECT m.id source_id,m.document_no,m.business_date::text shipping_date,m.source_facts->>'batch_no' batch_no,
    m.source_facts->>'truck' source_truck,m.source_facts->>'trailer_one' source_trailer,
    v.id dispatch_id,v.sales_plan_id,v.plan_no,v.truck_no,v.trailer_no,v.shipment_month,
+   b.project_id,b.warehouse_id,v.customer_id,
    count(*) OVER (PARTITION BY m.id)::int dispatch_matches,
    count(*) OVER (PARTITION BY v.id)::int source_matches
   FROM historical_movement_documents m JOIN historical_backfills b ON b.source_id=m.id
@@ -31,14 +32,16 @@ function candidateSql(co){
   WHERE m.product_code=$2 AND m.voided_at IS NULL AND m.movement_type='OUTBOUND'
    AND nullif(btrim(m.source_facts->>'truck'),'') IS NOT NULL
    AND EXISTS (SELECT 1 FROM historical_movement_lines l WHERE l.document_id=m.id)
-   AND EXISTS (SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=b.project_id
-    AND (s.warehouse_id IS NULL OR s.warehouse_id=b.warehouse_id)
-    AND (s.customer_id IS NULL OR s.customer_id=v.customer_id))
+   AND (coalesce(${plate('v.trailer_no')},'') IN('','NA','N/A','NONE') OR
+        coalesce(${plate("m.source_facts->>'trailer_one'")},'') IN('','NA','N/A','NONE') OR
+        ${plate('v.trailer_no')}=${plate("m.source_facts->>'trailer_one'")})
    AND NOT EXISTS (SELECT 1 FROM historical_sales_dispatch_links h WHERE h.source_id=m.id OR h.${link}=v.id)
    AND NOT EXISTS (SELECT 1 FROM ${co?'co_loading_plans':'loading_plan_documents'} d
     JOIN ${co?'co_vehicle_arrivals':'vehicle_arrivals'} a ON a.id=d.arrival_id
     WHERE a.dispatch_vehicle_id=v.id AND ${co?"d.status<>'CANCELLED'":"d.cancelled_at IS NULL"})
- ) SELECT * FROM pairs WHERE sales_plan_id=$3`;
+ ) SELECT * FROM pairs v WHERE sales_plan_id=$3 AND EXISTS (SELECT 1 FROM user_scopes s
+  WHERE s.user_id=$1 AND s.project_id=v.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=v.warehouse_id)
+  AND(s.customer_id IS NULL OR s.customer_id=v.customer_id))`;
 }
 
 async function access(c,req,planId){
@@ -74,4 +77,21 @@ async function link(c,req){
  return saved;
 }
 
-module.exports={candidates,link};
+async function autoLink(c,req){
+ const plan=B.uuid(req.params.id),co=req.productCode===cobalt,target=co?'co_dispatch_id':'cu_dispatch_id';
+ await access(c,req,plan);
+ await c.query('SELECT pg_advisory_xact_lock(477189)');
+ const {rows:matches}=await c.query(candidateSql(co)+' ORDER BY source_id,dispatch_id',[req.user.id,req.productCode,plan]);
+ const unique=matches.filter(row=>row.dispatch_matches===1&&row.source_matches===1);
+ let linked=0;
+ for(const candidate of unique){
+  const {rows:[saved]}=await c.query('INSERT INTO historical_sales_dispatch_links(source_id,'+target+',linked_by,automatic) VALUES($1,$2,$3,true) ON CONFLICT DO NOTHING RETURNING *',
+   [candidate.source_id,candidate.dispatch_id,req.user.id]);
+  if(!saved)continue;
+  linked++;
+  await B.audit(c,req,'historical_sales_dispatch_linked','historical_movement_documents',candidate.source_id,null,{...saved,sales_plan_id:plan});
+ }
+ return {linked,ambiguous:new Set(matches.filter(row=>row.dispatch_matches>1||row.source_matches>1).map(row=>row.source_id)).size};
+}
+
+module.exports={candidates,link,autoLink};

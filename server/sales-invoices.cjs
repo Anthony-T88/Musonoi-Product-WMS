@@ -121,7 +121,7 @@ function register({app,pool,permitted,csrf}){
   });
   app.post(match,{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>{
    if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
-   return B.mutate(pool,req,c=>archive.link(c,req));
+   return B.mutate(pool,req,c=>req.body?.automatic===true?archive.autoLink(c,req):archive.link(c,req));
   });
   app.post(prefix+'/sales-workflow/plans/:id/confirm-invoice',{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>{
    if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');

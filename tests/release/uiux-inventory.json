@@ -11,6 +11,7 @@
       "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
       "^\\/customers\\/master-data$",
       "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
+      "^\\/customs(?:\\/(?:bp|templates|packing-list(?:\\/[0-9a-f-]{36})?))?$",
       "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
@@ -91,6 +92,7 @@
       "^\\/customers\\/contracts\\/(new|[0-9a-f-]{36}\\/edit)$",
       "^\\/customers\\/master-data$",
       "^\\/customers\\/master-data\\/(customers|batches|warehouses|yards|locations)\\/([^/]+)$",
+      "^\\/customs(?:\\/(?:bp|templates|packing-list(?:\\/[0-9a-f-]{36})?))?$",
       "^\\/export-licenses(?:\\/(?:new|[0-9a-f-]{36}(?:\\/edit)?))?$",
       "^\\/export-shipments$",
       "^\\/export-shipments\\/([0-9a-f-]{36})$",
@@ -943,12 +945,39 @@
       "template": "/outbounds"
     },
     {
+      "key": "customs",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "logistics-approved batches",
+      "template": "/customs/bp"
+    },
+    {
+      "key": "customs-packing",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/customs/packing-list"
+    },
+    {
       "key": "templates",
       "products": [
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
       "state": "standard",
+      "template": "/customs/templates"
+    },
+    {
+      "key": "templates-former-entry",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "redirected",
       "template": "/outbounds/templates"
     },
     {
@@ -1038,7 +1067,7 @@
         "CO_HYDROXIDE"
       ],
       "state": "standard",
-      "template": "/outbounds/:id/packing-list"
+      "template": "/customs/packing-list/:id"
     },
     {
       "key": "shipping",

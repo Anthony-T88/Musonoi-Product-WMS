@@ -170,7 +170,10 @@ function pages(ids){
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager']});
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
- add('templates','/outbounds/templates',BOTH);
+ add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'logistics-approved batches'});
+ add('customs-packing','/customs/packing-list',BOTH,{screenshot:true});
+ add('templates','/customs/templates',BOTH);
+ add('templates-former-entry','/outbounds/templates',BOTH,{state:'redirected'});
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);
  add('cu-load-new','/outbounds/loads/new',[CU]);
@@ -181,7 +184,7 @@ function pages(ids){
  add('cu-corrections','/outbounds/corrections',[CU]);
  add('cu-correction-detail','/outbounds/corrections/:id',[CU],{example:'cuCorrection'});
  add('cu-packing-legacy','/outbounds/packing-list/:id',[CU],{example:'cuLoad'});
- add('co-packing','/outbounds/:id/packing-list',[CO],{example:'coLoad',screenshot:true});
+ add('co-packing','/customs/packing-list/:id',[CO],{example:'coLoad',screenshot:true});
  add('shipping','/export-shipments',BOTH,{screenshot:true});
  add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true});
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});

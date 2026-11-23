@@ -98,7 +98,20 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  await check('formal outbound alone deducts inventory after independent load, logistics and production approvals',async()=>{
   const base='/cobalt/execution/orders/'+matched.order.id,act=async(action,role,extra={})=>{const d=await api(base);await api(base+'/'+action,role,{...(action==='start'?{order_version:d.order.version}:{version:d.execution.version}),note:'Synthetic rc2 '+action,...extra});};
   await api('/cobalt/packing/orders/'+matched.order.id,'admin',undefined,409);
+  const bp='/cobalt/customs/bp',ids=[matched.order.id];
+  await api(bp+'/preview','admin',{ids},409);
   await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
+  await api(bp,'sales_operator',undefined,403);
+  assert((await api(bp)).items.some(row=>row.source_ids.includes(ids[0])));
+  const bpData=await api(bp+'/preview','admin',{ids});
+  assert.equal(bpData.header.destination,'Synthetic destination');
+  const bpRows=bpData.rows.map(({id,code,...row})=>({...row,driver:'Verified driver <example>'}));
+  const bpBody={ids,token:bpData.token,header:bpData.header,rows:bpRows,number:''};
+  const bpDoc=await api(bp,'admin',bpBody);
+  assert.match(bpDoc.document_no,/^\d{3}\/\d{4}\/CO$/);
+  const print=await request(bp+'/'+bpDoc.id+'/print');
+  assert.equal(print.statusCode,200);assert.match(print.body,/Verified driver &lt;example&gt;/);
+  await api(bp+'/'+bpDoc.id+'/print','customer_admin',undefined,404);
   assert.equal(await trend(prep.id),0.647123);
   assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,1);const d=await api(base),key=crypto.randomUUID(),body={version:d.execution.version,note:'Synthetic rc3 final approval'};
   const approvals=await Promise.all([request(base+'/production-approve','production_manager',body,key),request(base+'/production-approve','production_manager',body,key)]);

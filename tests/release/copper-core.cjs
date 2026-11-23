@@ -219,6 +219,14 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const stockP3=await api('/inventory?'+new URLSearchParams({location:'P3-LEFTOVER',search:otherNumber}));assert.equal(stockP3.items[0].id,otherNumber);
  const p5=p3map.locations.find(x=>x.map_usage==='TEMPORARY');assert(p5);assert.equal(p5.current.bundle_count,0);
  for(const [action,role,extra]of [['depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()}],['logistics-approve','logistics_manager',{}]])load=await api('/v26/loads/'+load.id+'/'+action,role,{version:load.version,...extra});
+ const bpPath='/customs/bp',bpIds=[load.id];
+ assert((await api(bpPath)).items.some(row=>row.source_ids.includes(load.id)));
+ const bpDraft=await api(bpPath+'/preview','admin',{ids:bpIds});
+ const bpRows=bpDraft.rows.map(({id,code,...row})=>({...row,truck:row.truck||'SYNTHETIC-CU',gross_mt:row.gross_mt||row.net_mt}));
+ const bpDoc=await api(bpPath,'admin',{ids:bpIds,token:bpDraft.token,header:bpDraft.header,rows:bpRows,number:''});
+ assert.match(bpDoc.document_no,/^\d{3}\/\d{4}\/CU$/);
+ const sheetResponse=await request(bpPath+'/'+bpDoc.id+'/print');
+ assert.equal(sheetResponse.statusCode,200);assert.match(sheetResponse.body,/BULLETIN DE PESAGE/);
  assert.notEqual((await c.query('SELECT physical_status FROM bundles WHERE id=$1',[bundle.id])).rows[0].physical_status,'OUTBOUND');const final='/v26/loads/'+load.id+'/manager-approve',finalBody={version:load.version},key=crypto.randomUUID();
  const results=await Promise.all([request(final,'production_manager',finalBody,key),request(final,'production_manager',finalBody,key)]);
  assert.equal(results[0].statusCode,200,results[0].body);assert.equal(results[1].statusCode,200,results[1].body);

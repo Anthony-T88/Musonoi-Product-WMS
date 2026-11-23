@@ -144,24 +144,27 @@ test('copper and cobalt preparation batches and historical navigation on indepen
   for(const product of products)await t.test(product+' links reviewed historical trips, confirms invoices and records historical exits',async()=>{
    const co=cobalt(product),plan=fixtures[product].plan,alternate=await P.salesPlan(api,f,product);
    const plate=co?'AUDIT-CO-REPEAT':'AUDIT-CU-REPEAT',month=P.localMonth(),day=month+'-01';
-   const dispatch=async plan=>{
+   const dispatch=async (plan,truck=plate)=>{
     const base=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch',info=await api('admin',product,base);
     const workbook=X.utils.book_new();
-    X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([['HORSE','TON'],[plate,30]]),'Dispatch');
+    X.utils.book_append_sheet(workbook,X.utils.aoa_to_sheet([['HORSE','TON','TRANSPORTEUR','DESTINATION'],[truck,30,'Synthetic Transport','Synthetic Destination']]),'Dispatch');
     const file={file_name:'historical-trips.xlsx',mapping:{sheet:'Dispatch',header_row:1,truck_column:1,capacity_column:2,capacity_kg:false},
      file_base64:X.write(workbook,{type:'base64',bookType:'xlsx'}),...(co?{plan_version:info.plan.version}:{})};
     const preview=await api('admin',product,base+'/import-preview',file);
+    assert.equal(preview.items[0].transporter,'Synthetic Transport');
     await api('admin',product,base+(co?'/import':''),{...file,shipment_month:preview.shipment_month,preview_sha256:preview.file_sha256});
-    return (await api('admin',product,base)).vehicles.find(row=>row.truck_no===plate);
+    return (await api('admin',product,base)).vehicles.find(row=>row.truck_no===truck);
    };
    const first=await dispatch(plan),second=await dispatch(alternate);
+   assert.equal(first.transporter,'Synthetic Transport');
+   assert.equal(second.destination,'Synthetic Destination');
    const contractTable=co?'co_sales_contracts':'customer_contracts';
    const {rows:[contract]}=await c.query('SELECT contract_no FROM '+contractTable+' WHERE id=$1',[f.customers[product].contract]);
-   async function importTrip(suffix,shippingDay=day){
-    const tag=plate+'-'+suffix,rows=Array.from({length:29},()=>[]);
+   async function importTrip(suffix,shippingDay=day,truck=plate){
+    const tag=truck+'-'+suffix,rows=Array.from({length:29},()=>[]);
     rows[0]=['PACKING LIST'];rows[2]=['','','','Packing List No:',tag+'-PL'];rows[3]=['','','','Lot No:',tag+'-LOT'];
     rows[4]=['','','','Contract No:',contract.contract_no];rows[6]=['','','','Shipping Date:',shippingDay];
-    rows[21]=['Synthetic '+(co?'CO-AUDIT':'CU-AUDIT'),'','','',plate.replaceAll('-',' ')];
+    rows[21]=['Synthetic '+(co?'CO-AUDIT':'CU-AUDIT'),'','','',truck.replaceAll('-',' ')];
     rows[28]=['No','Description',co?'Bag No':'Bundle No',co?null:'Sheets Qty','Seal No','Net Weight (KG)','Gross Weight (KG)'];
     rows.push([1,'Synthetic',tag+'-UNIT',co?null:48,tag+'-SEAL',647,650],['Total',null,null,null,null,647,650]);
     const workbook=X.utils.book_new();
@@ -180,6 +183,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const matches=(await api('admin',product,sales+plan+'/historical-matches')).items;
    assert.deepEqual(new Set(matches.map(row=>row.source_id)),new Set([trip.id,other.id]));
    assert(matches.every(row=>row.dispatch_id===first.id&&row.dispatch_matches===2&&row.source_matches===2));
+   assert.deepEqual(await api('admin',product,sales+plan+'/historical-matches',{automatic:true}),{linked:0,ambiguous:2});
    const choice={source_id:trip.id,dispatch_id:first.id};
    await api('admin',product,sales+plan+'/historical-matches',choice,409);
    await api('admin',product,sales+plan+'/historical-matches',{...choice,verified_trip:true});
@@ -204,6 +208,14 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const numbering=prefix(product)+'/export-permits/invoice-number?'+new URLSearchParams({sales_plan_id:plan});
    assert((await api('admin',product,numbering)).invoice_preview.endsWith('-01'));
    assert.deepEqual(await api('admin',product,numbering+'&'+new URLSearchParams({invoice_no:trip.tag+'-INV'})),{duplicate:true});
+   const uniquePlate=plate+'-UNIQUE',uniqueDispatch=await dispatch(plan,uniquePlate);
+   const route=(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch/vehicles/'+uniqueDispatch.id+'/transport';
+   const transport=await api('admin',product,route,{version:uniqueDispatch.transport_version??uniqueDispatch.version,transporter:'Updated Transport',destination:'Updated Destination'});
+   assert.equal(transport.destination,'Updated Destination');
+   const unique=await importTrip('SINGLE',day,uniquePlate);
+   assert.deepEqual(await api('admin',product,sales+plan+'/historical-matches',{automatic:true}),{linked:1,ambiguous:0});
+   assert.equal((await c.query('SELECT automatic FROM historical_sales_dispatch_links WHERE source_id=$1',[unique.id])).rows[0].automatic,true);
+   assert.equal((await api('admin',product,gate+'?'+new URLSearchParams({batch_no:unique.tag,state:'EXITED'}))).total,1);
   });
   await app.listen({port,host:'127.0.0.1'});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
@@ -716,7 +728,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.equal(await page.locator('#historical-ledger .v34-pagination').count(),0);
     assert.equal(await page.locator('#historical-ledger .co-pager').count(),1);
     await page.goto(origin+'/outbounds?view=departures&state=EXITED');
-    await layout('#gate-filter',['permit_no','truck_no','customer','approved_on','state']);
+    await layout('#gate-filter',['batch_no','truck_no','customer','approved_on','state']);
     const archived=page.locator('#gate-list tbody tr').filter({hasText:older.tag});
     await archived.locator('[data-state=EXITED]').waitFor();
     assert.equal(await page.locator('#gate-confirm-history').count(),0);

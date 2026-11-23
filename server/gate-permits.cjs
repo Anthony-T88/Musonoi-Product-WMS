@@ -39,20 +39,20 @@ async function list(c,req,tasks=false){
   NULL::uuid historical_detail_id,NULL::text shipping_date ${from}`;
  const archive=tasks?" AND $2::text IS NOT NULL":' UNION ALL '+require('./historical-gate.cjs').listSql;
  const candidates='WITH all_rows AS MATERIALIZED ('+live+archive+') ';
- const filtered=`FROM all_rows WHERE ($3='' OR strpos(lower(coalesce(document_no,'')),lower($3))>0)
+ const filtered=`FROM all_rows WHERE ($3='' OR strpos(lower(coalesce(batch_number,'')),lower($3))>0 OR ($8<>'' AND strpos(lower(coalesce(document_no,'')),lower($8))>0))
   AND ($4='' OR strpos(lower(coalesce(truck_no,'')),lower($4))>0)
   AND ($5='' OR customer_name=$5)
   AND ($6::date IS NULL OR (approved_at AT TIME ZONE 'Africa/Lubumbashi')::date=$6)
   AND ($7='' OR strpos(lower(concat_ws(' ',code,document_no,batch_number,truck_no,customer_name)),lower($7))>0)`+
   (tasks?" AND state<>'EXITED'":'');
- const values=[req.user.id,product,filter('permit_no'),filter('truck_no'),filter('customer'),q.approved_on?B.date(q.approved_on):null,filter('search')];
+ const values=[req.user.id,product,filter('batch_no')||filter('permit_no'),filter('truck_no'),filter('customer'),q.approved_on?B.date(q.approved_on):null,filter('search'),q.batch_no?'':filter('permit_no')];
  const order=B.documentOrder({pending:"state IN('MISSING','READY')",historical:'historical_source_id IS NOT NULL',id:'order_id'});
  const customers=tasks?"'[]'::jsonb":`(SELECT coalesce(jsonb_agg(DISTINCT customer_name ORDER BY customer_name),'[]')
   FROM all_rows WHERE nullif(customer_name,'') IS NOT NULL)`;
  const {rows:[data]}=await c.query(candidates+`, filtered_rows AS MATERIALIZED (SELECT * ${filtered}),
   stats AS (SELECT state,count(*)::int count FROM filtered_rows GROUP BY state),
-  page_rows AS (SELECT * FROM filtered_rows WHERE ($8='' OR state=$8)
-   ORDER BY ${order} LIMIT $9 OFFSET $10)
+  page_rows AS (SELECT * FROM filtered_rows WHERE ($9='' OR state=$9)
+   ORDER BY ${order} LIMIT $10 OFFSET $11)
   SELECT coalesce((SELECT jsonb_object_agg(state,count) FROM stats),'{}') counts,
    coalesce((SELECT jsonb_agg(p ORDER BY ${order}) FROM page_rows p),'[]') items,${customers} customers`,
   [...values,state,size,(page-1)*size]);

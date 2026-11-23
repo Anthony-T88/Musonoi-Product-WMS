@@ -56,11 +56,18 @@ async function list(c,req){
  const executable=query.executable==='1';
  if(executable&&!canStart(req))throw B.error(403,'当前岗位无权创建备货单');
  const ready=executable?" AND p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL AND coalesce(cu.status,co.status)='OPEN' AND NOT EXISTS(SELECT 1 FROM sales_plan_approvals a WHERE a.plan_id=coalesce(cu.id,co.id) AND a.product_code=p.product_code AND a.state<>'APPROVED')":'';
- const where=' WHERE '+visibility+" AND ($3::text='' OR p.state=$3) AND ($4::text='' OR strpos(lower(concat_ws(' ',p.batch_no,cu.code,co.code,customer.name)),lower($4))>0)"+ready;
- const values=[...params(req),state,search];
- const {rows}=await c.query(projection+where+' ORDER BY '+B.documentOrder({pending:"p.state='PENDING' OR (p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL)",created:'p.created_at',id:'p.id'})+' LIMIT 50 OFFSET $5',[...values,(page-1)*50]);
+ const batch=query.batch_no?B.text(query.batch_no,'批次号',160):'',salesNo=query.sales_plan_no?B.text(query.sales_plan_no,'销售计划号',160):'';
+ const month=query.shipment_month||'',customer=query.customer_id?B.uuid(query.customer_id):null;
+ if(month&&!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw B.error(400,'发运月无效');
+ const where=' WHERE '+visibility+
+  " AND ($3::text='' OR p.state=$3) AND ($4::text='' OR strpos(lower(concat_ws(' ',p.batch_no,cu.code,co.code,customer.name)),lower($4))>0)"+
+  " AND ($5='' OR strpos(lower(p.batch_no),lower($5))>0) AND ($6='' OR strpos(lower(coalesce(cu.code,co.code)),lower($6))>0)"+
+  " AND ($7='' OR p.shipment_month=$7) AND ($8::uuid IS NULL OR p.customer_id=$8)"+ready;
+ const values=[...params(req),state,search,batch,salesNo,month,customer];
+ const {rows}=await c.query(projection+where+' ORDER BY '+B.documentOrder({pending:"p.state='PENDING' OR (p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL)",created:'p.created_at',id:'p.id'})+' LIMIT 50 OFFSET $9',[...values,(page-1)*50]);
  const {rows:[total]}=await c.query('SELECT count(*)::int n FROM ('+projection+where+') results',values);
- return {items:rows.map(plan=>({...plan,actions:actions(req,plan)})),can_create:canCreate(req),page,total:total.n,page_size:50};
+ const customers=executable?[]:(await c.query('SELECT DISTINCT customer.id,customer.name FROM preparation_plans p JOIN customers customer ON customer.id=p.customer_id WHERE '+visibility+' ORDER BY customer.name,customer.id',params(req))).rows;
+ return {items:rows.map(plan=>({...plan,actions:actions(req,plan)})),customers,can_create:canCreate(req),page,total:total.n,page_size:50};
 }
 const batchLimit=100;
 async function occupied(c,req){

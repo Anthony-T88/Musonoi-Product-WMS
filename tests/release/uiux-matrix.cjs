@@ -77,7 +77,7 @@ function expectedLanding(spec,product,ids){
   'historical-loading-plans':'/loading-plans/query',
   'historical-outbounds':'/outbounds',
   'historical-stock-outbound':'/outbounds',
-  'cu-invoice':'/outbounds/packing-list/'+ids.cuLoad,
+  'cu-invoice':'/customs/packing-list/'+ids.cuLoad,
   'former-design-entry':'/workbench'
  };
  replacements['preparation-new']=co?'/receipts/new':'/preparation/new';

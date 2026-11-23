@@ -54,7 +54,9 @@ window.ProductContext={code:'CU_CATHODE',ready:false,switching:false,dirty:false
    box.setAttribute('aria-label',this.text('产品切换','Switch Product'));
    const names=this.text(['阴极铜','氢氧化钴'],['Copper Cathodes','Cobalt Hydroxide']);
    [...box.children].forEach((button,index)=>{button.textContent=names[index];});
-   if(sharedDocument()){
+   if(changed&&location.pathname.startsWith('/customs/')){
+    CustomsWorkspace.language().catch(error=>notify(error.message));
+   }else if(sharedDocument()){
     if(changed&&!editing())Router.show();
    }else if(window.HistoricalMovements?.documentRoute(location.pathname)){
     // HistoricalMovements refreshes its own translated document without calling the live cobalt router.

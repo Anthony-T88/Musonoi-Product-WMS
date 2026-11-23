@@ -260,8 +260,11 @@ window.PreparationPlans={
    '<div class="business-toolbar">'+(d.can_create?'<button type="button" id="preparation-plan-create" class="button primary">'+t('新建备货计划','New Preparation Plan')+'</button>':'')+
    available.map(([operation,,label])=>'<button type="button" class="button secondary" data-preparation-operation="'+operation+'" disabled>'+label+'</button>').join('')+
    this.backLink()+'</div>'+
-   '<form id="preparation-plan-filter" class="filters wms-filter-row"><label>'+t('批次号 / 销售计划 / 客户','Lot Number / Sales Plan / Customer')+
-   '<input name="search" type="search" maxlength="160" value="'+esc(q.get('search')||'')+'"></label><label>'+t('审批状态','Review Status')+
+   '<form id="preparation-plan-filter" class="filters wms-filter-row"><label>'+t('批次号','Lot Number')+
+   '<input name="batch_no" type="search" maxlength="160" value="'+esc(q.get('batch_no')||q.get('search')||'')+'"></label><label>'+t('销售计划号','Sales Plan No.')+
+   '<input name="sales_plan_no" type="search" maxlength="160" value="'+esc(q.get('sales_plan_no')||'')+'"></label><label>'+t('发运月','Shipment Month')+
+   '<input name="shipment_month" type="month" value="'+esc(q.get('shipment_month')||'')+'"></label><label>'+t('客户','Customer')+
+   '<select name="customer_id"><option value="">'+t('全部客户','All Customers')+'</option>'+(d.customer_options||[]).map(c=>'<option value="'+esc(c.id)+'" '+(c.id===q.get('customer_id')?'selected':'')+'>'+esc(c.name)+'</option>').join('')+'</select></label><label>'+t('审批状态','Review Status')+
    '<select name="state"><option value="">'+t('全部','All')+'</option>'+status+'</select></label><div class="wms-filter-actions">'+
    '<button class="button primary">'+t('查询','Search')+'</button><a class="button secondary" data-wms-reset href="'+this.route+'">'+t('重置','Reset')+'</a></div></form>'+
    '<p id="preparation-bulk-error" class="wms-feedback error" role="alert"></p>'+

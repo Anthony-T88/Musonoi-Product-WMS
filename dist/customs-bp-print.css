@@ -1,0 +1,28 @@
+:root{color:#162122;background:#eef2ef;font-family:Arial,sans-serif;font-size:12px}
+body{max-width:1080px;margin:16px auto;padding:0 12px}
+main{background:#fff;padding:20px}
+h1{text-align:center;font-size:1.35rem;margin:0 0 .65rem;border-bottom:2px solid #143f35;padding-bottom:.6rem}
+.bp-issuer p{margin:.12rem 0}
+.bp-issuer p:first-child{font-weight:bold}
+.bp-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:column;grid-template-rows:repeat(5,auto);gap:.2rem 1rem;margin:1rem 0}
+.bp-details div{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:.2rem}
+.bp-details dt{font-weight:bold}
+.bp-details dd{margin:0;overflow-wrap:anywhere}
+.bp-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-variant-numeric:tabular-nums}
+.bp-table :is(th,td){padding:.36rem .2rem;border:1px solid #323b37;overflow-wrap:anywhere}
+.bp-table thead{background:#e1eee7;display:table-header-group}
+.bp-table thead th:first-child{width:3%}
+.bp-table thead th:nth-child(2){width:14%}
+.bp-table thead th:nth-child(7),.bp-table thead th:nth-child(8){width:11%}
+.bp-total{font-weight:bold}
+tr,.bp-details,footer{break-inside:avoid}
+footer{display:flex;justify-content:space-between;padding:.9rem .3rem 2rem}
+#bp-print{padding:.55rem 1rem;margin-bottom:.5rem}
+@page{size:A4 landscape;margin:10mm}
+@media print{
+ :root{font-size:10pt;background:#fff}
+ body{max-width:none;padding:0;margin:0}
+ main{padding:0}
+ #bp-print{display:none}
+ .bp-table thead{print-color-adjust:exact}
+}

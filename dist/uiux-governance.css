@@ -1000,3 +1000,14 @@ html[data-release-ui="46"] #page-content .wms-route-error :is(p, small) { color:
 .wms-map-controls .wms-map-search { flex-wrap: nowrap; max-inline-size: 100%; overflow-x: auto; }
 .map-app .wms-map-search > label { flex: 1 0 8rem; }
 .wms-map-search select { inline-size: 100%; min-inline-size: 0; min-block-size: var(--uix-control); }
+
+#preparation-plan-filter > label{min-width:0}
+.loading465-plan-facts{margin-block:.75rem}
+#page-content .wms-page:has(#customs-bp-form),#customs-bp-form,#customs-bp-form .wms-section{min-inline-size:0;max-inline-size:100%}
+.customs-bp-table-scroll{inline-size:100%;min-inline-size:0;overflow-x:auto;contain:inline-size}
+#customs-bp-edit-rows{min-inline-size:78rem}
+#customs-bp-edit-rows input{inline-size:100%;min-inline-size:5.25rem}
+#customs-bp-edit-rows th{white-space:normal;min-inline-size:5.25rem}
+@media(min-width:1000px){
+ #preparation-plan-filter{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;align-items:end}
+}

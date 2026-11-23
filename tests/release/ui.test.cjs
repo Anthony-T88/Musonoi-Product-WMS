@@ -263,9 +263,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await ready(page);assert.equal(await page.locator('[data-primary-route=cobalt-metal]').count(),0);
  await go(page,'/inventory/'+f.preparation);
  await go(viewer.page,'/inventory/'+f.preparation);assert.equal(await viewer.page.locator('[data-co2-select],#co2-place').count(),0);
- await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===69);
- assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),69);
- assert.equal(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').count(),25);
+ await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===70);
+ assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),70);
+ assert.equal(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').count(),26);
  assert(await page.locator('.s46-r2-matrix thead').isVisible());
  const cobalt=page.locator('.s46-permission-items').filter({has:page.locator('input[value="co:create"]')});
  assert.equal(await cobalt.count(),1);

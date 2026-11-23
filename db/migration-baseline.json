@@ -801,6 +801,10 @@
     {
       "version": "200_v487_preparation_reversal.sql",
       "checksum": "1c686907b31a4fa2a822f8812c3517d4aa9b58fd0870b70977f597a0f8706de4"
+    },
+    {
+      "version": "201_v488_customs_dispatch.sql",
+      "checksum": "e120a82bbcdcb8e9469b96006b22391ca996cef42f4bd9093c587375d137ff1d"
     }
   ]
 }

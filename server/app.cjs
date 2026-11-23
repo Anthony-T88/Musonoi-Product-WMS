@@ -58,6 +58,14 @@ async function build(options={}){
  await require('./stock-balance.cjs').register({app,pool,permitted,csrf});
  app.get('/api/v1/config',async()=>({environment:cfg.environment,displayVersion:require('./release.cjs').displayVersion,frontendRevision:require('./release.cjs').frontendRevision,cobaltStocktakingV451:await require('./cobalt-stocktaking.cjs').enabled(pool),outboundWorkspaceUX11:await require('./outbound-workspace.cjs').enabled(pool),salesApprovalUX10:await require('./sales-approval.cjs').enabled(pool),cobaltV38:cobaltEnabled,cobaltMetalV471:cobaltMetalEnabled,cobaltWorkV39:cobaltWorkEnabled,cobaltStockV40:cobaltStockEnabled,cobaltSalesV41:cobaltSalesEnabled,cobaltLoadingV42:cobaltLoadingEnabled,cobaltExecutionV43:cobaltExecutionEnabled,cobaltPackingV44:cobaltPackingEnabled,cobaltReportsV441:cobaltPackingEnabled,cobaltUX7,cobaltUX9:cobaltPackingEnabled,gatePermits:(await pool.query("SELECT to_regclass('public.gate_permits') IS NOT NULL ok")).rows[0].ok,arrivalWorkflowV34:await require('./vehicle-arrivals.cjs').enabled(pool),managementV34:await require('./management.cjs').enabled(pool),inventoryDepthV33:await require('./inventory-depth.cjs').enabled(pool),inventoryControlV32:await require('./inventory-control.cjs').enabled(pool),dispatchCapacityV31:await require('./packing-templates.cjs').enabled(pool),salesDispatchV31:(await pool.query("SELECT to_regclass('public.sales_dispatch_imports') IS NOT NULL ok")).rows[0].ok,version:require('./release.cjs').version,unifiedLoadingV31:await require('./unified-loading-plans.cjs').enabled(pool),loadingPlanAccessV31:true,invoiceHeaderV31:(await pool.query("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='loading_plan_groups' AND column_name='invoice_no') ok")).rows[0].ok,loadingPlanV31:await require('./loading-plans.cjs').enabled(pool),productionReceiptSelfReviewEnabled:cfg.environment==='test'&&(await AccountPolicy.policy(pool)).production_receipt_self_review,supplementV262:await require('./v262-supplement.cjs').enabled(pool),lotWorkV262:await require('./v262.cjs').enabled(pool),lotWorkV261:await require('./v261.cjs').enabled(pool),source:'PostgreSQL',businessWrites:true,modules:['masters','receipts','allocations','samples','weighings','loads','outbounds','moves','stocktakes','adjustments','reports','dashboard','labels','language','operations','shipping','loading-plans']}));
  app.get('/api/v1/health',async()=>{await dbEnvironment();await pool.query('SELECT 1');return {database:'ok',environment:cfg.environment};});
+ for(const path of ['/customs','/customs/bp','/customs/templates','/customs/packing-list','/customs/packing-list/:id']){
+  const entryPermissions=['customs:bp','load:read','packing-template:write'];
+  const permission=path==='/customs'?async req=>{
+   await auth(req);
+   if(!entryPermissions.some(code=>req.user.permissions.includes(code)))throw Object.assign(Error('当前账号没有此页面权限'),{statusCode:403});
+  }:path==='/customs/bp'?'customs:bp':path==='/customs/templates'?'packing-template:write':'load:read';
+  app.get(path,(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{auth,permitted,permission}));
+ }
  app.post('/api/v1/auth/login',{config:{rateLimit:{max:10,timeWindow:'1 minute'}},schema:{body:{type:'object',additionalProperties:false,required:['username','password'],properties:{username:{type:'string',maxLength:80},password:{type:'string',maxLength:128},language:{type:'string',enum:['zh-CN','en']}}}}},async(req,reply)=>{
  if(req.headers.origin!==cfg.origin)throw problem(403,'请求来源不受信任');await dbEnvironment();
  const u=(await pool.query('SELECT * FROM users WHERE username=$1',[req.body.username.toLowerCase()])).rows[0];
@@ -117,6 +125,8 @@ async function build(options={}){
  await require('./allocations.cjs')({app,pool,cfg,permitted,csrf});
  if(await require('./vehicle-arrivals.cjs').enabled(pool))await require('./vehicle-arrivals.cjs').register({app,pool,permitted,csrf});
  await require('./sales-dispatch.cjs').register({app,pool,permitted,csrf});
+ require('./dispatch-transport.cjs').register({app,pool,permitted,csrf});
+ require('./customs-bp.cjs').register({app,pool,permitted,csrf});
  await require('./packing-templates.cjs').register({app,pool,permitted,csrf});
  await require('./inventory-control.cjs').register({app,pool,permitted,csrf});
  await require('./inventory-depth.cjs').register({app,pool,permitted,csrf});
