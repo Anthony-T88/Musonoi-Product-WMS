@@ -14,6 +14,11 @@ async function active(c,product){
  return record||{revision:0,fields:defaults};
 }
 
+async function fieldsAt(c,product,revision){
+ const {rows:[record]}=await c.query('SELECT fields FROM customs_bp_templates WHERE product_code=$1 AND revision=$2',[product,revision]);
+ return record?.fields;
+}
+
 async function save(c,req){
  const {revision,fields,...extra}=req.body||{};
  if(Object.keys(extra).length||!Number.isInteger(revision)||revision<0||!fields||typeof fields!=='object'||
@@ -33,4 +38,4 @@ async function save(c,req){
  return next;
 }
 
-module.exports={active,save};
+module.exports={active,fieldsAt,save};

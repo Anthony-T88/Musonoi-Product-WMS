@@ -79,7 +79,7 @@ window.CustomsBP={
   Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page" data-page-composed data-no-i18n>'+CustomsWorkspace.nav('bp')+
    '<div class="bp-list-toolbar"><nav class="bp-list-tabs" aria-label="'+t('BP表列表','BP Sheet Lists')+'">'+
    tab('batches',pendingTitle,d.total,!archive)+tab('documents',archiveTitle,d.document_total,archive)+'</nav><div class="bp-archive-actions">'+
-   this.agencyButton()+this.templateButton()+'</div></div>'+this.filter(q,d.customer_options,archive)+
+   this.templateButton()+'</div></div>'+this.filter(q,d.customer_options,archive)+
    (archive?'<section class="wms-section" aria-label="'+archiveTitle+'">'+this.documents(d.documents)+this.pagination('documents',q,d)+'</section>':
    '<section id="customs-bp-pending" class="wms-section" aria-label="'+pendingTitle+'">'+
    ExportLicenses.table(headers,rows,'customs-bp-batches',true,{numeric:[4]})+this.pagination('batches',q,d)+
@@ -132,7 +132,6 @@ window.CustomsBP={
  templateButton(){return CustomsWorkspace.can('customs:bp-template')?
   '<button type="button" class="button secondary compact" data-bp-template>'+this.t('BP表模板','BP Sheet Template')+'</button>':'';},
  bindTools(){
-  this.bindAgencyBook();
   const button=document.querySelector('[data-bp-template]');
   if(button)button.onclick=()=>this.editTemplate(button);
  },
@@ -246,10 +245,10 @@ window.CustomsBP={
   try{
    const {items}=await API.request(this.base()+'/'+button.dataset.bpExpand+'/batches');
    if(!inside.isConnected)return;
-   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,row.code,row.packing_list_no,this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt)]
+   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,row.packing_list_no,this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt),row.loading_date]
     .map(value=>'<td>'+esc(value||'—')+'</td>').join('')+'</tr>');
-   inside.innerHTML=ExportLicenses.table([['批次号','Lot No.'],['车头号','Truck Plate'],['装车单号','Loading Order'],
-    ['装箱单号','Packing List No.'],['净重','Net Weight'],['毛重','Gross Weight']],rows,panel.id+'-details',true,{numeric:[4,5]});
+   inside.innerHTML=ExportLicenses.table([['批次号','Lot No.'],['车头号','Truck Plate'],['装箱单号','Packing List No.'],
+    ['净重','Net Weight'],['毛重','Gross Weight'],['装车日期','Loading Date']],rows,panel.id+'-details',true,{numeric:[3,4]});
    inside.dataset.loaded='true';
   }catch(e){
    inside.textContent=this.feedback(e);

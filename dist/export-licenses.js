@@ -7,7 +7,10 @@ window.ExportLicenses={
  can:key=>CurrentUser.permissions.includes('export-license:'+key),
  labels:{
   contract_id:['买家 / 合同','Buyer / Contract'],applied_on:['申请日期','Application Date'],proforma_no:['形式发票号','Proforma Invoice No.'],license_no:['许可证号','License No.'],buyer:['买家','Buyer'],contract_no:['合同号','Contract No.'],
-  quantity:['批准数量','Approved Quantity'],unit_basis:['计量口径','Quantity Basis'],unit:['计量单位','Unit'],clearing_agent:['开证清关公司','Clearance Agent'],issuing_bank:['开证银行','Issuing Bank'],issuing_bank_account:['开证银行账户号','Issuing Bank Account No.'],issuing_bank_account_name:['开证银行账户名','Issuing Bank Account Name'],offshore_bank:['离岸银行','Offshore Bank'],offshore_bank_account:['离岸银行账户号','Offshore Bank Account No.'],offshore_bank_account_name:['离岸银行账户名','Offshore Bank Account Name'],unit_price:['单价','Unit Price'],price_unit:['计价单位','Price Unit'],amount:['正式登记金额','Registered Amount'],currency:['币种','Currency'],reference_amount:['计算参考金额','Calculated Reference Amount'],destination:['目的地','Destination'],
+  quantity:['批准数量','Approved Quantity'],unit_basis:['计量口径','Quantity Basis'],unit:['计量单位','Unit'],clearing_agent:['开证清关公司','Clearance Agent'],
+  issuing_bank:['开证银行','Issuing Bank'],issuing_bank_account:['开证银行账户号','Issuing Bank Account No.'],issuing_bank_account_name:['开证银行账户名','Issuing Bank Account Name'],issuing_bank_swift:['本地银行SWIFT号','Local Bank SWIFT Code'],
+  offshore_bank:['离岸银行','Offshore Bank'],offshore_bank_account:['离岸银行账户号','Offshore Bank Account No.'],offshore_bank_account_name:['离岸银行账户名','Offshore Bank Account Name'],offshore_bank_swift:['离岸银行SWIFT号','Offshore Bank SWIFT Code'],
+  unit_price:['单价','Unit Price'],price_unit:['计价单位','Price Unit'],amount:['正式登记金额','Registered Amount'],currency:['币种','Currency'],reference_amount:['计算参考金额','Calculated Reference Amount'],destination:['目的地','Destination'],
   valid_from:['生效日期','Valid From'],valid_until:['原失效日期','Original Expiry'],extension_on:['最近批准延期日期','Latest Extension Date'],extended_until:['延期后失效日期','Extended Expiry'],effective_until:['当前失效日期','Current Expiry Date'],closed_on:['关证日期','Closure Date'],status:['许可证状态','License Status'],note:['备注','Remarks'],
   used:['已使用','Used'],reserved:['有效预占','Reserved'],pending:['待核销（含于预占）','Pending Reconciliation (Reserved)'],remaining:['剩余额度','Remaining'],available:['可分配额度','Allocatable'],utilization:['使用率','Usage Rate'],
   reference:['业务依据 / 凭证号','Evidence / Reference'],allocation_id:['装车计划 / 发票号','Loading Plan / Invoice']
@@ -30,8 +33,8 @@ window.ExportLicenses={
   this.value(k==='utilization'?data[k]+'%':['quantity','used','reserved','remaining','pending','available'].includes(k)&&data[k]!=null?data[k]+' '+data.unit:data[k])]));},
  processingDetails(data){
   const top=this.facts(['clearing_agent','destination','note'],data);
-  const rows=['issuing_bank','offshore_bank'].map(bank=>this.facts([bank,bank+'_account',bank+'_account_name'],data)).join('');
-  return '<div class="permit-processing-details">'+top+rows+'</div>';
+  const rows=['issuing_bank','offshore_bank'].map(bank=>this.facts([bank,bank+'_account',bank+'_account_name',bank+'_swift'],data)).join('');
+  return '<div class="permit-processing-details">'+top+'<div class="permit-bank-details">'+rows+'</div></div>';
  },
  input(key,data={},type='text',required=false){return '<label>'+this.label(key)+'<input name="'+key+'" type="'+type+'" '+(required?'required ':'')+'maxlength="'+(key==='note'?1000:320)+'" value="'+esc(data[key]??'')+'"></label>';},
  moneyFields(d){
@@ -60,16 +63,24 @@ window.ExportLicenses={
    '<button type="button" class="button secondary compact" data-book-open="'+key+'" aria-label="'+esc(this.label(key)+' · '+t('记录簿','Record Book'))+'" disabled>'+t('记录簿','Record Book')+'</button></div></div>';
   const bankRow=bank=>{
    const account=bank+'_account';
-   return '<div class="permit-bank-fields">'+record(bank)+record(account)+'<div class="permit-book-field">'+
-    '<label for="permit-holder-'+account+'">'+this.label(account+'_name')+'</label><div>'+
-    '<input id="permit-holder-'+account+'" data-account-holder="'+account+'" readonly></div></div></div>';
+   const linked=(field,attribute)=>'<div class="permit-book-field"><label for="permit-linked-'+field+'">'+this.label(field)+
+    '</label><div><input id="permit-linked-'+field+'" '+attribute+'="'+account+'" readonly></div></div>';
+   return '<div class="permit-bank-fields">'+record(bank)+record(account)+linked(account+'_name','data-account-holder')+
+    linked(bank+'_swift','data-account-swift')+'</div>';
   };
   return '<div class="permit-books" data-permit-books><div class="permit-other-fields">'+['clearing_agent','destination','note'].map(record).join('')+'</div>'+
    ['issuing_bank','offshore_bank'].map(bankRow).join('')+'<p class="permit-book-status" data-book-status role="status"></p></div>';
  },
  bookDialog(){
   const t=this.t;
-  return '<dialog id="permit-book-dialog" class="permit-book-dialog" aria-labelledby="permit-book-title"><form class="user-form"><h2 id="permit-book-title"></h2><p data-book-bank></p><ul data-book-entries></ul><div class="form-grid wms-field-grid"><label class="wms-field"><span data-book-label></span><input name="value" required autocomplete="off"></label><label class="wms-field" data-account-name hidden>'+t('账户名','Account Name')+'<input name="account_name" maxlength="160" autocomplete="off"></label></div><p class="error" role="alert"></p><div class="business-toolbar"><button class="button primary" data-book-save>'+t('新增记录','Add Record')+'</button><button type="button" class="button secondary" data-book-create hidden>'+t('返回新增','Back to Add')+'</button><button type="button" class="button secondary" data-book-close>'+t('关闭','Close')+'</button></div></form></dialog>';
+  return '<dialog id="permit-book-dialog" class="permit-book-dialog" aria-labelledby="permit-book-title"><form class="user-form">'+
+   '<h2 id="permit-book-title"></h2><p data-book-bank></p><ul data-book-entries></ul><div class="form-grid wms-field-grid">'+
+   '<label class="wms-field"><span data-book-label></span><input name="value" required autocomplete="off"></label>'+
+   '<label class="wms-field" data-account-name hidden>'+t('账户名','Account Name')+'<input name="account_name" maxlength="160" autocomplete="off"></label>'+
+   '<label class="wms-field" data-book-swift hidden>'+t('SWIFT号','SWIFT Code')+'<input name="swift_code" maxlength="11" autocomplete="off" autocapitalize="characters" spellcheck="false"></label></div>'+
+   '<p class="error" role="alert"></p><div class="business-toolbar"><button class="button primary" data-book-save>'+t('新增记录','Add Record')+
+   '</button><button type="button" class="button secondary" data-book-create hidden>'+t('返回新增','Back to Add')+
+   '</button><button type="button" class="button secondary" data-book-close>'+t('关闭','Close')+'</button></div></form></dialog>';
  },
  bindBooks(root,getProject,d){
   const t=this.t,fields=Object.keys(this.bookFields),dialog=$('permit-book-dialog'),form=dialog.querySelector('form'),api=this.api()+'/record-books';
@@ -90,8 +101,9 @@ window.ExportLicenses={
     select.disabled=!enabled;
     root.querySelector('[data-book-open='+key+']').disabled=!enabled;
     if(this.bookParents[key]){
-     const row=activeAccount(key);
-     root.querySelector('[data-account-holder='+key+']').value=(row?row.account_name:selected===initial[key]?d[key+'_name']:'')||'';
+     const row=activeAccount(key),saved=selected===initial[key]?d:{};
+     root.querySelector('[data-account-holder='+key+']').value=(row?row.account_name:saved[key+'_name'])||'';
+     root.querySelector('[data-account-swift='+key+']').value=(row?row.swift_code:saved[this.bookParents[key]+'_swift'])||'';
     }
    }
   };
@@ -120,6 +132,7 @@ window.ExportLicenses={
   const editor=row=>{
    editing=row;
    alert.textContent='';form.elements.value.value=row?.value||'';form.elements.account_name.value=row?.account_name||'';
+   form.elements.swift_code.value=row?.swift_code||'';
    form.querySelector('[data-book-label]').textContent=this.label(kind);
    form.querySelector('[data-book-save]').textContent=row?t('保存修改','Save Changes'):t('新增记录','Add Record');
    form.querySelector('[data-book-create]').hidden=!row;
@@ -130,7 +143,7 @@ window.ExportLicenses={
    };
    dialog.querySelector('[data-book-entries]').replaceChildren(...options(kind).map(row=>{
     const li=document.createElement('li'),label=document.createElement('span'),actions=document.createElement('span');
-    label.textContent=[row.value,row.account_name].filter(Boolean).join(' · ');
+    label.textContent=[row.value,row.account_name,row.swift_code].filter(Boolean).join(' · ');
     actions.className='permit-book-entry-actions';
     const edit=buttons(t('编辑','Edit'),'secondary',()=>{editor(row);form.elements.value.focus();});
     const remove=buttons(t('删除','Delete'),'danger-outline',async()=>{
@@ -154,6 +167,7 @@ window.ExportLicenses={
    $('permit-book-title').textContent=this.label(kind)+' · '+t('记录簿','Record Book');
    dialog.querySelector('[data-book-bank]').textContent=bank?.value||'';
    form.querySelector('[data-account-name]').hidden=!bank;
+   form.querySelector('[data-book-swift]').hidden=!bank;
    form.elements.value.maxLength=this.bookFields[kind];
    entries();dialog.showModal();form.elements.value.focus();
   };
@@ -161,8 +175,12 @@ window.ExportLicenses={
   form.querySelector('[data-book-create]').onclick=()=>editor(null);
   form.onsubmit=e=>this.submit(e,async()=>{
    const key=kind,bank=values[this.bookParents[key]],current=editing;
-   const row=await API.request(api+(current?'/'+current.id:''),{method:current?'PATCH':'POST',
-    body:{project_id:scope,kind:key,value:form.elements.value.value,...(current?{version:current.version}:{}),...(bank?{bank_id:bank,account_name:form.elements.account_name.value}:{})}});
+   const data={project_id:scope,kind:key,value:form.elements.value.value,...(current?{version:current.version}:{})};
+   if(bank)Object.assign(data,{bank_id:bank,account_name:form.elements.account_name.value,swift_code:form.elements.swift_code.value});
+   const row=await API.request(api+(current?'/'+current.id:''),{method:current?'PATCH':'POST',body:data}).catch(error=>{
+    if(error.message==='SWIFT_CODE_INVALID')throw Error(t('请输入有效的 8 位或 11 位 SWIFT 号。','Enter a valid 8- or 11-character SWIFT code.'));
+    throw error;
+   });
    if(!root.isConnected)return;
    records=records.filter(item=>item.id!==row.id);records.push(row);
    paint();dialog.close();controls[key].focus();
@@ -175,7 +193,7 @@ window.ExportLicenses={
     if((values[key]||'')!==initial[key])return true;
     if(!this.bookParents[key])return false;
     const row=activeAccount(key);
-    return row&&(row.value!==(d[key]||'')||row.account_name!==(d[key+'_name']||''));
+    return row&&(row.value!==(d[key]||'')||row.account_name!==(d[key+'_name']||'')||row.swift_code!==(d[this.bookParents[key]+'_swift']||''));
    };
    return Object.fromEntries(fields.filter(changed).map(key=>[key,values[key]||null]));
   }};

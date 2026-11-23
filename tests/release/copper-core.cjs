@@ -104,9 +104,12 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   const body=i?{...arrivalBody,trailer_one:'RC3-ALT-'+seq,driver_name:'Alternate Driver '+seq,passport_no:'Alternate Passport '+seq}:arrivalBody;
   arrivals.push(await api(url,'admin',body));
  }
- const books='/export-permits/record-books',newBook=(kind,value,bank_id)=>api(books,'sales_operator',{contract_id:contract.id,kind,value,...(bank_id?{bank_id}:{})});
+ const books='/export-permits/record-books',newBook=(kind,value,fields={})=>api(books,'sales_operator',{contract_id:contract.id,kind,value,...fields});
  const bank=await newBook('issuing_bank','Synthetic issuing bank 1'),otherBank=await newBook('issuing_bank','Synthetic issuing bank 2');
- const account=await newBook('issuing_bank_account','SYNTH-ACCT-001',bank.id);
+ const account=await newBook('issuing_bank_account','SYNTH-ACCT-001',{bank_id:bank.id,account_name:'Synthetic local holder',swift_code:'tst1cd01'});
+ const offshoreBank=await newBook('offshore_bank','Synthetic offshore bank');
+ const offshoreAccount=await newBook('offshore_bank_account','SYNTH-OFFSHORE-002',{
+  bank_id:offshoreBank.id,account_name:'Synthetic offshore holder',swift_code:'TST2GB2L123'});
  await api(books,'sales_operator',{contract_id:contract.id,kind:'issuing_bank_account',value:'SYNTH-ACCT-001',bank_id:bank.id},409);
  await api(books,'sales_operator',{contract_id:contract.id,kind:'offshore_bank_account',value:'SYNTH-BAD',bank_id:bank.id},400);
  assert((await api(books+'?contract_id='+customer.contract,'sales_operator')).items.some(row=>row.id===account.id&&row.bank_id===bank.id));
@@ -121,9 +124,16 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await licenseAction('ISSUE',{license_no:'RC3-LICENSE',valid_from:today,valid_until:'2099-12-30'});
  const {version}=await api(permitPath);
  await api(permitPath+'/actions','sales_operator',{action:'AMEND',version,reason:'Synthetic wrong bank',payload:{processing_records:{issuing_bank:otherBank.id,issuing_bank_account:account.id}}},400);
- const amended=await licenseAction('AMEND',{processing_records:{issuing_bank:bank.id,issuing_bank_account:account.id}});
+ const amended=await licenseAction('AMEND',{processing_records:{issuing_bank:bank.id,issuing_bank_account:account.id,
+  offshore_bank:offshoreBank.id,offshore_bank_account:offshoreAccount.id}});
  assert.equal(amended.issuing_bank_account,'SYNTH-ACCT-001');
+ assert.equal(amended.issuing_bank_swift,'TST1CD01');
+ assert.equal(amended.offshore_bank_swift,'TST2GB2L123');
  assert.equal(amended.history[0].processing_changes.issuing_bank_account,'SYNTH-ACCT-001');
+ const updatedBook=await app.inject({method:'PATCH',url:'/api/v1'+books+'/'+account.id,
+  headers:{...sessions.sales_operator,'x-product-code':'CU_CATHODE','idempotency-key':crypto.randomUUID()},
+  payload:{project_id:f.project,version:account.version,value:account.value,account_name:'Book changed after approval',swift_code:'TST1CD02'}});
+ assert.equal(updatedBook.statusCode,200,updatedBook.body);
  assert.equal((await c.query("SELECT count(*)::int n FROM audit_logs WHERE action LIKE 'export_license%' AND (after_data::text LIKE '%SYNTH-ACCT-001%' OR before_data::text LIKE '%SYNTH-ACCT-001%')")).rows[0].n,0);
 
  const expired=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:'2020-01-01',proforma_no:'SYNTH-EXPIRED-'+seq,quantity:'1',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});
@@ -256,13 +266,26 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(bpList.documents[0].items,undefined);
  assert.equal((await api(bpPath+'?'+new URLSearchParams({...archiveFilters,batch_no:'UNMATCHED'}))).document_total,0);
  assert.deepEqual((await api(bpPath+'/'+bpDoc.id+'/batches')).items,[{batch:bpRows[0].batch,truck:bpRows[0].truck,code:load.code,
-  packing_list_no:bpRows[0].packing_list_no,net_mt:bpRows[0].net_mt,gross_mt:bpRows[0].gross_mt}]);
+  packing_list_no:bpRows[0].packing_list_no,net_mt:bpRows[0].net_mt,gross_mt:bpRows[0].gross_mt,loading_date:bpRows[0].loading_date}]);
  assert(!(await api(bpPath)).items.some(row=>row.source_ids.includes(load.id)));
  await api(bpPath+'/preview','admin',{ids:bpIds},409);
  await api(bpPath,'admin',{...bpBody,number:bpBody.number.toLowerCase()},409);
  const sheetResponse=await request(bpPath+'/'+bpDoc.id+'/print');
  assert.equal(sheetResponse.statusCode,200);assert(sheetResponse.body.includes(bpPreview.content));
- await api(bpPath+'/template','admin',{revision:issuedTemplate.revision,fields:{...templateFields,title:'Synthetic replacement heading'}});
+ const printedIds=['RCCM: '+templateFields.rccm,'ID-NAT: '+templateFields.id_nat,'NIF: '+templateFields.nif,'Contact: '+templateFields.contact];
+ for(const item of printedIds)assert(sheetResponse.body.includes(item));
+ await api(bpPath+'/template','admin',{revision:issuedTemplate.revision,fields:{...templateFields,title:'Synthetic replacement heading',contact:'Updated future contact'}});
+ const legacyNo='SYNTHETIC-LEGACY-'+seq;
+ const {rows:[legacyBP]}=await c.query(`INSERT INTO customs_bp_documents(product_code,document_no,source_ids,source_context,snapshot,created_by)
+  SELECT product_code,$2,source_ids,source_context,
+   (snapshot-'original'-'template_revision'-'template_title')||jsonb_build_object('number',$2::text,
+    'header',(snapshot->'header')-'rccm'-'id_nat'-'nif'-'contact','rows',jsonb_build_array((snapshot->'rows'->0)-'loading_date')),
+   created_by FROM customs_bp_documents WHERE id=$1 RETURNING id,snapshot`,[bpDoc.id,legacyNo]);
+ const legacyPrint=await request(bpPath+'/'+legacyBP.id+'/print');
+ assert.equal(legacyPrint.statusCode,200);
+ for(const item of printedIds)assert(legacyPrint.body.includes(item));
+ assert.equal((await api(bpPath+'/'+legacyBP.id+'/batches')).items[0].loading_date,bpRows[0].loading_date);
+ assert.deepEqual((await c.query('SELECT snapshot FROM customs_bp_documents WHERE id=$1',[legacyBP.id])).rows[0].snapshot,legacyBP.snapshot);
  const revise=(method,url,body,key=crypto.randomUUID())=>app.inject({method,url:'/api/v1'+url,
   headers:{...sessions.admin,'x-product-code':'CU_CATHODE','idempotency-key':key},payload:body});
  const edit={revision:1,header:{...bpBody.header,border:'Mokambo'}};
@@ -312,6 +335,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const packingRow=pendingPacking.items.find(row=>row.id===load.id);
  assert.equal(pendingPacking.page_size,10);
  assert.equal(packingRow?.loading_plan_id,document.id);
+ assert.equal(packingRow?.loading_date,bpRows[0].loading_date);
  assert(pendingPacking.customer_options.some(row=>row.id===customer.id));
  await api('/shipping/'+load.id+'/packing-list','admin',{...generate,unit_price_usd:'-1'},400);
  await api('/shipping/'+load.id+'/packing-list','admin',generate);
@@ -329,9 +353,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(inv.getCell('D30').numFmt,'#,##0.000');
  assert.equal(inv.getCell('D30').result,2.0325);
  assert.equal(inv.getCell('E14').alignment.shrinkToFit,true);
+ assert.equal(inv.getCell('A42').text,'Bank Name: Synthetic offshore bank');
+ assert.equal(inv.getCell('A43').text,'Account Name: Synthetic offshore holder');
+ assert.equal(inv.getCell('A44').text,'Account Number: SYNTH-OFFSHORE-002');
+ assert.equal(inv.getCell('A45').text,'SWIFT: TST2GB2L123');
  assert.equal(inv.getCell('A48').text,'Bank Name: Synthetic issuing bank 1');
+ assert.equal(inv.getCell('A49').text,'Account Name: Synthetic local holder');
  assert.equal(inv.getCell('A50').text,'Account Number: SYNTH-ACCT-001');
- assert.equal(inv.getCell('A51').text,'');
+ assert.equal(inv.getCell('A51').text,'SWIFT: TST1CD01');
+ const invoicePreview=await api('/shipping/'+load.id+'/invoice/preview');
+ assert.match(JSON.stringify(invoicePreview.layout),/SWIFT: TST1CD01/);
+ assert.match(JSON.stringify(invoicePreview.layout),/SWIFT: TST2GB2L123/);
  assert.equal(inv.getCell('F30').value,1234.56);
  assert.equal(inv.getCell('F31').value,50);
  assert.equal(inv.getCell('G30').result,2509.24);

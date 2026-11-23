@@ -12,8 +12,8 @@ function amountCents(weight,price){return (T.scaled(weight,6)*T.scaled(price,2)+
 async function bankDetails(c,loadingPlan){
  if(!loadingPlan)return {};
  const {id,project_id,customer_id,contract_id,export_license_no}=loadingPlan;
- const {rows}=await c.query(`SELECT l.issuing_bank,l.issuing_bank_account_name,l.issuing_bank_account,
-  l.offshore_bank,l.offshore_bank_account_name,l.offshore_bank_account,
+ const {rows}=await c.query(`SELECT l.issuing_bank,l.issuing_bank_account_name,l.issuing_bank_account,l.issuing_bank_swift,
+  l.offshore_bank,l.offshore_bank_account_name,l.offshore_bank_account,l.offshore_bank_swift,
   (a.id IS NOT NULL) linked FROM export_licenses l
   LEFT JOIN export_license_allocations a ON a.license_id=l.id AND a.cu_plan_id=$1 AND a.state<>'VOID'
   WHERE l.product_code='CU_CATHODE' AND l.project_id=$2 AND l.customer_id=$3 AND l.contract_id=$4
@@ -41,11 +41,10 @@ for(const key of ['A13','A14','A16','A17','A18','A19','E8','E9'])fields[key]=pac
 fields.E14=singleLine(f.forwarder);
 const banks=snapshot.invoice_bank_details||{};
 for(const [first,prefix] of [[42,'offshore_bank'],[48,'issuing_bank']]){
- for(const [offset,label,key] of [[0,'Bank Name',prefix],[1,'Account Name',prefix+'_account_name'],[2,'Account Number',prefix+'_account']]){
+ for(const [offset,label,suffix] of [[0,'Bank Name',''],[1,'Account Name','_account_name'],[2,'Account Number','_account'],[3,'SWIFT','_swift']]){
+  const key=prefix+suffix;
   fields['A'+(first+offset)]=banks[key]?label+': '+banks[key]:'';
  }
- // SWIFT is absent from the license archive. Never reuse the template account's code.
- fields['A'+(first+3)]='';
 }
 for(const [key,value] of Object.entries(fields))body=PL.cell(body,key,value);
 const price=snapshot.commercial_invoice?.unit_price_usd,freight=snapshot.commercial_invoice?.freight_price_usd||freightPrice,

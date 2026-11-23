@@ -12,10 +12,18 @@ const kinds={
  note:['备注',1000]
 };
 const fields=Object.keys(kinds);
-const columns='id,kind,value,bank_id,account_name,version';
+const columns='id,kind,value,bank_id,account_name,swift_code,version';
 const predicate='product_code=$1 AND project_id=$2';
 const scope=(req,context)=>[req.productCode,context.project_id];
-const nameField=account=>account+'_name';
+const accountDetails=(account,record)=>({
+ [account+'_name']:record?.account_name||'',
+ [kinds[account][2]+'_swift']:record?.swift_code||''
+});
+function swiftCode(value){
+ if(typeof value!=='string'||!/^(?:[a-z0-9]{4}[a-z]{2}[a-z0-9]{2}(?:[a-z0-9]{3})?)?$/i.test(value.trim()))
+  throw B.error(400,'SWIFT_CODE_INVALID');
+ return value.trim().toUpperCase();
+}
 
 async function project(c,req,id){
  const {rows}=await c.query('SELECT DISTINCT project_id FROM user_scopes WHERE user_id=$1 AND warehouse_id IS NULL AND ($2::uuid IS NULL OR project_id=$2) ORDER BY project_id',[req.user.id,id?B.uuid(id):null]);
@@ -29,7 +37,7 @@ async function list(c,req,context){
 }
 
 async function change(c,req,context,id=null){
- const {kind,value,bank_id,account_name,version,project_id,contract_id,...extra}=req.body||{};
+ const {kind,value,bank_id,account_name,swift_code,version,project_id,contract_id,...extra}=req.body||{};
  const method=req.method,params=scope(req,context);
  if(Object.keys(extra).length)throw B.error(400,'记录簿参数无效');
  await B.scope(c,req,context.project_id,null,null,true);
@@ -52,15 +60,16 @@ async function change(c,req,context,id=null){
   next={id,kind:type,archived:true};
  }else{
   const text=B.text(value,label,max),name=bankKind&&account_name?B.text(account_name,'账户名',160):'';
+  const swift=bankKind?swiftCode(swift_code===undefined?prior?.swift_code||'':swift_code):'';
   const bank=bankKind?(prior?.bank_id||B.uuid(bank_id)):null;
   if(bankKind){
    const exists=(await c.query('SELECT id FROM export_license_record_books WHERE '+predicate+' AND id=$3 AND kind=$4 AND archived_at IS NULL',[...params,bank,bankKind])).rowCount;
    if(!exists)throw B.error(400,'请选择对应银行');
-  }else if(bank_id||account_name)throw B.error(400,'此记录簿无需关联银行账户');
+  }else if(bank_id||account_name||swift_code)throw B.error(400,'此记录簿无需关联银行账户');
   if(prior){
-   next=(await c.query('UPDATE export_license_record_books SET value=$2,account_name=$3,version=version+1 WHERE id=$1 RETURNING '+columns,[id,text,name])).rows[0];
+   next=(await c.query('UPDATE export_license_record_books SET value=$2,account_name=$3,swift_code=$4,version=version+1 WHERE id=$1 RETURNING '+columns,[id,text,name,swift])).rows[0];
   }else{
-   next=(await c.query('INSERT INTO export_license_record_books(product_code,project_id,kind,value,bank_id,account_name,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING RETURNING '+columns,[...params,type,text,bank,name,req.user.id])).rows[0];
+   next=(await c.query('INSERT INTO export_license_record_books(product_code,project_id,kind,value,bank_id,account_name,swift_code,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING RETURNING '+columns,[...params,type,text,bank,name,swift,req.user.id])).rows[0];
    if(!next)throw B.error(409,'记录簿已存在相同记录');
   }
  }
@@ -80,12 +89,12 @@ async function selections(c,req,context,body,previous={},replay=false){
   const bankKind=kinds[field][2];
   if(Object.hasOwn(changes||{},field)){
    const id=changes[field];
-   if(id===null){delete ids[field];values[field]='';if(bankKind)values[nameField(field)]='';continue;}
+   if(id===null){delete ids[field];values[field]='';if(bankKind)Object.assign(values,accountDetails(field));continue;}
    const item=indexed.get(id.toLowerCase());
    if(!item||item.kind!==field)throw B.error(400,'所选办证资料已删除或不属于当前字段、产品及项目');
    ids[field]=item.id;
    values[field]=item.value;
-   if(bankKind)values[nameField(field)]=item.account_name;
+   if(bankKind)Object.assign(values,accountDetails(field,item));
   }else if(Object.hasOwn(body,field)&&!bankKind&&field!=='offshore_bank'){
    const value=body[field]?B.text(body[field],kinds[field][0],kinds[field][1]):'';
    if(value!==(previous[field]||'')){delete ids[field];values[field]=value;}
@@ -97,7 +106,7 @@ async function selections(c,req,context,body,previous={},replay=false){
   if(Object.hasOwn(values,parent)&&!Object.hasOwn(changes||{},account)&&((previous[parent]||'')!==values[parent]||previous.processing_records?.[parent]!==ids[parent])){
    delete ids[account];
    values[account]='';
-   values[nameField(account)]='';
+   Object.assign(values,accountDetails(account));
   }
  }
  return Object.keys(values).length?{...values,processing_records:ids}:values;
@@ -105,7 +114,7 @@ async function selections(c,req,context,body,previous={},replay=false){
 
 function auditSnapshot(values){
  if(!values)return values;
- const {issuing_bank_account,issuing_bank_account_name,offshore_bank_account,offshore_bank_account_name,...safe}=values;
+ const {issuing_bank_account,issuing_bank_account_name,issuing_bank_swift,offshore_bank_account,offshore_bank_account_name,offshore_bank_swift,...safe}=values;
  return safe;
 }
 

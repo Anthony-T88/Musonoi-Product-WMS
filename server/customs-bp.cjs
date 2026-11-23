@@ -71,7 +71,7 @@ const cuList=`SELECT l.id,l.code,l.project_id,l.customer_id,c.name customer,x.ba
 const claimed=(alias,product)=>`(EXISTS(SELECT 1 FROM customs_bp_batch_claims c WHERE c.product_code=${product}
  AND c.project_id=${alias}.project_id AND c.batch_no=ANY(${alias}.batch_nos))
  OR EXISTS(SELECT 1 FROM customs_bp_documents b WHERE b.product_code=${product} AND b.source_ids @> ARRAY[${alias}.id]))`;
-const rowFields={batch:160,truck:80,trailer_one:80,trailer_two:80,container:80,transporter:160,driver:160,passport:80,quantity:8,net_mt:32,gross_mt:32,packing_list_no:160};
+const rowFields={batch:160,truck:80,trailer_one:80,trailer_two:80,container:80,transporter:160,driver:160,passport:80,quantity:8,net_mt:32,gross_mt:32,packing_list_no:160,loading_date:10};
 const editableHeader={mode:60,border:120,signature_date:10};
 const choices={modes:['ROAD','RAILWAY'],borders:['Kasumbalesa','Sakania','Mokambo']};
 const hash=rows=>crypto.createHash('sha256').update(JSON.stringify(rows)).digest('hex');
@@ -282,6 +282,15 @@ async function archiveBasis(c,req,doc){
   template_revision:template.revision,template_title:title};
 }
 
+async function withPrintIdentification(c,product,snapshot){
+ const missing=['rccm','id_nat','nif','contact'].filter(field=>!snapshot.header[field]?.trim());
+ if(!missing.length)return snapshot;
+ // Earlier BP revisions predate the approved template. Use its first version for missing print fields.
+ const template=await Templates.fieldsAt(c,product,snapshot.template_revision||1),header={...snapshot.header};
+ for(const field of missing)header[field]=snapshot.original?.header?.[field]?.trim()||template?.[field]||'';
+ return {...snapshot,header};
+}
+
 function editorData(doc,basis){
  const {snapshot}=doc;
  const findChoice=(key,options)=>options.find(option=>option.toUpperCase()===String(snapshot.header[key]||'').toUpperCase())||'';
@@ -301,18 +310,24 @@ async function revised(c,req,doc,lock=false){
 }
 
 async function archiveBatches(c,req,rows){
- const ids=rows.filter(row=>!row.packing_list_no&&row.order_id).map(row=>row.order_id);
- let numbers=new Map();
+ const ids=rows.filter(row=>(!row.packing_list_no||!row.loading_date)&&row.order_id).map(row=>row.order_id);
+ let source=new Map();
  if(ids.length){
-  const sql=req.productCode===CO?`SELECT l.id,coalesce(k.document_no,p.packing_list_no) packing_list_no
-   FROM co_loading_orders l JOIN co_loading_plans p ON p.id=l.plan_id LEFT JOIN co_packing_documents k ON k.order_id=l.id`:
-   `SELECT l.id,coalesce(k.document_no,p.packing_list_no) packing_list_no
+  const sql=req.productCode===CO?`SELECT l.id,coalesce(k.document_no,p.packing_list_no) packing_list_no,
+   coalesce((e.confirmed_at AT TIME ZONE 'Africa/Lubumbashi')::date,p.planned_load_date)::text loading_date
+   FROM co_loading_orders l JOIN co_loading_plans p ON p.id=l.plan_id
+   LEFT JOIN co_load_executions e ON e.order_id=l.id LEFT JOIN co_packing_documents k ON k.order_id=l.id`:
+   `SELECT l.id,coalesce(k.document_no,p.packing_list_no) packing_list_no,
+   coalesce((l.loaded_at AT TIME ZONE 'Africa/Lubumbashi')::date,p.planned_load_date)::text loading_date
    FROM loading_orders l LEFT JOIN loading_plan_matches m ON m.loading_id=l.id
    LEFT JOIN loading_plan_documents p ON p.id=m.document_id LEFT JOIN packing_list_documents k ON k.loading_id=l.id`;
-  numbers=new Map((await c.query(sql+' WHERE l.id=ANY($1::uuid[])',[ids])).rows.map(row=>[row.id,row.packing_list_no]));
+  source=new Map((await c.query(sql+' WHERE l.id=ANY($1::uuid[])',[ids])).rows.map(row=>[row.id,row]));
  }
- return {items:rows.map(({batch,truck,code,packing_list_no,order_id,net_mt,gross_mt})=>
-  ({batch,truck,code,packing_list_no:packing_list_no||numbers.get(order_id)||'',net_mt,gross_mt}))};
+ return {items:rows.map(({batch,truck,code,packing_list_no,order_id,net_mt,gross_mt,loading_date})=>{
+  const row=source.get(order_id);
+  return {batch,truck,code,packing_list_no:packing_list_no||row?.packing_list_no||'',net_mt,gross_mt,
+   loading_date:loading_date||row?.loading_date||''};
+ })};
 }
 
 async function editArchive(c,req){
@@ -395,13 +410,17 @@ function register({app,pool,permitted,csrf}){
     versions:[...rows,{revision:1,created_at:doc.created_at}]};
   }));
   app.post(url+'/:id/print/preview',{preHandler:[permission,csrf]},req=>C.readTransaction(pool,async c=>{
-   const snapshot=await revised(c,req,await archived(c,req));
+   const snapshot=await withPrintIdentification(c,req.productCode,await revised(c,req,await archived(c,req)));
    return {number:snapshot.number,content:E.content(snapshot)};
   }));
   app.patch(url+'/:id',{preHandler:[permission,csrf]},req=>B.mutate(pool,req,c=>editArchive(c,req)));
   app.get(url+'/:id/batches',{preHandler:permission},req=>C.readTransaction(pool,async c=>archiveBatches(c,req,(await archived(c,req)).snapshot.rows)));
-  app.get(url+'/:id/print',{preHandler:permission},async(req,reply)=>reply
-   .type('text/html; charset=utf-8').send(E.html((await archived(pool,req,req.query.revision===undefined?null:B.version(Number(req.query.revision)))).snapshot,req.query.print==='1')));
+  app.get(url+'/:id/print',{preHandler:permission},async(req,reply)=>{
+   const revision=req.query.revision===undefined?null:B.version(Number(req.query.revision));
+   const doc=await archived(pool,req,revision);
+   const snapshot=await withPrintIdentification(pool,req.productCode,doc.snapshot);
+   return reply.type('text/html; charset=utf-8').send(E.html(snapshot,req.query.print==='1'));
+  });
  }
 }
 

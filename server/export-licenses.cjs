@@ -59,10 +59,11 @@ async function detail(c,req,id){
  const data=(await c.query(projection+' WHERE l.id=$1',[id])).rows[0];
  const history=(await c.query(`SELECT a.*,u.display_name requester,v.display_name reviewer,coalesce(a.processing_snapshot - 'processing_records',a.result - 'processing_records',(SELECT jsonb_object_agg(s.key,b.value) FROM jsonb_each_text(coalesce(a.payload->'processing_records','{}')) s LEFT JOIN export_license_record_books b ON b.id::text=s.value AND b.product_code=$2 AND b.project_id=$3 AND b.kind=s.key)) processing_changes FROM export_license_actions a JOIN users u ON u.id=a.requested_by LEFT JOIN users v ON v.id=a.reviewed_by WHERE a.license_id=$1 ORDER BY a.requested_at DESC,a.id`,[id,license.product_code,license.project_id])).rows;
  const allocations=(await c.query("SELECT a.id,a.plan_id,a.batch_id,a.invoice_no,a.reserved_quantity::text,a.used_quantity::text,a.state,a.closed_at,p.loading_id,p.posted_at,p.net_mt::text,p.estimated_metal_mt::text,p.confirmed_metal_mt::text,coalesce(d.code,cp.code) plan_no FROM export_license_allocations a LEFT JOIN export_license_postings p ON p.allocation_id=a.id LEFT JOIN loading_plan_documents d ON d.id=a.cu_plan_id LEFT JOIN co_loading_plans cp ON cp.id=a.co_plan_id WHERE a.license_id=$1 ORDER BY a.created_at,a.id",[id])).rows;
- const {issuing_bank_account,issuing_bank_account_name,offshore_bank,offshore_bank_account,offshore_bank_account_name,processing_records}=license;
+ const {issuing_bank_account,issuing_bank_account_name,issuing_bank_swift,offshore_bank,offshore_bank_account,offshore_bank_account_name,offshore_bank_swift,processing_records}=license;
  const {rows:historical_usage}=await c.query('SELECT source_id,document_no,invoice_no,business_date::text,used_quantity::text FROM export_license_historical_usage WHERE license_id=$1 ORDER BY business_date DESC,document_no',[id]);
  const {local_day}=(await c.query('SELECT '+today+'::text local_day')).rows[0];
- return {...data,license_status:license.status,issuing_bank_account,issuing_bank_account_name,offshore_bank,offshore_bank_account,offshore_bank_account_name,processing_records,history,allocations,historical_usage,local_day};
+ return {...data,license_status:license.status,issuing_bank_account,issuing_bank_account_name,issuing_bank_swift,
+  offshore_bank,offshore_bank_account,offshore_bank_account_name,offshore_bank_swift,processing_records,history,allocations,historical_usage,local_day};
 }
 async function list(c,req,eligible){
  const q=req.query||{},page=Number(q.page||1),filter=String(q.search||'').trim().slice(0,160);

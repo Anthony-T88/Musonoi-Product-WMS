@@ -813,6 +813,10 @@
     {
       "version": "203_v488_bp_templates.sql",
       "checksum": "3d9178b594ee1d450fe0acbb51a8a4a4cfe14af901188280b5f680e9d91aa1b1"
+    },
+    {
+      "version": "204_v488_bank_swift.sql",
+      "checksum": "0abe678dd0c343fb39052021a856b49731e77566e6180c5518053722b04e5ad4"
     }
   ]
 }

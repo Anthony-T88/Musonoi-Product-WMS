@@ -70,6 +70,7 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
  const state_counts=Object.fromEntries(stateCounts.map(r=>[r.state||'UNKNOWN',r.count])),scope_total=stateCounts.reduce((n,r)=>n+r.count,0);
  let total=statusPredicate?(stateCounts.find(row=>row.state===q.status)?.count||0):scope_total,visibleTotal=scope_total;
  const planFields=packingWorkspace?`lp.packing_list_no,lp.id loading_plan_id,lp.code loading_plan_code,
+ coalesce((l.loaded_at AT TIME ZONE 'Africa/Lubumbashi')::date,lp.planned_load_date)::text loading_date,
  coalesce(nullif(lp.transporter,''),nullif(t.fields->>'forwarder',''),l.carrier) transporter,
  coalesce(nullif(lp.destination,''),t.fields->>'destination') destination,`:
   v31?"(SELECT x.packing_list_no FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id) packing_list_no,":'';

@@ -124,7 +124,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const listed=await api(bp+'?'+new URLSearchParams(filters));
   assert.deepEqual(listed.documents.map(row=>[row.id,row.customer]),[[bpDoc.id,bpData.header.customer]]);
   assert.deepEqual((await api(bp+'/'+bpDoc.id+'/batches')).items,
-   [{batch:bpRows[0].batch,truck:bpRows[0].truck,code:matched.order.code,packing_list_no:bpRows[0].packing_list_no,net_mt:bpRows[0].net_mt,gross_mt:bpRows[0].gross_mt}]);
+   [{batch:bpRows[0].batch,truck:bpRows[0].truck,code:matched.order.code,packing_list_no:bpRows[0].packing_list_no,
+    net_mt:bpRows[0].net_mt,gross_mt:bpRows[0].gross_mt,loading_date:bpRows[0].loading_date}]);
   await api(bp+'/'+bpDoc.id+'/batches','sales_operator',undefined,403);
   await api(bp+'/'+bpDoc.id+'/batches','customer_admin',undefined,404);
   assert.equal((await api(bp+'?'+new URLSearchParams({...filters,generated_date:'2000-01-01'}))).document_total,0);
@@ -231,6 +232,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const pending=await api(packing+'?'+new URLSearchParams({...filter,document_status:'MISSING'}));
   assert.equal(pending.page_size,25);
   assert.equal(pending.items.find(row=>row.order_id===matched.order.id)?.destination,'Synthetic destination');
+  const {rows:[executed]}=await c.query("SELECT (confirmed_at AT TIME ZONE 'Africa/Lubumbashi')::date::text date FROM co_load_executions WHERE order_id=$1",[matched.order.id]);
+  assert.equal(pending.items.find(row=>row.order_id===matched.order.id)?.loading_date,executed.date);
   assert(pending.customer_options.some(row=>row.id===customer.id));
   const generated=await api(base+'/generate','admin',{expected_revision:0,source_signature:details.source_signature,reason:'Synthetic rc3 integration evidence'});
   const listed=await api(packing+'?'+new URLSearchParams({...filter,document_status:'GENERATED'}));

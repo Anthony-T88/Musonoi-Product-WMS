@@ -14,7 +14,7 @@ window.CustomsWorkspace={
  },
  nav(tab){
   const t=this.t,options=[
-   ['packing',this.can('load:read')?'/customs/packing-list':'/customs/templates','装箱单','Packing Lists',this.can('load:read')||this.can('packing-template:write')],
+   ['packing',this.can('load:read')?'/customs/packing-list':'/customs/templates','商业发票与装箱单','Commercial Invoice & Packing List',this.can('load:read')||this.can('packing-template:write')],
    ['bp','/customs/bp','BP表','BP Sheet',!!this.bpPermission()]
   ];
   return '<nav class="business-toolbar" aria-label="'+t('清关单据导航','Customs Documents Navigation')+'" data-customs-nav data-no-i18n>'+
@@ -32,22 +32,23 @@ window.CustomsWorkspace={
   if(key!==location.href||product!==ProductContext.code)return;
   const rows=data.items.map(row=>this.packingRow(row,co));
   const labels=[['批次号','Lot No.'],['车牌 / 客户','Truck / Customer'],['净重（吨）','Net Weight (MT)'],
-   ['装箱单号','Packing List No.'],['单据状态','Document Status'],['创建时间','Created At'],['操作','Actions']];
+   ['装箱单号','Packing List No.'],['单据状态','Document Status'],['装车日期','Loading Date']];
   const entries=rows.map(row=>{
-   const select=(caption,cls)=>'<button type="button" class="'+cls+'" data-packing-select="'+esc(row.id)+
+   const select='<button type="button" class="packing-lot-link" data-packing-select="'+esc(row.id)+
     '" aria-pressed="false" aria-controls="customs-packing-preview" aria-label="'+esc(t('预览批次 ','Preview lot ')+(row.batch||row.code))+
-    '">'+esc(caption)+'</button>';
-   const cells=[select(row.batch||'—','packing-lot-link'),esc(row.truck||'—')+'<small>'+esc(row.customer||'—')+'</small>',
-    esc(row.weight),esc(row.number||'—'),this.packingStatus(row.revision),esc(row.created),select(t('查看','View'),'button secondary compact')];
+    '">'+esc(row.batch||'—')+'</button>';
+   const cells=[select,esc(row.truck||'—')+'<small>'+esc(row.customer||'—')+'</small>',
+    esc(row.weight),esc(row.number||'—'),this.packingStatus(row.revision),esc(row.loadingDate||'—')];
    return '<tr data-packing-row="'+esc(row.id)+'">'+cells.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>';
   });
-  Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page customs-packing-workspace" data-no-i18n data-page-composed>'+this.nav('packing')+
-   this.packingFilters(q,data.customer_options)+
+  const template=this.can('packing-template:write')?'<a class="button secondary compact" data-packing-template href="/customs/templates">'+
+   t('装箱单模板','Packing List Template')+'</a>':'';
+  Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page customs-packing-workspace" data-no-i18n data-page-composed>'+
+   '<div class="packing-workspace-toolbar">'+this.nav('packing')+template+'</div>'+this.packingFilters(q,data.customer_options)+
    '<div class="customs-packing-split"><section class="wms-section packing-list-panel" aria-labelledby="customs-packing-list-heading">'+
-   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('装箱单列表','Packing Lists')+'</h2><div class="bp-archive-actions"><span>'+
-   esc(t('共 '+data.total+' 条',data.total+' records'))+'</span>'+(this.can('packing-template:write')?
-    '<a class="button secondary compact" data-packing-template href="/customs/templates">'+t('装箱单模板','Packing List Template')+'</a>':'')+'</div></header>'+
-   ExportLicenses.table(labels,entries,'customs-packing-list',true,{numeric:[2],actions:[6]})+Management.pager(data)+'</section>'+
+   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('批次列表','Batch List')+'</h2><span>'+
+   esc(t('共 '+data.total+' 条',data.total+' records'))+'</span></header>'+
+   ExportLicenses.table(labels,entries,'customs-packing-list',true,{numeric:[2]})+Management.pager(data)+'</section>'+
    '<aside id="customs-packing-preview" class="wms-preview" aria-labelledby="customs-packing-preview-heading" tabindex="-1">'+
    '<header class="packing-panel-heading"><h2 id="customs-packing-preview-heading">'+t('装箱单预览','Packing List Preview')+'</h2><span>'+
    t('只读','Read only')+'</span></header><div class="packing-preview-body" aria-live="polite"></div></aside></div></div>');
@@ -82,7 +83,7 @@ window.CustomsWorkspace={
    id:co?row.order_id:row.id,batch:co?row.preparation_batch_no:row.lot_no,customer:row.customer_name,code:row.code,
    truck:co?row.transport_snapshot?.truck_no:row.shipping_vehicle_no||row.vehicle_no,
    number:row.document_no||row.packing_list_no,weight:weight==null?'—':co?CobaltLoadingUI.mt(weight):Tonnes.format(weight),
-   revision,generated:co?row.document_generated_at:row.generated_at,created:BusinessTime.display(row.created_at),
+   revision,generated:co?row.document_generated_at:row.generated_at,loadingDate:row.loading_date,
    planId:co?row.plan_id:row.loading_plan_id,planCode:row.loading_plan_code,
    transporter:row.transporter,destination:row.destination,posted:co||row.posted
   };

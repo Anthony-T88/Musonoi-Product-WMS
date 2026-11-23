@@ -95,7 +95,7 @@ function selectors(key,product,landing){
  const main=co?'#business-title, #dashboard h1, #inventory h1':'#business-title, #dashboard h1, #inventory h1, #field h1';
  const checks={
   'customs-entry':['#customs-packing-list','#customs-packing-preview'],
-  customs:['#customs-bp-pending','[data-bp-agency-book]'],
+  customs:['#customs-bp-pending','.bp-list-tabs'],
   'customs-bp-archive':['#customs-bp-documents','#customs-bp-filter'],
   login:['#login-username','#login-password'],
   'register-dialog':['#registration-modal[open] input[name="username"]'],
