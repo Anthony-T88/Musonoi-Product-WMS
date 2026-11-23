@@ -223,18 +223,25 @@ async function main(){
   });
   await check('packing and invoice action panels at 1440, 1280 and 390',async()=>{
    const cu=await one('SELECT loading_id FROM packing_list_documents LIMIT 1'),co=await one('SELECT order_id FROM co_packing_documents LIMIT 1');
-   for(const [product,route,form] of [[CU,'/export-shipments/'+cu.loading_id,'#shipping-generate'],[CO,'/outbounds/'+co.order_id+'/packing-list','#co-packing-generate']]){
+   for(const [product,id] of [[CU,cu.loading_id],[CO,co.order_id]]){
+    const form='#customs-document-generate';
     for(const width of [1440,1280,390]){
-     await page.setViewportSize({width,height:900});await go(product,route);await page.locator(form).waitFor();
+     await page.setViewportSize({width,height:900});
+     await go(product,'/customs/packing-list/'+id);
+     assert.equal(await page.locator(form+', [data-packing-generate]').count(),0);
+     await go(product,'/customs/packing-list?page_size=100');
+     await page.locator('[data-packing-row="'+id+'"] button').click();
+     await page.locator('[data-packing-generate]').click();
+     await page.locator(form).waitFor();
      const dimensions=await page.locator(form).evaluate(f=>{
-      const grid=f.closest('.p46-grid'),main=f.closest('.p46-main'),documentGrid=f.querySelector('.wms-field-grid');
-      return {grid:grid.getBoundingClientRect().width,main:main.getBoundingClientRect().width,form:f.getBoundingClientRect().width,fields:documentGrid.getBoundingClientRect().width};
+      const bounds=f.closest('dialog').getBoundingClientRect(),fields=f.querySelector('.wms-field-grid').getBoundingClientRect();
+      return {left:bounds.left,right:bounds.right,form:f.getBoundingClientRect().width,fields:fields.width};
      });
-     assert(Math.abs(dimensions.grid-dimensions.main)<2&&Math.abs(dimensions.form-dimensions.fields)<2,JSON.stringify(dimensions));
+     assert(dimensions.left>=0&&dimensions.right<=width+1&&Math.abs(dimensions.form-dimensions.fields)<2,JSON.stringify(dimensions));
      if(width!==1280)await shot(page,product+'-packing-'+width);
+     if(width!==390)await page.keyboard.press('Escape');
     }
-    const table=product===CU?'packing_list_documents':'co_packing_documents',fk=product===CU?'loading_id':'order_id',
-     id=product===CU?cu.loading_id:co.order_id;
+    const table=product===CU?'packing_list_documents':'co_packing_documents',fk=product===CU?'loading_id':'order_id';
     const prior=(await one('SELECT revision FROM '+table+' WHERE '+fk+'=$1',[id])).revision;
     const field=page.locator(form+' '+(product===CU?'input[name=unit_price_usd]':'textarea[name=reason]'));
     await field.fill('');
@@ -248,7 +255,7 @@ async function main(){
      await new Promise(resolve=>setTimeout(resolve,150));
     }
     assert.equal((await one('SELECT revision FROM '+table+' WHERE '+fk+'=$1',[id])).revision,prior+1,
-     JSON.stringify({product,errors:await page.locator('#shipping-generate-error,#co-packing-error').allTextContents()}));
+     JSON.stringify({product,errors:await page.locator(form+' [role="alert"]').allTextContents()}));
    }
   });
   await check('separate approval prototypes, desktop and mobile',async()=>{

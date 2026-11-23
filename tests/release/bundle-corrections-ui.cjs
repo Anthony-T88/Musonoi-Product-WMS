@@ -98,7 +98,7 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
     const p=login.page;await p.goto(origin+'/overview?management=todos');
     const task=p.locator('tr').filter({has:p.locator('a[href="'+url+'"]')});
     await task.getByText('Bundle Correction Awaiting Production Manager Review',{exact:true}).waitFor();
-    await task.getByRole('link',{name:'Open to Process →'}).click();
+    await task.getByRole('link',{name:'Document Details'}).click();
     await p.getByRole('button',{name:'Approve',exact:true}).click();
     await p.locator('#operation-confirm-accept').click();
     await p.locator('#bundle-correction-records').getByText('Approved',{exact:true}).waitFor();

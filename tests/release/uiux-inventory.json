@@ -932,7 +932,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "loading order preview with detail link",
+      "state": "loading order preview with detail and correction links",
       "template": "/outbounds"
     },
     {
@@ -986,7 +986,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "template above filters, batch loading date and scoped preview",
+      "state": "customs document preview and authorized generation dialog",
       "template": "/customs/packing-list"
     },
     {
@@ -1102,7 +1102,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "cobalt document details, preview and archive history",
       "template": "/customs/packing-list/:id"
     },
     {
@@ -1119,7 +1119,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "standard",
+      "state": "copper document details, preview and archive history",
       "template": "/export-shipments/:id"
     },
     {

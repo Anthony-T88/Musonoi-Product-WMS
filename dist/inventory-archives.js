@@ -164,7 +164,7 @@ window.InventoryArchives={
   archive.innerHTML=UI46Pages.identity(doc,status,actions,summary,'archive-identity')+'<div id="bundle-correction-records"></div>'+this.documents(linkRows)+
    this.section('业务记录与历史依据','Activity and Historical Evidence',secondary+activity+
     '<a class="button secondary" href="/inventory/'+encodeURIComponent(doc)+'/history">'+t('查看完整流水','Open Full Ledger')+'</a>'+
-    '<p class="wms-feedback">'+t('资料来源　库存档案、关联单据和库存流水','Sources: inventory archive, linked documents and stock ledger')+'</p>');
+    '');
   for(const id of ['v262-correct-sheets','v262-correct-seal']){
    const button=root.querySelector('#'+id);
    if(button&&!(id==='v262-correct-sheets'&&b.inventory_state_code==='AVAILABLE'))UI46Pages.move(button,archive.querySelector('#c461-bundle-actions'),s);
@@ -235,7 +235,7 @@ window.InventoryArchives={
   const older=rows.length>4?'<details><summary>'+t('更早记录','Earlier Activity')+'（'+(rows.length-4)+'）</summary>'+
    this.table(historyHeads,rows.slice(4))+'</details>':'';
   const history=this.section('业务记录','Activity',this.table(historyHeads,rows.slice(0,4))+older+
-   '<p class="wms-feedback">'+t('资料来源　入库备货单、袋级作业和正式出库记录','Sources: receipt preparations, bag operations and formal outbound records')+'</p>');
+   '');
   CobaltUI.page(t('批次详情档案','Batch Detail Archive'),'<div class="inventory-archive">'+
    UI46Pages.identity(b.preparation_batch_no,CobaltStock469R2.state(b),actions,summaryHTML,'archive-identity')+
    this.section('逐袋明细','Bag Details',search+bags+pager)+related+history+'</div>');

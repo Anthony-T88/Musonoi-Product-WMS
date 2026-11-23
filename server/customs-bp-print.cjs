@@ -15,13 +15,17 @@ const value=(row,key)=>{
  if(!key.endsWith('_mt'))return escape(field);
  return T.fixed(T.scaled(field,3),3).replace(/\B(?=(\d{3})+\.)/g,',');
 };
-function table(rows,total){
+function table(rows,total,signatureDate){
  const head=columns.map(([label])=>'<th scope="col">'+escape(label)+'</th>').join('');
- const body=rows.map((row,i)=>'<tr>'+columns.map(([,key])=>'<td>'+(key?value(row,key):i+1)+'</td>').join('')+'</tr>').join('');
- // Store no placeholder rows. The total is a normal row group so it prints only once.
+ const vehicles=rows.map((row,i)=>'<tr class="bp-vehicle">'+columns.map(([,key])=>'<td>'+(key?value(row,key):i+1)+'</td>').join('')+'</tr>');
+ const totals='<tr class="bp-total"><th scope="row" colspan="9">TOTAL</th>'+
+  ['quantity','net_mt','gross_mt'].map(k=>'<td>'+value(total,k)+'</td>').join('')+'</tr>';
+ const signature='<tr class="bp-signoff"><td colspan="'+columns.length+'"><footer class="bp-signature"><p>SIGNATURE</p><p>KOLWEZI, le '+
+  escape(signatureDate)+'</p></footer></td></tr>';
+ // Keep the last vehicle with the totals and signatures on multi-page sheets.
  return '<table class="bp-table"><colgroup>'+columns.map(([,,width])=>'<col class="bp-width-'+width+'">').join('')+
-  '</colgroup><thead><tr>'+head+'</tr></thead><tbody class="bp-vehicles">'+body+'</tbody>'+
-  '<tbody class="bp-total"><tr><th scope="row" colspan="9">TOTAL</th>'+['quantity','net_mt','gross_mt'].map(k=>'<td>'+value(total,k)+'</td>').join('')+'</tr></tbody></table>';
+  '</colgroup><thead><tr>'+head+'</tr></thead><tbody>'+vehicles.slice(0,-1).join('')+'</tbody>'+
+  '<tbody class="bp-closing">'+(vehicles.at(-1)||'')+totals+signature+'</tbody></table>';
 }
 function content(snapshot){
  const {number,header:h,rows,total}=snapshot;
@@ -33,7 +37,7 @@ function content(snapshot){
   '<div class="bp-issuer"><div>'+identification+'</div><img src="/customs-bp-logo.png?rev='+revision()+'" alt="Metorex · Ruashi Mining"></div>'+
   '<div class="bp-details">'+details([['Client','customer'],['Product','product'],['Transport mode','mode'],['Final Destination','destination'],['Exit Border','border']])+
   details([['Customs Agency','agency'],['License','license'],['Loading Point','loading_point'],['Loading Date','loading_date']])+'</div>'+
-  table(rows,total)+'<footer class="bp-signature"><p>SIGNATURE</p><p>KOLWEZI, le '+escape(h.signature_date)+'</p></footer></article>';
+  table(rows,total,h.signature_date)+'</article>';
 }
 function html(snapshot,auto=false){
  const rev=revision();

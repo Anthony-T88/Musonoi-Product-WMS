@@ -168,13 +168,13 @@ function pages(ids){
  add('co-loading-plan','/loading-plans/orders/:id',[CO],{example:'coPlanDoc',screenshot:true});
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
- add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail link'});
+ add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail and correction links'});
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
  add('customs-entry','/customs',BOTH,{state:'default to commercial invoice and packing list'});
  add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'pending lots, net weights and scoped template controls'});
  add('customs-bp-archive','/customs/bp',BOTH,{query:'?view=documents',state:'issued BP weights and expanded batch loading dates'});
  add('customs-bp-filtered','/customs/bp',BOTH,{query:'?document_no=UIUX-NO-MATCH',state:'archive number filter with no match'});
- add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'template above filters, batch loading date and scoped preview'});
+ add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'customs document preview and authorized generation dialog'});
  add('customs-packing-empty','/customs/packing-list',BOTH,{query:'?search=UIUX-NO-PACKING-MATCH',state:'empty filtered packing workspace'});
  add('templates','/customs/templates',BOTH);
  add('templates-former-entry','/outbounds/templates',BOTH,{state:'redirected'});
@@ -188,9 +188,9 @@ function pages(ids){
  add('cu-corrections','/outbounds/corrections',[CU]);
  add('cu-correction-detail','/outbounds/corrections/:id',[CU],{example:'cuCorrection'});
  add('cu-packing-legacy','/outbounds/packing-list/:id',[CU],{example:'cuLoad'});
- add('co-packing','/customs/packing-list/:id',[CO],{example:'coLoad',screenshot:true});
+ add('co-packing','/customs/packing-list/:id',[CO],{example:'coLoad',screenshot:true,state:'cobalt document details, preview and archive history'});
  add('shipping','/export-shipments',BOTH,{screenshot:true});
- add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true});
+ add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true,state:'copper document details, preview and archive history'});
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
  add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});

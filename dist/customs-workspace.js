@@ -46,12 +46,11 @@ window.CustomsWorkspace={
   Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page customs-packing-workspace" data-no-i18n data-page-composed>'+
    '<div class="packing-workspace-toolbar">'+this.nav('packing')+template+'</div>'+this.packingFilters(q,data.customer_options)+
    '<div class="customs-packing-split"><section class="wms-section packing-list-panel" aria-labelledby="customs-packing-list-heading">'+
-   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('批次列表','Batch List')+'</h2><span>'+
-   esc(t('共 '+data.total+' 条',data.total+' records'))+'</span></header>'+
+   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('批次列表','Batch List')+'</h2></header>'+
    ExportLicenses.table(labels,entries,'customs-packing-list',true,{numeric:[2]})+Management.pager(data)+'</section>'+
    '<aside id="customs-packing-preview" class="wms-preview" aria-labelledby="customs-packing-preview-heading" tabindex="-1">'+
-   '<header class="packing-panel-heading"><h2 id="customs-packing-preview-heading">'+t('装箱单预览','Packing List Preview')+'</h2><span>'+
-   t('只读','Read only')+'</span></header><div class="packing-preview-body" aria-live="polite"></div></aside></div></div>');
+   '<header class="packing-panel-heading"><h2 id="customs-packing-preview-heading">'+
+   t('清关单据预览','Customs Document Preview')+'</h2></header><div class="packing-preview-body" aria-live="polite"></div></aside></div></div>');
   $('customs-packing-filter').onsubmit=e=>{
    e.preventDefault();
    const params=new URLSearchParams([...new FormData(e.target)].filter(([,value])=>value.trim()));
@@ -106,7 +105,7 @@ window.CustomsWorkspace={
  },
  packingPreview(preview,row,co){
   const t=this.t,body=preview.querySelector('.packing-preview-body');
-  if(!row){body.innerHTML='<p class="wms-feedback">'+t('当前筛选无可预览的装箱单。','No packing lists match these filters.')+'</p>';return;}
+  if(!row){body.innerHTML='<p class="wms-feedback">'+t('当前筛选无清关单据。','No customs documents match these filters.')+'</p>';return;}
   const detail='/customs/packing-list/'+esc(row.id),facts=entries=>UI46Pages.factList(entries);
   const text=value=>esc(value||'—'),link=(href,value)=>value?'<a href="'+esc(href)+'">'+esc(value)+'</a>':'—';
   const plan=row.planId&&this.can('loading-plan:read')?link('/loading-plans/orders/'+row.planId,row.planCode):text(row.planCode);
@@ -122,14 +121,56 @@ window.CustomsWorkspace={
     [t('装车单号','Loading Order No.'),link((co?'/outbounds/':'/outbounds/loads/')+row.id,row.code)],[t('装车计划号','Loading Plan No.'),plan]])+'</section>'+
    '<section><h3>'+t('运输资料','Transport Details')+'</h3>'+facts([
     [t('运输商','Transporter'),text(row.transporter)],[t('目的地','Destination'),text(row.destination)]])+'</section>'+revisions+
-   '<div class="business-toolbar"><a class="button primary" href="'+detail+'">'+t('进入装箱单','Open Packing List')+'</a>'+
+   '<div class="business-toolbar"><a class="button primary" href="'+detail+'">'+t('单据详情','Document Details')+'</a>'+
+   (Shipping.canGenerate()?'<button type="button" class="button secondary" data-packing-generate>'+
+    (row.revision?t('生成新版本','Generate New Revision'):t('生成清关单据','Generate Customs Documents'))+'</button>':'')+
    (row.revision?'<a class="button secondary" href="'+detail+'?preview=archive#packing-list-preview">'+t('预览 / 打印','Preview / Print')+'</a>'+
     (this.can('inventory:export')?'<button type="button" class="button secondary" data-packing-download>'+t('下载归档','Download Archive')+'</button>':''):'')+'</div>';
-  const history=body.querySelector('details'),download=body.querySelector('[data-packing-download]');
+  const history=body.querySelector('details'),download=body.querySelector('[data-packing-download]'),
+   generate=body.querySelector('[data-packing-generate]');
   if(row.revision)history.ontoggle=()=>{
    if(history.open)this.packingHistory(history,this.base()+'/packing-list/'+row.id+'/revisions',detail);
   };
   if(download)download.onclick=()=>co?CobaltPackingUI.download(row.revision,row.id):Shipping.download(row.id);
+  if(generate)generate.onclick=()=>this.generate(row,co,generate);
+ },
+ async generate(row,co,button){
+  const t=this.t,path=(co?CobaltPackingUI.base:'/shipping')+'/'+row.id;
+  button.disabled=true;
+  try{
+   const data=await API.request(path);
+   if(!button.isConnected)return;
+   const title=data.document?t('生成新版本','Generate New Revision'):t('生成清关单据','Generate Customs Documents');
+   const blocked=!co&&data.missing_weights.length>0;
+   const fields=co?
+    '<label class="wms-field" data-field-span="full">'+t('生成或修订原因（至少5个字符）','Generation or Revision Reason (At Least 5 Characters)')+
+    '<textarea name="reason" required minlength="5" maxlength="1000"></textarea></label>':
+    '<label class="wms-field">'+t('商业发票单价（美元/吨）','Commercial Invoice Unit Price (USD/MT)')+
+    '<input name="unit_price_usd" type="number" required min="0.01" max="999999999.99" step="0.01" value="'+esc(data.document?.unit_price_usd||'')+'"></label>'+
+    '<label class="wms-field">'+t('运费单价（美元/吨）','Freight Rate (USD/MT)')+'<input readonly value="50.00"></label>';
+   dialog(title,'<form id="customs-document-generate" class="user-form" data-wms-validation data-no-i18n>'+
+    '<div class="form-grid wms-field-grid">'+fields+'</div><p class="error" role="alert">'+
+    (blocked?t('原始重量缺失：','Missing original weights: ')+esc(data.missing_weights.join(' / ')):'')+
+    '</p><div class="wms-filter-actions"><button class="button primary"'+(blocked?' disabled':'')+'>'+
+    t('生成','Generate')+'</button></div></form>',{protectForm:'#customs-document-generate'});
+   const form=$('customs-document-generate'),expected_revision=data.document?.revision||0;
+   form.onsubmit=e=>UI46Pages.submit(e,async()=>{
+    const payload={expected_revision,source_signature:data.source_signature};
+    if(co){
+     payload.reason=form.elements.reason.value;
+     if(!await OperationConfirm.ask({title,rows:[[t('装箱单号','Packing List No.'),data.source.document_no],
+      [t('全部袋数','All Bags'),data.source.bag_count],
+      [t('目标版本','Target Revision'),expected_revision+1]],note:payload.reason}))return;
+    }else{
+     payload.transport_version=data.transport.version;
+     payload.unit_price_usd=form.elements.unit_price_usd.value;
+    }
+    try{await API.request(path+(co?'/generate':'/packing-list'),{method:'POST',body:payload});}
+    catch(error){throw Error(co?CobaltPackingUI.error(error):I18n.translate(error.message,true));}
+    if(form.isConnected){$('dialog').close();await Router.show();}
+   });
+  }catch(error){if(button.isConnected)notify(co?CobaltPackingUI.error(error):I18n.translate(error.message,true));}
+  finally{if(button.isConnected)button.disabled=false;}
  },
  async packingHistory(history,path,detail){
   const t=this.t,host=history.querySelector('.packing-revision-list');

@@ -66,9 +66,11 @@ test('BP sheets omit placeholder rows, keep short lists on one A4 landscape page
   '/customs-bp-logo.png':'image/png'
  };
  const documents=new Map();
- for(const count of [1,3,10,70]){
+ for(const count of [1,3,6,10,70]){
   const rows=Array.from({length:count},(_,i)=>({batch:'SYNTHETIC-LOT-'+(i+1),truck:'DEMO-'+i,
    trailer_one:'TRAILER-'+i,container:'CONTAINER-'+i,transporter:'Example Logistics Company',driver:'Demo Driver Surname',
+   ...(count===6?{container:'SYNTHETIC-CONTAINER-1234',transporter:'Synthetic International Transport and Logistics Company',
+    driver:'Synthetic Example Driver With Five Given Names',passport:'SYNTHETIC-PASSPORT-2901'}:{}),
    quantity:16,net_mt:'30.123451',gross_mt:'31.123456'}));
   documents.set('/'+count,BP.html({number:'001/2026/CU',header:{issuer:'RUASHI MINING SAS',address:'Musonoi Project site, Kolwezi, Lualaba Province',
    rccm:'Example RCCM',id_nat:'Example identifier',nif:'Example NIF',contact:'Example office contact',
@@ -94,15 +96,20 @@ test('BP sheets omit placeholder rows, keep short lists on one A4 landscape page
   for(const [pathname]of documents){
    const count=Number(pathname.slice(1));await page.goto(origin+pathname);
    await page.locator('.bp-issuer img').evaluate(image=>image.decode());
-   assert.equal(await page.locator('.bp-vehicles tr').count(),count);
-   assert.equal(await page.locator('.bp-total tr').count(),1);
-   assert.equal(await page.locator('.bp-signature').count(),1);
-   assert.equal(await page.locator('.bp-vehicles tr').first().locator('td').nth(10).textContent(),'30.123');
+   assert.equal(await page.locator('.bp-vehicle').count(),count);
+   assert.equal(await page.locator('.bp-closing > .bp-vehicle').count(),1);
+   assert.equal(await page.locator('.bp-closing > .bp-total').count(),1);
+   assert.equal(await page.locator('.bp-closing .bp-signature').count(),1);
+   assert.equal(await page.locator('.bp-vehicle').first().locator('td').nth(10).textContent(),'30.123');
    const pdf=await page.pdf({path:path.join(output,'vehicles-'+count+'.pdf'),preferCSSPageSize:true});
    const bytes=pdf.toString('latin1'),pages=bytes.match(/\/Type\s*\/Page\b/g)?.length;
    const size=bytes.match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/);
    assert(size);assert(Math.abs(Number(size[1])-841.89)<1&&Math.abs(Number(size[2])-595.28)<1);
    if(count<=10)assert.equal(pages,1,count+' vehicles');else assert(pages>1,count+' vehicles');
+   if(count===6){
+    const nativeDefault=await page.pdf({format:'Letter',preferCSSPageSize:false});
+    assert.equal(nativeDefault.toString('latin1').match(/\/Type\s*\/Page\b/g)?.length,1);
+   }
   }
  }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
 });

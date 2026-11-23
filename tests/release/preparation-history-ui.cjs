@@ -528,7 +528,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      await page.goto(origin+'/overview?management=todos');
      const row=page.locator('tbody tr').filter({has:page.locator('a[href="'+path+'"]')});
      await row.locator('.c461-state').filter({hasText:stage}).waitFor();
-     await row.getByRole('link',{name:'进入详情办理 →',exact:true}).click();
+     await row.getByRole('link',{name:'单据详情',exact:true}).click();
      const badge=page.locator('.co469-state');
      await badge.waitFor();
      assert.equal(await badge.innerText(),stage);

@@ -7,7 +7,7 @@
 .bp-sheet .bp-issuer{display:flex;align-items:center;justify-content:space-between;gap:5mm;padding-bottom:2mm}
 .bp-sheet .bp-issuer p{overflow-wrap:anywhere}
 .bp-sheet .bp-issuer p:first-child{font-size:12pt;font-weight:700}
-.bp-sheet .bp-issuer img{display:block;width:25mm;height:18mm;object-fit:contain;flex:none}
+.bp-sheet .bp-issuer img{display:block;width:46mm;height:34mm;object-fit:contain;object-position:right center;flex:none}
 .bp-sheet .bp-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm;margin:0 0 3mm}
 .bp-sheet .bp-details dl{display:grid;gap:.6mm;align-content:start}
 .bp-sheet .bp-details dl div{display:grid;grid-template-columns:30mm minmax(0,1fr);gap:1mm}
@@ -23,11 +23,12 @@
 .bp-sheet .bp-width-9{width:9%}
 .bp-sheet .bp-width-10{width:10%}
 .bp-sheet .bp-width-11{width:11%}
-.bp-sheet .bp-signature{display:flex;justify-content:space-between;gap:10mm;padding:5mm 4mm 0;font-weight:700}
-.bp-sheet :is(tr,.bp-details,.bp-issuer,.bp-signature){break-inside:avoid}
-.bp-sheet .bp-signature{break-before:avoid}
-.bp-sheet.bp-short .bp-table td{padding-block:.6mm}
+.bp-sheet .bp-signature{display:flex;justify-content:space-between;gap:10mm;padding:5mm 4mm 0;font-size:10pt;font-weight:700}
+.bp-sheet :is(tr,.bp-details,.bp-issuer,.bp-closing){break-inside:avoid}
+.bp-sheet .bp-table .bp-signoff td{border:0;padding:0}
+.bp-sheet.bp-short .bp-vehicle td{padding-block:.6mm}
 .bp-sheet.bp-short .bp-signature{padding-block-start:3mm}
+.bp-print-document .bp-sheet.bp-measuring{position:absolute;inline-size:285mm;min-width:0;padding:0;visibility:hidden;zoom:1}
 /* Keep the preview inside the app aligned with the print window's document styles. */
 html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-sheet>h2{display:block;width:100%;text-align:center;margin:0 0 2mm}
 html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-table :is(th,td){white-space:normal;text-align:center;color:inherit;background:transparent}
@@ -36,7 +37,8 @@ html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-signature p{color:i
 @page customs-bp-sheet{size:A4 landscape;margin:12mm 6mm}
 @media print{
  .bp-print-document,.bp-print-document body{background:#fff}
- .bp-print-document body{page:customs-bp-sheet;max-width:none;padding:0;margin:0}
- .bp-print-document .bp-sheet{min-width:0;padding:0}
+ .bp-print-document{page:customs-bp-sheet}
+ .bp-print-document body{max-width:none;padding:0;margin:0}
+ .bp-print-document .bp-sheet{min-width:0;padding:0;zoom:var(--bp-print-scale,1)}
  #bp-print{display:none}
 }
