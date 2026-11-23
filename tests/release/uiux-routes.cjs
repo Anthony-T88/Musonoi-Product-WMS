@@ -172,7 +172,8 @@ function pages(ids){
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
  add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'single-customer selection and generated sheets'});
  add('customs-bp-filtered','/customs/bp',BOTH,{query:'?document_no=UIUX-NO-MATCH',state:'archive number filter with no match'});
- add('customs-packing','/customs/packing-list',BOTH,{screenshot:true});
+ add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'packing list and scoped read-only preview'});
+ add('customs-packing-empty','/customs/packing-list',BOTH,{query:'?search=UIUX-NO-PACKING-MATCH',state:'empty filtered packing workspace'});
  add('templates','/customs/templates',BOTH);
  add('templates-former-entry','/outbounds/templates',BOTH,{state:'redirected'});
  add('weight-settings','/outbounds/weight-settings',BOTH);

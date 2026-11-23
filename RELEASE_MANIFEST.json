@@ -1294,8 +1294,8 @@
     },
     {
       "path": "dist/cobalt-packing-ui.js",
-      "sha256": "6ec0d6c7d9559fa491974b4a08830ae4198849830a7931efbce90584e073edeb",
-      "bytes": 8805
+      "sha256": "c9f8c44194a0f57ac6d2d44bb24b928563b20ddb1256b3a28f13064d960e8eb1",
+      "bytes": 8865
     },
     {
       "path": "dist/cobalt-preparation469.js",
@@ -1504,7 +1504,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "66979092393fe865a8c7aa03b5bc83c3c99b45e47d634ee7b842c480faf06d57",
+      "sha256": "e8dec4709672a7ff95b972788560f22e21f05d883f7aaaa9aeeeae84c19217ff",
       "bytes": 14533
     },
     {
@@ -1594,8 +1594,8 @@
     },
     {
       "path": "dist/customs-workspace.js",
-      "sha256": "5be6f08b1400f100f310d527f8a5bce66a97f73b6b4cd3cb119c085fbd5181b8",
-      "bytes": 6545
+      "sha256": "13515b6fbabee1242c110ed085457ea5d347aa9160ed83c1acc532e066d0450f",
+      "bytes": 14572
     },
     {
       "path": "dist/navigation.js",
@@ -1789,7 +1789,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "6b02b6c4588760dfef56e7cdaa3eb2a8777f53b5cba429b7bd3b6783bfa69f21",
+      "sha256": "360a5f534c07a1f0879104f3a97a840faaaece48bdaefdce9a412c27f696e0bd",
       "bytes": 418
     },
     {
@@ -1849,7 +1849,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "9bc29346a77921f91ed67c69bc8bc5d678ec2c6b09f6ada0ceb624e6eb8eaae8",
+      "sha256": "37e0b484135e75b2c3aa2c3bbcfbf496f02ff35df1a1da633d63419655ec97f1",
       "bytes": 2915
     },
     {
@@ -1969,8 +1969,8 @@
     },
     {
       "path": "dist/uiux-governance.css",
-      "bytes": 51718,
-      "sha256": "5b2748e3bd3d065fb1392d8e7f804399fbc191c874b5da7b9feb81209f036275"
+      "bytes": 55295,
+      "sha256": "0df83a16df81c4d3e7612976b56098a05a0a9150e6f63d8a18867519341bead3"
     },
     {
       "path": "dist/ux-r4.css",
@@ -2449,13 +2449,13 @@
     },
     {
       "path": "docs/uiux/COVERAGE.md",
-      "sha256": "496b7823c2484d5c98cc3ca139788144835b83e8aa7bb6b66b63850d81081178",
-      "bytes": 31013
+      "sha256": "45d2672ff931e3547ea64336fc9ed07505741b6b6b5f70add381101b7856781d",
+      "bytes": 31305
     },
     {
       "path": "docs/uiux/DESIGN.md",
-      "sha256": "12f5d4f6211a6001a534d9ec0db6c36635e93fc727b0a9c807ae55534dd4741a",
-      "bytes": 16998
+      "sha256": "d305f3a6f01b1436074b9136bd363bae671d3c11f610a03e74d12560c47169cd",
+      "bytes": 17385
     },
     {
       "path": "docs/uiux/QUALITY.md",
@@ -3039,8 +3039,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "5238a79c7144cda500a995d329a051e03a1caffc46214dc7ee5ae34557e9b83a",
-      "bytes": 6682
+      "sha256": "a16cc09179c9af08ddc97f99711fa052388530653c5a35cb0140677a0ceca4d5",
+      "bytes": 6924
     },
     {
       "path": "scripts/db.cjs",
@@ -3214,8 +3214,8 @@
     },
     {
       "path": "server/cobalt-overview.cjs",
-      "sha256": "1e421b62758161c408930d56ac4d688b928f32594d488b05ab1d500719a0da41",
-      "bytes": 14390
+      "sha256": "dab607e0c08a717719eda55ff5df0b76467ed877d6c943a7b6e8ead46c82c527",
+      "bytes": 15367
     },
     {
       "path": "server/cobalt-packing-render.cjs",
@@ -3354,13 +3354,13 @@
     },
     {
       "path": "server/customs-bp.cjs",
-      "sha256": "dea9a963c4fd51c99b39bf2ede0c1061f0194f24eb837d670b5a1b676322f1a5",
-      "bytes": 18399
+      "sha256": "6535659dde96a85ecd5a38c77e897cda799eb6fab767db811d5ec3807bf99089",
+      "bytes": 19249
     },
     {
       "path": "server/export-shipping.cjs",
-      "sha256": "15015b99c748bc07cd2068c82f50e0f9b1e165bb6c748a4cb3a2056db1721354",
-      "bytes": 29977
+      "sha256": "8cf21af04d9b29f5360bbda62802ddbce5b0134e717ed1e596c7a8b089633b62",
+      "bytes": 31040
     },
     {
       "path": "server/gate-permits.cjs",
@@ -3599,7 +3599,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "6f9ef7ae60a580e386dbeb8fac28cb00965653359b4e15d72f69cf0bba37f0a5",
+      "sha256": "f9502019315c18f509599e4af51806b8c6cf9738b2784475e88475c00003ef5e",
       "bytes": 207
     },
     {
@@ -3814,7 +3814,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "f9a053465acafd13ab2c1f6f98a149bdae6bebc8a373010bbb601ec27bd95d53",
+      "sha256": "fd99b513ad78de9b77d832725f4fce2516c056886fb9e2fffa2544b2d1331a0a",
       "bytes": 99250
     },
     {
@@ -3919,8 +3919,8 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "bytes": 41724,
-      "sha256": "e8cea9dc4f6040b32713a6bb8bc80744c68da5d534a4ae86f6d492cbcb0ca15c"
+      "bytes": 42514,
+      "sha256": "5db3ef80fd5af3c9df0fa718c81f762993cfa59aef0e746e7f2a03eddb523657"
     },
     {
       "path": "tests/release/bp-customer.test.cjs",
@@ -3929,8 +3929,8 @@
     },
     {
       "path": "tests/release/core-flows.cjs",
-      "sha256": "76323b52a09cf7fe24dde74a450b72cf96de7444d0ce8f31fddf036550d411b1",
-      "bytes": 30442
+      "sha256": "a96f6e3697eaa306198abd809d5e9c70627b4fe69fa25e17621355cd6c09c80d",
+      "bytes": 31294
     },
     {
       "path": "tests/release/database.test.cjs",
@@ -4094,8 +4094,8 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "b76840ab628e16f214eee0e87382579e8137b7831daaf3f32c7dc0207ca0f0bf",
-      "bytes": 33664
+      "sha256": "1eb04c5818410049024cf879bb2d6c5a520655fb8adced029867adbd2c81445d",
+      "bytes": 33915
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -4109,8 +4109,8 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "8cc20a349e8c726f20f49be8b2339b8cb4f711b807af843b77370f2d1197c8d5",
-      "bytes": 21074
+      "sha256": "8d920c85562979e0d9799fc369aa60cd61093ca34f3d8f013ce7f4310bcac389",
+      "bytes": 21266
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -4214,8 +4214,8 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "cc720da22b0c9f901bb2c4bf705dbb3aaa8d5fc51e3c8c429b107a5b0465fac7",
-      "bytes": 22725
+      "sha256": "42e2916e8309a51408785b0aeabcba40caae04b74e4ce06197e00e855fc8183b",
+      "bytes": 23189
     },
     {
       "path": "tests/release/bundle-corrections-ui.cjs",

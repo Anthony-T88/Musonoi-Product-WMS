@@ -5,7 +5,7 @@ const crypto=require('node:crypto'),T=require('../dist/tonnes.js');
 const E=require('./customs-bp-print.cjs');
 const CO='CO_HYDROXIDE';
 const cuUrl='/api/v1/customs/bp',coUrl='/api/v1/cobalt/customs/bp';
-const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/customs/packing-list'||method==='GET'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/[0-9a-f-]{36}\/(?:print|batches))?$/i.test(path)||
+const allowed=(path,method)=>method==='GET'&&/^\/api\/v1\/cobalt\/customs\/packing-list(?:\/[0-9a-f-]{36}\/revisions)?$/i.test(path)||method==='GET'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/[0-9a-f-]{36}\/(?:print|batches))?$/i.test(path)||
  method==='POST'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/(?:preview|print\/preview))?$/.test(path);
 const clearanceScope=`NOT EXISTS(SELECT 1 FROM jsonb_array_elements(d.source_context) f WHERE NOT EXISTS(
  SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=(f->>'project_id')::uuid
@@ -231,12 +231,27 @@ async function archived(c,req){
  return doc.snapshot;
 }
 
+async function packingRevisions(c,req,co){
+ const id=B.uuid(req.params.id);
+ if(co){
+  const {order,execution}=await require('./cobalt-execution.cjs').access(c,req,id);
+  if(order.status!=='OUTBOUND'||execution?.state!=='OUTBOUND')throw B.error(409,'CO_PACKING_OUTBOUND_REQUIRED');
+ }else await S.load(c,req,id);
+ const [table,lookup]=co?['co_packing_revisions','order_id']:['packing_list_revisions','loading_id'];
+ const {rows}=await c.query(`SELECT revision,generated_at,reason FROM ${table}
+  WHERE ${lookup}=$1 ORDER BY revision DESC LIMIT 10`,[id]);
+ return {items:rows};
+}
+
 function register({app,pool,permitted,csrf}){
  for(const url of [cuUrl,coUrl]){
   const permission=permitted('customs:bp');
   const co=url===coUrl;
-  app.get(url.replace(/bp$/,'packing-list'),{preHandler:permitted('load:read')},req=>C.readTransaction(pool,c=>co?
-   require('./cobalt-overview.cjs').operations(c,{...req,query:{...req.query,state:'OUTBOUND'}}):S.list(c,req,true,true)));
+  const packing=url.replace(/bp$/,'packing-list'),options={packingWorkspace:true};
+  app.get(packing,{preHandler:permitted('load:read')},req=>C.readTransaction(pool,c=>co?
+   require('./cobalt-overview.cjs').operations(c,{...req,query:{...req.query,state:'OUTBOUND'}},false,false,options):
+   S.list(c,req,true,true,false,options)));
+  app.get(packing+'/:id/revisions',{preHandler:permitted('load:read')},req=>C.readTransaction(pool,c=>packingRevisions(c,req,co)));
   app.get(url,{preHandler:permission},req=>C.readTransaction(pool,c=>list(c,req)));
   app.post(url+'/preview',{preHandler:[permission,csrf]},req=>C.readTransaction(pool,async c=>{
    const source=await chosen(c,req,selection(req.body));

@@ -4,14 +4,19 @@ const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),Reports=requi
 const base='/api/v1/cobalt',allowed=(path,method)=>method==='GET'&&['/overview','/todos','/operations','/departures'].some(s=>path===base+s);
 const scope=(customer='p.customer_id')=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id) AND ${customer==='NULL'?'s.customer_id IS NULL':`(s.customer_id IS NULL OR s.customer_id=${customer})`})`;
 const states=['WAITING','LOADING','REVIEW_PENDING','LOADED','DEPARTED','OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION','OUTBOUND','CANCELLED'];
-async function operations(c,req,departure=false,includeHistory=false){
- const q=req.query||{},state=q.state||'',page=Number(q.page||1),search=q.search||'';if(Object.keys(q).some(k=>!['state','page','search','document_status','customer_id','created_date'].includes(k))||!Number.isInteger(page)||page<1||page>100000||typeof search!=='string'||search.length>160||state&&!states.includes(state))throw B.error(400,'CO_OVERVIEW_FILTER');
+async function operations(c,req,departure=false,includeHistory=false,{packingWorkspace=false}={}){
+ const q=req.query||{},state=q.state||'',page=Number(q.page||1),search=q.search||'',size=packingWorkspace?Number(q.page_size??50):50;
+ const fields=['state','page','search','document_status','customer_id','created_date',...(packingWorkspace?['page_size']:[])];
+ if(Object.keys(q).some(k=>!fields.includes(k))||!Number.isInteger(page)||page<1||page>100000||![10,25,50,100].includes(size)||typeof search!=='string'||search.length>160||state&&!states.includes(state))throw B.error(400,'CO_OVERVIEW_FILTER');
  if(q.document_status&&!['GENERATED','MISSING'].includes(q.document_status))throw B.error(400,'CO_OVERVIEW_FILTER');const docFilter=q.document_status?(q.document_status==='GENERATED'?' AND doc.order_id IS NOT NULL':' AND doc.order_id IS NULL'):'';
  const metalEnabled=await require('./cobalt-metal.cjs').enabled(c),valid=departure?['LOADED','DEPARTED','OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION','OUTBOUND']:states,values=[req.user.id,valid,state,search];
  const filters=(q.customer_id?' AND p.customer_id=$'+values.push(B.uuid(q.customer_id)):'')+
   (q.created_date?" AND (l.created_at AT TIME ZONE 'Africa/Lubumbashi')::date=$"+values.push(B.date(q.created_date)):'');
  const lifecycle=`CASE WHEN l.status='CANCELLED' THEN 'CANCELLED' ELSE coalesce(e.state,'WAITING') END`,from=`FROM co_loading_orders l JOIN co_loading_plans lp ON lp.id=l.plan_id JOIN co_sales_plans p ON p.id=l.sales_plan_id AND p.product_code=l.product_code JOIN co_preparations b ON b.id=l.preparation_id AND b.product_code=l.product_code JOIN co_customer_profiles customer ON customer.id=p.customer_id LEFT JOIN co_load_executions e ON e.order_id=l.id LEFT JOIN co_departures dep ON dep.id=e.departure_id LEFT JOIN co_outbounds ob ON ob.order_id=l.id ${metalEnabled?'LEFT JOIN co_metal_outbound metal ON metal.outbound_id=ob.id':''} LEFT JOIN co_packing_documents doc ON doc.order_id=l.id LEFT JOIN co_sales_contracts contract ON contract.id=p.contract_id WHERE l.product_code='CO_HYDROXIDE' AND ${scope()} AND ${lifecycle}=ANY($2::text[]) AND($3='' OR ${lifecycle}=$3) AND($4='' OR strpos(lower(l.code||' '||b.preparation_batch_no||' '||customer.name||' '||coalesce(l.transport_snapshot->>'truck_no','')||' '||coalesce(lp.packing_list_no,'')||' '||coalesce(doc.document_no,'')||' '||coalesce(contract.contract_no,'')),lower($4))>0)${docFilter}${filters}`;
- const select=`SELECT l.id order_id,l.created_at,l.plan_id,l.code,l.bag_count,l.actual_gross_kg,l.actual_net_kg,l.arecoms_input,l.transport_snapshot,lp.packing_list_no,contract.contract_no,doc.revision packing_revision,doc.document_no,doc.updated_at document_generated_at,p.code sales_plan_code,coalesce(ob.snapshot->'customer'->>'name',customer.name) customer_name,b.preparation_batch_no,${lifecycle} state,dep.departed_at,dep.revision departure_revision,dep.actor_id departure_actor_id,(SELECT display_name FROM users WHERE id=dep.actor_id) departure_actor_name,ob.code outbound_code,ob.posted_at,${metalEnabled?'metal.shipment_status':'NULL::text shipment_status'}`;
+ const planFields=packingWorkspace?`lp.code loading_plan_code,
+  coalesce(nullif(ob.snapshot->'order'->'transport_snapshot'->>'transporter',''),nullif(lp.transporter,''),l.transport_snapshot->>'transporter') transporter,
+  coalesce(nullif(ob.snapshot->'plan'->>'destination',''),lp.destination) destination,`:'';
+ const select=`SELECT ${planFields} l.id order_id,l.created_at,l.plan_id,l.code,l.bag_count,l.actual_gross_kg,l.actual_net_kg,l.arecoms_input,l.transport_snapshot,lp.packing_list_no,contract.contract_no,doc.revision packing_revision,doc.document_no,doc.updated_at document_generated_at,p.code sales_plan_code,coalesce(ob.snapshot->'customer'->>'name',customer.name) customer_name,b.preparation_batch_no,${lifecycle} state,dep.departed_at,dep.revision departure_revision,dep.actor_id departure_actor_id,(SELECT display_name FROM users WHERE id=dep.actor_id) departure_actor_name,ob.code outbound_code,ob.posted_at,${metalEnabled?'metal.shipment_status':'NULL::text shipment_status'}`;
  const scopeFrom=from.replace("($3='' OR "+lifecycle+"=$3)",'($3::text IS NOT NULL)');
  const counts=(await c.query('SELECT '+lifecycle+' state,count(*)::int count,count(dep.id)::int departed '+scopeFrom+' GROUP BY '+lifecycle,values)).rows;
  const state_counts=Object.fromEntries(counts.map(r=>[r.state,r.count])),scope_total=counts.reduce((n,r)=>n+r.count,0);
@@ -31,14 +36,19 @@ async function operations(c,req,departure=false,includeHistory=false){
     'bag_count',h.quantity,'actual_net_kg',h.net_kg,'transport_snapshot',jsonb_build_object('truck_no',h.vehicle_no)) FROM (${history}) h`;
   }
  }
+ const pending=packingWorkspace?"data->>'packing_revision' IS NULL":"data->>'state' NOT IN('OUTBOUND','CANCELLED')";
  const {rows}=await c.query(`SELECT data FROM (SELECT live.order_id id,live.created_at,to_jsonb(live) data FROM (${select} ${from}) live${archive}) records
-  ORDER BY ${B.documentOrder({historical:"data->>'historical_import'='true'",pending:"data->>'state' NOT IN('OUTBOUND','CANCELLED')"})} LIMIT 50 OFFSET ${(page-1)*50}`,values);
- const customer_options=includeHistory?(await c.query(`SELECT DISTINCT customer.id,customer.name FROM co_sales_plans p
+  ORDER BY ${B.documentOrder({historical:"data->>'historical_import'='true'",pending})} LIMIT ${size} OFFSET ${(page-1)*size}`,values);
+ const customer_options=packingWorkspace?(await c.query(`SELECT DISTINCT customer.id,customer.name
+  FROM co_loading_orders l JOIN co_sales_plans p ON p.id=l.sales_plan_id
+  JOIN co_load_executions e ON e.order_id=l.id JOIN co_customer_profiles customer ON customer.id=p.customer_id
+  WHERE l.status<>'CANCELLED' AND e.state='OUTBOUND' AND ${scope()} ORDER BY customer.name,customer.id`,
+  [req.user.id])).rows:includeHistory?(await c.query(`SELECT DISTINCT customer.id,customer.name FROM co_sales_plans p
   JOIN co_customer_profiles customer ON customer.id=p.customer_id WHERE ${scope()}
   UNION SELECT DISTINCT customer.id,customer.name FROM co_customer_profiles customer
   JOIN (${require('./historical-backfill.cjs').outboundListSql('CO_HYDROXIDE',{},()=>'$2')}) h ON h.customer_id=customer.id
   ORDER BY name,id`,[req.user.id,'CO_HYDROXIDE'])).rows:undefined;
- return {items:rows.map(row=>row.data),page,total,state_counts,scope_total:visibleTotal,summary,customer_options};
+ return {items:rows.map(row=>row.data),page,total,page_size:size,state_counts,scope_total:visibleTotal,summary,customer_options};
 }
 async function todos(c,req){
  const items=[],actor=req.user.id,can=p=>req.user.permissions.includes(p),site=['site_supervisor','admin'].includes(req.user.role_code),production=['production_manager','admin'].includes(req.user.role_code),add=(kind,id,document_no,status,href)=>items.push({kind,id,document_no,status,href});

@@ -968,7 +968,16 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "packing list and scoped read-only preview",
+      "template": "/customs/packing-list"
+    },
+    {
+      "key": "customs-packing-empty",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "empty filtered packing workspace",
       "template": "/customs/packing-list"
     },
     {

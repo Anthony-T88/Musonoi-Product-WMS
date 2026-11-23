@@ -216,7 +216,18 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  await check('archived Packing List reconciles bag, seal and physical weight with the final outbound report',async()=>{
   const base='/cobalt/packing/orders/'+matched.order.id;
   const details=await api(base);
+  const packing='/cobalt/customs/packing-list';
+  const filter={search:details.source.preparation_batch_no,customer_id:customer.id,created_date:today,page_size:'25'};
+  const pending=await api(packing+'?'+new URLSearchParams({...filter,document_status:'MISSING'}));
+  assert.equal(pending.page_size,25);
+  assert.equal(pending.items.find(row=>row.order_id===matched.order.id)?.destination,'Synthetic destination');
+  assert(pending.customer_options.some(row=>row.id===customer.id));
   const generated=await api(base+'/generate','admin',{expected_revision:0,source_signature:details.source_signature,reason:'Synthetic rc3 integration evidence'});
+  const listed=await api(packing+'?'+new URLSearchParams({...filter,document_status:'GENERATED'}));
+  assert.equal(listed.items.find(row=>row.order_id===matched.order.id)?.packing_revision,1);
+  const revisions=packing+'/'+matched.order.id+'/revisions';
+  assert.equal((await api(revisions)).items[0].revision,1);
+  await api(revisions,'customer_admin',undefined,404);
   const downloaded=await request(base+'/file');assert.equal(downloaded.statusCode,200);
   assert.equal(crypto.createHash('sha256').update(downloaded.rawPayload).digest('hex'),generated.file_sha256);
   assert.equal(downloaded.headers['x-content-sha256'],generated.file_sha256);

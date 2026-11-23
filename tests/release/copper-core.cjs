@@ -267,8 +267,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const list=await api('/sales-workflow/plans?buyer_contract='+encodeURIComponent(contract.contract_no));
  assert(list.items.some(row=>row.id===plan.id&&Number(row.execution.posted)===2.0325));
  const shipping=await api('/shipping/'+load.id),generate={expected_revision:0,transport_version:shipping.transport.version,source_signature:shipping.source_signature,unit_price_usd:'1234.56'};
+ const packingPath='/customs/packing-list',packingFilter={search:approvedWork.batch_no,customer_id:customer.id,created_date:today,page_size:'10'};
+ const pendingPacking=await api(packingPath+'?'+new URLSearchParams({...packingFilter,document_status:'MISSING'}));
+ const packingRow=pendingPacking.items.find(row=>row.id===load.id);
+ assert.equal(pendingPacking.page_size,10);
+ assert.equal(packingRow?.loading_plan_id,document.id);
+ assert(pendingPacking.customer_options.some(row=>row.id===customer.id));
  await api('/shipping/'+load.id+'/packing-list','admin',{...generate,unit_price_usd:'-1'},400);
  await api('/shipping/'+load.id+'/packing-list','admin',generate);
+ const generatedPacking=await api(packingPath+'?'+new URLSearchParams({...packingFilter,document_status:'GENERATED'}));
+ assert.equal(generatedPacking.items.find(row=>row.id===load.id)?.revision,1);
+ assert.equal((await api(packingPath+'/'+load.id+'/revisions')).items[0].revision,1);
  const archive=await request('/shipping/'+load.id+'/packing-list.xlsx');
  assert.equal(archive.statusCode,200);
  const invoiceBook=new(require('exceljs').Workbook)();await invoiceBook.xlsx.load(archive.rawPayload);

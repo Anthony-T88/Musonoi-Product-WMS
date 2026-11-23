@@ -1006,6 +1006,43 @@ html[data-release-ui="46"] #page-content .wms-route-error :is(p, small) { color:
 html[data-release-ui="46"] #page-content [data-customs-nav]{display:flex;justify-content:flex-start;align-items:center;flex-wrap:nowrap;overflow-x:auto}
 html[data-release-ui="46"] #page-content [data-customs-nav] .button{flex:none;inline-size:auto;min-inline-size:6rem;padding-inline:var(--uix-gap);white-space:nowrap}
 html[data-release-ui="46"] #page-content [data-customs-nav] [aria-current="page"]{color:var(--uix-brand);border-color:var(--uix-brand);background:var(--uix-success-soft)}
+#customs-packing-filter > label{flex:1 1 var(--uix-filter-min)}
+#customs-packing-filter > label:first-child{flex-grow:1.5}
+.customs-packing-split{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(18rem,1fr);gap:var(--uix-gap);align-items:start;min-inline-size:0}
+.customs-packing-workspace :is(.packing-list-panel,.wms-preview){min-inline-size:0;border:var(--uix-border-width) solid var(--uix-border);overflow:hidden}
+.customs-packing-workspace .packing-panel-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--uix-gap-xs);padding:var(--uix-gap);border-block-end:var(--uix-border-width) solid var(--uix-border)}
+.packing-panel-heading h2{margin:0}
+.packing-panel-heading span,.packing-preview-title span:not(.packing-document-status){color:var(--uix-muted);font-size:var(--uix-caption)}
+.packing-list-panel .business-table{margin:0}
+.packing-list-panel .v34-pagination{padding:var(--uix-gap-sm);margin:0}
+html[data-release-ui="46"] #page-content #customs-packing-list tr[data-packing-row][data-selected] > td{background:var(--uix-success-soft)}
+#customs-packing-list tr[data-packing-row]{cursor:pointer}
+#customs-packing-list td small{display:block;margin-block-start:var(--uix-gap-xs);color:var(--uix-muted);overflow-wrap:anywhere}
+#customs-packing-list .packing-lot-link{border:0;padding:var(--uix-gap-xs);color:var(--uix-brand);background:transparent;font:inherit;font-weight:var(--uix-weight-emphasis);text-align:inherit;overflow-wrap:anywhere;white-space:normal}
+.packing-document-status{display:inline-block;padding:var(--uix-gap-xs);border-radius:var(--uix-pill);font-size:var(--uix-caption);line-height:var(--uix-label-line)}
+.packing-document-status.is-generated{background:var(--uix-success-soft);color:var(--uix-success)}
+.packing-document-status.is-pending{background:var(--uix-warning-soft);color:var(--uix-warning)}
+.packing-preview-body{display:grid;gap:var(--uix-gap);padding:var(--uix-gap);min-inline-size:0}
+.packing-preview-body :is(section,.packing-preview-revisions){border-block-start:var(--uix-border-width) solid var(--uix-border);padding-block-start:var(--uix-gap-sm);min-inline-size:0}
+.packing-preview-title{display:flex;align-items:start;justify-content:space-between;gap:var(--uix-gap-xs);flex-wrap:wrap;overflow-wrap:anywhere}
+.packing-preview-body h3{font-size:var(--uix-body);margin:0 0 var(--uix-gap-xs)}
+html[data-release-ui="46"] #page-content .packing-preview-body dl.wms-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--uix-gap-sm)}
+.packing-preview-body dd{overflow-wrap:anywhere}
+.packing-preview-body .business-toolbar{margin:0}
+.packing-preview-revisions summary{cursor:pointer;color:var(--uix-brand);font-weight:var(--uix-weight-emphasis)}
+.packing-preview-revisions[open] summary{margin-block-end:var(--uix-gap-sm)}
+.packing-revision-list ul{padding-inline-start:var(--uix-gap);margin-block:var(--uix-gap-sm)}
+.packing-revision-list li{overflow-wrap:anywhere;margin-block-end:var(--uix-gap-xs)}
+.packing-revision-list time{margin-inline:var(--uix-gap-xs)}
+@media(min-width:641px){
+ html[data-release-ui="46"] #page-content #customs-packing-list{min-inline-size:38rem}
+ html[data-release-ui="46"] #page-content #customs-packing-list :is(th,td){padding-inline:var(--uix-gap-sm);white-space:normal}
+ #customs-packing-list td:first-child{min-inline-size:9rem}
+ html[data-release-ui="46"] #page-content #customs-packing-list :is(.packing-document-status,.button){white-space:nowrap}
+}
+@media(max-width:1080px){
+ .customs-packing-split{grid-template-columns:minmax(0,1fr)}
+}
 @media(max-width:900px){
  html[data-release-ui="46"] #page-content nav[data-customs-nav].business-toolbar .button{min-height:var(--uix-touch)}
 }
