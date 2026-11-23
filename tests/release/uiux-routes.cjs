@@ -168,9 +168,10 @@ function pages(ids){
  add('co-loading-plan','/loading-plans/orders/:id',[CO],{example:'coPlanDoc',screenshot:true});
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
- add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager']});
+ add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail link'});
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
- add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'logistics-approved batches'});
+ add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'single-customer selection and generated sheets'});
+ add('customs-bp-filtered','/customs/bp',BOTH,{query:'?document_no=UIUX-NO-MATCH',state:'archive number filter with no match'});
  add('customs-packing','/customs/packing-list',BOTH,{screenshot:true});
  add('templates','/customs/templates',BOTH);
  add('templates-former-entry','/outbounds/templates',BOTH,{state:'redirected'});

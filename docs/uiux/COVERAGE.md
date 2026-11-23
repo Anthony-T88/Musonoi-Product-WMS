@@ -155,7 +155,8 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | outbounds | `/outbounds` | 铜、钴 | 管理员、物流经理、生产经理 | 筛选、表格、状态、指标、预览 | 28 / 0 / 0 | 列表与只读预览 |
 | outbound-vehicles | `/outbounds` | 铜、钴 | 管理员、销售员、销售经理 | 表格 | 28 / 0 / 0 | — |
 | printers | `/outbounds` | 铜、钴 | 管理员 | 骨架、表单、反馈 | 12 / 0 / 0 | — |
-| 清关单据管理 | `/customs/bp`、`/customs/packing-list`、`/customs/templates` | 铜、钴 | 办公室业务员、管理员 | 三按钮单行、批次多选、可改的建议编号、缺项补充、预览、权限与打印 | — | BP 表仅含物流经理已审批的单据，按实际车辆行打印，少量明细单页、超页重复表头 |
+| 清关单据管理 | `/customs/bp`、`/customs/packing-list`、`/customs/templates` | 铜、钴 | 办公室业务员、管理员 | 标准尺寸单行按钮、仅限同客多选、四项筛选、归档展开、权限与打印 | — | BP 表仅含物流经理已审批的单据，按实际车辆行打印，少量明细单页、超页重复表头 |
+| 装车出库管理只读预览 | `/outbounds` | 铜、钴 | 获授权查看装车单的岗位 | 选择在线单据，预览、详情、更正与历史跳转，预览故障保留详情入口 | — | 详情接口继续校验单据范围 |
 | weight-settings | `/outbounds/weight-settings` | 铜、钴 | 管理员 | 骨架、表单 | 12 / 0 / 0 | — |
 | cu-loads | `/outbounds/loads` | 铜 | 管理员 | 骨架、筛选、表格、状态 | 6 / 0 / 0 | — |
 | cu-load-new | `/outbounds/loads/new` | 铜 | 管理员 | 骨架、表单 | 6 / 0 / 0 | — |

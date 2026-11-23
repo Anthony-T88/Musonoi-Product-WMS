@@ -14,13 +14,19 @@ async function catalog(c){
  const definitions=require('./workflow-permissions.cjs').catalog,roles={};for(const product of ['CU_CATHODE','CO_HYDROXIDE']){roles[product]={};for(const permission of Object.keys(definitions).filter(p=>definitions[p].products.includes(product)))roles[product][permission]=resolve(permission,product);if(product==='CU_CATHODE'){roles[product]['outbound:approve']=resolve('outbound:approve',product);roles[product]['stocktake:final']=resolve(['stocktake:review','adjust:approve'],product);}}
  return roles;
 }
-function identify(path,data){
- const preparationPlan=path.match(new RegExp('^/api/v1/(?:cobalt/)?preparation-plans/'+uuid+'$'));
- if(preparationPlan)return {kind:'preparation-plan',id:preparationPlan[1]};
- const rules=[['receipt',`receipts/${uuid}`],['lot',`(?:allocations|v261/lots)/${uuid}`],['load',`loads/${uuid}`],['sales',`(?:cobalt/)?sales-workflow/plans/${uuid}`],['plan',`(?:loading-plan-documents|loading-plans/unified/documents)/${uuid}`],['co-preparation',`cobalt/preparations/${uuid}(?:/work)?`],['co-plan',`cobalt/loading/plans/${uuid}`],['co-load',`cobalt/execution/orders/${uuid}`],['stocktake',`(?:v27/)?stocktakes/${uuid}`],['co-stocktake',`cobalt/stocktaking/${uuid}`],['adjustment',`adjustments/${uuid}`],['correction',`v27/corrections/${uuid}`],['gate',`(?:cobalt/)?gate-permits/${uuid}`]];
- for(const[k,re]of rules){const m=path.match(new RegExp('^/api/v1/'+re+'$'));if(m)return {kind:k,id:m[1],document:data.permit||data.document||data.task||data.order||data.lot||data};}
+const routes=[
+ ['preparation-plan',`(?:cobalt/)?preparation-plans/${uuid}`],['receipt',`receipts/${uuid}`],
+ ['lot',`(?:allocations|v261/lots)/${uuid}`],['load',`loads/${uuid}`],['sales',`(?:cobalt/)?sales-workflow/plans/${uuid}`],
+ ['plan',`(?:loading-plan-documents|loading-plans/unified/documents)/${uuid}`],['co-preparation',`cobalt/preparations/${uuid}(?:/work)?`],
+ ['co-plan',`cobalt/loading/plans/${uuid}`],['co-load',`cobalt/execution/orders/${uuid}`],['stocktake',`(?:v27/)?stocktakes/${uuid}`],
+ ['co-stocktake',`cobalt/stocktaking/${uuid}`],['adjustment',`adjustments/${uuid}`],['correction',`v27/corrections/${uuid}`],
+ ['gate',`(?:cobalt/)?gate-permits/${uuid}`]
+].map(([kind,pattern])=>[kind,new RegExp('^/api/v1/'+pattern+'$')]);
+function identify(path){
+ for(const [kind,pattern] of routes){const match=path.match(pattern);if(match)return {kind,id:match[1]};}
  return null;
 }
+const supports=(path,target)=>!!target||['/api/v1/me','/api/v1/product-context','/api/v1/users/registration-requests'].includes(path);
 const titles={
  CREATE:['创建单据','Document Created'],EDIT:['编辑单据','Document Edited'],SUBMIT:['提交审核','Submitted for Review'],APPROVE:['审核通过','Approved'],REJECT:['退回修改','Returned for Changes'],WITHDRAW:['撤回申请','Submission Withdrawn'],CANCEL:['取消单据','Document Cancelled'],REQUEST:['提出申请','Request Submitted'],AUTHORIZE:['批准更正','Correction Authorized'],APPLY:['更正生效','Correction Applied'],VERIFY_RETURN:['核验实物退回','Physical Return Verified'],
  RECEIPT_CREATED:['创建入库单','Receipt Created'],RECEIPT_EDITED:['编辑入库单','Receipt Edited'],RECEIPT_SUBMITTED:['提交入库审核','Receipt Submitted'],RECEIPT_CONFIRMED:['审核确认入库','Receipt Approved'],RECEIPT_REJECTED:['入库审核退回','Receipt Returned'],RECEIPT_REVIEW_COMMENT:['入库审批意见','Receipt Review Note'],
@@ -148,8 +154,7 @@ async function recordedFacts(c,kind,id,data){
  const items=entries.map(([actor,at,title])=>{const r=normalize({source:'document_fields',id:id+'/'+actor,actor_id:d[actor],actor_name:people.find(p=>p.id===d[actor])?.display_name,occurred_at:d[at],action:'RECORDED_FACT'},kind);return {...r,title};}).sort((a,b)=>new Date(b.at)-new Date(a.at));
  return {items,page:1,page_size:20,total:items.length};
 }
-async function enrich(c,req,data){
- const path=req.url.split('?')[0];
+async function enrich(c,req,data,path=req.url.split('?')[0],target=identify(path)){
  if(path==='/api/v1/me'||path==='/api/v1/product-context'){
   const roles=await catalog(c);data._approval_catalog={roles,drafts:Object.fromEntries(['CU_CATHODE','CO_HYDROXIDE'].map(product=>[product,Object.fromEntries((product==='CU_CATHODE'?['receipt','lot','plan','load','sales','stocktake']:['co-preparation','co-plan','co-load','sales','co-stocktake']).map(kind=>[kind,workflow(kind,{status:'DRAFT'},product,roles,{draft:true})]))]))};return data;
  }
@@ -157,7 +162,7 @@ async function enrich(c,req,data){
   for(const row of data.items){row._approval_history=await history(c,'registration',row.id,req.productCode);if(!row._approval_history.total&&row.reviewed_at){const r=(await c.query('SELECT q.reviewed_by,u.display_name FROM registration_requests q LEFT JOIN users u ON u.id=q.reviewed_by WHERE q.id=$1',[row.id])).rows[0];if(r?.reviewed_by){row._approval_history={items:[normalize({source:'registration_requests',id:row.id,actor_id:r.reviewed_by,actor_name:r.display_name,occurred_at:row.reviewed_at,action:'REGISTRATION_'+row.status,note:row.review_reason},'registration')],page:1,page_size:20,total:1};}}}
   return data;
  }
- const target=identify(path,data);if(!target)return data;
+ if(!target)return data;
  const product=req.productCode||'CU_CATHODE',page=Number(req.query.approval_page||1);
  if(!Number.isInteger(page)||page<1||page>100000)throw Object.assign(Error('审批历史页码无效'),{statusCode:400});
  if(target.kind==='preparation-plan'){
@@ -183,4 +188,4 @@ async function enrich(c,req,data){
  data._approval={kind:target.kind,id:target.id,product,workflows:[main,...additional],history:timeline,related};
  return data;
 }
-module.exports={catalog,identify,workflow,normalize,history,recordedFacts,enrich};
+module.exports={catalog,identify,supports,workflow,normalize,history,recordedFacts,enrich};

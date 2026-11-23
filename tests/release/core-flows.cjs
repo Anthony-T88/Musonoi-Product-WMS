@@ -114,6 +114,15 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal((await c.query('SELECT count(*)::int n FROM customs_bp_documents')).rows[0].n,0);
   const bpDoc=await api(bp,'admin',bpBody);
   assert.equal(bpDoc.document_no,bpData.number);
+  const filters={document_no:bpDoc.document_no,batch_no:bpRows[0].batch,customer_id:customer.id,generated_date:today};
+  const listed=await api(bp+'?'+new URLSearchParams(filters));
+  assert.deepEqual(listed.documents.map(row=>[row.id,row.customer]),[[bpDoc.id,bpData.header.customer]]);
+  assert.deepEqual((await api(bp+'/'+bpDoc.id+'/batches')).items,
+   [{batch:bpRows[0].batch,truck:bpRows[0].truck,code:matched.order.code}]);
+  await api(bp+'/'+bpDoc.id+'/batches','sales_operator',undefined,403);
+  await api(bp+'/'+bpDoc.id+'/batches','customer_admin',undefined,404);
+  assert.equal((await api(bp+'?'+new URLSearchParams({...filters,generated_date:'2000-01-01'}))).document_total,0);
+  assert.equal((await api(bp+'?'+new URLSearchParams({...filters,document_page:2}))).documents.length,0);
   await api(bp+'/print/preview','admin',{...bpBody,number:bpDoc.document_no.toLowerCase()},409);
   const print=await request(bp+'/'+bpDoc.id+'/print');
   assert.equal(print.statusCode,200);assert(print.body.includes(proof.content));

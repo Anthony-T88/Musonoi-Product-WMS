@@ -1,13 +1,15 @@
 'use strict';
 
 window.CustomsBP={
- selected:new Set(),product:null,preview:null,proof:null,editing:null,
+ selected:new Set(),selectedCustomer:null,product:null,preview:null,proof:null,editing:null,
  t:(zh,en)=>I18n.language==='en'?en:zh,
  base(){return CustomsWorkspace.base()+'/bp';},
  feedback(error){
   const labels={
    BP_INVALID_FIELD:['请核对填写内容及长度。','Check the submitted fields and their lengths.'],
    BP_SELECTION_REQUIRED:['请勾选至少一个批次。','Select at least one batch.'],
+   BP_CUSTOMER_MISMATCH:['同一张BP表只能选择同一客户的批次。','Choose batches for a single customer per BP sheet.'],
+   BP_NOT_FOUND:['BP表不存在或超出查看范围。','This BP sheet is unavailable in your scope.'],
    BP_SOURCE_CHANGED:['选中单据的审批或数据已变化，请重新选择并生成预览。','A selected document or approval changed. Select the batches again.'],
    BP_REQUIRED_DETAILS:['请补全批次号、车头号、公司、客户和产品。','Complete the batch, truck plate, issuer, customer and product.'],
    BP_INVALID_WEIGHT:['请填写有效的净重和毛重，净重不能大于毛重。','Enter valid weights. Net weight must not exceed gross weight.'],
@@ -16,43 +18,149 @@ window.CustomsBP={
   };
   return labels[error.message]?this.t(...labels[error.message]):error.message;
  },
+ filter(q,customers){
+  const t=this.t,field=(name,zh,en,type,limit='')=>'<label>'+t(zh,en)+'<input type="'+type+'" name="'+name+
+   '" value="'+esc(q.get(name)||'')+'"'+(limit?' maxlength="'+limit+'"':'')+'></label>';
+  const options='<option value="">'+t('全部客户','All Customers')+'</option>'+customers.map(({id,name})=>
+   '<option value="'+esc(id)+'"'+(id===q.get('customer_id')?' selected':'')+'>'+esc(name)+'</option>').join('');
+  return '<form id="customs-bp-filter" class="filters wms-filter-row wms-compact-filters">'+
+   field('document_no','BP编号','BP Number','search',80)+field('batch_no','批次号','Lot No.','search',160)+
+   '<label>'+t('客户','Customer')+'<select name="customer_id">'+options+'</select></label>'+
+   field('generated_date','生成日期','Generated Date','date')+
+   '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+
+   '</button><a class="button secondary" data-wms-reset href="/customs/bp">'+t('重置','Reset')+'</a></div></form>';
+ },
+ pagination(list,query,d){
+  const t=this.t,archive=list==='documents',prefix=archive?'document_':'',page=d[prefix+'page'],
+   size=d[prefix+'page_size'],total=d[prefix+'total'],pages=Math.max(1,Math.ceil(total/size));
+  const url=n=>{const q=new URLSearchParams(query);q.set(prefix+'page',n);return '/customs/bp?'+q;};
+  const link=(n,zh,en,enabled)=>enabled?'<a class="button secondary" href="'+esc(url(n))+'">'+t(zh,en)+'</a>':
+   '<button type="button" class="button secondary" disabled>'+t(zh,en)+'</button>';
+  return '<div class="v34-pagination" data-bp-pager="'+list+'"><span>'+page+' / '+pages+' · '+total+'</span>'+
+   '<label>'+t('每页','Per page')+' <select aria-label="'+t('每页行数','Rows per page')+'" data-bp-size="'+prefix+'">'+
+   RowsPerPage.standard.map(n=>'<option value="'+n+'"'+(n===size?' selected':'')+'>'+n+'</option>').join('')+'</select></label>'+
+   link(page-1,'上一页','Previous',page>1)+link(page+1,'下一页','Next',page<pages)+'</div>';
+ },
+ clearSelection(){
+  this.selected.clear();
+  this.selectedCustomer=null;
+ },
  async page(){
-  if(this.product!==ProductContext.code){this.product=ProductContext.code;this.selected.clear();this.preview=null;this.proof=null;this.editing=null;}
-  const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.base()+'?'+q);
-  if(location.pathname!=='/customs/bp')return;
+  if(this.product!==ProductContext.code){this.product=ProductContext.code;this.clearSelection();this.preview=null;this.proof=null;this.editing=null;}
+  const t=this.t,url=location.href,base=this.base(),q=new URLSearchParams(location.search);
+  for(const prefix of ['','document_'])q.set(prefix+'page_size',
+   RowsPerPage.read('bp-'+prefix+'page',RowsPerPage.standard,q.get(prefix+'page_size')));
+  const d=await API.request(base+'?'+q);
+  if(location.href!==url||this.base()!==base)return;
   const headers=[['选择','Select'],['备货批次','Preparation Lot'],['客户','Customer'],['车头号','Truck Plate'],['车辆数','Vehicles'],['物流审批时间','Logistics Approval']];
   const rows=d.items.map((row,i)=>'<tr><td><input type="checkbox" data-bp-select="'+i+'" aria-label="'+esc(t('选择批次 ','Select batch ')+(row.batch||row.truck))+
-   '" '+(row.source_ids.every(id=>this.selected.has(id))?'checked':'')+'></td><td>'+esc(row.batch||'—')+'</td><td>'+esc(row.customer)+
+   '"></td><td>'+esc(row.batch||'—')+'</td><td>'+esc(row.customer)+
    '</td><td>'+esc(row.truck||'—')+'</td><td>'+row.source_ids.length+'</td><td>'+esc(BusinessTime.display(row.approved_at))+'</td></tr>');
-  const documents=d.documents.map(row=>'<tr><td>'+esc(row.document_no)+'</td><td>'+row.vehicle_count+'</td><td>'+esc(BusinessTime.display(row.created_at))+
-   '</td><td><a class="button secondary compact" href="/api/v1'+this.base()+'/'+row.id+'/print" target="_blank" rel="noopener">'+t('预览 / 打印','Preview / Print')+'</a></td></tr>');
   Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page" data-page-composed data-no-i18n>'+CustomsWorkspace.nav('bp')+
-   CustomsWorkspace.filter(q,'/customs/bp',t('批次号 / 车牌 / 客户','Lot / Truck / Customer'))+
+   this.filter(q,d.customer_options)+
    '<section class="wms-section"><h2>'+t('可编制BP的批次','Batches Eligible for BP')+'</h2>'+
-   ExportLicenses.table(headers,rows,'customs-bp-batches',true)+CobaltStockUI.pager(d.page,d.total,d.page_size)+
+   ExportLicenses.table(headers,rows,'customs-bp-batches',true)+this.pagination('batches',q,d)+
    '<div class="business-toolbar"><span id="customs-bp-selection" role="status"></span>'+
+   '<button type="button" class="button secondary" id="customs-bp-clear">'+t('清除已选','Clear Selection')+'</button>'+
    '<button type="button" class="button primary" id="customs-bp-preview">'+t('编制BP表','Prepare BP Sheet')+'</button></div>'+
    '<p class="error" id="customs-bp-error" role="alert"></p></section>'+
-   '<section class="wms-section"><h2>'+t('已生成BP表','Generated BP Sheets')+'</h2>'+
-   ExportLicenses.table([['BP编号','BP Number'],['车辆数','Vehicles'],['生成时间','Generated At'],['操作','Actions']],documents,'customs-bp-documents',true,{actions:[3]})+'</section></div>');
-  CustomsWorkspace.bindFilter('/customs/bp',d);
-  const button=$('customs-bp-preview'),status=$('customs-bp-selection'),sync=()=>{
-   const count=this.selected.size;
-   status.textContent=count>200?t('每张BP最多选200辆车。','Select up to 200 vehicles per BP sheet.'):t('已选择 '+count+' 辆车','Selected '+count+' vehicles');
-   button.disabled=!count||count>200;
+   '<section class="wms-section"><h2>'+t('已生成BP表','Generated BP Sheets')+'</h2>'+this.documents(d.documents)+
+   this.pagination('documents',q,d)+'</section></div>');
+  $('customs-bp-filter').onsubmit=e=>{
+   e.preventDefault();
+   const filters=new URLSearchParams([...new FormData(e.target)].filter(([,value])=>value.trim()));
+   Router.go('/customs/bp'+(filters.size?'?'+filters:''));
   };
-  for(const input of document.querySelectorAll('[data-bp-select]'))input.onchange=()=>{
-   for(const id of d.items[Number(input.dataset.bpSelect)].source_ids)if(input.checked)this.selected.add(id);else this.selected.delete(id);
+  for(const select of document.querySelectorAll('[data-bp-size]'))select.onchange=()=>{
+   const prefix=select.dataset.bpSize,next=new URLSearchParams(q);
+   RowsPerPage.remember('bp-'+prefix+'page',select.value);
+   next.set(prefix+'page_size',select.value);next.delete(prefix+'page');
+   Router.go('/customs/bp?'+next);
+  };
+  for(const button of document.querySelectorAll('[data-bp-expand]'))button.onclick=()=>this.expand(button);
+  this.bindSelection(d.items);
+  ProductContext.dirty=false;
+ },
+ documents(documents){
+  const t=this.t,headers=[['BP编号','BP Number'],['车辆数','Vehicles'],['客户','Customer'],['生成时间','Generated At'],['操作','Actions']];
+  const rows=documents.flatMap(row=>{
+   const id=esc(row.id),panel='customs-bp-batch-'+id,number=esc(row.document_no);
+   return ['<tr><td>'+number+'</td><td>'+row.vehicle_count+'</td><td>'+esc(row.customer||'—')+'</td><td>'+esc(BusinessTime.display(row.created_at))+
+    '</td><td><div class="bp-archive-actions"><button type="button" class="button secondary compact" data-bp-expand="'+id+'" data-bp-number="'+number+
+    '" aria-expanded="false" aria-controls="'+panel+'" aria-label="'+t('展开批次','Expand Batches')+' '+number+'">'+t('展开批次','Expand Batches')+
+    '</button><a class="button secondary compact" href="/api/v1'+this.base()+'/'+id+'/print" target="_blank" rel="noopener">'+t('预览 / 打印','Preview / Print')+'</a></div></td></tr>',
+    '<tr class="bp-batch-expansion" id="'+panel+'" hidden><td colspan="5"><div class="bp-batch-panel" aria-live="polite"></div></td></tr>'];
+  });
+  return ExportLicenses.table(headers,rows,'customs-bp-documents',true,{numeric:[1],actions:[4]});
+ },
+ async expand(button){
+  const t=this.t,panel=$(button.getAttribute('aria-controls')),inside=panel.querySelector('.bp-batch-panel'),open=panel.hidden;
+  panel.hidden=!open;
+  const caption=open?t('收起批次','Collapse Batches'):t('展开批次','Expand Batches');
+  button.textContent=caption;
+  button.setAttribute('aria-label',caption+' '+button.dataset.bpNumber);
+  button.setAttribute('aria-expanded',String(open));
+  if(!open||inside.dataset.loaded||inside.getAttribute('aria-busy')==='true')return;
+  inside.setAttribute('aria-busy','true');
+  inside.textContent=t('正在读取批次…','Loading batches…');
+  try{
+   const {items}=await API.request(this.base()+'/'+button.dataset.bpExpand+'/batches');
+   if(!inside.isConnected)return;
+   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,row.code].map(value=>'<td>'+esc(value||'—')+'</td>').join('')+'</tr>');
+   inside.innerHTML=ExportLicenses.table([['批次号','Lot No.'],['车头号','Truck Plate'],['装车单号','Loading Order']],
+    rows,panel.id+'-details',true);
+   inside.dataset.loaded='true';
+  }catch(e){
+   inside.textContent=this.feedback(e);
+  }finally{
+   inside.removeAttribute('aria-busy');
+  }
+ },
+ bindSelection(batches){
+  const t=this.t,button=$('customs-bp-preview'),clear=$('customs-bp-clear'),status=$('customs-bp-selection'),error=$('customs-bp-error');
+  const controls=[...document.querySelectorAll('[data-bp-select]')];
+  let pending=false;
+  const sync=()=>{
+   const count=this.selected.size;
+   status.textContent=count>200?t('每张BP最多选200辆车。','Select up to 200 vehicles per BP sheet.'):
+    this.selectedCustomer?this.selectedCustomer.name+' · '+t('已选择 '+count+' 辆车，仅可继续勾选同一客户','Selected '+count+' vehicle(s). Add batches for this customer only.'):
+     t('每张BP表可选择同一客户的一个或多个批次','Select one or more batches for a single customer');
+   button.disabled=pending||!count||count>200;
+   clear.disabled=!count;
+   for(const input of controls){
+    const row=batches[Number(input.dataset.bpSelect)];
+    input.checked=row.source_ids.every(id=>this.selected.has(id));
+    input.disabled=!!this.selectedCustomer&&row.customer_id!==this.selectedCustomer.id;
+    input.setAttribute('aria-describedby','customs-bp-selection');
+   }
+  };
+  for(const input of controls)input.onchange=()=>{
+   const row=batches[Number(input.dataset.bpSelect)];
+   if(input.checked){
+    if(this.selectedCustomer&&row.customer_id!==this.selectedCustomer.id){
+     error.textContent=this.feedback(Error('BP_CUSTOMER_MISMATCH'));sync();return;
+    }
+    this.selectedCustomer={id:row.customer_id,name:row.customer};
+    for(const id of row.source_ids)this.selected.add(id);
+   }else{
+    for(const id of row.source_ids)this.selected.delete(id);
+    if(!this.selected.size)this.clearSelection();
+   }
+   error.textContent='';
    sync();
   };
+  clear.onclick=()=>{this.clearSelection();error.textContent='';sync();};
   button.onclick=async()=>{
-   button.disabled=true;
+   pending=true;sync();
    const ids=[...this.selected].sort();
-   try{const data=await API.request(this.base()+'/preview',{method:'POST',body:{ids}});if(button.isConnected){this.preview={...data,ids,suggestion:data.number};this.editor();}}
-   catch(error){if(button.isConnected)$('customs-bp-error').textContent=this.feedback(error);}
-   finally{if(button.isConnected)sync();}
+   error.textContent='';
+   try{
+    const data=await API.request(this.base()+'/preview',{method:'POST',body:{ids}});
+    if(button.isConnected&&ids.length===this.selected.size&&ids.every(id=>this.selected.has(id))){this.preview={...data,ids,suggestion:data.number};this.editor();}
+   }catch(e){if(button.isConnected)error.textContent=this.feedback(e);}
+   finally{pending=false;if(button.isConnected)sync();}
   };
-  sync();ProductContext.dirty=false;
+  sync();
  },
  labels(){
   return {
@@ -206,7 +314,7 @@ window.CustomsBP={
    try{
     const saved=await API.request(this.base(),{method:'POST',body:this.proof.payload});
     if(!form.isConnected)return;
-    this.preview=null;this.proof=null;this.selected.clear();ProductContext.dirty=false;this.saved(saved);
+    this.preview=null;this.proof=null;this.clearSelection();ProductContext.dirty=false;this.saved(saved);
    }catch(error){
     if(error.message==='BP_NUMBER_IN_USE'&&form.isConnected){
      this.proof=null;this.editor();$('customs-bp-save-error').textContent=this.feedback(error);

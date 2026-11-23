@@ -229,6 +229,16 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(bpPreview.number,bpBody.number);
  const bpDoc=await api(bpPath,'admin',bpBody);
  assert.equal(bpDoc.document_no,bpBody.number);
+ const archiveFilters={document_no:bpDoc.document_no.toLowerCase(),batch_no:bpRows[0].batch,customer_id:customer.id,generated_date:today};
+ const bpList=await api(bpPath+'?'+new URLSearchParams(archiveFilters));
+ assert.equal(bpList.document_total,1);
+ assert.deepEqual(bpList.documents.map(row=>row.id),[bpDoc.id]);
+ assert.equal(bpList.documents[0].customer,bpDraft.header.customer);
+ assert.equal(bpList.documents[0].vehicle_count,bpRows.length);
+ assert(bpList.customer_options.some(row=>row.id===customer.id));
+ assert.equal(bpList.documents[0].items,undefined);
+ assert.equal((await api(bpPath+'?'+new URLSearchParams({...archiveFilters,batch_no:'UNMATCHED'}))).document_total,0);
+ assert.deepEqual((await api(bpPath+'/'+bpDoc.id+'/batches')).items,[{batch:bpRows[0].batch,truck:bpRows[0].truck,code:load.code}]);
  assert.equal((await api(bpPath+'/preview','admin',{ids:bpIds})).number,bpDraft.number);
  await api(bpPath,'admin',{...bpBody,number:bpBody.number.toLowerCase()},409);
  const sheetResponse=await request(bpPath+'/'+bpDoc.id+'/print');

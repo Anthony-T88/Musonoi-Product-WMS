@@ -5,7 +5,7 @@ const crypto=require('node:crypto'),T=require('../dist/tonnes.js');
 const E=require('./customs-bp-print.cjs');
 const CO='CO_HYDROXIDE';
 const cuUrl='/api/v1/customs/bp',coUrl='/api/v1/cobalt/customs/bp';
-const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/customs/packing-list'||method==='GET'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/[0-9a-f-]{36}\/print)?$/i.test(path)||
+const allowed=(path,method)=>method==='GET'&&path==='/api/v1/cobalt/customs/packing-list'||method==='GET'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/operations\/status|\/[0-9a-f-]{36}\/(?:print|batches))?$/i.test(path)||
  method==='POST'&&/^\/api\/v1\/cobalt\/customs\/bp(?:\/(?:preview|print\/preview))?$/.test(path);
 const clearanceScope=`NOT EXISTS(SELECT 1 FROM jsonb_array_elements(d.source_context) f WHERE NOT EXISTS(
  SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=(f->>'project_id')::uuid
@@ -13,25 +13,45 @@ const clearanceScope=`NOT EXISTS(SELECT 1 FROM jsonb_array_elements(d.source_con
  AND(s.warehouse_id IS NULL OR s.warehouse_id=(f->>'warehouse_id')::uuid)))`;
 const contractScope=alias=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=${alias}.project_id
  AND (s.customer_id IS NULL OR s.customer_id=${alias}.customer_id) AND (s.warehouse_id IS NULL OR s.warehouse_id=${alias}.warehouse_id))`;
+const coBatch="COALESCE(NULLIF(l.plan_snapshot->>'preparation_batch_no',''),p.preparation_batch_no)";
+const coFrom=`FROM co_loading_orders l JOIN co_loading_plans d ON d.id=l.plan_id
+ JOIN co_sales_plans sp ON sp.id=l.sales_plan_id JOIN co_customer_profiles c ON c.id=sp.customer_id
+ JOIN co_preparations p ON p.id=l.preparation_id JOIN co_load_executions e ON e.order_id=l.id
+ WHERE l.status<>'CANCELLED' AND e.logistics_by IS NOT NULL AND e.logistics_at IS NOT NULL
+ AND e.state IN('LOGISTICS_APPROVED','OUTBOUND') AND ${contractScope('sp')}`;
 const coSql=`SELECT l.id,l.code,l.version,d.version plan_version,e.version execution_version,sp.project_id,sp.warehouse_id,
- sp.customer_id,c.name customer,COALESCE(NULLIF(l.plan_snapshot->>'preparation_batch_no',''),p.preparation_batch_no) batch,
+ sp.customer_id,c.name customer,${coBatch} batch,
  d.planned_load_date::text loading_date,e.logistics_at approved_at,e.state,
  COALESCE(NULLIF(d.transporter,''),l.transport_snapshot->>'transporter') transporter,
  l.transport_snapshot->>'truck_no' truck,l.transport_snapshot->>'trailer_one' trailer_one,l.transport_snapshot->>'trailer_two' trailer_two,
  l.transport_snapshot->>'container_no' container,l.transport_snapshot->>'driver_name' driver,l.transport_snapshot->>'passport_no' passport,
  d.destination,d.export_license_no license,l.bag_count quantity,
  round(l.actual_net_kg/1000,6)::text net_mt,round(l.actual_gross_kg/1000,6)::text gross_mt,
- to_jsonb(ARRAY[sp.warehouse_id]) warehouses
- FROM co_loading_orders l JOIN co_loading_plans d ON d.id=l.plan_id
- JOIN co_sales_plans sp ON sp.id=l.sales_plan_id JOIN co_customer_profiles c ON c.id=sp.customer_id
- JOIN co_preparations p ON p.id=l.preparation_id JOIN co_load_executions e ON e.order_id=l.id
- WHERE l.status<>'CANCELLED' AND e.logistics_by IS NOT NULL AND e.logistics_at IS NOT NULL
- AND e.state IN('LOGISTICS_APPROVED','OUTBOUND') AND ${contractScope('sp')}`;
+ to_jsonb(ARRAY[sp.warehouse_id]) warehouses ${coFrom}`;
+const cuTruck="coalesce(nullif(l.vehicle_no,''),d.vehicle_no,t.fields->>'vehicle_no')";
+const cuFrom=withDetails=>`FROM loading_orders l JOIN copper_customers c ON c.id=l.customer_id
+ LEFT JOIN loading_plan_matches m ON m.loading_id=l.id LEFT JOIN loading_plan_documents d ON d.id=m.document_id
+ LEFT JOIN export_transport t ON t.loading_id=l.id
+ ${withDetails?'LEFT JOIN vehicle_arrivals a ON a.id=d.arrival_id':''}
+ CROSS JOIN LATERAL (
+  SELECT string_agg(DISTINCT lot.lot_no,' / ' ORDER BY lot.lot_no) batch,count(*)::int quantity
+   ${withDetails?`,CASE WHEN bool_and(i.original_weight IS NOT NULL) THEN sum(i.original_weight)::text END net_mt,
+   CASE WHEN bool_and(coalesce(ai.gross_weight,b.gross_weight) IS NOT NULL) THEN sum(coalesce(ai.gross_weight,b.gross_weight))::text END gross_mt,
+   array_agg(DISTINCT loc.warehouse_id ORDER BY loc.warehouse_id) warehouses`:''}
+  FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations lot ON lot.id=r.allocation_id
+  ${withDetails?`JOIN bundles b ON b.id=i.bundle_id JOIN locations loc ON loc.id=i.original_location_id
+  LEFT JOIN allocation_items ai ON ai.allocation_id=lot.id AND ai.bundle_id=b.id`:''}
+  WHERE i.loading_id=l.id AND NOT i.plan_removed
+ ) x
+ WHERE l.logistics_review_by IS NOT NULL AND l.logistics_review_at IS NOT NULL
+ AND x.quantity>0 AND (l.workflow_state='OUTBOUND' AND (${S.posted}) OR l.workflow_state='DEPARTED_PENDING' AND l.status NOT IN('CANCELLED','REVERSED'))
+ AND NOT EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id
+  AND (cr.status IN('REQUESTED','AUTHORIZED','RETURN_VERIFIED') OR cr.kind='RETURN_OUTBOUND' AND cr.status='APPLIED')) AND ${S.scope}`;
 const cuSql=`SELECT l.id,l.code,l.version,d.version plan_version,NULL::integer execution_version,l.project_id,l.customer_id,
  c.name customer,x.batch,coalesce(d.planned_load_date,(l.loaded_at AT TIME ZONE 'Africa/Lubumbashi')::date)::text loading_date,
  l.logistics_review_at approved_at,l.workflow_state state,
  coalesce(nullif(d.transporter,''),nullif(t.fields->>'forwarder',''),l.carrier) transporter,
- coalesce(nullif(l.vehicle_no,''),d.vehicle_no,t.fields->>'vehicle_no') truck,
+ ${cuTruck} truck,
  coalesce(nullif(a.trailer_one,''),t.fields->>'trailer_one') trailer_one,
  coalesce(nullif(a.trailer_two,''),t.fields->>'trailer_two') trailer_two,
  coalesce(nullif(a.container_no,''),t.fields->>'container_no') container,
@@ -39,25 +59,10 @@ const cuSql=`SELECT l.id,l.code,l.version,d.version plan_version,NULL::integer e
  coalesce(nullif(a.passport_no,''),t.fields->>'passport_no') passport,
  coalesce(nullif(d.destination,''),t.fields->>'destination') destination,
  coalesce(nullif(d.export_license_no,''),t.fields->>'eb_license') license,
- x.quantity,x.net_mt,x.gross_mt,to_jsonb(x.warehouses) warehouses
- FROM loading_orders l JOIN copper_customers c ON c.id=l.customer_id
- LEFT JOIN loading_plan_matches m ON m.loading_id=l.id LEFT JOIN loading_plan_documents d ON d.id=m.document_id
- LEFT JOIN vehicle_arrivals a ON a.id=d.arrival_id LEFT JOIN export_transport t ON t.loading_id=l.id
- CROSS JOIN LATERAL (
-  SELECT string_agg(DISTINCT lot.lot_no,' / ' ORDER BY lot.lot_no) batch,count(*)::int quantity,
-   CASE WHEN bool_and(i.original_weight IS NOT NULL) THEN sum(i.original_weight)::text END net_mt,
-   CASE WHEN bool_and(coalesce(ai.gross_weight,b.gross_weight) IS NOT NULL) THEN sum(coalesce(ai.gross_weight,b.gross_weight))::text END gross_mt,
-   array_agg(DISTINCT loc.warehouse_id ORDER BY loc.warehouse_id) warehouses
-  FROM loading_items i JOIN reservations r ON r.id=i.reservation_id
-  JOIN bundles b ON b.id=i.bundle_id JOIN allocations lot ON lot.id=r.allocation_id
-  JOIN locations loc ON loc.id=i.original_location_id
-  LEFT JOIN allocation_items ai ON ai.allocation_id=lot.id AND ai.bundle_id=b.id
-  WHERE i.loading_id=l.id AND NOT i.plan_removed
- ) x
- WHERE l.logistics_review_by IS NOT NULL AND l.logistics_review_at IS NOT NULL
- AND x.quantity>0 AND (l.workflow_state='OUTBOUND' AND (${S.posted}) OR l.workflow_state='DEPARTED_PENDING' AND l.status NOT IN('CANCELLED','REVERSED'))
- AND NOT EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id
-  AND (cr.status IN('REQUESTED','AUTHORIZED','RETURN_VERIFIED') OR cr.kind='RETURN_OUTBOUND' AND cr.status='APPLIED')) AND ${S.scope}`;
+ x.quantity,x.net_mt,x.gross_mt,to_jsonb(x.warehouses) warehouses ${cuFrom(true)}`;
+const coList=`SELECT l.id,l.code,sp.customer_id,c.name customer,${coBatch} batch,
+ l.transport_snapshot->>'truck_no' truck,e.logistics_at approved_at ${coFrom}`;
+const cuList=`SELECT l.id,l.code,l.customer_id,c.name customer,x.batch,${cuTruck} truck,l.logistics_review_at approved_at ${cuFrom(false)}`;
 const rowFields={batch:160,truck:80,trailer_one:80,trailer_two:80,container:80,transporter:160,driver:160,passport:80,quantity:8,net_mt:32,gross_mt:32};
 const headerFields={issuer:180,address:360,rccm:120,id_nat:120,nif:120,contact:360,customer:1000,product:120,mode:60,
  destination:1000,border:120,agency:1000,license:1000,loading_point:360,loading_date:160,signature_date:80};
@@ -106,22 +111,48 @@ function defaultHeader(rows,co){
   loading_date:join(rows,'loading_date'),signature_date:date()};
 }
 async function list(c,req){
- const co=req.productCode===CO,q=req.query||{},search=text(q.search||'',160),page=Number(q.page||1),size=30;
- if(!Number.isInteger(page)||page<1||page>100000)throw B.error(400,'BP_INVALID_FIELD');
+ const co=req.productCode===CO,q=req.query||{};
+ const page=Number(q.page||1),documentPage=Number(q.document_page||1);
+ const size=Number(q.page_size||10),documentSize=Number(q.document_page_size||10);
+ if(![page,documentPage].every(n=>Number.isInteger(n)&&n>=1&&n<=100000)||
+  ![size,documentSize].every(n=>[10,25,50,100].includes(n)))throw B.error(400,'BP_INVALID_FIELD');
+ const customer=q.customer_id?B.uuid(q.customer_id):null,generatedDate=q.generated_date?B.date(q.generated_date):null;
+ const batch=text(q.batch_no||'',160),documentNo=text(q.document_no||'',80),legacy=text(q.search||'',160);
  const {rows:[result]}=await c.query(`WITH eligible AS MATERIALIZED (
-  SELECT *,COALESCE(NULLIF(batch,''),id::text) batch_key FROM (${coords(co)}) candidates
- ), matching_keys AS (
-  SELECT DISTINCT batch_key FROM eligible WHERE ($2='' OR strpos(lower(concat_ws(' ',batch,code,customer,truck)),lower($2))>0)
- ), grouped AS (
-  SELECT e.batch_key,max(e.batch) batch,string_agg(DISTINCT e.customer,' / ' ORDER BY e.customer) customer,
-   string_agg(DISTINCT e.truck,' / ' ORDER BY e.truck) truck,max(e.approved_at) approved_at,array_agg(e.id ORDER BY e.id) source_ids
-  FROM eligible e JOIN matching_keys USING(batch_key) GROUP BY e.batch_key
+  ${co?coList:cuList}
+ ), grouped AS MATERIALIZED (
+  SELECT COALESCE(NULLIF(batch,''),id::text) batch_key,customer_id,max(batch) batch,max(customer) customer,
+   string_agg(DISTINCT truck,' / ' ORDER BY truck) truck,max(approved_at) approved_at,array_agg(id ORDER BY id) source_ids
+  FROM eligible WHERE ($3::uuid IS NULL OR customer_id=$3) AND ($4='' OR strpos(lower(batch),lower($4))>0)
+  GROUP BY batch_key,customer_id HAVING bool_or($7='' OR strpos(lower(concat_ws(' ',batch,code,customer,truck)),lower($7))>0)
+ ), visible AS MATERIALIZED (
+  SELECT d.id,d.document_no,d.created_at,d.source_context FROM customs_bp_documents d
+  WHERE d.product_code=$2 AND ${clearanceScope}
+ ), matching AS MATERIALIZED (
+  SELECT d.id,d.created_at FROM visible d
+  WHERE ($3 IS NULL OR d.source_context @> jsonb_build_array(jsonb_build_object('customer_id',$3::text)))
+   AND ($5='' OR strpos(lower(d.document_no),lower($5))>0)
+   AND ($6::date IS NULL OR (d.created_at AT TIME ZONE 'Africa/Lubumbashi')::date=$6)
+   AND ($4='' OR EXISTS(SELECT 1 FROM customs_bp_documents s
+    CROSS JOIN LATERAL jsonb_array_elements(s.snapshot->'rows'||coalesce(s.snapshot->'original'->'rows','[]')) r
+    WHERE s.id=d.id AND strpos(lower(r->>'batch'),lower($4))>0))
+ ), bp_page AS (
+  SELECT id,created_at FROM matching ORDER BY created_at DESC,id LIMIT $10 OFFSET $11
+ ), customers AS (
+  SELECT customer_id id,customer name FROM eligible
+  UNION
+  SELECT p.id,p.name FROM visible d CROSS JOIN LATERAL jsonb_array_elements(d.source_context) s
+  JOIN ${co?'co_customer_profiles':'copper_customers'} p ON p.id=(s->>'customer_id')::uuid
  ) SELECT (SELECT count(*)::int FROM grouped) total,
- coalesce((SELECT jsonb_agg(f) FROM (SELECT * FROM grouped ORDER BY approved_at DESC,batch_key LIMIT $3 OFFSET $4) f),'[]') items`,
- [req.user.id,search,size,(page-1)*size]);
- const {rows:documents}=await c.query(`SELECT d.id,d.document_no,d.created_at,cardinality(d.source_ids) vehicle_count
-  FROM customs_bp_documents d WHERE d.product_code=$2 AND ${clearanceScope} ORDER BY d.created_at DESC,d.id LIMIT 30`,[req.user.id,req.productCode]);
- return {...result,documents,page,page_size:size};
+  (SELECT count(*)::int FROM matching) document_total,
+  coalesce((SELECT jsonb_agg(f ORDER BY approved_at DESC,batch_key,customer_id)
+   FROM (SELECT * FROM grouped ORDER BY approved_at DESC,batch_key,customer_id LIMIT $8 OFFSET $9) f),'[]') items,
+  coalesce((SELECT jsonb_agg(f ORDER BY created_at DESC,id) FROM (
+   SELECT s.id,s.document_no,s.created_at,cardinality(s.source_ids) vehicle_count,s.snapshot->'header'->>'customer' customer
+   FROM bp_page b JOIN customs_bp_documents s ON s.id=b.id) f),'[]') documents,
+  coalesce((SELECT jsonb_agg(customers ORDER BY name,id) FROM customers),'[]') customer_options`,
+ [req.user.id,req.productCode,customer,batch,documentNo,generatedDate,legacy,size,(page-1)*size,documentSize,(documentPage-1)*documentSize]);
+ return {...result,page,page_size:size,document_page:documentPage,document_page_size:documentSize};
 }
 function selection(body){
  if(!Array.isArray(body?.ids)||body.ids.length<1||body.ids.length>200)throw B.error(400,'BP_SELECTION_REQUIRED');
@@ -133,6 +164,7 @@ async function chosen(c,req,ids){
  const co=req.productCode===CO;
  const {rows}=await c.query(`SELECT * FROM (${coords(co)}) eligible WHERE id=ANY($2::uuid[]) ORDER BY id`,[req.user.id,ids]);
  if(rows.length!==ids.length)throw B.error(409,'BP_SOURCE_CHANGED');
+ if(new Set(rows.map(row=>row.customer_id)).size!==1)throw B.error(409,'BP_CUSTOMER_MISMATCH');
  // Source signatures include every business field and the latest approval version.
  return {token:hash(rows),rows,header:defaultHeader(rows,co),data:rows.map(row=>fieldMap(rowFieldsFrom(row),rowFields))};
 }
@@ -192,6 +224,13 @@ async function save(c,req){
  return doc;
 }
 
+async function archived(c,req){
+ const doc=(await c.query(`SELECT d.snapshot FROM customs_bp_documents d
+  WHERE d.product_code=$2 AND d.id=$3 AND ${clearanceScope}`,[req.user.id,req.productCode,B.uuid(req.params.id)])).rows[0];
+ if(!doc)throw B.error(404,'BP_NOT_FOUND');
+ return doc.snapshot;
+}
+
 function register({app,pool,permitted,csrf}){
  for(const url of [cuUrl,coUrl]){
   const permission=permitted('customs:bp');
@@ -218,12 +257,12 @@ function register({app,pool,permitted,csrf}){
     WHERE r.actor_id=$1 AND r.route=$2 AND r.key=$3 AND d.product_code=$4 AND ${clearanceScope}`,[req.user.id,method+' '+url,key,req.productCode]);
    return {committed:result.rowCount===1};
   });
-  app.get(url+'/:id/print',{preHandler:permission},async(req,reply)=>{
-   const doc=(await pool.query(`SELECT d.snapshot FROM customs_bp_documents d
-    WHERE d.product_code=$2 AND d.id=$3 AND ${clearanceScope}`,[req.user.id,req.productCode,B.uuid(req.params.id)])).rows[0];
-   if(!doc)throw B.error(404,'BP_NOT_FOUND');
-   return reply.type('text/html; charset=utf-8').send(E.html(doc.snapshot,req.query.print==='1'));
+  app.get(url+'/:id/batches',{preHandler:permission},async req=>{
+   const snapshot=await archived(pool,req);
+   return {items:snapshot.rows.map(({batch,truck,code})=>({batch,truck,code}))};
   });
+  app.get(url+'/:id/print',{preHandler:permission},async(req,reply)=>reply
+   .type('text/html; charset=utf-8').send(E.html(await archived(pool,req),req.query.print==='1')));
  }
 }
 

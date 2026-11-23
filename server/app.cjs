@@ -56,7 +56,45 @@ async function build(options={}){
  await require('./outbound-workspace.cjs').register({app,pool,permitted,csrf});
  await require('./cobalt-stocktaking.cjs').register({app,pool,permitted,csrf});
  await require('./stock-balance.cjs').register({app,pool,permitted,csrf});
- app.get('/api/v1/config',async()=>({environment:cfg.environment,displayVersion:require('./release.cjs').displayVersion,frontendRevision:require('./release.cjs').frontendRevision,cobaltStocktakingV451:await require('./cobalt-stocktaking.cjs').enabled(pool),outboundWorkspaceUX11:await require('./outbound-workspace.cjs').enabled(pool),salesApprovalUX10:await require('./sales-approval.cjs').enabled(pool),cobaltV38:cobaltEnabled,cobaltMetalV471:cobaltMetalEnabled,cobaltWorkV39:cobaltWorkEnabled,cobaltStockV40:cobaltStockEnabled,cobaltSalesV41:cobaltSalesEnabled,cobaltLoadingV42:cobaltLoadingEnabled,cobaltExecutionV43:cobaltExecutionEnabled,cobaltPackingV44:cobaltPackingEnabled,cobaltReportsV441:cobaltPackingEnabled,cobaltUX7,cobaltUX9:cobaltPackingEnabled,gatePermits:(await pool.query("SELECT to_regclass('public.gate_permits') IS NOT NULL ok")).rows[0].ok,arrivalWorkflowV34:await require('./vehicle-arrivals.cjs').enabled(pool),managementV34:await require('./management.cjs').enabled(pool),inventoryDepthV33:await require('./inventory-depth.cjs').enabled(pool),inventoryControlV32:await require('./inventory-control.cjs').enabled(pool),dispatchCapacityV31:await require('./packing-templates.cjs').enabled(pool),salesDispatchV31:(await pool.query("SELECT to_regclass('public.sales_dispatch_imports') IS NOT NULL ok")).rows[0].ok,version:require('./release.cjs').version,unifiedLoadingV31:await require('./unified-loading-plans.cjs').enabled(pool),loadingPlanAccessV31:true,invoiceHeaderV31:(await pool.query("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='loading_plan_groups' AND column_name='invoice_no') ok")).rows[0].ok,loadingPlanV31:await require('./loading-plans.cjs').enabled(pool),productionReceiptSelfReviewEnabled:cfg.environment==='test'&&(await AccountPolicy.policy(pool)).production_receipt_self_review,supplementV262:await require('./v262-supplement.cjs').enabled(pool),lotWorkV262:await require('./v262.cjs').enabled(pool),lotWorkV261:await require('./v261.cjs').enabled(pool),source:'PostgreSQL',businessWrites:true,modules:['masters','receipts','allocations','samples','weighings','loads','outbounds','moves','stocktakes','adjustments','reports','dashboard','labels','language','operations','shipping','loading-plans']}));
+ // Schema capabilities are fixed for a running release. Read mutable policy per request.
+ const frontendConfig={
+  environment:cfg.environment,
+  displayVersion:release.displayVersion,
+  frontendRevision:release.frontendRevision,
+  cobaltStocktakingV451:await require('./cobalt-stocktaking.cjs').enabled(pool),
+  outboundWorkspaceUX11:await require('./outbound-workspace.cjs').enabled(pool),
+  salesApprovalUX10:await require('./sales-approval.cjs').enabled(pool),
+  cobaltV38:cobaltEnabled,
+  cobaltMetalV471:cobaltMetalEnabled,
+  cobaltWorkV39:cobaltWorkEnabled,
+  cobaltStockV40:cobaltStockEnabled,
+  cobaltSalesV41:cobaltSalesEnabled,
+  cobaltLoadingV42:cobaltLoadingEnabled,
+  cobaltExecutionV43:cobaltExecutionEnabled,
+  cobaltPackingV44:cobaltPackingEnabled,
+  cobaltReportsV441:cobaltPackingEnabled,cobaltUX7,
+  cobaltUX9:cobaltPackingEnabled,
+  gatePermits:(await pool.query("SELECT to_regclass('public.gate_permits') IS NOT NULL ok")).rows[0].ok,
+  arrivalWorkflowV34:await require('./vehicle-arrivals.cjs').enabled(pool),
+  managementV34:await require('./management.cjs').enabled(pool),
+  inventoryDepthV33:await require('./inventory-depth.cjs').enabled(pool),
+  inventoryControlV32:await require('./inventory-control.cjs').enabled(pool),
+  dispatchCapacityV31:await require('./packing-templates.cjs').enabled(pool),
+  salesDispatchV31:(await pool.query("SELECT to_regclass('public.sales_dispatch_imports') IS NOT NULL ok")).rows[0].ok,
+  version:release.version,
+  unifiedLoadingV31:await require('./unified-loading-plans.cjs').enabled(pool),
+  loadingPlanAccessV31:true,
+  invoiceHeaderV31:(await pool.query("SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='loading_plan_groups' AND column_name='invoice_no') ok")).rows[0].ok,
+  loadingPlanV31:await require('./loading-plans.cjs').enabled(pool),
+  supplementV262:await require('./v262-supplement.cjs').enabled(pool),
+  lotWorkV262:await require('./v262.cjs').enabled(pool),
+  lotWorkV261:await require('./v261.cjs').enabled(pool),
+  source:'PostgreSQL',
+  businessWrites:true,
+  modules:['masters','receipts','allocations','samples','weighings','loads','outbounds','moves','stocktakes','adjustments','reports','dashboard','labels','language','operations','shipping','loading-plans']
+ };
+ app.get('/api/v1/config',async()=>({...frontendConfig,
+  productionReceiptSelfReviewEnabled:cfg.environment==='test'&&(await AccountPolicy.policy(pool)).production_receipt_self_review}));
  app.get('/api/v1/health',async()=>{await dbEnvironment();await pool.query('SELECT 1');return {database:'ok',environment:cfg.environment};});
  for(const path of ['/customs','/customs/bp','/customs/templates','/customs/packing-list','/customs/packing-list/:id']){
   const entryPermissions=['customs:bp','load:read','packing-template:write'];

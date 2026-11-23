@@ -179,17 +179,26 @@ test('first batch management security regressions',async t=>{
  await check('172-to-173 upgrade preserves every historical account, grant, scope, session and audit row',async()=>{
   const old=await E.database();try{const Chain=require('../../scripts/migration-chain.cjs'),prior=Chain.load().filter(e=>e.version<'173_');await old.client.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');for(const e of prior)await Chain.execute(old.client,e);await old.client.query("INSERT INTO system_info VALUES(true,'test')");const fixture=await E.seed(old.client,old.name),who=fixture.accounts.find(a=>a.role==='admin');await old.client.query("INSERT INTO sessions(token_hash,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')",[crypto.randomBytes(32).toString('hex'),who.id,crypto.randomBytes(32).toString('hex')]);const event=(await old.client.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_legacy','projects',$2,$3) RETURNING id",[who.id,fixture.project,{project_id:fixture.project}])).rows[0].id;
    const snapshot=async()=>{const result={};for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs'])result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg((to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email')::text,'' ORDER BY (to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email')::text),'')) digest FROM ${table} t`)).rows[0];return result;};await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});const before=await snapshot();await old.client.query('BEGIN');try{await Chain.execute(old.client,Chain.load().find(e=>e.version.startsWith('173_')));await old.client.query('COMMIT');}catch(e){await old.client.query('ROLLBACK');throw e;}assert.deepEqual(await snapshot(),before);await assert.rejects(()=>require('../../server/app.cjs').build({config:fixture.appCfg}),{code:'DB_SECURITY_SCHEMA_REQUIRED'});for(const migration of Chain.load().slice(173,181))await Chain.execute(old.client,migration);assert.deepEqual(await snapshot(),before);
+   const grantKey="role_code||'/'||permission_code";
+   const retained=async(added=[])=>(await old.client.query(`SELECT count(*)::int n,
+    md5(coalesce(string_agg(to_jsonb(t)::text,'' ORDER BY to_jsonb(t)::text),'')) digest FROM role_permissions t
+    WHERE permission_code NOT LIKE 'export-license:%' AND permission_code<>'printer:manage' AND NOT (${grantKey}=ANY($1::text[]))`,[added])).rows[0];
+   const previouslyRetained=await retained();
+   const retiredPrinters=(await old.client.query("SELECT role_code FROM role_permissions WHERE permission_code='printer:manage' ORDER BY role_code")).rows;
+   assert.deepEqual(retiredPrinters.map(row=>row.role_code),['admin','sales_manager']);
    const appliedCount=(await old.client.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n;
    assert.equal((await migrate(old.client,{environment:'test',apply:true,backupVerified:true})).added,Chain.load().length-appliedCount);
    const after=await snapshot();
    for(const table of ['users','roles','user_scopes','audit_logs'])assert.deepEqual(after[table],before[table],table);
    const dispatchGrants=['admin/dispatch:month','sales_manager/dispatch:month','sales_manager/dispatch:read','sales_operator/dispatch:month','sales_operator/dispatch:read'];
-   const grantKey="role_code||'/'||permission_code";
-   const {rows:addedDispatch}=await old.client.query('SELECT '+grantKey+' AS key FROM role_permissions WHERE '+grantKey+'=ANY($1::text[])',[dispatchGrants]);
-   assert.deepEqual(addedDispatch.map(row=>row.key).sort(),dispatchGrants);
-   const priorGrants=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg(to_jsonb(t)::text,'' ORDER BY to_jsonb(t)::text),'')) digest FROM role_permissions t WHERE permission_code NOT LIKE 'export-license:%' AND NOT (${grantKey}=ANY($1::text[]))`,[dispatchGrants])).rows[0];
-   assert.deepEqual(priorGrants,before.role_permissions);
-   assert.equal(after.role_permissions.n,before.role_permissions.n+12+dispatchGrants.length);
+   const laterGrants=[...dispatchGrants,'production_operator/inventory:correct-request','logistics_field_operator/inventory:correct-request',
+    'production_manager/inventory:correct-review','site_supervisor/lot:reverse-request','logistics_manager/lot:reverse-review',
+    'logistics_office_operator/customs:bp','admin/customs:bp'].sort();
+   const {rows:added}=await old.client.query('SELECT '+grantKey+' AS key FROM role_permissions WHERE '+grantKey+'=ANY($1::text[])',[laterGrants]);
+   assert.deepEqual(added.map(row=>row.key).sort(),laterGrants);
+   assert.equal((await old.client.query("SELECT 1 FROM role_permissions WHERE permission_code='printer:manage'")).rowCount,0);
+   assert.deepEqual(await retained(laterGrants),previouslyRetained);
+   assert.equal(after.role_permissions.n,before.role_permissions.n+12+laterGrants.length-retiredPrinters.length);
    assert.equal(after.sessions.n,before.sessions.n-1);assert.equal((await old.client.query('SELECT scope_context FROM audit_logs WHERE id=$1',[event])).rows[0].scope_context,null);
    const oldApp=await require('../../server/app.cjs').build({config:fixture.appCfg});try{const r=await oldApp.inject({method:'POST',url:'/api/v1/auth/login',headers:{origin:fixture.appCfg.origin},payload:{username:who.username,password:who.password}});assert.equal(r.statusCode,200);const cookie=r.cookies.map(x=>x.name+'='+x.value).join('; ');assert.equal((await oldApp.inject({url:'/api/v1/v27/audit/'+event,headers:{cookie,origin:fixture.appCfg.origin}})).statusCode,200);}finally{await oldApp.close();}
   }finally{await old.client.end();}

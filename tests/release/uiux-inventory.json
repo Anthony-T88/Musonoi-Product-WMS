@@ -932,7 +932,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "loading order preview with detail link",
       "template": "/outbounds"
     },
     {
@@ -950,7 +950,16 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "logistics-approved batches",
+      "state": "single-customer selection and generated sheets",
+      "template": "/customs/bp"
+    },
+    {
+      "key": "customs-bp-filtered",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "archive number filter with no match",
       "template": "/customs/bp"
     },
     {

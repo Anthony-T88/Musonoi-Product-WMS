@@ -17,7 +17,7 @@ window.CustomsWorkspace={
    ['templates','/customs/templates','装箱单模板','Packing List Template','packing-template:write']
   ];
   return '<nav class="business-toolbar" aria-label="'+t('清关单据导航','Customs Documents Navigation')+'" data-customs-nav data-no-i18n>'+
-   options.filter(x=>this.can(x[4])).map(([key,url,zh,en])=>'<a class="button secondary compact" href="'+url+'"'+
+   options.filter(x=>this.can(x[4])).map(([key,url,zh,en])=>'<a class="button secondary" href="'+url+'"'+
     (tab===key?' aria-current="page"':'')+'>'+t(zh,en)+'</a>').join('')+'</nav>';
  },
  decorate(tab){

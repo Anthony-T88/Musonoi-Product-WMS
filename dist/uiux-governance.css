@@ -1004,8 +1004,15 @@ html[data-release-ui="46"] #page-content .wms-route-error :is(p, small) { color:
 #preparation-plan-filter > label{min-width:0}
 .loading465-plan-facts{margin-block:.75rem}
 html[data-release-ui="46"] #page-content [data-customs-nav]{display:flex;justify-content:flex-start;align-items:center;flex-wrap:nowrap;overflow-x:auto}
-html[data-release-ui="46"] #page-content [data-customs-nav] .button{flex:none;inline-size:auto;white-space:nowrap}
+html[data-release-ui="46"] #page-content [data-customs-nav] .button{flex:none;inline-size:auto;min-inline-size:6rem;padding-inline:var(--uix-gap);white-space:nowrap}
 html[data-release-ui="46"] #page-content [data-customs-nav] [aria-current="page"]{color:var(--uix-brand);border-color:var(--uix-brand);background:var(--uix-success-soft)}
+@media(max-width:900px){
+ html[data-release-ui="46"] #page-content nav[data-customs-nav].business-toolbar .button{min-height:var(--uix-touch)}
+}
+#customs-bp-filter > label{flex:1 1 var(--uix-filter-min)}
+#customs-bp-documents .bp-batch-expansion[hidden]{display:none}
+.bp-archive-actions{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:var(--uix-gap-xs)}
+.bp-batch-panel{padding:var(--uix-gap-sm);border-radius:var(--uix-radius);background:var(--uix-soft);min-inline-size:0}
 .customs-bp-review,#customs-bp-form,#customs-bp-form .wms-section{min-inline-size:0;max-inline-size:100%}
 #customs-bp-form{display:grid;gap:var(--uix-gap)}
 #customs-bp-form>.wms-section{padding:var(--uix-gap);border:var(--uix-border-width) solid var(--uix-border)}
@@ -1025,6 +1032,9 @@ html[data-release-ui="46"] #customs-bp-form .bp-review-footer dl.wms-facts{grid-
  .bp-review-overview{grid-template-columns:1fr}
  .bp-review-overview .wms-field{max-inline-size:17rem}
  html[data-release-ui="46"] #customs-bp-form :is(.bp-review-overview,.bp-review-footer) dl.wms-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:480px){
+ html[data-release-ui="46"] #page-content form#customs-bp-filter > label{flex-basis:calc((100% - var(--uix-gap)) / 2)}
 }
 @media(min-width:1000px){
  #preparation-plan-filter{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;align-items:end}

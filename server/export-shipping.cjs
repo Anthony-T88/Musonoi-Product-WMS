@@ -61,8 +61,10 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false){
  const from=`FROM loading_orders l JOIN copper_customers cu ON cu.id=l.customer_id LEFT JOIN export_transport t ON t.loading_id=l.id LEFT JOIN packing_list_documents d ON d.loading_id=l.id WHERE ${parts.join(' AND ')}`;
  // Counts share all original authorization and business filters, while the
  // selected workflow state narrows only the list. Keep parameter positions.
- const scopeFrom=statusPredicate?from.replace(statusPredicate,'('+statusPredicate.split('=')[1]+'::text IS NOT NULL)'):from,stateCounts=(await c.query('SELECT l.workflow_state state,count(*)::int count '+scopeFrom+' GROUP BY l.workflow_state',values)).rows,state_counts=Object.fromEntries(stateCounts.map(r=>[r.state||'UNKNOWN',r.count])),scope_total=stateCounts.reduce((n,r)=>n+r.count,0);
- let total=Number((await c.query('SELECT count(*) n '+from,values)).rows[0].n),visibleTotal=scope_total;
+ const scopeFrom=statusPredicate?from.replace(statusPredicate,'('+statusPredicate.split('=')[1]+'::text IS NOT NULL)'):from;
+ const stateCounts=(await c.query('SELECT l.workflow_state state,count(*)::int count '+scopeFrom+' GROUP BY l.workflow_state',values)).rows;
+ const state_counts=Object.fromEntries(stateCounts.map(r=>[r.state||'UNKNOWN',r.count])),scope_total=stateCounts.reduce((n,r)=>n+r.count,0);
+ let total=statusPredicate?(stateCounts.find(row=>row.state===q.status)?.count||0):scope_total,visibleTotal=scope_total;
  const live=`SELECT ${v31?"(SELECT x.packing_list_no FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id) packing_list_no,":''} l.id,l.created_at,l.code,l.workflow_state,l.logistics_review_by,l.status,l.vehicle_no,coalesce((SELECT cr.proposed_data->>'vehicle_no' FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' ORDER BY cr.applied_at DESC,cr.id DESC LIMIT 1),nullif(t.fields->>'vehicle_no',''),l.vehicle_no) shipping_vehicle_no,cu.name customer_name,
  coalesce((SELECT o.code FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED' ORDER BY o.created_at DESC LIMIT 1),l.code) outbound_no,
  ${at} outbound_at,to_char((${at}) AT TIME ZONE 'Africa/Lubumbashi','YYYY-MM-DD') outbound_date,(${posted}) posted,(${packingEligible}) packing_eligible,d.document_no,d.revision,d.generated_at,
