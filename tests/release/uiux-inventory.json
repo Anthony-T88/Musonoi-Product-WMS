@@ -538,7 +538,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "dispatch transfer by month and Excel reimport",
+      "state": "dispatch month transfer and transport backfill with the standard Excel import",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -562,7 +562,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "dispatch transfer by month and Excel reimport",
+      "state": "dispatch month transfer and transport backfill with the standard Excel import",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -843,7 +843,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "license selection, editable invoice recommendation and duplicate check",
+      "state": "license selection, invoice checks and dispatch transport verification",
       "template": "/loading-plans/new"
     },
     {

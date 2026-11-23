@@ -11,19 +11,22 @@ window.DispatchTransport={
  notice(rows,canImport,closed){
   const count=this.missingRows(rows).length;
   if(!count)return '';
-  const prompt=closed?'销售计划已关闭':canImport?'请重新导入派车单，系统会批量补全。':
-   '请具备派车导入权限的人员重新导入派车单。';
-  return '<div class="business-toolbar"><p class="wms-feedback" role="status">'+
-   '<span>'+this.label('缺少运输商或目的地的车辆')+'</span> <strong>'+count+'</strong> · <span>'+this.label(prompt)+'</span></p>'+
-   (canImport?'<button type="button" class="button secondary" data-dispatch-reimport>'+this.label('重新导入派车单')+'</button>':'')+'</div>';
+  const prompt=closed?'销售计划已关闭':canImport?
+   '请在下方再次导入包含运输商和目的地的派车单，确认保存时系统会自动补全空缺。':
+   '请具备派车导入权限的人员再次导入派车单。';
+  return '<div class="dispatch-transport-notice" data-dispatch-notice role="status">'+
+   '<strong>'+this.label('缺少运输商或目的地的车辆')+' · '+count+'</strong><p>'+this.label(prompt)+'</p></div>';
  },
- importFields(rows){
-  const months=[...new Set(this.missingRows(rows).map(row=>row.shipment_month).filter(Boolean))].sort().reverse();
-  return '<div class="form-grid"><div data-dispatch-month-field hidden><label>'+
-   this.label('原派车月份')+'<select name="transport_month" disabled>'+
-   (months.length===1?'':'<option value="">'+this.label('请选择原派车月份')+'</option>')+
-   months.map(month=>'<option value="'+esc(month)+'">'+esc(month)+'</option>').join('')+'</select></label></div>'+
-   '<label>'+this.label('客户Excel派车单')+'<input name="file" type="file" accept=".xls,.xlsx" required></label></div>';
+ importFields(rows,currentMonth){
+  const olderMonths=[...new Set(this.missingRows(rows).map(row=>row.shipment_month)
+   .filter(month=>month&&month!==currentMonth))].sort().reverse();
+  const monthOption=(month,label)=>'<option value="'+esc(month)+'">'+esc(label)+'</option>';
+  const monthField=olderMonths.length?'<label>'+this.label('派车单所属月份')+'<select name="transport_month">'+
+   (currentMonth?monthOption(currentMonth,currentMonth):monthOption('',this.label('请选择原派车月份')))+
+   olderMonths.map(month=>monthOption(month,month+' · '+this.label('补全运输资料'))).join('')+
+   '</select></label>':'';
+  return this.notice(rows,true,false)+'<div class="form-grid">'+monthField+'<label>'+
+   this.label('客户Excel派车单')+'<input name="file" type="file" accept=".xls,.xlsx" required></label></div>';
  },
  outcome(row,transportOnly=false){
   if(row.cancelled)return transportOnly?'取消行 · 跳过':'已取消 · 不计入';
@@ -48,12 +51,11 @@ window.DispatchTransport={
  bindImport(form,{path,month,planVersion,error,render,reload,savePath=path,confirm=false,errorText=e=>I18n.translate(e.message,true)}){
   if(!form)return;
   const fileField=form.elements.file,monthField=form.elements.transport_month;
-  const title=form.closest('.lp-load-summary').querySelector('[data-dispatch-import-title]');
   const previewButton=form.querySelector('[data-dispatch-preview]');
-  const save=form.querySelector('[type="submit"]'),exit=form.querySelector('[data-dispatch-normal-import]');
+  const save=form.querySelector('[type="submit"]');
   const output=form.querySelector('[data-dispatch-preview-rows]'),mappingPanel=$('dispatch-mapping');
-  const reimport=document.querySelector('[data-dispatch-reimport]'),t=this.t;
-  let transportOnly=false,mapping,preview,sequence=0,saving=false;
+  const t=this.t;
+  let mapping,preview,sequence=0,saving=false;
   const clearPreview=()=>{
    preview=null;sequence++;save.disabled=true;output.replaceChildren();
    previewButton.disabled=saving;
@@ -65,11 +67,12 @@ window.DispatchTransport={
   const readPreview=async()=>{
    if(saving)return;
    clearPreview();
-   const request=sequence,file=fileField.files[0],targetMonth=transportOnly?monthField.value:month;
+   const request=sequence,file=fileField.files[0],targetMonth=monthField?monthField.value:month;
+   const transportOnly=!!targetMonth&&targetMonth!==month;
    const current=()=>form.isConnected&&sequence===request;
    previewButton.disabled=true;error.textContent='';
    try{
-    if(!targetMonth)throw Error(transportOnly?'DISPATCH_TRANSPORT_MONTH_REQUIRED':
+    if(!targetMonth)throw Error(monthField?'DISPATCH_TRANSPORT_MONTH_REQUIRED':
      t('请先维护销售计划的发运月份','Set the shipment month on the sales plan first'));
     if(!file)throw Error(t('请选择客户Excel派车单','Select a customer dispatch Excel file'));
     if(file.size>2*1024*1024)throw Error(t('派车单最大2MB','The dispatch file must not exceed 2 MB'));
@@ -99,7 +102,7 @@ window.DispatchTransport={
     preview={...body,mapping,preview_sha256:result.file_sha256};
     const notes=[];
     if(result.warnings?.length)notes.push('请核对车牌格式异常的行。');
-    if(transportOnly&&!mapping.transporter_column&&!mapping.destination_column)notes.push(
+    if((transportOnly||form.querySelector('[data-dispatch-notice]'))&&!mapping.transporter_column&&!mapping.destination_column)notes.push(
      '未识别运输商或目的地列。请调整识别列，或重新上传包含运输资料的派车单。');
     const rows=[...result.items,...(result.cancelled||[]).map(row=>({...row,cancelled:true}))];
     output.innerHTML='<p role="status">'+esc(this.label(this.summary(result)))+'</p>'+
@@ -108,25 +111,11 @@ window.DispatchTransport={
    }catch(e){if(current())showError(e);}
    finally{if(current())previewButton.disabled=false;}
   };
-  const selectMode=only=>{
-   if(saving)return;
-   transportOnly=only;
-   monthField.disabled=!only;
-   exit.hidden=!only;
-   if(reimport)reimport.hidden=only;
-   form.querySelector('[data-dispatch-month-field]').hidden=!only;
-   title.textContent=this.label(only?'重新导入派车单':'导入客户派车单');
-   fileField.value='';mapping=undefined;mappingPanel.replaceChildren();clearPreview();error.textContent='';
-   form.scrollIntoView({block:'nearest'});
-   (only&&!monthField.value?monthField:fileField).focus({preventScroll:true});
-  };
-  if(reimport)reimport.onclick=()=>selectMode(true);
-  exit.onclick=()=>selectMode(false);
   fileField.onchange=()=>{
    mapping=undefined;mappingPanel.replaceChildren();clearPreview();error.textContent='';
-   if(fileField.files.length&&(transportOnly?monthField.value:month))void readPreview();
+   if(fileField.files.length)void readPreview();
   };
-  monthField.onchange=()=>{
+  if(monthField)monthField.onchange=()=>{
    clearPreview();error.textContent='';
    if(fileField.files.length&&monthField.value)void readPreview();
   };
@@ -135,11 +124,10 @@ window.DispatchTransport={
    e.preventDefault();
    if(!preview||save.disabled||saving)return;
    const pending=preview;
-   saving=save.disabled=previewButton.disabled=fileField.disabled=exit.disabled=true;
-   monthField.disabled=true;
-   if(reimport)reimport.disabled=true;
+   saving=save.disabled=previewButton.disabled=fileField.disabled=true;
+   if(monthField)monthField.disabled=true;
    try{
-    if(confirm&&!await OperationConfirm.ask({title:transportOnly?t('确认补全运输资料','Confirm Route Details'):
+    if(confirm&&!await OperationConfirm.ask({title:pending.transport_only?t('确认补全运输资料','Confirm Route Details'):
      t('确认保存派车单','Confirm Dispatch Import')}))return;
     if(preview!==pending||!form.isConnected)return;
     const saved=await API.request(savePath,{method:'POST',body:pending,timeoutMs:30000});
@@ -148,13 +136,35 @@ window.DispatchTransport={
     notify(I18n.translate(this.summary(saved),true));
    }catch(err){if(form.isConnected)showError(err);}
    finally{
-    saving=previewButton.disabled=fileField.disabled=exit.disabled=false;
-    monthField.disabled=!transportOnly;save.disabled=preview!==pending;
-    if(reimport)reimport.disabled=false;
+    saving=previewButton.disabled=fileField.disabled=false;
+    if(monthField)monthField.disabled=false;
+    save.disabled=preview!==pending;
    }
   };
  },
- fill(form,row,existing=false,fallback=''){
+ verifyPlan(form,row,original){
+  const panel=form.querySelector('[data-dispatch-verification]');
+  const current=original&&(row?original.arrival_id===(row.arrival_id||row.id):
+   !original.arrival_required&&!original.arrival_id);
+  panel.hidden=!row||!!row.cancelled_at||!!current;
+  if(panel.hidden)return !!current;
+  const missing=[['transporter','运输商'],['destination','目的地']]
+   .filter(([field])=>!row['dispatch_'+field]?.trim());
+  panel.classList.toggle('dispatch-transport-verified',missing.length===0);
+  if(!missing.length){
+   panel.innerHTML='<strong>'+this.label('派车资料已核验')+'</strong>';
+   return true;
+  }
+  const planId=row.sales_plan_id||form.elements.sales_plan_id.value;
+  const link=planId&&Business.can('dispatch:read')?
+   ' <a target="_blank" rel="noopener" href="/sales-plans/'+encodeURIComponent(planId)+'/dispatch">'+
+   this.label('打开派车管理')+'</a>':'';
+  panel.innerHTML='<strong>'+this.label('派车资料不全')+' · '+
+   missing.map(([,label])=>this.label(label)).join(' / ')+'</strong><p>'+
+   this.label('请再次导入派车单补全资料，保存后刷新装车计划页面。')+link+'</p>';
+  return false;
+ },
+ fill(form,row,existing=false){
   let state=this.state.get(form);
   if(!state){state={last:{},manual:new Set()};this.state.set(form,state);}
   for(const field of ['transporter','destination']){
@@ -164,7 +174,7 @@ window.DispatchTransport={
     if(existing&&input.value)state.manual.add(field);
     input.addEventListener('input',()=>state.manual.add(field));
    }else if(input.value!==state.last[field])state.manual.add(field);
-   if(!state.manual.has(field))input.value=row?.['dispatch_'+field]||(field==='destination'?fallback:'');
+   if(!state.manual.has(field))input.value=row?.['dispatch_'+field]||'';
    state.last[field]=input.value;
   }
  }

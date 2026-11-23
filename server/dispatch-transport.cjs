@@ -8,6 +8,10 @@ const allowed=(path,method)=>method==='POST'&&/^\/api\/v1\/cobalt\/sales\/plans\
 const truckKey=value=>value.toUpperCase().replace(/[\s-]+/g,'');
 const routeFields=['transporter','destination'];
 const cobaltTransportLocked="EXISTS(SELECT 1 FROM co_loading_orders l WHERE l.vehicle_id=v.id AND l.status IN('WAITING','OUTBOUND'))";
+function requireForLoading(arrival){
+ if(routeFields.some(field=>!arrival?.['dispatch_'+field]?.trim()))
+  throw B.error(409,'派车资料不全。请在派车管理再次导入派车单，补全运输商和目的地。');
+}
 
 function importMonth(plan,body){
  if(body.transport_only===undefined||body.transport_only===false)return Month.effective(plan,body.shipment_month);
@@ -125,4 +129,4 @@ function register({app,pool,permitted,csrf}){
      B.mutate(pool,req,c=>save(c,req,co)));
 }
 
-module.exports={register,allowed,truckKey,importMonth,analyzeImport,fillFromImport,cobaltTransportLocked};
+module.exports={register,allowed,truckKey,importMonth,analyzeImport,fillFromImport,cobaltTransportLocked,requireForLoading};

@@ -117,6 +117,32 @@ html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) t
 html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) .button {
   white-space: normal;
 }
+#page-content .dispatch-transport-notice {
+  grid-column: 1 / -1;
+  padding: var(--uix-gap-sm) var(--uix-gap);
+  margin-block: 0 var(--uix-gap-sm);
+  border-inline-start: 3px solid currentColor;
+  border-radius: var(--uix-radius);
+  background: var(--uix-warning-soft);
+  color: var(--uix-warning);
+  overflow-wrap: anywhere;
+}
+#page-content [data-dispatch-verification] {
+  margin-block-start: var(--uix-gap-sm);
+}
+#page-content .dispatch-transport-notice p {
+  color: inherit;
+  margin: var(--uix-gap-xs) 0 0;
+}
+#page-content .dispatch-transport-notice a {
+  display: inline-block;
+  margin-inline-start: var(--uix-gap-xs);
+  text-decoration: underline;
+}
+#page-content .dispatch-transport-notice.dispatch-transport-verified {
+  background: var(--uix-success-soft);
+  color: var(--uix-success);
+}
 #page-content [data-dispatch-preview-rows] .business-table table { min-width: 0; }
 #page-content [data-dispatch-preview-rows] .business-table :is(th, td) {
   white-space: normal;

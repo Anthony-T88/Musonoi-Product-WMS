@@ -60,11 +60,76 @@ const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATIO
    if($('yard-error'))$('yard-error').textContent=I18n.translate(error.message,true);
   });
  },
- async enhance(id){const form=$('single-plan-form');if(!form||form.querySelector('#yard-arrival-choice'))return;const query=new URLSearchParams(location.search),current=id?await API.request('/loading-plans/unified/documents/'+id):null;const label=document.createElement('label');label.className='yard-arrival-choice';label.innerHTML='<span>已登记到厂车辆</span><select name="arrival_id" id="yard-arrival-choice"><option value="">请选择等待创建计划的车辆</option></select><small id="yard-arrival-help"></small>';form.elements.sales_plan_id.closest('label').after(label);if(!current||current.arrival_required||current.arrival_id)label.querySelector('select').required=true;let rows=[],seq=0;
- const select=label.querySelector('select'),load=async()=>{const n=++seq,planId=form.elements.sales_plan_id.value;select.innerHTML='<option value="">请选择等待创建计划的车辆</option>';if(!planId)return;try{rows=(await API.request('/loading-plans/arrivals?sales_plan_id='+planId)).items.filter(r=>r.arrival_id&&(r.arrival_state==='WAITING_PLAN'||r.arrival_id===current?.arrival_id));if(n!==seq)return;form.operationArrivals=rows;const chosen=current?.arrival_id||query.get('arrival_id');select.innerHTML='<option value="">请选择等待创建计划的车辆</option>'+rows.map(r=>`<option value="${r.arrival_id}" ${chosen===r.arrival_id?'selected':''}>${esc(r.truck_no+' · '+r.shipment_month+' · '+r.driver_name)}</option>`).join('');$('yard-arrival-help').innerHTML=rows.length?'运输及司机信息由到厂登记自动带入。':'暂无已登记到厂的车辆。<a href="/loading-plans?tab=arrivals">查看到厂登记</a>';select.onchange();}catch(e){$('single-plan-error').textContent=e.message;}};
- select.onchange=()=>{const r=rows.find(r=>r.arrival_id===select.value);DispatchTransport.fill(form,r,!!id);if(r){form.elements.vehicle_no.value=r.truck_no;form.elements.vehicle_no.readOnly=true;}else{form.elements.vehicle_no.readOnly=!!select.required;if(!current)form.elements.vehicle_no.value='';}};const prior=form.elements.sales_plan_id.onchange;form.elements.sales_plan_id.onchange=async()=>{await prior?.();await load();};await load();
- for(const [field,title] of Object.entries({export_license_no:'许可证记录簿',transporter:'运输商记录簿',destination:'目的地记录簿'})){const input=form.elements[field],wrap=document.createElement('div'),button=document.createElement('button');wrap.className='transport-book-input';input.before(wrap);wrap.append(input);button.type='button';button.className='button secondary';button.textContent='记录簿';button.onclick=()=>this.book(form,field,title);wrap.append(button);}I18n.apply();},
- async book(form,field,title){const plans=(await API.request('/plans')).items,plan=plans.find(p=>p.id===form.elements.sales_plan_id.value);if(!plan){notify('请先选择销售计划');return;}const r=await API.request('/customers/'+plan.customer_id+'/transport-book'),items=r.items.filter(x=>x.field===field);dialog(title,`<p><span>客户名称</span>：<strong data-no-i18n>${esc(plan.customer_name)}</strong></p><div class="transport-book-list">${items.map(i=>`<div class="book-entry"><strong data-no-i18n>${esc(i.value)}</strong><button class="button secondary" data-book-pick="${i.id}" type="button">选择</button>${Business.can('loading-plan:write')?`<button class="button secondary" data-book-edit="${i.id}" type="button">编辑</button><button class="button danger" data-book-delete="${i.id}" type="button">删除</button>`:''}</div>`).join('')||'<p>暂无保存记录</p>'}</div><form id="transport-book-save" class="user-form"><label>保存新记录<input name="value" maxlength="${field==='destination'?1000:160}" required value="${esc(form.elements[field].value)}"></label><p id="transport-book-error" class="error" role="alert"></p><button class="button primary">保存并使用</button></form>`);for(const b of document.querySelectorAll('[data-book-pick]'))b.onclick=()=>{form.elements[field].value=items.find(i=>i.id===b.dataset.bookPick).value;$('dialog').close();};for(const b of document.querySelectorAll('[data-book-edit],[data-book-delete]'))b.onclick=async()=>{const item=items.find(i=>i.id===(b.dataset.bookEdit||b.dataset.bookDelete)),remove=!!b.dataset.bookDelete;let value=item.value;try{if(!await OperationConfirm.ask({title:remove?'请确认删除记录':'编辑记录',rows:[['客户名称',plan.customer_name]],note:'仅影响今后选择，不修改已保存的装车计划及历史装箱单。',comment:!remove,commentRequired:!remove,commentLabel:'记录内容',commentMax:field==='destination'?1000:160,commentValue:value,onComment:v=>value=v}))return;b.disabled=true;await (remove?feedbackRequest:API.request.bind(API))('/customers/'+plan.customer_id+'/transport-book/'+item.id,{method:remove?'DELETE':'PATCH',body:{version:item.version,value}});await this.book(form,field,title);}catch(e){$('transport-book-error').textContent=e.message;}finally{if(b.isConnected)b.disabled=false;}};$('transport-book-save').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{const saved=await API.request('/customers/'+plan.customer_id+'/transport-book',{method:'POST',body:{field,value:new FormData(e.target).get('value')}});form.elements[field].value=saved.value;$('dialog').close();notify('记录已保存');}catch(err){$('transport-book-error').textContent=err.message;e.submitter.disabled=false;}};}
+ async enhance(id){
+  const form=$('single-plan-form');
+  if(!form||form.querySelector('#yard-arrival-choice'))return;
+  const query=new URLSearchParams(location.search),save=form.querySelector('button[type=submit]');
+  save.disabled=true;
+  const current=id?await API.request('/loading-plans/unified/documents/'+id):null;
+  if(!form.isConnected)return;
+  const label=document.createElement('label'),notice=document.createElement('div');
+  label.className='yard-arrival-choice';
+  label.innerHTML='<span>已登记到厂车辆</span><select name="arrival_id" id="yard-arrival-choice"></select><small id="yard-arrival-help"></small>';
+  notice.className='dispatch-transport-notice';
+  notice.dataset.dispatchVerification='';
+  notice.setAttribute('role','status');
+  notice.hidden=true;
+  const plan=form.elements.sales_plan_id,select=label.querySelector('select'),help=label.querySelector('small');
+  plan.closest('label').after(label,notice);
+  select.required=!current||current.arrival_required||!!current.arrival_id;
+  const placeholder='<option value="">请选择等待创建计划的车辆</option>';
+  let rows=[],sequence=0;
+  const selected=()=>rows.find(row=>row.arrival_id===select.value);
+  select.onchange=()=>{
+   const row=selected();
+   DispatchTransport.fill(form,row,!!id);
+   const plate=form.elements.vehicle_no;
+   if(row)plate.value=row.truck_no;
+   else if(!current)plate.value='';
+   plate.readOnly=!!row||select.required;
+   save.disabled=!DispatchTransport.verifyPlan(form,row,current);
+   I18n.apply();
+  };
+  const load=async()=>{
+   const request=++sequence,planId=plan.value;
+   form.operationArrivals=rows=[];
+   select.innerHTML=placeholder;
+   help.replaceChildren();
+   select.onchange();
+   if(!planId)return;
+   try{
+    const result=await API.request('/loading-plans/arrivals?sales_plan_id='+planId);
+    if(!form.isConnected||request!==sequence)return;
+    form.operationArrivals=rows=result.items.filter(row=>row.arrival_id&&
+     (row.arrival_state==='WAITING_PLAN'||row.arrival_id===current?.arrival_id));
+    const chosen=current?.arrival_id||query.get('arrival_id');
+    select.innerHTML=placeholder+rows.map(row=>'<option value="'+esc(row.arrival_id)+'" '+
+     (chosen===row.arrival_id?'selected':'')+'>'+esc(row.truck_no+' · '+row.shipment_month+' · '+row.driver_name)+'</option>').join('');
+    help.innerHTML=rows.length?'':'暂无已登记到厂的车辆。<a href="/loading-plans?tab=arrivals">查看到厂登记</a>';
+    select.onchange();
+   }catch(e){if(form.isConnected&&request===sequence)$('single-plan-error').textContent=I18n.translate(e.message,true);}
+  };
+  const prior=plan.onchange,submit=form.onsubmit;
+  plan.onchange=async()=>{await Promise.all([load(),prior?.()]);};
+  form.onsubmit=e=>{
+   if(!DispatchTransport.verifyPlan(form,selected(),current)){
+    e.preventDefault();
+    I18n.apply();
+    return;
+   }
+   return submit.call(form,e);
+  };
+  const input=form.elements.export_license_no,wrap=document.createElement('div'),button=document.createElement('button');
+  wrap.className='transport-book-input';
+  input.before(wrap);
+  wrap.append(input,button);
+  button.type='button';
+  button.className='button secondary';
+  button.textContent='记录簿';
+  button.onclick=()=>this.book(form,'export_license_no','许可证记录簿');
+  await load();
+ },
+ async book(form,field,title){const plans=(await API.request('/plans')).items,plan=plans.find(p=>p.id===form.elements.sales_plan_id.value);if(!plan){notify('请先选择销售计划');return;}const r=await API.request('/customers/'+plan.customer_id+'/transport-book'),items=r.items.filter(x=>x.field===field);dialog(title,`<p><span>客户名称</span>：<strong data-no-i18n>${esc(plan.customer_name)}</strong></p><div class="transport-book-list">${items.map(i=>`<div class="book-entry"><strong data-no-i18n>${esc(i.value)}</strong><button class="button secondary" data-book-pick="${i.id}" type="button">选择</button>${Business.can('loading-plan:write')?`<button class="button secondary" data-book-edit="${i.id}" type="button">编辑</button><button class="button danger" data-book-delete="${i.id}" type="button">删除</button>`:''}</div>`).join('')||'<p>暂无保存记录</p>'}</div><form id="transport-book-save" class="user-form"><label>保存新记录<input name="value" maxlength="160" required value="${esc(form.elements[field].value)}"></label><p id="transport-book-error" class="error" role="alert"></p><button class="button primary">保存并使用</button></form>`);for(const b of document.querySelectorAll('[data-book-pick]'))b.onclick=()=>{form.elements[field].value=items.find(i=>i.id===b.dataset.bookPick).value;$('dialog').close();};for(const b of document.querySelectorAll('[data-book-edit],[data-book-delete]'))b.onclick=async()=>{const item=items.find(i=>i.id===(b.dataset.bookEdit||b.dataset.bookDelete)),remove=!!b.dataset.bookDelete;let value=item.value;try{if(!await OperationConfirm.ask({title:remove?'请确认删除记录':'编辑记录',rows:[['客户名称',plan.customer_name]],note:'仅影响今后选择，不修改已保存的装车计划及历史装箱单。',comment:!remove,commentRequired:!remove,commentLabel:'记录内容',commentMax:160,commentValue:value,onComment:v=>value=v}))return;b.disabled=true;await (remove?feedbackRequest:API.request.bind(API))('/customers/'+plan.customer_id+'/transport-book/'+item.id,{method:remove?'DELETE':'PATCH',body:{version:item.version,value}});await this.book(form,field,title);}catch(e){$('transport-book-error').textContent=e.message;}finally{if(b.isConnected)b.disabled=false;}};$('transport-book-save').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{const saved=await API.request('/customers/'+plan.customer_id+'/transport-book',{method:'POST',body:{field,value:new FormData(e.target).get('value')}});form.elements[field].value=saved.value;$('dialog').close();notify('记录已保存');}catch(err){$('transport-book-error').textContent=err.message;e.submitter.disabled=false;}};}
 };
 const yardPlanForm=SinglePlan.form.bind(SinglePlan);SinglePlan.form=async function(id,legacy){await yardPlanForm(id,legacy);await LoadingYard.enhance(id);};
 const yardList=Management.list.bind(Management);Management.list=async function(kind){if(kind==='loading'&&location.pathname==='/loading-plans')return LoadingYard.page();await yardList(kind);if(kind==='loading'){const tabs=document.createElement('div');tabs.className='business-toolbar yard-tabs';tabs.innerHTML='<a class="button secondary" href="/loading-plans">车辆到厂登记</a><a class="button primary" href="/loading-plans/query">装车计划查询</a>';$('page-content').prepend(tabs);I18n.apply();}};

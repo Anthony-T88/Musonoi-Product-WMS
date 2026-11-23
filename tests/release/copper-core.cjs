@@ -81,7 +81,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const detail=await api('/stock-map/locations/'+location.id+'?'+mapQuery);assert.equal(detail.items[0].id,number);steps.push('native sampling, repacking, location assignment and gross minus 2.5kg');
  const workbook=new(require('exceljs').Workbook)();
  const dispatchSheet=workbook.addWorksheet('Dispatch'),plate='RC3-CU-'+seq;
- dispatchSheet.addRows([['Horse','Trailer','Capacity'],[plate,'RC3-TRAILER',30],['ALT-'+seq,'RC3-ALT',30]]);
+ dispatchSheet.addRows([['Horse','Trailer','Capacity','Transporter','Destination'],
+  [plate,'RC3-TRAILER',30,'Synthetic Carrier',''],['ALT-'+seq,'RC3-ALT',30,'Synthetic Carrier','Synthetic Depot']]);
  const dispatchPath='/plans/'+plan.id+'/dispatch',shipment_month=today.slice(0,7);
  const dispatchBody={file_name:'synthetic-rc3.xlsx',file_base64:Buffer.from(await workbook.xlsx.writeBuffer()).toString('base64')};
  const wrongMonth=await request(dispatchPath+'/import-preview','admin',{...dispatchBody,shipment_month:'2000-01'});
@@ -154,6 +155,29 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal((await request(permitPath+'/attachments/'+archivedAttachment.id,'sales_operator')).statusCode,404);
  assert.deepEqual((await c.query('SELECT content FROM export_license_attachments WHERE id=$1',[archivedAttachment.id])).rows[0].content,content);
  const planBody={sales_plan_id:plan.id,arrival_id:arrivals[0].id,license_id:permit.id,transporter:'Synthetic Transport',destination:'Synthetic Destination',planned_load_date:today,allocation_ids:[lot.id]};
+ const blocked=await request('/loading-plans/unified','admin',planBody);
+ assert.equal(blocked.statusCode,409,blocked.body);
+ assert.match(blocked.body,/派车资料不全/);
+ for(const legacy of ['/loading-plans','/loading-plan-documents'])
+  await api(legacy,'admin',planBody,409);
+ const customerBook='/customers/'+customer.id+'/transport-book';
+ for(const field of ['transporter','destination'])
+  await api(customerBook,'admin',{field,value:'Retired transport record'},400);
+ const legacyBook=await api(customerBook,'admin',{field:'export_license_no',value:'SYNTH-OTHER-LICENSE'});
+ assert((await api(customerBook)).items.some(row=>row.id===legacyBook.id));
+ const corrected=new(require('exceljs').Workbook)();
+ corrected.addWorksheet('Dispatch').addRows([['Horse','Transporter','Destination'],
+  [plate.toLowerCase().replaceAll('-',' '),'Do not overwrite saved carrier','Synthetic Depot']]);
+ const correctedFile={file_name:'synthetic-updated-dispatch.xlsx',
+  file_base64:Buffer.from(await corrected.xlsx.writeBuffer()).toString('base64')};
+ const correctedPreview=await api(dispatchPath+'/import-preview','admin',correctedFile);
+ assert.deepEqual(correctedPreview.items.map(row=>row.action),['FILL_TRANSPORT']);
+ const backfill=await api(dispatchPath,'admin',{...correctedFile,preview_sha256:correctedPreview.file_sha256});
+ assert.deepEqual([backfill.added_count,backfill.transport_filled_count],[0,1]);
+ const refreshed=(await api(dispatchPath)).vehicles.find(row=>row.id===arrivalVehicles[0].id);
+ assert.equal(refreshed.transporter,'Synthetic Carrier');
+ assert.equal(refreshed.destination,'Synthetic Depot');
+ steps.push('dispatch route verification, standard Excel backfill and licence record book');
  await api('/loading-plans/unified','admin',{...planBody,license_id:expired.id},409);
  const sameDay=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:'SYNTH-SAME-DAY-'+seq,quantity:'25',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD'});
  const dayPath='/export-permits/'+sameDay.id,issue=await api(dayPath+'/actions','sales_operator',{version:sameDay.version,action:'ISSUE',reason:'Synthetic expiry boundary',payload:{license_no:'SYNTH-DAY-'+seq,valid_from:today,valid_until:today}});
@@ -174,7 +198,10 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert((await api(chosen)).items.some(item=>item.id===sameDay.id));
  assert(!(await api('/export-permits?status=EXPIRING')).items.some(item=>item.id===sameDay.id));
 
- const firstDocument=await api('/loading-plans/unified','admin',planBody);
+ const {transporter,destination,...autoPlan}=planBody;
+ const firstDocument=await api('/loading-plans/unified','admin',autoPlan);
+ assert.equal(firstDocument.transporter,'Synthetic Carrier');
+ assert.equal(firstDocument.destination,'Synthetic Depot');
  assert.equal(firstDocument.invoice_no,permit.proforma_no+'-01');
  let quota=await api(permitPath);assert.equal(Number(quota.reserved),4.065);assert.equal(Number(quota.used),0);assert.equal(Number(quota.remaining),7500);
  await api(permitPath+'/actions','sales_operator',{action:'CLOSE',payload:{closed_on:today,reference:'Synthetic closure with active reservation'},version:quota.version,reason:'Synthetic guard check'},409);
@@ -462,7 +489,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   ready.push(batch.id);
  }
  const trucks=new(require('exceljs').Workbook)(),sheet=trucks.addWorksheet('Dispatch');
- const plates=['V475-A-'+seq,'V475-B-'+seq];sheet.addRows([['Horse','Trailer','Capacity'],...plates.map((plate,i)=>[plate,'V475-T-'+i+'-'+seq,30])]);
+ const plates=['V475-A-'+seq,'V475-B-'+seq];sheet.addRows([['Horse','Trailer','Capacity','Transporter','Destination'],
+  ...plates.map((plate,i)=>[plate,'V475-T-'+i+'-'+seq,30,'Synthetic Carrier','Synthetic Depot'])]);
  const upload={file_name:'synthetic-v475.xlsx',file_base64:Buffer.from(await trucks.xlsx.writeBuffer()).toString('base64')};
  const validated=await api(dispatchPath+'/import-preview','admin',upload);
  await api(dispatchPath,'admin',{...upload,preview_sha256:validated.file_sha256});

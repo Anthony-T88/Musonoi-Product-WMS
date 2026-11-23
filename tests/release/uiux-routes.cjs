@@ -119,7 +119,7 @@ function pages(ids){
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});
   add(prefix+'-sales-edit','/sales-plans/:id/edit',[product],{example:prefix+'Plan'});
-  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'dispatch transfer by month and Excel reimport'});
+  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'dispatch month transfer and transport backfill with the standard Excel import'});
  }
  add('cu-sales-shipping','/sales-plans/:id/shipping',[CU],{example:'cuPlan'});
  add('legacy-sales-new','/preparation/plans/new',[CU]);
@@ -157,7 +157,7 @@ function pages(ids){
   entry.url='/loading-plans?'+new URLSearchParams({vehicle_id:ids[example]||missingId});
  }
  add('loading-search','/loading-plans/query',BOTH,{screenshot:true});
- add('loading-new','/loading-plans/new',BOTH,{state:'license selection, editable invoice recommendation and duplicate check'});
+ add('loading-new','/loading-plans/new',BOTH,{state:'license selection, invoice checks and dispatch transport verification'});
  add('cu-plan-group','/loading-plans/:id',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-edit','/loading-plans/:id/edit',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-cancel','/loading-plans/:id/cancel',[CU],{example:'cuPlanGroup'});

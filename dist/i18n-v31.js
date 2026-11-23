@@ -1,10 +1,18 @@
 'use strict';
 Object.assign(TRANSLATIONS.en,{
  '缺少运输商或目的地的车辆':'Vehicles missing a transporter or destination',
- '请重新导入派车单，系统会批量补全。':'Reimport the dispatch file to complete these details in bulk.',
- '请具备派车导入权限的人员重新导入派车单。':'Ask a colleague with dispatch import permission to reimport the file.',
- '重新导入派车单':'Reimport Dispatch File','返回普通导入':'Back to Standard Import',
- '原派车月份':'Original Dispatch Month','请选择原派车月份':'Select the original dispatch month',
+ '请在下方再次导入包含运输商和目的地的派车单，确认保存时系统会自动补全空缺。':
+  'Upload a dispatch file with the transporter and destination below. Missing details are filled when you confirm.',
+ '请具备派车导入权限的人员再次导入派车单。':'Ask a colleague with dispatch import permission to upload the file again.',
+ '派车单所属月份':'Dispatch File Month','请选择原派车月份':'Select the original dispatch month',
+ '派车资料不全':'Incomplete Dispatch Details','派车资料已核验':'Dispatch Details Verified',
+ '打开派车管理':'Open Dispatch Management',
+ '请再次导入派车单补全资料，保存后刷新装车计划页面。':
+  'Upload the dispatch file again to complete the details, then refresh this loading plan page.',
+ '派车资料不全。请在派车管理再次导入派车单，补全运输商和目的地。':
+  'Dispatch details are incomplete. Upload the dispatch file again in Dispatch Management to add the transporter and destination.',
+ '请通过新建装车计划选择已登记到厂且派车资料齐全的车辆。':
+  'Create the loading plan by selecting a registered arrival with complete dispatch details.',
  '补全运输资料':'Complete Route Details','未匹配 · 跳过':'No Match · Skipped',
  '运输资料冲突 · 跳过':'Conflicting Route Details · Skipped',
  '已有装车单 · 跳过':'Loading Order Exists · Skipped',

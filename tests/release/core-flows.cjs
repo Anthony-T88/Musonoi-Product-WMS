@@ -22,7 +22,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   for(const role of ['sales_manager','commerce_manager']){const d=await api('/cobalt/sales-workflow/plans/'+sales.id,role);await api('/cobalt/sales-workflow/plans/'+sales.id+'/review',role,{version:d.approval_version,decision:'APPROVED'});}sales=await api('/cobalt/sales-workflow/plans/'+sales.id);
   const vehiclePath='/cobalt/sales/plans/'+sales.id+'/dispatch/vehicles';
   await api(vehiclePath,'logistics_manager',{plan_version:sales.version,shipment_month:'2000-01',truck_no:'MISMATCH-'+salt},409);
-  const vehicle=await api(vehiclePath,'logistics_manager',{plan_version:sales.version,truck_no:'RC2-'+salt,capacity_tonnes:'30',trailer_no:'RC2-TRAILER-'+salt,driver_name:'Synthetic Driver '+salt,passport_no:'Synthetic Passport '+salt,transporter:'Synthetic Transport'});
+  const vehicle=await api(vehiclePath,'logistics_manager',{plan_version:sales.version,truck_no:'RC2-'+salt,capacity_tonnes:'30',trailer_no:'RC2-TRAILER-'+salt,driver_name:'Synthetic Driver '+salt,passport_no:'Synthetic Passport '+salt,destination:'Synthetic Depot'});
   assert.equal(vehicle.shipment_month,sales.shipment_month);
   f.rc2arrival=await api('/cobalt/sales/arrivals/'+vehicle.id,'logistics_field_operator',{dispatch_version:vehicle.version,arrived_at:new Date(Date.now()-1000).toISOString(),trailer_one:'RC2-TRAILER-'+salt,trailer_two:'',driver_name:'Synthetic Driver '+salt,passport_no:'Synthetic Passport '+salt,transporter:'Synthetic Transport',container_no:'',exception_remark:'Synthetic arrival'});
  });
@@ -42,7 +42,26 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  });
  await check('matching requires current versions and a complete independent preparation',async()=>{
   const options=await api('/cobalt/loading/options?sales_plan_id='+sales.id),a=options.arrivals.find(a=>a.id===f.rc2arrival.id);assert(a);
-  preview=await api('/cobalt/loading/preview?sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);
+  const query=new URLSearchParams({sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id});
+  const previewPath='/cobalt/loading/preview?'+query;
+  const blockedPreview=await request(previewPath);
+  assert.equal(blockedPreview.statusCode,409,blockedPreview.body);
+  assert.match(blockedPreview.body,/派车资料不全/);
+  const blockedSave=await request('/cobalt/loading/plans','logistics_manager',{
+   ...Object.fromEntries(query),planned_load_date:today,transporter:'Manual Carrier',destination:'Manual Depot'});
+  assert.equal(blockedSave.statusCode,409,blockedSave.body);
+  assert.match(blockedSave.body,/派车资料不全/);
+  const updatedDispatch=new(require('exceljs').Workbook)();
+  updatedDispatch.addWorksheet('Dispatch').addRows([['Horse','Transporter','Destination'],
+   [a.truck_no.toLowerCase(),'Synthetic Carrier','Do not overwrite saved depot']]);
+  const dispatch='/cobalt/sales/plans/'+sales.id+'/dispatch',file={file_name:'synthetic-updated-dispatch.xlsx',
+   file_base64:Buffer.from(await updatedDispatch.xlsx.writeBuffer()).toString('base64'),plan_version:sales.version};
+  const validated=await api(dispatch+'/import-preview','logistics_manager',file);
+  assert.deepEqual(validated.items.map(row=>row.action),['FILL_TRANSPORT']);
+  const filled=await api(dispatch+'/import','logistics_manager',{...file,shipment_month:validated.shipment_month,
+   preview_sha256:validated.file_sha256});
+  assert.deepEqual([filled.added_count,filled.transport_filled_count],[0,1]);
+  preview=await api(previewPath);
   const permit=await api('/cobalt/export-permits','sales_operator',{contract_id:customer.contract,applied_on:today,proforma_no:'RMM-CO-'+salt,quantity:'30',unit_basis:'COBALT_MT',unit:'Co MT',currency:'USD'});
   const path=licensePath='/cobalt/export-permits/'+permit.id,issue=await api(path+'/actions','sales_operator',{action:'ISSUE',payload:{license_no:'RC2-LICENSE',valid_from:today,valid_until:today},version:permit.version,reason:'Synthetic cobalt licence'});
   const issued=await api(path+'/actions/'+issue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic independent cobalt review'});
@@ -55,7 +74,9 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(extended.effective_until,'2099-12-31');
   assert.equal(extended.history.find(item=>item.id===extension.id).result.previous_effective_until,today);
   assert((await api(optionsPath)).items.some(item=>item.id===permit.id));
-  plan=await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,destination:'Synthetic destination',license_id:permit.id,remark:'Synthetic rc2 matching',...preview.versions});
+  plan=await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,license_id:permit.id,remark:'Synthetic rc2 matching',...preview.versions});
+  assert.equal(plan.transporter,'Synthetic Carrier');
+  assert.equal(plan.destination,'Synthetic Depot');
   assert.equal(plan.invoice_no,permit.proforma_no+'-01');
   assert.equal(plan.packing_list_no,plan.invoice_no+'-PL');
   assert.equal(Number((await api(path)).reserved),0.647123);
@@ -231,7 +252,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const filter={search:details.source.preparation_batch_no,customer_id:customer.id,created_date:today,page_size:'25'};
   const pending=await api(packing+'?'+new URLSearchParams({...filter,document_status:'MISSING'}));
   assert.equal(pending.page_size,25);
-  assert.equal(pending.items.find(row=>row.order_id===matched.order.id)?.destination,'Synthetic destination');
+  assert.equal(pending.items.find(row=>row.order_id===matched.order.id)?.destination,plan.destination);
   const {rows:[executed]}=await c.query("SELECT (confirmed_at AT TIME ZONE 'Africa/Lubumbashi')::date::text date FROM co_load_executions WHERE order_id=$1",[matched.order.id]);
   assert.equal(pending.items.find(row=>row.order_id===matched.order.id)?.loading_date,executed.date);
   assert(pending.customer_options.some(row=>row.id===customer.id));
@@ -281,7 +302,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal((await api(receipt)).metal.inventory.estimated_mt,'0.23292');
   const vehicle=await api('/cobalt/sales/plans/'+sales.id+'/dispatch/vehicles',manager,{
    plan_version:(await api('/cobalt/sales-workflow/plans/'+sales.id)).version,shipment_month:today.slice(0,7),truck_no:'NA'+salt.toUpperCase(),
-   capacity_tonnes:'30',trailer_no:'NEW-TRAILER',driver_name:'Second Driver',passport_no:'Second Passport',transporter:'Second Carrier'});
+   capacity_tonnes:'30',trailer_no:'NEW-TRAILER',driver_name:'Second Driver',passport_no:'Second Passport',transporter:'Second Carrier',destination:'Synthetic Depot'});
   const arrival=await api('/cobalt/sales/arrivals/'+vehicle.id,role,{
    dispatch_version:vehicle.version,arrived_at:new Date(Date.now()-1000).toISOString(),trailer_one:'NEW-TRAILER',trailer_two:'',
    driver_name:'Second Driver',passport_no:'Second Passport',transporter:'Second Carrier',container_no:'',exception_remark:''});

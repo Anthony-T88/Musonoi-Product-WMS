@@ -131,7 +131,7 @@ async function seed(){
   });
   const coDispatch=truck_no=>request('logistics_manager',CO,'/cobalt/sales/plans/'+coPlan.id+'/dispatch/vehicles',{
    plan_version:coPlan.version,truck_no,capacity_tonnes:'30',trailer_no:truck_no+'-TR',driver_name:'Synthetic UI '+truck_no,
-   passport_no:truck_no+'-P',transporter:'Synthetic UI Carrier'
+   passport_no:truck_no+'-P',transporter:'Synthetic UI Carrier',destination:'Synthetic UI Destination'
   });
   await check('co-awaiting-arrival',()=>coDispatch('UIUX-CO-A-'+unique));
   await check('co-draft-loading-plan',async()=>{
