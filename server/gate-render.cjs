@@ -6,9 +6,10 @@ const gatePaper={widthMm:241.3,heightMm:139.7,sideMm:12.7,endMm:8.5};
 const pxPerMm=96/25.4;
 
 // Read the archived workbook itself: historical revisions retain their own layout.
-async function preview(buffer,sheetName='Sheet1 (2)'){
+async function preview(buffer,sheetName='Sheet1 (2)',businessDate){
  const book=new Excel.Workbook();await book.xlsx.load(buffer);
  const sheet=book.getWorksheet(sheetName);if(!sheet)throw Object.assign(Error('GATE_TEMPLATE_SHEET_MISSING'),{statusCode:404});
+ if(businessDate)sheet.getCell('D2').value=new Date(businessDate+'T00:00:00Z');
  const color=c=>c?.argb?'#'+c.argb.slice(-6):null,mergedBorders=new Map();
  const lastRow=Number(sheet.pageSetup.printArea?.match(/:\$?G\$?(\d+)/)?.[1]||14);
  for(const merge of sheet.model.merges){

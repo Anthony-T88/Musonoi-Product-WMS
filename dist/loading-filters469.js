@@ -8,7 +8,10 @@ window.LoadingFiltersR9={
   date.innerHTML=t(query?'计划装车日期':'到达时间',query?'Planned Loading Date':'Arrival Date')+'<input type="date" name="'+dateKey+'" value="'+esc(q.get(dateKey)||'')+'">';
   const customer=oldCustomer||document.createElement('label');customer.innerHTML=t('客户','Customer')+'<select name="customer_id"><option value="">'+t('全部客户','All Customers')+'</option>'+customers.map(c=>'<option value="'+c.id+'" '+(q.get('customer_id')===c.id?'selected':'')+'>'+esc(c.name||c.customer_name)+'</option>').join('')+'</select>';
   for(const label of [...form.querySelectorAll('label')])if(![month,customer,state].includes(label))label.remove();grid.replaceChildren(month,customer,date,state);
-  if(query){const search=document.createElement('label');search.innerHTML=t('单号、批次号或合同号','Document, Batch or Contract No.')+'<input type="search" name="search" maxlength="160" placeholder="'+t('装箱单号 / 发票号 / 批次号 / 合同号','Packing List / Invoice / Batch / Contract')+'" value="'+esc(q.get('search')||'')+'">';grid.prepend(search);form.classList.add('r9-plan-query');}state.querySelector('select').name=current;
+  if(query){const search=document.createElement('label');search.innerHTML=t('单号 / 批次 / 合同','Document / Lot / Contract')+'<input type="search" name="search" maxlength="160" placeholder="'+t('装箱单号 / 发票号 / 批次号 / 合同号','Packing List / Invoice / Batch / Contract')+'" value="'+esc(q.get('search')||'')+'">';grid.prepend(search);form.classList.add('r9-plan-query');}state.querySelector('select').name=current;
+  const plate=document.createElement('label');
+  plate.innerHTML=t('车牌号','Truck Plate')+'<input type="search" name="truck_no" maxlength="80" value="'+esc(q.get('truck_no')||'')+'">';
+  grid.prepend(plate);
   form.classList.add('r9-document-filter');form.dataset.v34Reset='true';form.dataset.r9FilterReady='true';return {q,grid};
  },
  actions(form,co,query,applied){const t=this.t;let bar=form.querySelector('.business-toolbar');if(!bar){bar=document.createElement('div');bar.className='business-toolbar';form.append(bar);}bar.classList.add('r9-filter-actions');let submit=form.querySelector('button:not([type]),button[type=submit]');if(!submit){submit=document.createElement('button');submit.className='button secondary';bar.append(submit);}submit.textContent=t('查询','Search');bar.prepend(submit);

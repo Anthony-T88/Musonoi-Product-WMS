@@ -117,6 +117,17 @@ html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) t
 html[data-release-ui="46"] #page-content :is(.business-table, .v34-table-wrap) .button {
   white-space: normal;
 }
+#page-content .wms-dispatch-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--uix-gap);
+}
+#page-content .wms-dispatch-search label {
+  display: grid;
+  flex: 0 1 18rem;
+  gap: var(--uix-gap-xs);
+}
 #page-content .dispatch-transport-notice {
   grid-column: 1 / -1;
   padding: var(--uix-gap-sm) var(--uix-gap);

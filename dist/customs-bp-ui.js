@@ -248,7 +248,7 @@ window.CustomsBP={
   try{
    const {items}=await API.request(this.base()+'/'+button.dataset.bpExpand+'/batches');
    if(!inside.isConnected)return;
-   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,row.packing_list_no,this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt),row.loading_date]
+   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,PlanDisplay.documentNo(row.packing_list_no),this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt),row.loading_date]
     .map(value=>'<td>'+esc(value||'—')+'</td>').join('')+'</tr>');
    inside.innerHTML=ExportLicenses.table([['批次号','Lot No.'],['车头号','Truck Plate'],['装箱单号','Packing List No.'],
     ['净重','Net Weight'],['毛重','Gross Weight'],['装车日期','Loading Date']],rows,panel.id+'-details',true,{numeric:[3,4]});

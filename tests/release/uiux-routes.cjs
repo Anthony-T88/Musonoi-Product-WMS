@@ -119,7 +119,7 @@ function pages(ids){
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});
   add(prefix+'-sales-edit','/sales-plans/:id/edit',[product],{example:prefix+'Plan'});
-  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'dispatch month transfer and transport backfill with the standard Excel import'});
+  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'saved vehicle plate search, dispatch month transfer and Excel backfill'});
  }
  add('cu-sales-shipping','/sales-plans/:id/shipping',[CU],{example:'cuPlan'});
  add('legacy-sales-new','/preparation/plans/new',[CU]);
@@ -150,13 +150,13 @@ function pages(ids){
  add('cu-weighings','/outbounds/weighings',[CU],{state:'retired permission'});
  add('cu-weigh-new','/outbounds/weighings/new',[CU]);
  add('cu-weigh','/outbounds/weighings/:id',[CU],{example:'cuWeigh',state:'retired permission'});
- add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'arrival and optional second trailer'});
+ add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'single-row plate search, arrival and optional second trailer'});
  for(const [product,key,example] of [[CU,'cu-arrival','cuArrivalPending'],[CO,'co-arrival','coArrival']]){
   add(key,'/loading-plans',[product],{example,state:'waiting-arrival'});
   const entry=cases.at(-1);
   entry.url='/loading-plans?'+new URLSearchParams({vehicle_id:ids[example]||missingId});
  }
- add('loading-search','/loading-plans/query',BOTH,{screenshot:true});
+ add('loading-search','/loading-plans/query',BOTH,{screenshot:true,state:'single-row plate filter with full invoice and packing list numbers'});
  add('loading-new','/loading-plans/new',BOTH,{state:'single eligible license selector in document details, invoice checks and dispatch verification'});
  add('cu-plan-group','/loading-plans/:id',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-edit','/loading-plans/:id/edit',[CU],{example:'cuPlanGroup'});
@@ -169,12 +169,12 @@ function pages(ids){
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail and correction links'});
- add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
+ add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters, dated permit print and exited history'});
  add('customs-entry','/customs',BOTH,{state:'default to commercial invoice and packing list'});
  add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'pending lots, default BP template with issuer details and scoped template controls'});
  add('customs-bp-archive','/customs/bp',BOTH,{query:'?view=documents',state:'issued BP weights, expanded batches and Excel downloads'});
  add('customs-bp-filtered','/customs/bp',BOTH,{query:'?document_no=UIUX-NO-MATCH',state:'archive number filter with no match'});
- add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'customs document preview and authorized generation dialog'});
+ add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'customs document preview with complete packing list numbers and authorized generation'});
  add('customs-packing-empty','/customs/packing-list',BOTH,{query:'?search=UIUX-NO-PACKING-MATCH',state:'empty filtered packing workspace'});
  add('templates','/customs/templates',BOTH);
  add('templates-former-entry','/outbounds/templates',BOTH,{state:'redirected'});

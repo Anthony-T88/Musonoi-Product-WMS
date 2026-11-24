@@ -590,6 +590,7 @@ window.ExportLicenses={
     invoice.readOnly=reserved&&!creating;
     if(reserved&&!creating)invoice.value=old?.license_id===licenseId?old.invoice_no:'';
    }
+   if(creating&&!reserved&&!edited&&invoice)invoice.value='';
    manual.value=license?.license_no||legacyNumber;
    quantity.hidden=!isCustom;
    amount.disabled=!isCustom;
@@ -599,11 +600,10 @@ window.ExportLicenses={
     ' · '+t('有效至 ','Valid until ')+(license.effective_until||'—'):'');
    syncPacking();
    recommendation.textContent='';
-   if(!sales.value||!reserved&&!creating||reserved&&old?.license_id===licenseId)return;
-   const filters=new URLSearchParams({sales_plan_id:sales.value});
-   if(reserved)filters.set('invoice_preview_id',licenseId);
+   if(!sales.value||!reserved||old?.license_id===licenseId)return;
+   const filters=new URLSearchParams({sales_plan_id:sales.value,invoice_preview_id:licenseId});
    if(date?.value)filters.set('planned_load_date',date.value);
-   API.request((reserved?base+'/options':numberUrl)+'?'+filters).then(data=>{
+   API.request(base+'/options?'+filters).then(data=>{
     if(token!==previewRequest||select.value!==licenseId||!form.isConnected)return;
     if(invoice&&(!creating||!edited))invoice.value=data.invoice_preview||'';
     syncPacking();

@@ -200,6 +200,11 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
 
  const {transporter,destination,...autoPlan}=planBody;
  const firstDocument=await api('/loading-plans/unified','admin',autoPlan);
+ const byPlate=plate.toLowerCase().replaceAll('-',' ');
+ const arrivalsByPlate=await api('/loading-plans/arrivals?'+new URLSearchParams({truck_no:byPlate,shipment_month}));
+ assert.deepEqual(arrivalsByPlate.items.map(row=>row.arrival_id),[arrivals[0].id]);
+ const plansByPlate=await api('/v34/lists/loading?'+new URLSearchParams({truck_no:byPlate}));
+ assert.deepEqual(plansByPlate.items.map(row=>row.id),[firstDocument.id]);
  assert.equal(firstDocument.transporter,'Synthetic Carrier');
  assert.equal(firstDocument.destination,'Synthetic Depot');
  assert.equal(firstDocument.invoice_no,permit.proforma_no+'-01');
@@ -421,8 +426,21 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api(reuse,'admin',{...arrivalBody,version:arrivals[1].version},409);
  const gate=await api('/gate-permits/from/'+load.id,'admin',{});
  const gatePath='/gate-permits/'+gate.permit_id,issued=await api(gatePath);
- await api(gatePath+'/print','admin',{version:issued.permit.version});
+ await api(gatePath+'/print','admin',{version:issued.permit.version,business_date:'2026-02-30'},400);
+ const usualJob=await api(gatePath+'/print','admin',{version:issued.permit.version});
+ assert.equal(usualJob.business_date,today);
+ const changedDate='2026-05-12';
+ const job=await api(gatePath+'/print','admin',{version:issued.permit.version,business_date:changedDate});
+ const view=gatePath+'/revisions/'+job.revision+'/view';
+ const printedPage=await request(view+'?job='+job.job_id);
+ assert.equal(printedPage.statusCode,200);
+ assert.match(printedPage.body,/<td data-cell="D2"[^>]*>12 May 2026<\/td>/);
+ assert.doesNotMatch((await request(view)).body,/<td data-cell="D2"[^>]*>12 May 2026<\/td>/);
+ assert.equal((await request(view+'?job='+job.job_id,'sales_manager')).statusCode,404);
  const printed=await api(gatePath);
+ assert.equal(printed.revisions[0].file_sha256,issued.revisions[0].file_sha256);
+ assert.equal(printed.revisions[0].snapshot.business_date,issued.revisions[0].snapshot.business_date);
+ assert(printed.history.some(row=>row.after_data?.job_id===job.job_id&&row.after_data.business_date===changedDate));
  await api(gatePath+'/exit','sales_manager',{version:printed.permit.version,actual_exit_at:new Date().toISOString(),actual_exit:true,printed_permit_checked:true});
  await api(reuse,'admin',{...arrivalBody,version:arrivals[1].version});
 

@@ -538,7 +538,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "dispatch month transfer and transport backfill with the standard Excel import",
+      "state": "saved vehicle plate search, dispatch month transfer and Excel backfill",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -562,7 +562,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "dispatch month transfer and transport backfill with the standard Excel import",
+      "state": "saved vehicle plate search, dispatch month transfer and Excel backfill",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -809,7 +809,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "arrival and optional second trailer",
+      "state": "single-row plate search, arrival and optional second trailer",
       "template": "/loading-plans"
     },
     {
@@ -834,7 +834,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "single-row plate filter with full invoice and packing list numbers",
       "template": "/loading-plans/query"
     },
     {
@@ -941,7 +941,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "single-row desktop filters and exited history",
+      "state": "single-row desktop filters, dated permit print and exited history",
       "template": "/outbounds"
     },
     {
@@ -986,7 +986,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "customs document preview and authorized generation dialog",
+      "state": "customs document preview with complete packing list numbers and authorized generation",
       "template": "/customs/packing-list"
     },
     {

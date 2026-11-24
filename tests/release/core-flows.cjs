@@ -78,6 +78,11 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(plan.transporter,'Synthetic Carrier');
   assert.equal(plan.destination,'Synthetic Depot');
   assert.equal(plan.invoice_no,permit.proforma_no+'-01');
+  const byPlate=a.truck_no.toLowerCase().replaceAll('-',' ');
+  const arrivalsByPlate=await api('/cobalt/sales/arrivals?'+new URLSearchParams({truck_no:byPlate}));
+  assert.deepEqual(arrivalsByPlate.items.map(row=>row.arrival_id),[a.id]);
+  const plansByPlate=await api('/cobalt/loading/plans?'+new URLSearchParams({truck_no:byPlate}));
+  assert.deepEqual(plansByPlate.items.map(row=>row.id),[plan.id]);
   assert.equal(plan.packing_list_no,plan.invoice_no+'-PL');
   assert.equal(Number((await api(path)).reserved),0.647123);
   assert.equal(Number((await api(path)).used),0);
@@ -177,6 +182,13 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.deepEqual(approvals[0].json(),approvals[1].json());
   assert.equal((await c.query('SELECT count(*)::int n FROM co_outbounds WHERE order_id=$1',[matched.order.id])).rows[0].n,1);
   assert.equal((await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor')).block,'LOADED');
+  const permitJob=await api('/cobalt/gate-permits/from/'+matched.order.id,'admin',{});
+  const gatePath='/cobalt/gate-permits/'+permitJob.permit_id,current=await api(gatePath);
+  const dated=await api(gatePath+'/print','admin',{version:current.permit.version,business_date:'2026-05-12'});
+  const gatePage=await request(gatePath+'/revisions/'+dated.revision+'/view?job='+dated.job_id);
+  assert.equal(gatePage.statusCode,200);
+  assert.match(gatePage.body,/<td data-cell="D2"[^>]*>12 May 2026<\/td>/);
+  assert.equal((await api(gatePath)).revisions[0].snapshot.business_date,current.revisions[0].snapshot.business_date);
   assert.equal((await api(base)).execution.state,'OUTBOUND');assert.equal((await c.query("SELECT count(*)::int n FROM co_inventory WHERE preparation_id=$1 AND status<>'OUTBOUND'",[prep.id])).rows[0].n,0);
   assert.equal(await trend(prep.id),0);
   await assert.rejects(()=>c.query("UPDATE co_loading_reviews SET reason='tamper' WHERE id=$1",[review.id]));

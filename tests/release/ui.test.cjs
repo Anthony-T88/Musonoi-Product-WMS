@@ -1,6 +1,15 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{chromium}=require('playwright'),E=require('./environment.cjs');
 const release=require('../../server/release.cjs');
+test('online commercial numbers keep the complete invoice or packing list identifier',()=>{
+ const {documentNo}=require('../../dist/plan-display.js');
+ const invoice='RMM-2609-CU-SYNTH-01',packing=invoice+'-PL';
+ assert.equal(documentNo('SP-01-01'+invoice),invoice);
+ assert.equal(documentNo('SP-01-01 · '+packing),packing);
+ assert.equal(documentNo('SP-01-01'), 'SP-01-01');
+ assert.equal(documentNo('SP-01-01-OTHER-01'),'SP-01-01-OTHER-01');
+ assert.equal(documentNo('SP-01-01'+packing,true),'SP-01-01'+packing);
+});
 test('commercial invoice prints on one page and long packing lists paginate',async()=>{
  const fs=require('node:fs/promises'),PL=require('../../server/packing-list.cjs');
  const items=Array.from({length:85},(_,i)=>({bundle_no:'B-'+i,sheets_per_bundle:48,seal_no:'S-'+i,net_weight:'1.000000',gross_weight:'1.050000'}));

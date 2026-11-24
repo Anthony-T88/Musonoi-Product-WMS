@@ -5,6 +5,25 @@ window.DispatchTransport={
  // Cobalt pages translate their own markup and opt out of the global DOM translator.
  label:value=>ProductContext.isCopper()?value:I18n.translate(value,true),
  state:new WeakMap(),
+ search(id,rows){
+  const t=this.t,term=(new URLSearchParams(location.search).get('truck_no')||'').slice(0,80),path='/sales-plans/'+encodeURIComponent(id)+'/dispatch';
+  const plate=value=>String(value??'').toUpperCase().replace(/[\s-]+/g,'');
+  const key=plate(term);
+  return {term,rows:key?rows.filter(row=>[row.truck_no,row.trailer_no].some(value=>plate(value).includes(key))):rows,
+   empty:t('未找到匹配车牌的车辆','No vehicles match this plate'),
+   form:'<form id="dispatch-plate-search" class="filters wms-filter-row wms-dispatch-search" action="'+path+'">'+
+    '<label>'+t('车牌号','Truck Plate')+'<input type="search" name="truck_no" maxlength="80" value="'+esc(term)+'"></label>'+
+    '<div class="wms-filter-actions"><button class="button secondary">'+t('查询','Search')+'</button>'+
+    '<a class="button secondary" data-wms-reset href="'+path+'">'+t('重置','Reset')+'</a></div></form>'};
+ },
+ bindSearch(){
+  const form=$('dispatch-plate-search');
+  form.onsubmit=e=>{
+   e.preventDefault();
+   const value=form.elements.truck_no.value.trim();
+   return Router.go(form.getAttribute('action')+(value?'?'+new URLSearchParams({truck_no:value}):''));
+  };
+ },
  missingRows(rows){
   return rows.filter(row=>!row.cancelled_at&&!row.transport_locked&&row.counted!==false&&(!row.transporter?.trim()||!row.destination?.trim()));
  },

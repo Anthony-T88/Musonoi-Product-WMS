@@ -17,4 +17,6 @@ function documentOrder({pending='false',historical='false',created='created_at',
  return `CASE WHEN ${historical} THEN 2 WHEN ${pending} THEN 0 ELSE 1 END,(${created}) ${direction==='asc'?'ASC':'DESC'} NULLS LAST,${id}`;
 }
 function documentPriority(row,pending){return row.historical_import?2:pending(row)?0:1;}
-module.exports={error,text,uuid,version,date,weight,audit,scope,mutate,documentOrder,documentPriority};
+function plateKey(value){return typeof value==='string'?value.slice(0,80).toUpperCase().replace(/[\s-]+/g,''):'';}
+function plateContains(column,parameter){return "strpos(regexp_replace(upper(coalesce("+column+",'')), '[[:space:]-]+','','g'),"+parameter+")>0";}
+module.exports={plateKey,plateContains,error,text,uuid,version,date,weight,audit,scope,mutate,documentOrder,documentPriority};

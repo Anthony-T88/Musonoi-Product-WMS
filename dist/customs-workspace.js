@@ -81,7 +81,7 @@ window.CustomsWorkspace={
   return {
    id:co?row.order_id:row.id,batch:co?row.preparation_batch_no:row.lot_no,customer:row.customer_name,code:row.code,
    truck:co?row.transport_snapshot?.truck_no:row.shipping_vehicle_no||row.vehicle_no,
-   number:row.document_no||row.packing_list_no,weight:weight==null?'—':co?CobaltLoadingUI.mt(weight):Tonnes.format(weight),
+   number:PlanDisplay.documentNo(row.document_no||row.packing_list_no,row.historical_import),weight:weight==null?'—':co?CobaltLoadingUI.mt(weight):Tonnes.format(weight),
    revision,generated:co?row.document_generated_at:row.generated_at,loadingDate:row.loading_date,
    planId:co?row.plan_id:row.loading_plan_id,planCode:row.loading_plan_code,
    transporter:row.transporter,destination:row.destination,posted:co||row.posted
