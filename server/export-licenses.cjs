@@ -10,7 +10,9 @@ const allowed=(path,method)=>{
  return !!m&&['GET','POST','PATCH'].includes(method);
 };
 const fail=(status,message)=>B.error(status,message);
-const scope=(alias='l')=>"EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id="+alias+".project_id AND s.warehouse_id IS NULL AND(s.customer_id IS NULL OR s.customer_id="+alias+".customer_id))";
+const scope=(alias='l',warehouse=null)=>"EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id="+alias+
+ ".project_id AND ("+(warehouse?"s.warehouse_id IS NULL OR s.warehouse_id="+warehouse:"s.warehouse_id IS NULL")+
+ ") AND(s.customer_id IS NULL OR s.customer_id="+alias+".customer_id))";
 const contracts="(SELECT 'CU_CATHODE'::text product_code,k.id,k.project_id,k.customer_id,k.contract_no,k.active,c.name buyer FROM customer_contracts k JOIN copper_customers c ON c.id=k.customer_id UNION ALL SELECT 'CO_HYDROXIDE',k.id,k.project_id,k.customer_id,k.contract_no,k.active,c.name FROM co_sales_contracts k JOIN co_customer_profiles c ON c.id=k.customer_id)";
 const effective="coalesce(l.extended_until,l.valid_until)";
 const status="CASE WHEN l.state<>'ISSUED' THEN l.state WHEN "+effective+"<"+today+" THEN 'EXPIRED' WHEN l.valid_from>"+today+" THEN 'SCHEDULED' ELSE 'ACTIVE' END";
@@ -45,10 +47,31 @@ async function contract(c,req,id){
  if(!row)throw fail(404,'销售合同不存在或超出授权范围');
  return row;
 }
-async function record(c,req,id,lock=false){
- const row=(await c.query('SELECT l.*,l.applied_on::text,l.valid_from::text,l.valid_until::text,l.extension_on::text,('+effective+')::text effective_until,'+status+' status FROM export_licenses l WHERE l.product_code=$2 AND l.id=$3 AND '+scope()+(lock?' FOR UPDATE OF l':''),[req.user.id,req.productCode,B.uuid(id)])).rows[0];
- if(!row)throw fail(404,'许可证不存在或超出授权范围');
+async function record(c,req,id,lock=false,plan=null){
+ const values=[req.user.id,req.productCode,B.uuid(id)];
+ if(plan)values.push(plan.warehouse_id??null,plan.project_id,plan.customer_id,plan.contract_id);
+ const constraints=scope('l',plan?'$4::uuid':null)+(plan?' AND l.project_id=$5 AND l.customer_id=$6 AND l.contract_id=$7':'');
+ const row=(await c.query('SELECT l.*,l.applied_on::text,l.valid_from::text,l.valid_until::text,l.extension_on::text,('+effective+
+  ')::text effective_until,'+status+' status FROM export_licenses l WHERE l.product_code=$2 AND l.id=$3 AND '+constraints+
+  (lock?' FOR UPDATE OF l':''),values)).rows[0];
+ if(!row)throw plan?fail(409,'许可证与装车计划产品、买家或合同不一致'):fail(404,'许可证不存在或超出授权范围');
  return row;
+}
+async function loadingPlan(c,req,id){
+ if(req.productCode===CO)return require('./cobalt-sales.cjs').access(c,req,'plan',B.uuid(id));
+ return require('./allocations.cjs').planAccess(c,req,B.uuid(id));
+}
+
+async function unavailableReason(c,req,plan,plannedDate){
+ if(!plan.contract_id)return 'PLAN_CONTRACT_MISSING';
+ const {rows:[counts]}=await c.query("SELECT count(*)::int active, count(*) FILTER(WHERE l.contract_id=$5)::int same_contract,"+
+  "count(*) FILTER(WHERE l.contract_id=$5 AND ($7::date IS NULL OR $7::date BETWEEN l.valid_from AND "+effective+"))::int matching_date "+
+  "FROM export_licenses l WHERE l.product_code=$2 AND l.project_id=$3 AND l.customer_id=$4 AND "+scope('l','$6::uuid')+" AND "+status+"='ACTIVE'",
+  [req.user.id,req.productCode,plan.project_id,plan.customer_id,plan.contract_id,plan.warehouse_id??null,plannedDate]);
+ if(!counts.active)return 'NO_ACTIVE_LICENSE';
+ if(!counts.same_contract)return 'CONTRACT_MISMATCH';
+ if(!counts.matching_date)return 'DATE_MISMATCH';
+ return 'NO_ALLOCATABLE_QUOTA';
 }
 async function patch(c,table,id,values){
  const keys=Object.keys(values);
@@ -68,7 +91,11 @@ async function detail(c,req,id){
 async function list(c,req,eligible){
  const q=req.query||{},page=Number(q.page||1),filter=String(q.search||'').trim().slice(0,160);
  if(!Number.isInteger(page)||page<1||page>100000)throw fail(400,'页码无效');
- const v=[req.user.id,req.productCode],conditions=['l.product_code=$2',scope()],add=(sql,value)=>{v.push(value);conditions.push(sql.replace('?', '$'+v.length));};
+ // The picker is scoped to the selected plan, including its warehouse for cobalt.
+ const plan=eligible?await loadingPlan(c,req,q.sales_plan_id):null;
+ const v=[req.user.id,req.productCode],warehouse=plan?.warehouse_id?'$'+v.push(plan.warehouse_id)+'::uuid':null;
+ const conditions=['l.product_code=$2',scope('l',warehouse)],add=(sql,value)=>{v.push(value);conditions.push(sql.replace('?', '$'+v.length));};
+ const plannedDate=eligible&&q.planned_load_date?B.date(q.planned_load_date):null;
  if(filter)add("strpos(lower(concat_ws(' ',l.proforma_no,l.license_no,k.contract_no,k.buyer)),lower(?))>0",filter);
  for(const [key,expression] of Object.entries({buyer_contract:"concat_ws(' ',k.buyer,k.contract_no)"})){
   if(q[key])add('strpos(lower('+expression+'),lower(?))>0',B.text(q[key],key,160));
@@ -85,12 +112,11 @@ async function list(c,req,eligible){
  if(q.valid_from&&q.valid_until&&q.valid_from>q.valid_until)throw fail(400,'有效日期范围无效');
  if(q.status==='EXPIRING')conditions.push(status+"='ACTIVE' AND "+effective+"<="+today+"+(SELECT expiry_days FROM export_license_preferences WHERE product_code=$2)");
  else if(q.status){if(!['APPLYING','PENDING','ACTIVE','SCHEDULED','EXPIRED','CLOSED','CANCELLED'].includes(q.status))throw fail(400,'许可证状态无效');add((q.status==='ACTIVE'?status:displayStatus)+'=?',q.status);}
- if(eligible){
-  const p=req.productCode===CO?await require('./cobalt-sales.cjs').access(c,req,'plan',B.uuid(q.sales_plan_id)):await require('./allocations.cjs').planAccess(c,req,B.uuid(q.sales_plan_id));
+ if(plan){
   conditions.push(status+"='ACTIVE' AND (l.quantity-t.used-t.reserved)>0");
-  add('l.contract_id=?',p.contract_id);add('l.project_id=?',p.project_id);add('l.customer_id=?',p.customer_id);
+  add('l.contract_id=?',plan.contract_id);add('l.project_id=?',plan.project_id);add('l.customer_id=?',plan.customer_id);
   if(q.invoice_preview_id)add('l.id=?',B.uuid(q.invoice_preview_id));
-  if(q.planned_load_date){add('l.valid_from<=?::date',B.date(q.planned_load_date));add(effective+'>=?::date',q.planned_load_date);}
+  if(plannedDate)add('?::date BETWEEN l.valid_from AND '+effective,plannedDate);
  }
  const where=' WHERE '+conditions.join(' AND ');
  const pageSize=50,checkMore=eligible&&!q.invoice_preview_id;
@@ -102,7 +128,10 @@ async function list(c,req,eligible){
    const {invoice}=await require('./export-license-plans.cjs').invoiceCandidate(c,{...license,...serial});
    return {items:result.rows,invoice_preview:invoice};
   }
-  return {items:result.rows.slice(0,pageSize),has_more:result.rows.length>pageSize};
+  const options={items:result.rows.slice(0,pageSize),has_more:result.rows.length>pageSize};
+  if(!license&&page===1&&Object.keys(q).every(key=>['sales_plan_id','planned_load_date','page'].includes(key)))
+   options.unavailable_reason=await unavailableReason(c,req,plan,plannedDate);
+  return options;
  }
  // One aggregate pass produces the filtered count and the unfiltered indicators
  // and per-unit totals. The page and summary share the same read transaction.
@@ -253,8 +282,7 @@ function register({app,pool,permitted,csrf}){
   app.get(prefix,{preHandler:permitted(read)},req=>C.readTransaction(pool,c=>list(c,req,false)));
   app.get(prefix+'/options',{preHandler:permitted('loading-plan:read')},req=>C.readTransaction(pool,c=>list(c,req,true)));
   app.get(prefix+'/invoice-number',{preHandler:permitted('loading-plan:write')},req=>C.readTransaction(pool,async c=>{
-   const id=B.uuid(req.query.sales_plan_id),plan=req.productCode===CO?await require('./cobalt-sales.cjs').access(c,req,'plan',id):
-    await require('./allocations.cjs').planAccess(c,req,id);
+   const plan=await loadingPlan(c,req,req.query.sales_plan_id);
    const invoice=require('./export-license-plans.cjs');
    if(req.query.invoice_no)return {duplicate:await invoice.hasInvoice(c,B.text(req.query.invoice_no,'发票号',77))};
    const {invoice:invoice_preview}=await invoice.invoiceCandidate(c,{proforma_no:plan.code,next_serial:1});

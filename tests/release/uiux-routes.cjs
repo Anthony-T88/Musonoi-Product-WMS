@@ -157,7 +157,7 @@ function pages(ids){
   entry.url='/loading-plans?'+new URLSearchParams({vehicle_id:ids[example]||missingId});
  }
  add('loading-search','/loading-plans/query',BOTH,{screenshot:true,state:'single-row plate filter with full invoice and packing list numbers'});
- add('loading-new','/loading-plans/new',BOTH,{state:'single eligible license selector in document details, invoice checks and dispatch verification'});
+ add('loading-new','/loading-plans/new',BOTH,{state:'scoped license choices, planned loading date and editable automatic invoice recommendation'});
  add('cu-plan-group','/loading-plans/:id',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-edit','/loading-plans/:id/edit',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-cancel','/loading-plans/:id/cancel',[CU],{example:'cuPlanGroup'});

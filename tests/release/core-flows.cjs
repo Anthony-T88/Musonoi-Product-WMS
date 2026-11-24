@@ -6,6 +6,12 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  try{
  await require('../../scripts/production-db.cjs').migrate(c,{apply:true,appPassword:process.env.WMS_TEST_APP_PASSWORD,environment:'test'});
  const f=await E.seed(c,name);
+ const password=crypto.randomBytes(18).toString('base64url'),username='audit_license_warehouse';
+ const {rows:[scoped]}=await c.query("INSERT INTO users(username,display_name,password_hash,role_code) "+
+  "VALUES($1,'Synthetic scoped logistics manager',$2,'logistics_manager') RETURNING id",
+  [username,require('../../server/security.cjs').hashPassword(password)]);
+ await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id) VALUES($1,$2,$3)',[scoped.id,f.project,f.warehouse]);
+ f.accounts.push({id:scoped.id,username,password,role:'warehouse_manager'});
  await c.query("INSERT INTO role_permissions SELECT 'logistics_field_operator',unnest(ARRAY['loading-plan:match','load:write','load:execute']) ON CONFLICT DO NOTHING");app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
  for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.93.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
  const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':key},...(body?{payload:body}:{})});
@@ -74,7 +80,16 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(extended.effective_until,'2099-12-31');
   assert.equal(extended.history.find(item=>item.id===extension.id).result.previous_effective_until,today);
   assert((await api(optionsPath)).items.some(item=>item.id===permit.id));
-  plan=await api('/cobalt/loading/plans','logistics_manager',{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,license_id:permit.id,remark:'Synthetic rc2 matching',...preview.versions});
+  const role='warehouse_manager',filter=new URLSearchParams({sales_plan_id:sales.id,planned_load_date:today});
+  const permitOptions='/cobalt/export-permits/options?';
+  assert((await api(permitOptions+filter,role)).items.some(row=>row.id===permit.id));
+  const unavailable=await api(permitOptions+new URLSearchParams({...Object.fromEntries(filter),planned_load_date:'2100-01-01'}),role);
+  assert.equal(unavailable.unavailable_reason,'DATE_MISMATCH');
+  const previewFilter=new URLSearchParams(filter);previewFilter.set('invoice_preview_id',permit.id);
+  assert.equal((await api(permitOptions+previewFilter,role)).invoice_preview,permit.proforma_no+'-01');
+  const registry=await request(path,role);
+  assert([403,404].includes(registry.statusCode),'Plan scope must not grant access to the permit registry');
+  plan=await api('/cobalt/loading/plans',role,{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,license_id:permit.id,remark:'Synthetic rc2 matching',...preview.versions});
   assert.equal(plan.transporter,'Synthetic Carrier');
   assert.equal(plan.destination,'Synthetic Depot');
   assert.equal(plan.invoice_no,permit.proforma_no+'-01');
@@ -329,8 +344,12 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
    dispatch_version:vehicle.version,arrived_at:new Date(Date.now()-1000).toISOString(),trailer_one:'NEW-TRAILER',trailer_two:'',
    driver_name:'Second Driver',passport_no:'Second Passport',transporter:'Second Carrier',container_no:'',exception_remark:''});
   const args=new URLSearchParams({sales_plan_id:sales.id,preparation_id:p.id,arrival_id:arrival.id}),pv=await api('/cobalt/loading/preview?'+args);
-  const lp=await api('/cobalt/loading/plans',manager,{...Object.fromEntries(args),planned_load_date:today,destination:'Synthetic destination',
-   license_id:licensePath.split('/').at(-1),remark:'',...pv.versions});
+  const suggested=(await api('/cobalt/export-permits/invoice-number?sales_plan_id='+sales.id,manager)).invoice_preview;
+  const data={...Object.fromEntries(args),planned_load_date:today,destination:'Synthetic destination',remark:'',...pv.versions};
+  const draft=await api('/cobalt/loading/plans',manager,{...data,auto_invoice:true});
+  assert.equal(draft.invoice_no,suggested);
+  assert.equal(draft.packing_list_no,suggested+'-PL');
+  const lp=await api('/cobalt/loading/plans/'+draft.id,manager,{...data,version:draft.version,license_id:licensePath.split('/').at(-1)});
   const match=await api('/cobalt/loading/preview?'+new URLSearchParams({...Object.fromEntries(args),plan_id:lp.id}));
   await api('/cobalt/loading/plans/'+lp.id+'/match',role,{version:lp.version,preview_hash:match.preview_hash});
   const order=(await api('/cobalt/loading/plans/'+lp.id)).order,execution='/cobalt/execution/orders/'+order.id;

@@ -36,7 +36,7 @@ window.CobaltLoadingUI={
   f.operationPlans=o.sales_plans;
   f.operationRecord=p;
   f.operationArrivals=[];
-  ExportLicenses.mountPicker(f,p);
+  ExportLicenses.mountPicker(f,p,!id);
   let previewData,previewSequence=0,optionsSequence=0,saving=false;
   const selected=()=>f.operationArrivals.find(row=>row.id===arrival.value);
   const refresh=async()=>{
@@ -80,6 +80,7 @@ window.CobaltLoadingUI={
    saving=save.disabled=true;
    try{
     const body={...CobaltSalesUI.values(f),...previewData.versions,...(id?{version:p.version}:{})};
+    if(!id)ExportLicenses.applyInvoiceSuggestion(f,body);
     const result=await API.request(this.base+'/plans'+(id?'/'+id:''),{method:'POST',body});
     ProductContext.dirty=false;
     await Router.go('/loading-plans/orders/'+result.id);

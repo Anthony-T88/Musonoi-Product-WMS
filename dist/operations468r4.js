@@ -17,7 +17,7 @@ window.Operations468R4={
   const destination=field('destination')?.closest('label');if(destination)docs.append(destination);
   const three=this.section(f,'03','装车批次选择','Loading Batch',s),batch=field(co?'preparation_id':'allocation_ids');o.batch=batch;if(batch){P.hide(batch.closest('label'),s);o.batchHost=P.el('div','o4-batch-choice',three,s);o.batchButton=P.el('button','button secondary',o.batchHost,s);o.batchButton.type='button';o.batchButton.dataset.op4Batch='';o.batchButton.onclick=()=>this.batchPicker(s);o.batchValue=P.el('strong','o4-batch-value',o.batchHost,s);o.batchValue.dataset.noI18n='';}
   const remark=field('remark');if(remark){const details=P.el('details','o4-remarks',three,s);this.text(details,'summary','',this.t('补充备注','Additional Remarks'),s);P.move(remark.closest('label'),details,s);}const preview=f.querySelector('#co-loading-preview');if(preview)P.move(preview,three,s);
-  const date=field('planned_load_date');if(date){if(!date.value)date.value=BusinessTime.today();P.hide(date.closest('label'),s);}
+  const date=field('planned_load_date');if(date){if(!date.value)date.value=BusinessTime.today();P.move(date.closest('label'),fields,s);}
   const footer=P.el('div','o4-footer',f,s);for(const n of [...f.querySelectorAll(':scope>button[type=submit],:scope>button:not([type]),:scope>.error')])P.move(n,footer,s);
   for(const grid of f.querySelectorAll(':scope>.form-grid'))if(!grid.querySelector('input:not([type=hidden]),select,textarea')||[...grid.children].every(n=>n.hidden))P.hide(grid,s);
   for(const n of f.querySelectorAll(':scope>p:not(.error),#single-plan-context,#single-plan-lot-note'))P.hide(n,s);

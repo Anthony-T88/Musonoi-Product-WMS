@@ -15,7 +15,7 @@ async function save(c,req,id){await LP.write(c,req);const b=req.body||{},old=id?
  if(!old||arrival&&old.arrival_id!==arrival.id)Transport.requireForLoading(arrival);
  const lots=await lotInput(c,req,b,p,old?.id),ids=lots.map(a=>a.id),date=B.date(b.planned_load_date);
  const reservation=await Licenses.prepare(c,req,p,old,b,ids[0],date);
- const f=body({...b,...(reservation?{invoice_no:reservation.invoice,packing_list_no:undefined,export_license_no:reservation.license.license_no}:{}),vehicle_no:arrival?.truck_no||b.vehicle_no,
+ const f=body({...b,...(reservation?{invoice_no:reservation.invoice,packing_list_no:undefined,export_license_no:reservation.license?.license_no??b.export_license_no}:{}),vehicle_no:arrival?.truck_no||b.vehicle_no,
   transporter:old?(b.transporter??old.transporter):(b.transporter||arrival.dispatch_transporter),
   destination:old?(b.destination??old.destination):(b.destination||arrival.dispatch_destination)});f.arrival_id=arrival?.id||old?.arrival_id||null;f.shipment_batch_no=lots.map(a=>a.lot_no).join(' / ');if(f.shipment_batch_no.length>160)throw B.error(400,'所选批次号总长度超出160字符，请拆分计划单');
  if(old?.loading_id&&(await c.query('SELECT 1 FROM loading_items i JOIN reservations r ON r.id=i.reservation_id WHERE i.loading_id=$1 AND NOT i.plan_removed AND NOT(r.allocation_id=ANY($2::uuid[])) LIMIT 1',[old.loading_id,ids])).rowCount)throw B.error(409,'已匹配装车单含其他批次捆包，请先调整或解除匹配');

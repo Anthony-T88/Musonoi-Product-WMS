@@ -843,7 +843,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "single eligible license selector in document details, invoice checks and dispatch verification",
+      "state": "scoped license choices, planned loading date and editable automatic invoice recommendation",
       "template": "/loading-plans/new"
     },
     {

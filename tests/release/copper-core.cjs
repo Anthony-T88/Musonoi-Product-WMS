@@ -116,6 +116,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert((await api(books+'?contract_id='+customer.contract,'sales_operator')).items.some(row=>row.id===account.id&&row.bank_id===bank.id));
  await api(books+'?contract_id='+f.customers.CO_HYDROXIDE.contract,'customer_admin',undefined,404);
  await api(books+'?contract_id='+contract.id,'limited_viewer',undefined,403);
+ const emptyOptions=await api('/export-permits/options?sales_plan_id='+plan.id);
+ assert.equal(emptyOptions.unavailable_reason,'NO_ACTIVE_LICENSE');
  const permit=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:'RMM-2609-CU-MECR-7500',quantity:'7500',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD',unit_price:'1234.567891',price_unit:'USD/MT'});
  const permitPath='/export-permits/'+permit.id,licenseAction=async(action,payload)=>{
   const current=await api(permitPath),pending=await api(permitPath+'/actions','sales_operator',{action,payload,version:current.version,reason:'Synthetic licence acceptance'});
@@ -199,12 +201,26 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert(!(await api('/export-permits?status=EXPIRING')).items.some(item=>item.id===sameDay.id));
 
  const {transporter,destination,...autoPlan}=planBody;
+ const fallback=(await api('/export-permits/invoice-number?sales_plan_id='+plan.id)).invoice_preview;
+ const unlinked={...autoPlan,license_id:undefined,auto_invoice:true};
+ const numbered=await api('/loading-plans/unified','admin',unlinked);
+ assert.equal(numbered.invoice_no,fallback);
+ assert.equal(numbered.packing_list_no,fallback+'-PL');
+ await api('/loading-plan-documents/'+numbered.id+'/cancel','admin',{version:numbered.version,reason:'Synthetic automatic invoice check'});
+ const replacement='SYNTH-MANUAL-INV-'+seq;
+ const manual=await api('/loading-plans/unified','admin',{...unlinked,invoice_no:replacement});
+ assert.equal(manual.invoice_no,replacement);
+ await api('/loading-plan-documents/'+manual.id+'/cancel','admin',{version:manual.version,reason:'Synthetic manual invoice check'});
+ const otherContract=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:customer.contract,
+  target_weight:'25',quantity_tolerance:'5',preparation_month:shipment_month,remark:'Synthetic permit contract mismatch'});
+ const mismatched=await api('/export-permits/options?sales_plan_id='+otherContract.id);
+ assert.equal(mismatched.unavailable_reason,'CONTRACT_MISMATCH');
  const firstDocument=await api('/loading-plans/unified','admin',autoPlan);
  const byPlate=plate.toLowerCase().replaceAll('-',' ');
  const arrivalsByPlate=await api('/loading-plans/arrivals?'+new URLSearchParams({truck_no:byPlate,shipment_month}));
  assert.deepEqual(arrivalsByPlate.items.map(row=>row.arrival_id),[arrivals[0].id]);
  const plansByPlate=await api('/v34/lists/loading?'+new URLSearchParams({truck_no:byPlate}));
- assert.deepEqual(plansByPlate.items.map(row=>row.id),[firstDocument.id]);
+ assert.deepEqual(plansByPlate.items.filter(row=>row.state!=='CANCELLED').map(row=>row.id),[firstDocument.id]);
  assert.equal(firstDocument.transporter,'Synthetic Carrier');
  assert.equal(firstDocument.destination,'Synthetic Depot');
  assert.equal(firstDocument.invoice_no,permit.proforma_no+'-01');

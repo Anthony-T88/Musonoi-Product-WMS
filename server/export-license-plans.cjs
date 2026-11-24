@@ -70,13 +70,14 @@ async function invoiceCandidate(c,l){
  return {invoice,serial:row.serial};
 }
 async function nextInvoice(c,l){
- // The license row is already locked. Reserve the final number against legacy/manual writes too.
+ // The caller holds the transaction lock shared by automatic and manual invoice writes.
+ let next_serial=l.next_serial;
  for(let i=0;i<100;i++){
-  const {invoice,serial}=await invoiceCandidate(c,l);
+  const {invoice,serial}=await invoiceCandidate(c,{...l,next_serial});
   await lockInvoice(c,invoice);
-  const duplicate=(await c.query(`SELECT 1 FROM (${invoices}) invoices WHERE lower(invoice_no)=lower($1) LIMIT 1`,[invoice])).rowCount;
-  if(duplicate)continue;
-  await c.query('UPDATE export_licenses SET next_serial=$2::bigint+1 WHERE id=$1',[l.id,serial]);
+  next_serial=(BigInt(serial)+1n).toString();
+  if(await hasInvoice(c,invoice))continue;
+  if(l.id)await c.query('UPDATE export_licenses SET next_serial=$2::bigint WHERE id=$1',[l.id,next_serial]);
   return invoice;
  }
  throw B.error(409,'历史发票号冲突过多，请联系管理员核对');
@@ -85,6 +86,10 @@ async function prepare(c,req,plan,old,body,batch,date){
  const previous=await link(c,req.productCode,old?.id);
  if(previous?.state==='RELEASED')throw B.error(409,'许可证关联计划已取消');
  if(!body.license_id&&!previous){
+  if(!old&&body.auto_invoice===true&&!body.invoice_no){
+   await c.query('SELECT pg_advisory_xact_lock(477189)');
+   return {invoice:await nextInvoice(c,{proforma_no:plan.code,next_serial:1})};
+  }
   if(body.invoice_no!==old?.invoice_no)await invoiceConflict(c,body.invoice_no,old?.id);
   return null;
  }
@@ -100,8 +105,7 @@ async function prepare(c,req,plan,old,body,batch,date){
  const ids=[...new Set([id,previous?.license_id].filter(Boolean))].sort();
  await c.query('SELECT pg_advisory_xact_lock(477189)');
  await c.query('SELECT id FROM export_licenses WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE',[ids]);
- const license=await L.record(c,req,id);
- if(license.project_id!==plan.project_id||license.customer_id!==plan.customer_id||license.contract_id!==plan.contract_id)throw B.error(409,'许可证与装车计划产品、买家或合同不一致');
+ const license=await L.record(c,req,id,false,plan);
  await allowedDates(c,id,date);
  const quantity=license.unit_basis==='CUSTOM'&&previous&&!switching&&!body.license_quantity?previous.reserved_quantity:await weight(c,license,batch,body);
  await L.assertCapacity(c,id,!switching?previous?.id||null:null,quantity);
@@ -111,7 +115,7 @@ async function prepare(c,req,plan,old,body,batch,date){
  return {license,previous,switching,invoice,quantity,batch};
 }
 async function bind(c,req,plan,reservation){
- if(!reservation)return null;
+ if(!reservation?.license)return null;
  const {license,previous,switching,invoice,quantity,batch}=reservation,co=req.productCode===CO;
  if(switching)await c.query("UPDATE export_license_allocations SET state='VOID',closed_at=clock_timestamp() WHERE id=$1",[previous.id]);
  const {rows:[row]}=previous&&!switching?

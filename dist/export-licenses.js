@@ -501,7 +501,14 @@ window.ExportLicenses={
    root.querySelector('.oa-charts')?.before(warning);
   }
  },
- mountPicker(form,record={}){
+ applyInvoiceSuggestion(form,body){
+  if(form.invoiceSuggestion&&!body.invoice_no?.trim()){
+   body.invoice_no='';
+   body.auto_invoice=true;
+   delete body.packing_list_no;
+  }
+ },
+ mountPicker(form,record={},creating=!record.id){
   const t=this.t,id='loading-permit-picker',base=this.api(),known=new Map(),old=record.export_license;
   const invoice=form.elements.invoice_no,manual=form.elements.export_license_no,date=form.elements.planned_load_date,sales=form.elements.sales_plan_id;
   const field=manual?.closest('label'),invoiceField=invoice?.closest('label');
@@ -544,29 +551,37 @@ window.ExportLicenses={
   }
   const syncPacking=()=>{
    if(!invoice||!packing)return;
-   const value=invoice.value.trim();
+   const value=invoice.value.trim()||form.invoiceSuggestion||'';
    packing.value=value?(value===record.invoice_no&&record.packing_list_no?record.packing_list_no:value+'-PL'):'';
   };
   invoice?.addEventListener('input',syncPacking);
   syncPacking();
-  const creating=!record.id,numberUrl=base+'/invoice-number';
+  const numberUrl=base+'/invoice-number';
   const recommendation=document.createElement('small');
+  recommendation.id=id+'-invoice-recommendation';
   recommendation.setAttribute('role','status');
   recommendation.className='wms-feedback';
   invoiceField?.append(recommendation);
-  let edited=Boolean(invoice?.value),request=0,previewRequest=0,lookup=0,checkTimer;
+  let request=0,previewRequest=0,lookup=0,checkTimer;
   let pending=false,optionsMessage='',desired=record.license_id||old?.license_id||'';
+  const suggest=value=>{
+   if(!creating||!invoice)return;
+   form.invoiceSuggestion=value;
+   invoice.placeholder=value;
+   invoice.required=!value;
+   syncPacking();
+  };
   if(creating&&invoice){
    const feedback=document.createElement('small');
    feedback.setAttribute('role','status');
    feedback.id=id+'-invoice-check';
    feedback.className='wms-feedback';
    invoice.maxLength=77;
-   const descriptions=[invoice.getAttribute('aria-describedby'),feedback.id].filter(Boolean).join(' ');
+   const descriptions=[invoice.getAttribute('aria-describedby'),recommendation.id,feedback.id].filter(Boolean).join(' ');
    invoice.setAttribute('aria-describedby',descriptions);
    invoiceField.append(feedback);
    invoice.addEventListener('input',()=>{
-    edited=true;invoice.setCustomValidity('');feedback.textContent='';clearTimeout(checkTimer);
+    invoice.setCustomValidity('');feedback.textContent='';clearTimeout(checkTimer);
     const value=invoice.value.trim(),token=++lookup,planId=sales.value;
     if(!value||!planId)return;
     checkTimer=setTimeout(async()=>{
@@ -590,7 +605,7 @@ window.ExportLicenses={
     invoice.readOnly=reserved&&!creating;
     if(reserved&&!creating)invoice.value=old?.license_id===licenseId?old.invoice_no:'';
    }
-   if(creating&&!reserved&&!edited&&invoice)invoice.value='';
+   suggest('');
    manual.value=license?.license_no||legacyNumber;
    quantity.hidden=!isCustom;
    amount.disabled=!isCustom;
@@ -600,14 +615,23 @@ window.ExportLicenses={
     ' · '+t('有效至 ','Valid until ')+(license.effective_until||'—'):'');
    syncPacking();
    recommendation.textContent='';
-   if(!sales.value||!reserved||old?.license_id===licenseId)return;
-   const filters=new URLSearchParams({sales_plan_id:sales.value,invoice_preview_id:licenseId});
-   if(date?.value)filters.set('planned_load_date',date.value);
-   API.request(base+'/options?'+filters).then(data=>{
+   if(!sales.value||!creating&&(!reserved||old?.license_id===licenseId))return;
+   const filters=new URLSearchParams({sales_plan_id:sales.value});
+   if(reserved){
+    filters.set('invoice_preview_id',licenseId);
+    if(date?.value)filters.set('planned_load_date',date.value);
+   }
+   API.request((reserved?base+'/options':numberUrl)+'?'+filters).then(data=>{
     if(token!==previewRequest||select.value!==licenseId||!form.isConnected)return;
-    if(invoice&&(!creating||!edited))invoice.value=data.invoice_preview||'';
-    syncPacking();
-    if(data.invoice_preview)recommendation.textContent=t('推荐发票号 ','Suggested invoice ')+data.invoice_preview+(creating?t('，可修改。','. You can edit this number.'):'');
+    const number=data.invoice_preview||'';
+    if(!number&&reserved){
+     recommendation.textContent=t('该许可证已不可分配，请重新选择。','This license is no longer available. Select another option.');
+     return;
+    }
+    if(creating)suggest(number);
+    else if(invoice){invoice.value=number;syncPacking();}
+    if(number)recommendation.textContent=t('推荐发票号 ','Suggested invoice ')+number+
+     (creating?t('。留空自动编号，可手工输入。','. Leave blank for automatic numbering, or enter your own.'):'');
    }).catch(e=>{if(token===previewRequest&&form.isConnected)recommendation.textContent=I18n.translate(e.message,true);});
   };
   const refresh=async()=>{
@@ -617,10 +641,12 @@ window.ExportLicenses={
    pending=!!planId;
    select.disabled=true;
    ++previewRequest;
+   suggest('');
+   recommendation.textContent='';
    const loading=t('正在读取可用许可证…','Loading eligible export licenses…');
    note.textContent=planId?loading:'';
    if(!select.options.length)select.add(new Option(planId?loading:t('请先选择销售计划','Select a sales plan first'),''));
-   let error='';
+   let error='',unavailable='';
    if(planId)try{
     const filters=new URLSearchParams({sales_plan_id:planId});
     if(date?.value)filters.set('planned_load_date',date.value);
@@ -628,6 +654,7 @@ window.ExportLicenses={
      if(page>1)filters.set('page',page);
      const data=await API.request(base+'/options?'+filters);
      if(!current())return;
+     unavailable=data.unavailable_reason||unavailable;
      for(const item of data.items)options.set(item.id,item);
      if(!data.has_more)break;
     }
@@ -650,8 +677,15 @@ window.ExportLicenses={
    select.value=desired;
    select.disabled=!options.size;
    if(desired===old?.license_id&&old?.unit_basis==='CUSTOM')amount.value=old.reserved_quantity;
+   const reasons={
+    PLAN_CONTRACT_MISSING:t('请先为销售计划关联合同。','Link a contract to the sales plan first.'),
+    NO_ACTIVE_LICENSE:t('该产品和客户当前没有有效的已签发许可证。','There is no currently valid issued license for this product and customer.'),
+    CONTRACT_MISMATCH:t('该客户的有效许可证关联的是其他合同。','This customer’s valid licenses belong to other contracts.'),
+    DATE_MISMATCH:t('当前合同的有效许可证未覆盖计划装车日期。','The valid licenses for this contract do not cover the planned loading date.'),
+    NO_ALLOCATABLE_QUOTA:t('匹配合同和装车日期的许可证无可分配额度。','The licenses matching the contract and loading date have no allocatable quota.')
+   };
    optionsMessage=error||(!options.size&&planId?
-    t('所选销售计划暂无匹配合同、装车日期及余额的有效许可证。','No active license matches this sales plan’s contract, loading date and available balance.'):'');
+    reasons[unavailable]||t('当前销售计划无可用出口许可证。','No export license is available for this sales plan.'):'');
    show();
   };
   form.addEventListener('submit',event=>{

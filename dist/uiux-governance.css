@@ -260,6 +260,11 @@ html[data-release-ui="46"] #inventory #filter-form .filter-grid .input-icon{min-
 .export-license-page small{display:block;color:var(--uix-muted)}
 .export-license-history article{border-top:1px solid var(--uix-border);padding:var(--uix-gap) 0}
 .export-license-history form{display:flex;flex-wrap:wrap;align-items:end;gap:var(--uix-gap)}
+#page-content #loading-permit-picker-invoice-recommendation {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 #page-content .export-license-picker {
   display: grid;
   align-content: start;

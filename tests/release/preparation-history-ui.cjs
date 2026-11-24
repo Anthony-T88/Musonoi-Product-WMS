@@ -672,9 +672,10 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.equal(await form.locator('select[name="license_id"]').count(),1);
     assert.equal(await form.locator('input[name="export_license_no"]:visible').count(),0);
     await permits.selectOption('license-51');
-    await page.waitForFunction(()=>document.querySelector('[name="invoice_no"]')?.value==='QA-INVOICE-051');
+    await page.waitForFunction(()=>document.querySelector('[name="invoice_no"]')?.placeholder==='QA-INVOICE-051');
     const invoice=form.locator('[name=invoice_no]');
     assert(await invoice.isEditable());
+    assert.equal(await invoice.inputValue(),'');
     const existing=co?'AUDIT-CO-REPEAT-FIRST-INV':'AUDIT-CU-REPEAT-FIRST-INV';
     await invoice.fill(existing);
     await form.locator('#loading-permit-picker-invoice-check').getByText(/已使用|already in use/).waitFor();
