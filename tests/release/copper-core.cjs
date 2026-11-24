@@ -261,9 +261,12 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const templateFields={...initialTemplate.fields,rccm:'SYNTHETIC-RCCM',id_nat:'SYNTHETIC-ID',nif:'SYNTHETIC-NIF',contact:'Synthetic contact'};
  await api(bpPath+'/template','sales_operator',undefined,403);
  await api(bpPath+'/template','sales_operator',{revision:initialTemplate.revision,fields:templateFields},403);
- const issuedTemplate=await api(bpPath+'/template','admin',{revision:initialTemplate.revision,fields:templateFields});
+ assert.equal(initialTemplate.revision,0);
  assert((await api(bpPath)).items.some(row=>row.source_ids.includes(load.id)));
  const bpDraft=await api(bpPath+'/preview','admin',{ids:bpIds});
+ assert.equal(bpDraft.template_revision,0);
+ const identity=[['RCCM','rccm'],['ID-NAT','id_nat'],['NIF','nif'],['Contact','contact']];
+ for(const [,field] of identity)assert(bpDraft.header[field]&&bpDraft.header[field]===initialTemplate.fields[field],field);
  const bpRows=bpDraft.rows;
  assert.match(bpDraft.number,/^\d{3}\/\d{4}\/CU$/);
  const agency=await api(bpPath+'/agencies','admin',{project_id:f.project,name:'Synthetic clearance agency '+seq});
@@ -299,8 +302,11 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api(bpPath,'admin',{...bpBody,number:bpBody.number.toLowerCase()},409);
  const sheetResponse=await request(bpPath+'/'+bpDoc.id+'/print');
  assert.equal(sheetResponse.statusCode,200);assert(sheetResponse.body.includes(bpPreview.content));
- const printedIds=['RCCM: '+templateFields.rccm,'ID-NAT: '+templateFields.id_nat,'NIF: '+templateFields.nif,'Contact: '+templateFields.contact];
- for(const item of printedIds)assert(sheetResponse.body.includes(item));
+ for(const [label,field] of identity)assert(sheetResponse.body.includes(label+': '+initialTemplate.fields[field]),label);
+ const issuedTemplate=await api(bpPath+'/template','admin',{revision:initialTemplate.revision,fields:templateFields});
+ const configured=await api(bpPath+'/template');
+ assert.equal(configured.revision,1);
+ assert.equal(configured.fields.contact,templateFields.contact);
  await api(bpPath+'/template','admin',{revision:issuedTemplate.revision,fields:{...templateFields,title:'Synthetic replacement heading',contact:'Updated future contact'}});
  const legacyNo='SYNTHETIC-LEGACY-'+seq;
  const {rows:[legacyBP]}=await c.query(`INSERT INTO customs_bp_documents(product_code,document_no,source_ids,source_context,snapshot,created_by)
@@ -310,7 +316,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
    created_by FROM customs_bp_documents WHERE id=$1 RETURNING id,snapshot`,[bpDoc.id,legacyNo]);
  const legacyPrint=await request(bpPath+'/'+legacyBP.id+'/print');
  assert.equal(legacyPrint.statusCode,200);
- for(const item of printedIds)assert(legacyPrint.body.includes(item));
+ for(const [label,field] of identity)assert(legacyPrint.body.includes(label+': '+templateFields[field]),label);
  assert.equal((await api(bpPath+'/'+legacyBP.id+'/batches')).items[0].loading_date,bpRows[0].loading_date);
  assert.deepEqual((await c.query('SELECT snapshot FROM customs_bp_documents WHERE id=$1',[legacyBP.id])).rows[0].snapshot,legacyBP.snapshot);
  const revise=(method,url,body,key=crypto.randomUUID())=>app.inject({method,url:'/api/v1'+url,
@@ -328,6 +334,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const bpArchive=await api(bpPath+'/'+bpDoc.id);
  assert.deepEqual(bpArchive.versions.map(row=>row.revision),[2,1]);
  assert.equal(bpArchive.header.agency,agency.name);
+ assert.equal(bpArchive.template_revision,0);
+ assert(bpArchive.header.contact===initialTemplate.fields.contact,'An existing BP retains its original contact');
  const removed=await revise('DELETE',bpPath+'/agencies/'+agency.id,{version:agency.version});
  assert.equal(removed.statusCode,200,removed.body);
  assert(!(await api(bpPath+'/agencies')).items.some(row=>row.id===agency.id));

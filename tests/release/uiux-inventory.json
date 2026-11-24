@@ -843,7 +843,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "license selection, invoice checks and dispatch transport verification",
+      "state": "single eligible license selector in document details, invoice checks and dispatch verification",
       "template": "/loading-plans/new"
     },
     {
@@ -959,7 +959,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "pending lots, net weights and scoped template controls",
+      "state": "pending lots, default BP template with issuer details and scoped template controls",
       "template": "/customs/bp"
     },
     {

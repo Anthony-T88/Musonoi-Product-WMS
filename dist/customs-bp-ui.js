@@ -13,7 +13,6 @@ window.CustomsBP={
    BP_SOURCE_CHANGED:['选中单据的审批或数据已变化，请重新选择并生成预览。','A selected document or approval changed. Select the batches again.'],
    BP_REQUIRED_DETAILS:['装车单缺少车头号、件数或重量，请补齐来源单据后重试。','Complete the truck plate, package count or weights on the loading order and try again.'],
    BP_DECLARATION_REQUIRED:['请选择运输方式、出境口岸、清关代理和签署日期。','Select the transport mode, exit border, customs agency and signature date.'],
-   BP_TEMPLATE_REQUIRED:['请先由获授权人员保存BP表模板。','Have an authorized user save the BP sheet template first.'],
    BP_TEMPLATE_FIELDS_REQUIRED:['请填写所有模板固定资料。','Complete all fixed template fields.'],
    BP_TEMPLATE_CHANGED:['模板已有新版本，请重新打开后编辑。','A newer template exists. Reopen it to make changes.'],
    BP_BATCH_LOCKED:['所选批次已生成BP表，请返回列表查看已生成记录。','A selected batch is already on a BP sheet. Return to the list to view the issued sheet.'],
@@ -355,7 +354,7 @@ window.CustomsBP={
   const rows=d.rows.map(row=>'<tr>'+[row.batch,row.truck,row.transporter,row.quantity,this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt)]
    .map(value=>'<td>'+esc(value||'—')+'</td>').join('')+'</tr>');
   const missing=!d.id&&d.rows.some(row=>!row.truck||!row.quantity||!row.net_mt||!row.gross_mt);
-  const problem=!d.template_revision?'BP_TEMPLATE_REQUIRED':missing?'BP_REQUIRED_DETAILS':'';
+  const problem=missing?'BP_REQUIRED_DETAILS':'';
   this.frame(d.id?t('编辑BP表','Edit BP Sheet'):t('编制BP表','Prepare BP Sheet'),
    '<form id="customs-bp-form" class="user-form" data-wms-validation>'+
    '<section class="wms-section"><div class="bp-review-heading"><h2>'+t('单据资料','Document Details')+'</h2><span>'+

@@ -157,7 +157,7 @@ function pages(ids){
   entry.url='/loading-plans?'+new URLSearchParams({vehicle_id:ids[example]||missingId});
  }
  add('loading-search','/loading-plans/query',BOTH,{screenshot:true});
- add('loading-new','/loading-plans/new',BOTH,{state:'license selection, invoice checks and dispatch transport verification'});
+ add('loading-new','/loading-plans/new',BOTH,{state:'single eligible license selector in document details, invoice checks and dispatch verification'});
  add('cu-plan-group','/loading-plans/:id',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-edit','/loading-plans/:id/edit',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-cancel','/loading-plans/:id/cancel',[CU],{example:'cuPlanGroup'});
@@ -171,7 +171,7 @@ function pages(ids){
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail and correction links'});
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters and exited history'});
  add('customs-entry','/customs',BOTH,{state:'default to commercial invoice and packing list'});
- add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'pending lots, net weights and scoped template controls'});
+ add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'pending lots, default BP template with issuer details and scoped template controls'});
  add('customs-bp-archive','/customs/bp',BOTH,{query:'?view=documents',state:'issued BP weights, expanded batches and Excel downloads'});
  add('customs-bp-filtered','/customs/bp',BOTH,{query:'?document_no=UIUX-NO-MATCH',state:'archive number filter with no match'});
  add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'customs document preview and authorized generation dialog'});

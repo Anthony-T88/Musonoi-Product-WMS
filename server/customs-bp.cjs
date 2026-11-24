@@ -182,7 +182,7 @@ async function chosen(c,req,ids){
  const template=await Templates.active(c,req.productCode),{title,...fixed}=template.fields;
  const header={...fixed,...sourceHeader({customer:rows[0].customer,license:join(rows,'license'),loading_date:join(rows,'loading_date')},co)};
  // Source signatures include every business field and the latest approval version.
- return {token:hash([template.revision,rows]),rows,project_id:rows[0].project_id,header,template_title:title,
+ return {token:hash([template.revision,template.fields,rows]),rows,project_id:rows[0].project_id,header,template_title:title,
   template_revision:template.revision,data:rows.map(row=>fieldMap(rowFieldsFrom(row),rowFields))};
 }
 const rowFieldsFrom=row=>Object.fromEntries(Object.keys(rowFields).map(k=>[k,row[k]??'']));
@@ -202,7 +202,6 @@ async function declaration(c,req,body,project,{prior,lock=false}={}){
 async function draft(c,req,source,{lock=false}={}){
  const body=req.body;
  if(body.token!==source.token)throw B.error(409,'BP_SOURCE_CHANGED');
- if(!source.template_revision)throw B.error(409,'BP_TEMPLATE_REQUIRED');
  const {agency_id,...fields}=await declaration(c,req,body,source.project_id,{lock});
  const original={header:source.header,rows:source.data};
  if(!source.header.customer||source.data.some(row=>!row.batch||!row.truck||!row.quantity||!row.net_mt||!row.gross_mt))
@@ -277,7 +276,10 @@ async function archived(c,req,revision=null){
 
 async function archiveBasis(c,req,doc){
  const {snapshot}=doc;
- if(snapshot.template_revision)return {header:snapshot.header,template_revision:snapshot.template_revision,template_title:snapshot.template_title};
+ if(Number.isInteger(snapshot.template_revision)){
+  const {header}=await withPrintIdentification(c,req.productCode,snapshot);
+  return {header,template_revision:snapshot.template_revision,template_title:snapshot.template_title};
+ }
  const template=await Templates.active(c,req.productCode),{title,...fixed}=template.fields;
  return {header:{...fixed,...sourceHeader(snapshot.original?.header||snapshot.header,req.productCode===CO)},
   template_revision:template.revision,template_title:title};
@@ -287,8 +289,8 @@ async function withPrintIdentification(c,product,snapshot){
  const missing=['rccm','id_nat','nif','contact'].filter(field=>!snapshot.header[field]?.trim());
  if(!missing.length)return snapshot;
  // Earlier BP revisions predate the approved template. Use its first version for missing print fields.
- const template=await Templates.fieldsAt(c,product,snapshot.template_revision||1),header={...snapshot.header};
- for(const field of missing)header[field]=snapshot.original?.header?.[field]?.trim()||template?.[field]||'';
+ const template=await Templates.fieldsAt(c,product,snapshot.template_revision??1),header={...snapshot.header};
+ for(const field of missing)header[field]=snapshot.original?.header?.[field]?.trim()||template[field];
  return {...snapshot,header};
 }
 function archiveForOutput(pool,req){
@@ -312,7 +314,6 @@ async function revised(c,req,doc,lock=false){
  keys(req.body,editFields);
  if(B.version(req.body.revision)!==doc.revision)throw B.error(409,'BP_REVISION_CHANGED');
  const basis=await archiveBasis(c,req,doc);
- if(!basis.template_revision)throw B.error(409,'BP_TEMPLATE_REQUIRED');
  const {agency_id,...fields}=await declaration(c,req,req.body,doc.project_id,{prior:doc.snapshot,lock});
  return {...doc.snapshot,...basis,header:{...basis.header,...fields},agency_id,number:doc.document_no};
 }

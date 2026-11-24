@@ -124,9 +124,12 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
   await api(bp,'sales_operator',undefined,403);
   const template=await api(bp+'/template');
-  await api(bp+'/template','admin',{revision:template.revision,fields:{...template.fields,rccm:'SYNTHETIC-RCCM',id_nat:'SYNTHETIC-ID',nif:'SYNTHETIC-NIF',contact:'Synthetic contact'}});
+  assert.equal(template.revision,0);
   assert((await api(bp)).items.some(row=>row.source_ids.includes(ids[0])));
   const bpData=await api(bp+'/preview','admin',{ids});
+  assert.equal(bpData.template_revision,0);
+  for(const field of ['rccm','id_nat','nif','contact'])
+   assert(bpData.header[field]&&bpData.header[field]===template.fields[field],field);
   assert.equal(bpData.header.destination,'CHINA');
   assert.equal(bpData.header.loading_date,today);
   const bpRows=bpData.rows;
@@ -154,6 +157,13 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await api(bp+'/print/preview','admin',{...bpBody,number:bpDoc.document_no.toLowerCase()},409);
   const print=await request(bp+'/'+bpDoc.id+'/print');
   assert.equal(print.statusCode,200);assert(print.body.includes(proof.content));
+  const exportResponse=await request(bp+'/'+bpDoc.id+'/excel');
+  assert.equal(exportResponse.statusCode,200);
+  const workbook=new(require('exceljs').Workbook)();
+  await workbook.xlsx.load(exportResponse.rawPayload);
+  const sheet=workbook.worksheets[0];
+  for(const [cell,label,field] of [['A4','RCCM','rccm'],['A5','ID-NAT','id_nat'],['A6','NIF','nif'],['A7','Contact','contact']])
+   assert(sheet.getCell(cell).text===label+': '+template.fields[field],label);
   await api(bp+'/'+bpDoc.id+'/print','customer_admin',undefined,404);
   const edit=await app.inject({method:'PATCH',url:'/api/v1'+bp+'/'+bpDoc.id,headers:{...sessions.admin,'x-product-code':co,'idempotency-key':crypto.randomUUID()},
    payload:{revision:1,header:{mode:'RAILWAY',border:'Mokambo',signature_date:today}}});

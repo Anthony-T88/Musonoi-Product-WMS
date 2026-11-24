@@ -668,7 +668,9 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      button.nextElementSibling?.type==='submit'&&Boolean(button.closest('.o4-footer'))));
     assert.equal(await form.locator('#loading-permit-picker-search').count(),0);
     await form.locator('[name="sales_plan_id"]').selectOption(fixtures[product].plan);
-    const permits=form.locator('[name="license_id"]');
+    const permits=form.locator('.o4-doc-fields select[name="license_id"]');
+    assert.equal(await form.locator('select[name="license_id"]').count(),1);
+    assert.equal(await form.locator('input[name="export_license_no"]:visible').count(),0);
     await permits.selectOption('license-51');
     await page.waitForFunction(()=>document.querySelector('[name="invoice_no"]')?.value==='QA-INVOICE-051');
     const invoice=form.locator('[name=invoice_no]');

@@ -119,17 +119,8 @@ const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATIO
    }
    return submit.call(form,e);
   };
-  const input=form.elements.export_license_no,wrap=document.createElement('div'),button=document.createElement('button');
-  wrap.className='transport-book-input';
-  input.before(wrap);
-  wrap.append(input,button);
-  button.type='button';
-  button.className='button secondary';
-  button.textContent='记录簿';
-  button.onclick=()=>this.book(form,'export_license_no','许可证记录簿');
   await load();
- },
- async book(form,field,title){const plans=(await API.request('/plans')).items,plan=plans.find(p=>p.id===form.elements.sales_plan_id.value);if(!plan){notify('请先选择销售计划');return;}const r=await API.request('/customers/'+plan.customer_id+'/transport-book'),items=r.items.filter(x=>x.field===field);dialog(title,`<p><span>客户名称</span>：<strong data-no-i18n>${esc(plan.customer_name)}</strong></p><div class="transport-book-list">${items.map(i=>`<div class="book-entry"><strong data-no-i18n>${esc(i.value)}</strong><button class="button secondary" data-book-pick="${i.id}" type="button">选择</button>${Business.can('loading-plan:write')?`<button class="button secondary" data-book-edit="${i.id}" type="button">编辑</button><button class="button danger" data-book-delete="${i.id}" type="button">删除</button>`:''}</div>`).join('')||'<p>暂无保存记录</p>'}</div><form id="transport-book-save" class="user-form"><label>保存新记录<input name="value" maxlength="160" required value="${esc(form.elements[field].value)}"></label><p id="transport-book-error" class="error" role="alert"></p><button class="button primary">保存并使用</button></form>`);for(const b of document.querySelectorAll('[data-book-pick]'))b.onclick=()=>{form.elements[field].value=items.find(i=>i.id===b.dataset.bookPick).value;$('dialog').close();};for(const b of document.querySelectorAll('[data-book-edit],[data-book-delete]'))b.onclick=async()=>{const item=items.find(i=>i.id===(b.dataset.bookEdit||b.dataset.bookDelete)),remove=!!b.dataset.bookDelete;let value=item.value;try{if(!await OperationConfirm.ask({title:remove?'请确认删除记录':'编辑记录',rows:[['客户名称',plan.customer_name]],note:'仅影响今后选择，不修改已保存的装车计划及历史装箱单。',comment:!remove,commentRequired:!remove,commentLabel:'记录内容',commentMax:160,commentValue:value,onComment:v=>value=v}))return;b.disabled=true;await (remove?feedbackRequest:API.request.bind(API))('/customers/'+plan.customer_id+'/transport-book/'+item.id,{method:remove?'DELETE':'PATCH',body:{version:item.version,value}});await this.book(form,field,title);}catch(e){$('transport-book-error').textContent=e.message;}finally{if(b.isConnected)b.disabled=false;}};$('transport-book-save').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{const saved=await API.request('/customers/'+plan.customer_id+'/transport-book',{method:'POST',body:{field,value:new FormData(e.target).get('value')}});form.elements[field].value=saved.value;$('dialog').close();notify('记录已保存');}catch(err){$('transport-book-error').textContent=err.message;e.submitter.disabled=false;}};}
+ }
 };
 const yardPlanForm=SinglePlan.form.bind(SinglePlan);SinglePlan.form=async function(id,legacy){await yardPlanForm(id,legacy);await LoadingYard.enhance(id);};
 const yardList=Management.list.bind(Management);Management.list=async function(kind){if(kind==='loading'&&location.pathname==='/loading-plans')return LoadingYard.page();await yardList(kind);if(kind==='loading'){const tabs=document.createElement('div');tabs.className='business-toolbar yard-tabs';tabs.innerHTML='<a class="button secondary" href="/loading-plans">车辆到厂登记</a><a class="button primary" href="/loading-plans/query">装车计划查询</a>';$('page-content').prepend(tabs);I18n.apply();}};

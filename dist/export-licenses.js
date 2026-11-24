@@ -502,103 +502,167 @@ window.ExportLicenses={
   }
  },
  mountPicker(form,record={}){
-  const t=this.t,id='loading-permit-picker',slot=document.createElement('div'),known=new Map(),old=record.export_license;
+  const t=this.t,id='loading-permit-picker',base=this.api(),known=new Map(),old=record.export_license;
+  const invoice=form.elements.invoice_no,manual=form.elements.export_license_no,date=form.elements.planned_load_date,sales=form.elements.sales_plan_id;
+  const field=manual?.closest('label'),invoiceField=invoice?.closest('label');
+  if(!field||!sales)return;
+  const legacyNumber=record.id&&!old?manual.value.trim():'';
+  const slot=document.createElement('div'),select=document.createElement('select');
   slot.className='export-license-picker';
-  const search=record.id?'<label>'+t('搜索出口许可证','Search Export Licenses')+
-   '<input id="'+id+'-search" type="search" maxlength="160"></label>':'';
-  slot.innerHTML=search+'<label>'+t('出口许可证','Export License')+'<select name="license_id"><option value="">'+t('不关联出口许可证','No Export License')+'</option></select></label><div id="'+id+'-quantity" hidden><label>'+t('预占数量','Reserved Quantity')+'<input name="license_quantity"></label><input type="hidden" name="license_unit"></div><p id="'+id+'-note" role="status"></p>';
-  const invoice=form.elements.invoice_no,manual=form.elements.export_license_no,select=slot.querySelector('select'),date=form.elements.planned_load_date,sales=form.elements.sales_plan_id,query=slot.querySelector('input[type=search]'),note=slot.querySelector('p');
-  const container=invoice?.closest('label')||manual?.closest('label');
-  if(!container||!sales)return;
-  container.before(slot);
+  slot.dataset.loadingLicensePicker='';
+  field.before(slot);
+  slot.append(field);
+  manual.type='hidden';
+  select.name='license_id';
+  select.setAttribute('aria-describedby',id+'-note');
+  manual.before(select);
+  const quantity=document.createElement('label');
+  quantity.hidden=true;
+  quantity.textContent=t('预占数量','Reserved Quantity');
+  const amount=document.createElement('input'),unit=document.createElement('input');
+  amount.name='license_quantity';
+  amount.inputMode='decimal';
+  amount.disabled=true;
+  unit.type='hidden';
+  unit.name='license_unit';
+  quantity.append(amount,unit);
+  const note=document.createElement('p');
+  note.id=id+'-note';
+  note.setAttribute('role','status');
+  slot.append(quantity,note);
+  if(date&&!date.value)date.value=BusinessTime.today();
+
   let packing=form.elements.packing_list_no;
-  if(invoice&&!packing){
-   const label=document.createElement('label');label.textContent=t('装箱单号','Packing List No.');
-   packing=document.createElement('input');packing.readOnly=true;label.append(packing);container.after(label);
+  if(invoiceField&&!packing){
+   const label=document.createElement('label');
+   label.textContent=t('装箱单号','Packing List No.');
+   packing=document.createElement('input');
+   packing.dataset.loadingPackingList='';
+   packing.readOnly=true;
+   label.append(packing);
+   invoiceField.after(label);
   }
   const syncPacking=()=>{
    if(!invoice||!packing)return;
    const value=invoice.value.trim();
    packing.value=value?(value===record.invoice_no&&record.packing_list_no?record.packing_list_no:value+'-PL'):'';
   };
-  invoice?.addEventListener('input',syncPacking);syncPacking();
-  if(old)select.options[0].disabled=true;
-  const creating=!record.id,numberUrl=this.api()+'/invoice-number';
-  let edited=Boolean(invoice?.value),request=0,previewRequest=0,lookup=0,timer,checkTimer;
-  const feedback=document.createElement('small');
-  feedback.setAttribute('role','status');
+  invoice?.addEventListener('input',syncPacking);
+  syncPacking();
+  const creating=!record.id,numberUrl=base+'/invoice-number';
+  const recommendation=document.createElement('small');
+  recommendation.setAttribute('role','status');
+  recommendation.className='wms-feedback';
+  invoiceField?.append(recommendation);
+  let edited=Boolean(invoice?.value),request=0,previewRequest=0,lookup=0,checkTimer;
+  let pending=false,optionsMessage='',desired=record.license_id||old?.license_id||'';
   if(creating&&invoice){
-   feedback.id=id+'-invoice-check';feedback.className='wms-feedback';
+   const feedback=document.createElement('small');
+   feedback.setAttribute('role','status');
+   feedback.id=id+'-invoice-check';
+   feedback.className='wms-feedback';
    invoice.maxLength=77;
    const descriptions=[invoice.getAttribute('aria-describedby'),feedback.id].filter(Boolean).join(' ');
-   invoice.setAttribute('aria-describedby',descriptions);container.append(feedback);
+   invoice.setAttribute('aria-describedby',descriptions);
+   invoiceField.append(feedback);
    invoice.addEventListener('input',()=>{
     edited=true;invoice.setCustomValidity('');feedback.textContent='';clearTimeout(checkTimer);
-    const value=invoice.value.trim(),token=++lookup;
-    if(!value||!sales.value)return;
+    const value=invoice.value.trim(),token=++lookup,planId=sales.value;
+    if(!value||!planId)return;
     checkTimer=setTimeout(async()=>{
      try{
-      const {duplicate}=await API.request(numberUrl+'?'+new URLSearchParams({sales_plan_id:sales.value,invoice_no:value}));
-      if(token!==lookup||invoice.value.trim()!==value||!form.isConnected)return;
+      const {duplicate}=await API.request(numberUrl+'?'+new URLSearchParams({sales_plan_id:planId,invoice_no:value}));
+      if(token!==lookup||invoice.value.trim()!==value||sales.value!==planId||!form.isConnected)return;
       const message=duplicate?t('发票号已使用，请更换。','This invoice number is already in use. Enter a different number.'):'';
       invoice.setCustomValidity(message);
       feedback.textContent=message;
-     }catch(error){if(token===lookup&&form.isConnected)feedback.textContent=error.message;}
+     }catch(e){if(token===lookup&&form.isConnected)feedback.textContent=I18n.translate(e.message,true);}
     },220);
    });
   }
+  const noLink=legacyNumber?
+   t('原许可证号 ','Original License No. ')+legacyNumber:t('不关联出口许可证','No Export License');
   const show=()=>{
-   const token=++previewRequest,licenseId=select.value;
-   const chosen=known.get(select.value),reserved=!!select.value,isCustom=chosen?.unit_basis==='CUSTOM';
-   if(invoice){invoice.required=creating||!reserved&&ProductContext.isCopper();invoice.readOnly=reserved&&!creating;}
-   if(manual)manual.readOnly=reserved;
-   slot.querySelector('#'+id+'-quantity').hidden=!isCustom;form.elements.license_unit.value=isCustom?chosen.unit:'';
-   if(reserved){
-    if(manual)manual.value=chosen?.license_no||old?.license_no||'';
-    if(invoice&&!creating)invoice.value=old?.license_id===select.value?old.invoice_no:'';
+   const token=++previewRequest,licenseId=select.value,license=known.get(licenseId),reserved=!!license;
+   const isCustom=license?.unit_basis==='CUSTOM';
+   if(invoice){
+    invoice.required=creating||!reserved&&ProductContext.isCopper();
+    invoice.readOnly=reserved&&!creating;
+    if(reserved&&!creating)invoice.value=old?.license_id===licenseId?old.invoice_no:'';
    }
+   manual.value=license?.license_no||legacyNumber;
+   quantity.hidden=!isCustom;
+   amount.disabled=!isCustom;
+   unit.value=isCustom?license.unit:'';
+   note.textContent=optionsMessage||(license?.available!=null?
+    t('可分配 ','Allocatable ')+Tonnes.fixed(Tonnes.scaled(license.available,4),4)+' '+license.unit+
+    ' · '+t('有效至 ','Valid until ')+(license.effective_until||'—'):'');
    syncPacking();
-   const available=chosen?.available!=null?' '+t('可分配 ','Allocatable ')+chosen.available+' '+chosen.unit:'';
-   note.textContent=available;
+   recommendation.textContent='';
    if(!sales.value||!reserved&&!creating||reserved&&old?.license_id===licenseId)return;
    const filters=new URLSearchParams({sales_plan_id:sales.value});
    if(reserved)filters.set('invoice_preview_id',licenseId);
    if(date?.value)filters.set('planned_load_date',date.value);
-   API.request((reserved?this.api()+'/options':numberUrl)+'?'+filters).then(d=>{
+   API.request((reserved?base+'/options':numberUrl)+'?'+filters).then(data=>{
     if(token!==previewRequest||select.value!==licenseId||!form.isConnected)return;
-    if(invoice&&(!creating||!edited))invoice.value=d.invoice_preview||'';
+    if(invoice&&(!creating||!edited))invoice.value=data.invoice_preview||'';
     syncPacking();
-    if(d.invoice_preview)note.textContent=t('推荐发票号 ','Suggested invoice ')+d.invoice_preview+(creating?t('，可修改。','. You can edit this number.'):'')+available;
-   }).catch(error=>{if(token===previewRequest&&select.value===licenseId&&form.isConnected)note.textContent=error.message;});
+    if(data.invoice_preview)recommendation.textContent=t('推荐发票号 ','Suggested invoice ')+data.invoice_preview+(creating?t('，可修改。','. You can edit this number.'):'');
+   }).catch(e=>{if(token===previewRequest&&form.isConnected)recommendation.textContent=I18n.translate(e.message,true);});
   };
   const refresh=async()=>{
-   const token=++request,previous=select.value||old?.license_id||'';
-   const options=new Map();
+   const token=++request,planId=sales.value,options=new Map();
+   const current=()=>token===request&&form.isConnected;
    if(old)options.set(old.license_id,old);
-   if(sales.value)try{
-    const filters=new URLSearchParams({sales_plan_id:sales.value});
-    if(query?.value)filters.set('search',query.value);
+   pending=!!planId;
+   select.disabled=true;
+   ++previewRequest;
+   const loading=t('正在读取可用许可证…','Loading eligible export licenses…');
+   note.textContent=planId?loading:'';
+   if(!select.options.length)select.add(new Option(planId?loading:t('请先选择销售计划','Select a sales plan first'),''));
+   let error='';
+   if(planId)try{
+    const filters=new URLSearchParams({sales_plan_id:planId});
     if(date?.value)filters.set('planned_load_date',date.value);
     for(let page=1;;page++){
      if(page>1)filters.set('page',page);
-     const data=await API.request(this.api()+'/options?'+filters);
-     if(token!==request||!form.isConnected)return;
+     const data=await API.request(base+'/options?'+filters);
+     if(!current())return;
      for(const item of data.items)options.set(item.id,item);
-     if(query||!data.has_more)break;
+     if(!data.has_more)break;
     }
-   }catch(e){if(token===request&&form.isConnected)note.textContent=e.message;return;}
+   }catch(e){
+    error=t('许可证读取失败','Could not load export licenses')+' · '+I18n.translate(e.message,true);
+   }
+   if(!current())return;
+   pending=false;
    known.clear();
    for(const [key,item] of options)known.set(key,item);
-   select.querySelectorAll('option:not(:first-child)').forEach(o=>o.remove());
-   for(const [key,item] of known)select.add(new Option([item.proforma_no,item.license_no,item.buyer,item.contract_no,item.available!=null?t('可分配 ','Allocatable ')+item.available+' '+item.unit:'',item.effective_until].filter(Boolean).join(' / '),key));
-   select.value=known.has(previous)?previous:'';
-   if(old&&select.value===old.license_id&&old.unit_basis==='CUSTOM')form.elements.license_quantity.value=old.reserved_quantity;
+   const none=options.size||legacyNumber?noLink:!planId?t('请先选择销售计划','Select a sales plan first'):
+    error?t('许可证读取失败','Could not load export licenses'):t('无可用出口许可证','No eligible export license');
+   select.replaceChildren(new Option(none,''));
+   if(old)select.options[0].disabled=true;
+   for(const [key,item] of options){
+    const label=[...new Set([item.license_no,item.proforma_no].filter(Boolean))].join(' / ');
+    select.add(new Option(label,key));
+   }
+   desired=options.has(desired)?desired:old?.license_id||'';
+   select.value=desired;
+   select.disabled=!options.size;
+   if(desired===old?.license_id&&old?.unit_basis==='CUSTOM')amount.value=old.reserved_quantity;
+   optionsMessage=error||(!options.size&&planId?
+    t('所选销售计划暂无匹配合同、装车日期及余额的有效许可证。','No active license matches this sales plan’s contract, loading date and available balance.'):'');
    show();
   };
-  select.onchange=show;
-  if(query)query.oninput=()=>{clearTimeout(timer);timer=setTimeout(refresh,220);};
-  sales.addEventListener('change',refresh);date?.addEventListener('change',refresh);
-  refresh();
+  form.addEventListener('submit',event=>{
+   if(!pending)return;
+   event.preventDefault();
+   event.stopImmediatePropagation();
+  },true);
+  select.onchange=()=>{desired=select.value;show();};
+  sales.addEventListener('change',refresh);
+  date?.addEventListener('change',refresh);
+  void refresh();
  },
  planLink(row){return row.export_license&&this.can('read')?'<p><a class="export-license-link" href="'+this.route+'/'+row.export_license.license_id+'">'+esc(this.t('关联出口许可证','Linked Export License')+' · '+row.export_license.license_no)+'</a></p>':'';}
 };

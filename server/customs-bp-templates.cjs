@@ -1,22 +1,48 @@
 'use strict';
 
-const B=require('./business-common.cjs');
-const defaults=Object.freeze({
- title:'BULLETIN DE PESAGE / WEIGHTING SHEET',issuer:'RUASHI MINING SAS',
- address:'Musonoi Project site, Kolwezi, Lualaba Province, Democratic Republic of Congo',
- rccm:'',id_nat:'',nif:'',contact:'',loading_point:'RUASHI MINING MUSONOI PLANT',destination:'CHINA'
-});
+const path=require('node:path'),XLSX=require('xlsx'),B=require('./business-common.cjs');
 const limits={title:180,issuer:180,address:360,rccm:120,id_nat:120,nif:120,contact:360,loading_point:360,destination:1000};
+let defaultFields;
+
+function initialFields(){
+ if(defaultFields)return defaultFields;
+ // The approved packing workbook carries the same issuer identification as the BP reference.
+ const file=path.join(__dirname,'..','templates','packing-list','original.xls');
+ const sheet=XLSX.readFile(file,{sheets:'INV'}).Sheets.INV;
+ const identification={rccm:['A16','RCCM'],id_nat:['A17','ID-NAT'],nif:['A18','NIF'],contact:['A19','Contact']};
+ const official=Object.fromEntries(Object.entries(identification).map(([field,[cell,label]])=>{
+  const text=sheet?.[cell]?.v;
+  const separator=typeof text==='string'?text.indexOf(':'):-1;
+  const value=separator<0?'':text.slice(separator+1).trim();
+  if(!value||text.slice(0,separator).trim()!==label||value.length>limits[field])
+   throw B.error(500,'BP_TEMPLATE_FIELDS_REQUIRED');
+  return [field,value];
+ }));
+ defaultFields=Object.freeze({
+  title:'BULLETIN DE PESAGE / WEIGHTING SHEET',issuer:'RUASHI MINING SAS',
+  address:'Musonoi Project site, Kolwezi, Lualaba Province, Democratic Republic of Congo',
+  ...official,loading_point:'RUASHI MINING MUSONOI PLANT',destination:'CHINA'
+ });
+ return defaultFields;
+}
+
+function completeFields(fields){
+ const missing=Object.keys(limits).filter(key=>typeof fields[key]!=='string'||!fields[key].trim());
+ if(!missing.length)return fields;
+ const defaults=initialFields();
+ return {...fields,...Object.fromEntries(missing.map(key=>[key,defaults[key]]))};
+}
 
 async function active(c,product){
  const {rows:[record]}=await c.query(`SELECT revision,fields,created_at FROM customs_bp_templates
   WHERE product_code=$1 ORDER BY revision DESC LIMIT 1`,[product]);
- return record||{revision:0,fields:defaults};
+ return record?{...record,fields:completeFields(record.fields)}:{revision:0,fields:initialFields()};
 }
 
 async function fieldsAt(c,product,revision){
+ if(revision===0)return initialFields();
  const {rows:[record]}=await c.query('SELECT fields FROM customs_bp_templates WHERE product_code=$1 AND revision=$2',[product,revision]);
- return record?.fields;
+ return record?completeFields(record.fields):initialFields();
 }
 
 async function save(c,req){
