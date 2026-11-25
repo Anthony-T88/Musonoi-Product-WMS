@@ -1,6 +1,11 @@
 'use strict';
 window.CobaltMetal={
  base:'/cobalt/metal',t:(zh,en)=>CobaltUI.t(zh,en),
+ outboundPermission(){
+  return ['outbound:read','outbound:logistics-review',...(['admin','production_manager'].includes(CurrentUser.role_code)?['outbound:production-approve']:[])]
+   .find(code=>CobaltUI.can(code));
+ },
+ navigationPermission(){return CobaltUI.can('co:read')?'co:read':this.outboundPermission()||'outbound:read';},
  format(value,digits=5){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,digits),digits);},
  kg(value){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,1),4);},
  status(value){const states={
@@ -88,7 +93,7 @@ window.CobaltMetal={
   catch(e){CobaltUI.page(this.t('钴金属量管理','Cobalt Metal Management'),'<p class="error" role="alert">'+esc(this.error(e))+'</p>');}
  },
  async list(){
-  const t=this.t,q=new URLSearchParams(location.search),canStock=CobaltUI.can('co:read'),canOutbound=CobaltUI.can('outbound:read');
+  const t=this.t,q=new URLSearchParams(location.search),canStock=CobaltUI.can('co:read'),canOutbound=!!this.outboundPermission();
   const outbound=canOutbound&&(q.get('view')==='outbound'||!canStock),view=outbound?'outbound':'inventory';q.set('view',view);
   const d=await API.request(this.base+'?'+q),base='/cobalt-metal';
   const fields=outbound?[['PENDING_ARECOMS',this.status('PENDING_ARECOMS')],['COMPLETED',this.status('COMPLETED')]]:
@@ -106,8 +111,10 @@ window.CobaltMetal={
    [['备货批次 / 入库单','Preparation Batch / Receipt'],['库存状态','Stock Status'],['袋数','Bags'],['实物净重（MT）','Wet Net (MT)'],
    ['预计金属量（MT）','Estimated Metal (MT)'],['重量依据','Weight Basis'],['货位','Locations'],['入库时间','Receipt Time']];
   const val=(v,missing=this.missing())=>esc(v??missing),cells=values=>values.map(v=>'<td>'+v+'</td>').join('');
+  const outboundLink=r=>`<a href="${r.historical_import?'/stock-outbound/historical/':'/outbounds/'}${esc(r.order_id)}#co-metal-detail">${esc(r.order_no)}</a>`+
+   (r.historical_import?' '+HistoricalMovements.badge():'');
   const rows=d.items.map(r=>'<tr>'+(outbound?cells([
-   val(r.preparation_batch_no,'—'),`<a href="/outbounds/${r.order_id}#co-metal-detail">${esc(r.order_no)}</a>`,esc(r.customer_name)+' / '+esc(r.contract_no),
+   val(r.preparation_batch_no,'—'),outboundLink(r),val(r.customer_name,'—')+' / '+val(r.contract_no,'—'),
    val(r.truck_no,'—'),val(r.posted_day),val(r.net_mt),val(r.estimated_mt),val(r.confirmed_mt,this.pending()),
    val(r.difference_mt,r.confirmed_mt==null?this.pending():this.missing()),esc(this.status(r.shipment_status))
   ]):cells([

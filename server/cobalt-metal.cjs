@@ -4,18 +4,31 @@ const base='/api/v1/cobalt/metal',idPattern='[0-9a-fA-F-]{36}';
 const allowed=(path,method)=>method==='GET'&&new RegExp('^'+base+'(?:|/export|/outbounds/'+idPattern+')$').test(path)
  ||method==='POST'&&new RegExp('^'+base+'/outbounds/'+idPattern+'/(?:submit|confirm|reject)$').test(path);
 const enabled=async c=>(await c.query("SELECT to_regclass('public.co_metal_outbound') IS NOT NULL ok")).rows[0].ok;
+const canDecide=user=>user.permissions.includes('outbound:production-approve')&&['admin','production_manager'].includes(user.role_code);
+const canReadAll=user=>user.permissions.includes('outbound:read');
+const canReadHistorical=user=>canReadAll(user)||user.permissions.includes('outbound:logistics-review')||canDecide(user);
 const scope=(p,customer)=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=${p}.project_id
  AND(s.warehouse_id IS NULL OR s.warehouse_id=${p}.warehouse_id) AND(s.customer_id IS NULL OR s.customer_id=${customer}))`;
-const outboundFrom=`FROM co_metal_outbound m JOIN co_outbounds o ON o.id=m.outbound_id
- JOIN co_loading_orders l ON l.id=m.order_id JOIN co_preparations b ON b.id=m.preparation_id
- JOIN co_sales_plans p ON p.id=l.sales_plan_id JOIN co_customer_profiles cu ON cu.id=p.customer_id
- JOIN co_sales_contracts ct ON ct.id=p.contract_id LEFT JOIN users u ON u.id=m.confirmed_by`;
-const postedDay="(m.posted_at AT TIME ZONE 'Africa/Lubumbashi')::date";
-const shipment=`SELECT m.*,o.code outbound_code,l.code order_no,b.document_no,b.preparation_batch_no,
+const outboundFrom=`FROM (
+ SELECT m.*,o.code outbound_code,l.code order_no,b.document_no,b.preparation_batch_no,
  p.project_id,p.warehouse_id,p.customer_id,p.contract_id,p.id sales_plan_id,
  coalesce(o.snapshot#>>'{customer,name}',cu.name) customer_name,
  coalesce(o.snapshot#>>'{contract,contract_no}',ct.contract_no) contract_no,
- l.transport_snapshot->>'truck_no' truck_no,l.bag_count bags,${postedDay}::text posted_day,u.display_name confirmed_by_name,
+ l.transport_snapshot->>'truck_no' truck_no,l.bag_count bags,false historical_import,NULL::uuid historical_source_id,
+ cu.name current_customer_name,ct.contract_no current_contract_no
+ FROM co_metal_outbound m JOIN co_outbounds o ON o.id=m.outbound_id
+ JOIN co_loading_orders l ON l.id=m.order_id JOIN co_preparations b ON b.id=m.preparation_id
+ JOIN co_sales_plans p ON p.id=l.sales_plan_id JOIN co_customer_profiles cu ON cu.id=p.customer_id
+ JOIN co_sales_contracts ct ON ct.id=p.contract_id
+ UNION ALL
+ SELECT outbound_id,order_id,preparation_id,posted_at,net_kg,estimated_metal_mt,confirmed_metal_mt,confirmed_by,confirmed_at,
+  latest_action,latest_actor_id,version,pending_metal_mt,shipment_status,legacy_metal_mt,
+  outbound_code,order_no,document_no,preparation_batch_no,project_id,warehouse_id,customer_id,contract_id,sales_plan_id,
+  customer_name,contract_no,truck_no,bags,historical_import,historical_source_id,customer_name,contract_no
+ FROM co_historical_metal_outbound
+) m LEFT JOIN users u ON u.id=m.confirmed_by`;
+const postedDay="(m.posted_at AT TIME ZONE 'Africa/Lubumbashi')::date";
+const shipment=`SELECT m.*,${postedDay}::text posted_day,u.display_name confirmed_by_name,
  round(m.net_kg*0.001,4)::text net_mt,round(m.estimated_metal_mt,5)::text estimated_mt,
  round(m.confirmed_metal_mt,5)::text confirmed_mt,
  round(m.confirmed_metal_mt-m.estimated_metal_mt,5)::text difference_mt,
@@ -25,7 +38,7 @@ const weightTotals=`count(*)::int bags,count(*) FILTER(WHERE weight_basis='ESTIM
  count(*) FILTER(WHERE weight_basis='MISSING')::int missing_bags,
  CASE WHEN count(*)=0 THEN '0.0000' ELSE round(sum(net_kg)*0.001,4)::text END net_mt,
  CASE WHEN count(*)=0 THEN '0.00000' ELSE round(co_estimated_metal_mt(sum(net_kg)),5)::text END estimated_mt`;
-const shipTotals=`count(*)::int vehicles,coalesce(sum(l.bag_count),0)::int bags,
+const shipTotals=`count(*)::int vehicles,coalesce(sum(m.bags),0)::int bags,
  count(*) FILTER(WHERE m.shipment_status='COMPLETED')::int completed,
  count(*) FILTER(WHERE m.shipment_status='PENDING_ARECOMS')::int pending,
  CASE WHEN count(*)=0 THEN '0.00000' ELSE round(sum(m.estimated_metal_mt),5)::text END estimated_mt,
@@ -33,10 +46,11 @@ const shipTotals=`count(*)::int vehicles,coalesce(sum(l.bag_count),0)::int bags,
 const invalid=()=>B.error(400,'CO_METAL_FILTER');
 const filters=['project_id','warehouse_id','customer_id','contract_id','sales_plan_id','preparation_id'];
 function query(user,f,stock){
- const alias=stock?'i':'p',args=[user.id],clauses=[scope(alias,alias+'.customer_id')];
+ const alias=stock?'i':'m',args=[user.id],clauses=[scope(alias,alias+'.customer_id')];
  const add=(sql,value)=>{args.push(value);clauses.push(sql.replace('?', '$'+args.length));};
- for(const key of filters)if(f[key])add((key==='preparation_id'?(stock?'i':'m')+'.preparation_id':key==='sales_plan_id'?(stock?'i.sales_plan_id':'p.id'):alias+'.'+key)+'=?',B.uuid(f[key]));
- if(f.contract_no)add(`EXISTS(SELECT 1 FROM co_sales_contracts k WHERE k.id=${alias}.contract_id AND strpos(lower(k.contract_no),lower(?))>0)`,f.contract_no);
+ for(const key of filters)if(f[key])add(alias+'.'+key+'=?',B.uuid(f[key]));
+ if(f.contract_no)add(stock?`EXISTS(SELECT 1 FROM co_sales_contracts k WHERE k.id=i.contract_id AND strpos(lower(k.contract_no),lower(?))>0)`:
+  'strpos(lower(m.current_contract_no),lower(?))>0',f.contract_no);
  return {args,clauses,add,where(){return ' WHERE '+clauses.join(' AND ');}};
 }
 function stockFilter(user,f){
@@ -45,17 +59,19 @@ function stockFilter(user,f){
  if(f.search)q.add(`strpos(lower(concat_ws(' ',document_no,preparation_batch_no,bag_no,seal_no,location_code)),lower(?))>0`,f.search);
  return q;
 }
-function outboundFilter(user,f){
+function outboundFilter(user,f,historicalOnly=false){
  const q=query(user,f,false);
+ if(historicalOnly)q.clauses.push('m.historical_import');
  if(f.status&&!['OUTBOUND','PENDING_ARECOMS','COMPLETED'].includes(f.status))q.clauses.push('false');
  if(['PENDING_ARECOMS','COMPLETED'].includes(f.status))q.add('m.shipment_status=?',f.status);
- if(f.search)q.add(`strpos(lower(concat_ws(' ',o.code,l.code,b.preparation_batch_no,cu.name,ct.contract_no,l.transport_snapshot->>'truck_no')),lower(?))>0`,f.search);
+ if(f.search)q.add(`strpos(lower(concat_ws(' ',m.outbound_code,m.order_no,m.document_no,m.preparation_batch_no,
+  m.current_customer_name,m.current_contract_no,m.truck_no)),lower(?))>0`,f.search);
  if(f.from)q.add("m.posted_at >= (?::date::timestamp AT TIME ZONE 'Africa/Lubumbashi')",f.from);
  if(f.to)q.add("m.posted_at < ((?::date+1)::timestamp AT TIME ZONE 'Africa/Lubumbashi')",f.to);
  return q;
 }
-async function summary(c,req,f={},window){
- const i=stockFilter(req.user,f),o=outboundFilter(req.user,f);
+async function summary(c,req,f={},window,historicalOnly=false){
+ const i=stockFilter(req.user,f),o=outboundFilter(req.user,f,historicalOnly);
  const inventory=(await c.query('SELECT '+weightTotals+',count(DISTINCT i.preparation_id)::int batches FROM co_metal_inventory i'+i.where(),i.args)).rows[0];
  const status=(await c.query('SELECT '+shipTotals+' '+outboundFrom+o.where(),o.args)).rows[0];
  const currentMonth="date_trunc('month',clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')";
@@ -63,11 +79,11 @@ async function summary(c,req,f={},window){
   ' AND m.posted_at >= ('+currentMonth+" AT TIME ZONE 'Africa/Lubumbashi') AND m.posted_at < (("+currentMonth+"+interval '1 month') AT TIME ZONE 'Africa/Lubumbashi')",o.args)).rows[0];
  let period=month,months=[];
  if(window){
-  const selected=outboundFilter(req.user,{...f,from:window.from,to:window.to});
+  const selected=outboundFilter(req.user,{...f,from:window.from,to:window.to},historicalOnly);
   period=(await c.query('SELECT '+shipTotals+' '+outboundFrom+selected.where(),selected.args)).rows[0];
   const start="(date_trunc('month',?::date::timestamp) AT TIME ZONE 'Africa/Lubumbashi')";
   const end="((date_trunc('month',?::date::timestamp)+interval '1 month') AT TIME ZONE 'Africa/Lubumbashi')";
-  const monthly=outboundFilter(req.user,{...f,from:null,to:null});
+  const monthly=outboundFilter(req.user,{...f,from:null,to:null},historicalOnly);
   monthly.add('m.posted_at >= '+start,window.from);monthly.add('m.posted_at < '+end,window.to);
   months=(await c.query(`SELECT to_char(${postedDay},'YYYY-MM') period,${shipTotals} ${outboundFrom}${monthly.where()} GROUP BY 1 ORDER BY 1`,monthly.args)).rows;
  }
@@ -82,18 +98,18 @@ async function preparation(c,id){
   round(co_estimated_metal_mt(sum(bw.actual_net_kg)),5)::text measured_estimated_mt
   FROM co_bags b LEFT JOIN co_bag_work bw ON bw.bag_id=b.id WHERE b.preparation_id=$1`,[id])).rows[0];
 }
-async function detail(c,req,orderId,includeHistory=true){
- const q=outboundFilter(req.user,{});q.add('m.order_id=?',B.uuid(orderId));
+async function detail(c,req,orderId,{includeHistory=true,historicalOnly=false}={}){
+ const q=outboundFilter(req.user,{},historicalOnly);q.add('m.order_id=?',B.uuid(orderId));
  const row=(await c.query(shipment+q.where(),q.args)).rows[0];
  if(!row)return null;
  const history=includeHistory?(await c.query(`SELECT e.*,round(e.amount_mt,5)::text display_mt,u.display_name actor_name
-  FROM co_metal_events e JOIN users u ON u.id=e.actor_id WHERE outbound_id=$1 ORDER BY version DESC`,[row.outbound_id])).rows:undefined;
+  FROM ${eventTable(row)} e JOIN users u ON u.id=e.actor_id WHERE outbound_id=$1 ORDER BY version DESC`,[row.outbound_id])).rows:undefined;
  return {...row,history,can_submit:req.user.permissions.includes('outbound:logistics-review')&&row.latest_action!=='SUBMITTED',
-  can_decide:req.user.permissions.includes('outbound:production-approve')&&['admin','production_manager'].includes(req.user.role_code)&&
-   row.latest_action==='SUBMITTED'};
+  can_decide:canDecide(req.user)&&row.latest_action==='SUBMITTED'&&row.latest_actor_id!==req.user.id};
 }
+const eventTable=row=>row.historical_import?'co_historical_metal_events':'co_metal_events';
 const inventorySort={date:'received_at',batch:'preparation_batch_no',net:'sum(net_kg)'};
-const outboundSort={date:'m.posted_at',batch:'b.preparation_batch_no',net:'m.net_kg',metal:'m.confirmed_metal_mt'};
+const outboundSort={date:'m.posted_at',batch:'m.preparation_batch_no',net:'m.net_kg',metal:'m.confirmed_metal_mt'};
 function listOptions(q){
  const view=q.view||'inventory',page=Number(q.page||1),sort=q.sort||'date',direction=q.direction||'desc';
  if(Object.keys(q).some(k=>!['view','page','sort','direction','search','status','from','to',...filters].includes(k))||
@@ -108,7 +124,7 @@ function listOptions(q){
  return {view,page,sort,direction};
 }
 async function list(c,req,q,exporting=false){
- const opts=listOptions(q),stock=opts.view==='inventory',f=stock?stockFilter(req.user,q):outboundFilter(req.user,q);
+ const opts=listOptions(q),stock=opts.view==='inventory',f=stock?stockFilter(req.user,q):outboundFilter(req.user,q,!canReadAll(req.user));
  const groups=stock?` FROM co_metal_inventory i${f.where()} GROUP BY preparation_id,document_no,preparation_batch_no,status`:null;
  const sql=stock?`SELECT preparation_id,document_no,preparation_batch_no,status,min(received_at) received_at,
   string_agg(DISTINCT location_code,' / ' ORDER BY location_code) location_codes,${weightTotals}${groups}`:shipment+f.where();
@@ -160,26 +176,36 @@ async function decide(c,req,action){
  const reason=B.text(body.reason,'CO_METAL_REASON',1000);
  if(action==='submit'&&(typeof body.amount_mt!=='string'||!/^\d{1,16}(\.\d{1,5})?$/.test(body.amount_mt)||!/[1-9]/.test(body.amount_mt)))
   throw B.error(400,'CO_METAL_AMOUNT');
- await c.query("SELECT pg_advisory_xact_lock(hashtextextended('co-metal:'||id,0)) FROM co_outbounds WHERE order_id=$1",[id]);
- const row=await detail(c,req,id,false);
+ await c.query(`SELECT pg_advisory_xact_lock(hashtextextended('co-metal:'||outbound_id,0))
+  FROM (SELECT id outbound_id FROM co_outbounds WHERE order_id=$1
+   UNION ALL SELECT id FROM historical_business_documents WHERE id=$1 AND kind='OUTBOUND') target
+  ORDER BY outbound_id`,[id]);
+ const row=await detail(c,req,id,{includeHistory:false});
  if(!row)throw B.error(404,'CO_METAL_NOT_POSTED');
  if(row.version!==body.version)throw B.error(409,'CO_METAL_STALE');
  if(action==='submit'&&!row.can_submit)throw B.error(409,'CO_METAL_PENDING');
  if(action!=='submit'&&!row.can_decide)throw B.error(403,'CO_METAL_PERMISSION');
- const event=(await c.query(`INSERT INTO co_metal_events(outbound_id,version,action,amount_mt,actor_id,reason)
+ const event=(await c.query(`INSERT INTO ${eventTable(row)}(outbound_id,version,action,amount_mt,actor_id,reason)
   VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,[row.outbound_id,row.version+1,
   {submit:'SUBMITTED',confirm:'CONFIRMED',reject:'REJECTED'}[action],
   action==='submit'?body.amount_mt:action==='confirm'?row.pending_metal_mt:null,req.user.id,reason])).rows[0];
- await B.audit(c,req,'co_metal_'+action,'co_outbounds',row.outbound_id,{version:row.version,confirmed_metal_mt:row.confirmed_metal_mt},event);
+ const entity=row.historical_import?'historical_movement_documents':'co_outbounds';
+ await B.audit(c,req,'co_metal_'+action,entity,row.historical_source_id||row.outbound_id,
+  {version:row.version,confirmed_metal_mt:row.confirmed_metal_mt},event);
  return {...event,id:row.order_id,project_id:row.project_id,warehouse_id:row.warehouse_id,customer_id:row.customer_id};
 }
-async function register({app,pool,permitted,csrf}){
- const read=req=>permitted(req.query.view==='outbound'?'outbound:read':'co:read')(req);
+async function register({app,pool,auth,permitted,csrf}){
+ const readOutbound=async req=>{
+  await auth(req);
+  if(!canReadHistorical(req.user))throw B.error(403,'当前账号没有此操作权限');
+ };
+ const read=req=>req.query.view==='outbound'?readOutbound(req):permitted('co:read')(req);
  app.get(base,{preHandler:read},req=>C.readTransaction(pool,async c=>{
   const result=await list(c,req,req.query),scope=Object.fromEntries(filters.filter(k=>req.query[k]).map(k=>[k,req.query[k]]));
-  const dated=result.view==='outbound'&&(req.query.from||req.query.to),totals=await summary(c,req,scope);
+  const historicalOnly=!canReadAll(req.user),dated=result.view==='outbound'&&(req.query.from||req.query.to);
+  const totals=await summary(c,req,scope,undefined,historicalOnly);
   if(dated){
-   const selected=outboundFilter(req.user,{...scope,from:req.query.from,to:req.query.to});
+   const selected=outboundFilter(req.user,{...scope,from:req.query.from,to:req.query.to},historicalOnly);
    totals.period=(await c.query('SELECT '+shipTotals+' '+outboundFrom+selected.where(),selected.args)).rows[0];
   }
   if(result.view==='inventory'){
@@ -190,7 +216,7 @@ async function register({app,pool,permitted,csrf}){
    totals.execution=analysis.execution?.map(({planned_physical_mt,invoiced_net_kg})=>({planned_physical_mt,invoiced_net_kg}));
   }
   if(!req.user.permissions.includes('co:read'))delete totals.inventory;
-  if(!req.user.permissions.includes('outbound:read')){delete totals.status;delete totals.month;delete totals.period;}
+  if(!canReadHistorical(req.user)){delete totals.status;delete totals.month;delete totals.period;}
   return {...result,summary:totals};
  }));
  app.get(base+'/export',{preHandler:[read,permitted('inventory:export')]},async(req,reply)=>{
@@ -198,12 +224,12 @@ async function register({app,pool,permitted,csrf}){
   return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
    .header('Content-Disposition','attachment; filename="cobalt-metal.xlsx"').send(await exportBook(req,data));
  });
- app.get(base+'/outbounds/:id',{preHandler:permitted('outbound:read')},req=>C.readTransaction(pool,async c=>{
-  const row=await detail(c,req,req.params.id);
+ app.get(base+'/outbounds/:id',{preHandler:readOutbound},req=>C.readTransaction(pool,async c=>{
+  const row=await detail(c,req,req.params.id,{historicalOnly:!canReadAll(req.user)});
   if(!row)throw B.error(404,'CO_METAL_NOT_POSTED');
   return row;
  }));
  for(const [action,permission] of Object.entries(writePermissions))
   app.post(base+'/outbounds/:id/'+action,{preHandler:[permitted(permission),csrf]},req=>S.mutation(pool,req,permission,c=>decide(c,req,action)));
 }
-module.exports={allowed,enabled,register,summary,detail,preparation,exportBook};
+module.exports={allowed,enabled,register,summary,detail,preparation,exportBook,canReadHistorical};

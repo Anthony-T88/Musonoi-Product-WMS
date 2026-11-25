@@ -49,7 +49,8 @@ async function examples(client,fixture){
   cuHistoryUnit:"SELECT id value FROM historical_outbound_units WHERE product_code='CU_CATHODE' LIMIT 1",
   coHistoryBatch:"SELECT source_id value FROM historical_outbound_units WHERE product_code='CO_HYDROXIDE' LIMIT 1",
   cuHistoryReceipt:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CU_CATHODE' AND d.kind='RECEIPT' AND m.voided_at IS NULL LIMIT 1",
-  coHistoryPlan:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CO_HYDROXIDE' AND d.kind='LOADING_PLAN' AND m.voided_at IS NULL LIMIT 1"
+  coHistoryPlan:"SELECT d.id value FROM historical_business_documents d JOIN historical_movement_documents m ON m.id=d.source_id WHERE m.product_code='CO_HYDROXIDE' AND d.kind='LOADING_PLAN' AND m.voided_at IS NULL LIMIT 1",
+  coHistoryMetal:"SELECT order_id value FROM co_historical_metal_outbound ORDER BY (shipment_status='PENDING_ARECOMS') DESC,posted_at DESC LIMIT 1"
  };
  const ids={coPrep:fixture.preparation,coPrepEditable:fixture.estimatedPreparation,warehouse:fixture.warehouse,project:fixture.project};
  for(const [key,sql] of Object.entries(specs)){
@@ -193,7 +194,8 @@ function pages(ids){
  add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true,state:'copper document details, preview and archive history'});
  add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
- add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true});
+ add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true,state:'pending online and historical outbounds'});
+ add('co-historical-metal','/stock-outbound/historical/:id',[CO],{example:'coHistoryMetal',state:'historical ARECOMS entry and review'});
  add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'six archive filters and Excel diagnostics'});
  add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});
  add('historical-former-record','/historical-movements/:id',[CU],{example:'cuHistorical',state:'redirected'});

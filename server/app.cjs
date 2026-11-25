@@ -66,7 +66,7 @@ async function build(options={}){
  if(cobaltLoadingEnabled)await require('./cobalt-loading.cjs').register({app,pool,permitted,csrf});
  if(cobaltExecutionEnabled)await require('./cobalt-execution.cjs').register({app,pool,permitted,csrf});
  if(cobaltPackingEnabled)await require('./cobalt-packing.cjs').register({app,pool,permitted,csrf});
- if(cobaltMetalEnabled)await require('./cobalt-metal.cjs').register({app,pool,permitted,csrf});
+ if(cobaltMetalEnabled)await require('./cobalt-metal.cjs').register({app,pool,auth,permitted,csrf});
  if(cobaltPackingEnabled)await require('./cobalt-reports.cjs').register({app,pool,permitted,csrf});
  await require('./sales-approval.cjs').register({app,pool,permitted,csrf});
  await require('./outbound-workspace.cjs').register({app,pool,permitted,csrf});

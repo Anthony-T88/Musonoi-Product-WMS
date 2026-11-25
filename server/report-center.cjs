@@ -70,9 +70,9 @@ function groupRows(rows,fn,aggregate){
  return [...groupBy(rows,fn)].map(([key,items])=>({...aggregate(items),scope:key}));
 }
 function cobaltMetal(rows){
- const live=rows.filter(row=>row.source==='ONLINE');
- const known=live.filter(row=>row.metal!=null);
- return {metal:known.length?sum(known,'metal'):null,metalPending:countTrips(live.filter(row=>row.metal==null))};
+ const known=rows.filter(row=>row.metal!=null);
+ const pending=rows.filter(row=>row.metal==null&&(row.source==='ONLINE'||row.shipment_status==='PENDING_ARECOMS'));
+ return {metal:known.length?sum(known,'metal'):null,metalPending:countTrips(pending)};
 }
 function select(rows,q,keys){return rows.filter(row=>keys.every(key=>includes(row[key],q[key])));}
 function stockSummary(items){

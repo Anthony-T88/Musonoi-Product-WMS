@@ -287,6 +287,12 @@ async function reportShipments(c,req,filters,from,to){
  [req.user.id,req.productCode,from,to,filters.project_id||null,filters.warehouse_id||null,filters.customer_id||null,
   filters.contract_no||'',filters.contract_id||null]);
  if(rows.length>10000)throw bad('HISTORY_REPORT_LIMIT','报表超过10000行，请缩小范围',413);
+ if(req.productCode==='CO_HYDROXIDE'&&rows.length){
+  const {rows:metal}=await c.query(`SELECT historical_source_id,estimated_metal_mt::text,confirmed_metal_mt::text,shipment_status
+   FROM co_historical_metal_outbound WHERE historical_source_id=ANY($1::uuid[])`,[rows.map(row=>row.source_id)]);
+  const bySource=new Map(metal.map(({historical_source_id,...values})=>[historical_source_id,values]));
+  return rows.map(row=>({...row,...bySource.get(row.source_id)}));
+ }
  return rows;
 }
 
@@ -346,8 +352,11 @@ async function overview(c,req,chart,filters){
  return result.latest_shipping_date?result:null;
 }
 
+const canReadCobaltMetal=(req,kind)=>req.productCode==='CO_HYDROXIDE'&&kind==='OUTBOUND'&&
+ require('./cobalt-metal.cjs').canReadHistorical(req.user);
 function permission(req,name){
- if(!req.user.permissions.includes(permissions[req.productCode]?.[name]))throw bad('HISTORY_PERMISSION','当前账号没有此页面权限',403);
+ if(!canReadCobaltMetal(req,name)&&!req.user.permissions.includes(permissions[req.productCode]?.[name]))
+  throw bad('HISTORY_PERMISSION','当前账号没有此页面权限',403);
 }
 function authorizePage(auth,area){
  return async req=>{
@@ -377,8 +386,9 @@ function registerRead(app,pool,auth){
    const {rows:[row]}=await pool.query(documentSelect+` WHERE ${scope()} AND m.product_code=$2 AND d.id=$3 AND d.kind=$4`,
     [req.user.id,req.productCode,B.uuid(req.params.id),kind]);
    if(!row)throw bad('HISTORY_NOT_FOUND','历史单据不存在或超出授权范围',404);
-   const [units,documents]=await Promise.all([lines(pool,row.source_id),related(pool,row.source_id)]);
-   return {...row,rows:units,documents};
+   const [units,documents,metal]=await Promise.all([lines(pool,row.source_id),related(pool,row.source_id),
+    canReadCobaltMetal(req,kind)?require('./cobalt-metal.cjs').detail(pool,req,row.id,{historicalOnly:true}):null]);
+   return {...row,rows:units,documents,...(metal?{metal}:{})};
   });
   app.get(base+'/stock/batch/:id',{preHandler:auth},async req=>{
    permission(req,'stock');

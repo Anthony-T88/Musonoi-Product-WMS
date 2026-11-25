@@ -14,8 +14,8 @@ const isCo=req=>req.productCode==='CO_HYDROXIDE';
 async function historical(c,req,q){
  return (await H.reportShipments(c,req,q,q.from,q.to)).map(row=>({
   date:row.date,document:row.document_no,customer:row.customer_name,contract:row.contract_no,vehicle:row.vehicle_no,
-  lot:row.lot_no,packing:row.document_no,qty:row.units,gross:mt(row.gross_kg),net:row.net_weight,
-  status:'IMPORTED_PACKING',source:'HISTORICAL',href:'/outbounds/historical/'+row.id,
+  lot:row.lot_no,packing:row.document_no,qty:row.units,gross:mt(row.gross_kg),net:row.net_weight,metal:row.confirmed_metal_mt,
+  status:'IMPORTED_PACKING',source:'HISTORICAL',shipment_status:row.shipment_status,href:'/outbounds/historical/'+row.id,
   trip:row.vehicle_no?['history',row.date,row.vehicle_no,row.trailer_one,row.trailer_two].map(v=>String(v||'').trim().toUpperCase()).join('|'):null
  }));
 }

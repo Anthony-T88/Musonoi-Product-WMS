@@ -238,6 +238,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.deepEqual(precision,{thirty:'10.80000',one:'0.23292',combined:'0.46585',rounded_per_bag:'0.46584',difference:'0.12345'});
   const pending='/cobalt/metal?view=outbound&status=PENDING_ARECOMS';
   assert((await api(pending)).items.some(r=>r.order_id===matched.order.id));
+  assert(!(await api(pending,'logistics_manager')).items.some(r=>r.order_id===matched.order.id));
+  await api(base,'logistics_manager',undefined,404);
   await api(base,'customer_admin',undefined,404);
   assert.equal((await app.inject({url:'/api/v1'+base,headers:{...sessions.admin,'x-product-code':'CU_CATHODE'}})).statusCode,409);
   const proposal={version:0,amount_mt:'0.35641',reason:'Independent synthetic assay'};
@@ -272,7 +274,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await api(base+'/submit','admin',{version:2,amount_mt:'0.40000',reason:'Synthetic revision'});
   await api(base+'/confirm','sales_operator',{version:3,reason:'Unauthorized reviewer'},403);
   assert.equal((await api(base)).confirmed_mt,'0.35641');
-  await api(base+'/reject','admin',{version:3,reason:'Original confirmation is correct'});
+  await api(base+'/reject','admin',{version:3,reason:'Cannot review own submission'},403);
+  await api(base+'/reject','production_manager',{version:3,reason:'Original confirmation is correct'});
   assert.equal((await api(base)).confirmed_mt,'0.35641');
   const workbook=new(require('exceljs').Workbook)(),exported=await request('/cobalt/metal/export?view=outbound&search='+matched.order.code);
   assert.equal(exported.statusCode,200,exported.body.slice(0,250));await workbook.xlsx.load(exported.rawPayload);

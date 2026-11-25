@@ -173,7 +173,8 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | cu-invoice | `/export-shipments/:id` | 铜 | 管理员 | 骨架、表格 | 10 / 0 / 0 | 新旧商业发票单页打印、装箱单分页和预览 |
 | metal | `/cobalt-metal` | 钴 | 管理员、物流经理、生产经理 | 骨架、筛选、表格、指标 | 14 / 0 / 0 | — |
 | metal-outbound | `/cobalt-metal` | 钴 | 管理员 | 骨架、筛选、表格、指标 | 10 / 0 / 0 | — |
-| metal-confirmations | `/cobalt-metal` | 钴 | 管理员 | 骨架、筛选、表格、指标 | 10 / 0 / 0 | — |
+| metal-confirmations | `/cobalt-metal` | 钴 | 管理员、物流经理、生产经理 | 在线与历史出库待确认、按批次检索、详情入口 | 10 / 0 / 0 | 归档沿用原出库日期 |
+| co-historical-metal | `/stock-outbound/historical/:id` | 钴 | 管理员、物流经理、生产经理 | 原始资料、金属量录入、独立审批、结果及历史 | — | 作废归档退出待确认清单，审批记录保留 |
 | stocktakes | `/stocktaking` | 铜、钴 | 管理员、现场主管、生产经理 | 骨架、筛选、表单、表格、状态、反馈 | 24 / 4 / 0 | — |
 | stocktake-new | `/stocktaking/new` | 铜、钴 | 管理员 | 骨架、表单 | 12 / 0 / 0 | — |
 | cu-stocktake | `/stocktaking/:id` | 铜 | 管理员 | 骨架、表格、状态、反馈 | 6 / 0 / 0 | — |

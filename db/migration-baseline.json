@@ -829,6 +829,10 @@
     {
       "version": "207_v488_historical_dispatch_completion.sql",
       "checksum": "fc91a3f74ec7c75147c5ffdb53e5b158c6e00c33a70ee667ec5635f303383d9b"
+    },
+    {
+      "version": "208_v488_historical_cobalt_metal.sql",
+      "checksum": "06bc9bcbd63ced84a3e71091a2dcb7c26c3e4a4d51d1db9bf9dd3311e645eb42"
     }
   ]
 }

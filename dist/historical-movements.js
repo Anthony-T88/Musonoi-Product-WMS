@@ -92,6 +92,10 @@ window.HistoricalMovements={
  },
  documentRoute(path){return /^\/(receipts|loading-plans|outbounds|stock-outbound|inventory)\/historical(?:\/[0-9a-f-]{36})?$/.test(path);},
  permission(area){
+  if(area==='stock-outbound'&&!ProductContext.isCopper()){
+   const permission=CobaltMetal.outboundPermission();
+   if(permission)return permission;
+  }
   return ({receipts:ProductContext.isCopper()?'receipt:read':'co:read',inventory:ProductContext.isCopper()?'inventory:read':'co:read',
    'loading-plans':'loading-plan:read',outbounds:'load:read','stock-outbound':'load:read'})[area];
  },
@@ -473,11 +477,13 @@ window.HistoricalMovements={
    UI46Pages.identity(code||'—',this.badge()+(outbound?UI.status('OUTBOUND','stock',t('已出库','Outbound')):''),this.back(back),'')+
    this.section(...summaries[area],UI46Pages.factList(this.summary(row,area)))+
    (related?this.section('关联单据','Related Documents',related):'')+
+   (row.metal?CobaltMetal.outbound(row):'')+
    this.section(cu?'逐捆明细':'逐袋明细',cu?'Bundle Details':'Bag Details',
     (stock&&!cu?'<form id="historical-unit-search" class="filters wms-filter-row"><label>'+t('袋号或铅封号','Bag or Seal No.')+
      '<input type="search" name="unit" maxlength="160" value="'+esc(q.get('unit')||'')+'"></label><div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+'</button></div></form>':'')+
     this.unitLines(row.rows,row.product_code,!stock))+'</div>');
   this.followReturn();
+  if(row.metal)CobaltMetal.bindOutbound(row.metal,()=>this.document(area,id));
   if($('historical-unit-search'))$('historical-unit-search').onsubmit=e=>{e.preventDefault();Router.go(location.pathname+'?'+new URLSearchParams(new FormData(e.target)),true);};
  },
  install(){
@@ -515,7 +521,9 @@ window.HistoricalMovements={
     if(area==='workbench'){
      if(id)await this.detail(id);else await this.list();
     }else await this.document(area,id);
-    I18n.apply();window.scrollTo({top:0});
+    I18n.apply();
+    const target=location.hash==='#co-metal-detail'?$('co-metal-detail'):null;
+    if(target)target.scrollIntoView();else window.scrollTo({top:0});
    }catch(error){
     System46.lastFailure={route:location.pathname+location.search,status:error.statusCode||0,message:error.message};
     Router.page(this.t('页面暂不可用','Page Unavailable'),System46.stateHTML(error.statusCode===403?'denied':'error'));

@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195,198,199,200,201,203,204,205]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195,198,199,200,201,203,204,205,207]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
@@ -56,6 +56,21 @@ test('isolated migration, initialization, business permission and concurrency ac
     [fixture.project,fixture.customers.CU_CATHODE.id,fixture.customers.CU_CATHODE.contract,fixture.accounts[0].id]);
    if(from>=185)await c.query("INSERT INTO export_license_record_books(product_code,project_id,customer_id,kind,value,created_by) VALUES('CU_CATHODE',$1,$2,'issuing_bank','Synthetic legacy bank',$3)",
     [fixture.project,fixture.customers.CU_CATHODE.id,fixture.accounts[0].id]);
+   let archivedCobalt;
+   if(from===207){
+    const source=crypto.randomUUID(),actor=fixture.accounts[0].id;
+    await c.query(`INSERT INTO historical_movement_documents(id,product_code,movement_type,document_no,document_key,business_date,
+     date_evidence,source_name,source_sha256,source_data,source_facts,imported_by)
+     VALUES($1,'CO_HYDROXIDE','OUTBOUND','LEGACY-CO-PL','LEGACY-CO-PL','2020-03-05','Synthetic source date',
+      'synthetic.xlsx',$2,$3,'{"batch_no":"LEGACY-CO-LOT"}',$4)`,[source,'a'.repeat(64),Buffer.from('synthetic'),actor]);
+    await c.query(`INSERT INTO historical_movement_lines(document_id,source_row,unit_id,unit_key,net_kg,gross_kg)
+     VALUES($1,1,'LEGACY-CO-BAG','LEGACY-CO-BAG',30000,30075)`,[source]);
+    await c.query(`INSERT INTO historical_backfills(source_id,import_batch_id,project_id,warehouse_id,customer_id,backfilled_by)
+     VALUES($1,$2,$3,$4,$5,$6)`,[source,crypto.randomUUID(),fixture.project,fixture.warehouse,fixture.customers.CO_HYDROXIDE.id,actor]);
+    await c.query(`INSERT INTO historical_stock_units(source_id,source_row,product_code,unit_key) VALUES($1,1,'CO_HYDROXIDE','LEGACY-CO-BAG')`,[source]);
+    archivedCobalt=(await c.query(`INSERT INTO historical_business_documents(source_id,kind,document_no,business_date)
+     VALUES($1,'OUTBOUND','HIST-OUT-LEGACY-CO-PL','2020-03-05') RETURNING id`,[source])).rows[0].id;
+   }
    await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,outcome) VALUES($1,'synthetic_upgrade','customers',$2,'COMMITTED')",[fixture.accounts[0].id,fixture.customers.CU_CATHODE.id]);
    const tables=(await c.query("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'schema_migrations' ORDER BY tablename")).rows.map(r=>r.tablename);
    const snapshot=async()=>{
@@ -89,6 +104,9 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
+   if(archivedCobalt)assert.deepEqual((await c.query(`SELECT net_kg::text,round(estimated_metal_mt,5)::text estimated_mt,version,
+     confirmed_metal_mt,shipment_status FROM co_historical_metal_outbound WHERE order_id=$1`,[archivedCobalt])).rows[0],
+    {net_kg:'30000',estimated_mt:'10.80000',version:0,confirmed_metal_mt:null,shipment_status:'PENDING_ARECOMS'});
    const correctionPermissions=(await c.query(
     "SELECT role_code,permission_code FROM role_permissions WHERE permission_code IN('inventory:correct-request','inventory:correct-review','printer:manage') ORDER BY role_code"
    )).rows.map(row=>[row.role_code,row.permission_code]);
@@ -412,6 +430,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert(preview.importable,JSON.stringify(preview.issues));
    const imported=(await api('admin',product,queue+'/confirm',{files:[{...file,preview_token:preview.preview_token}]})).results[0];
    assert.equal(imported.status,'IMPORTED');
+   if(co)f.historicalMetalSource={id:imported.id,search:tag+'-PL'};
    const outbound=(co?'/cobalt':'')+'/outbound-workspace',statusFilter={[co?'state':'status']:'OUTBOUND'};
    const archived=(await api('admin',product,outbound+'?'+new URLSearchParams({...statusFilter,search:tag+'-PL'}))).items
     .find(row=>row.historical_import);
@@ -442,6 +461,59 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert.equal(again.status,'ALREADY_IMPORTED');
    assert.equal((await api('sales_operator',product,base+'/'+draft.id)).historical_usage.length,1);
   }
+ });
+ await check('historical cobalt outbounds enter the ARECOMS queue and preserve independent confirmation and source history',async()=>{
+  const product='CO_HYDROXIDE',c=business.client,{id:source,search}=f.historicalMetalSource;
+  const {rows:[{id}]}=await c.query("SELECT id FROM historical_business_documents WHERE source_id=$1 AND kind='OUTBOUND'",[source]);
+  const suffix=new URLSearchParams({view:'outbound',status:'PENDING_ARECOMS',search,from:'2020-03-05',to:'2020-03-05'});
+  const queue='/cobalt/metal?'+suffix,detail='/cobalt/metal/outbounds/'+id,
+   archive='/cobalt/historical-backfill/documents/'+id+'?kind=OUTBOUND';
+  const loginRole='logistics_manager',approveRole='production_manager';
+  const pending=await api(loginRole,product,queue);
+  assert.equal(pending.total,1);
+  const [line]=pending.items;
+  assert.deepEqual([line.order_id,line.historical_source_id,line.historical_import,line.posted_day,line.net_mt,line.estimated_mt,line.confirmed_mt],
+   [id,source,true,'2020-03-05','0.6471','0.23296',null]);
+  assert.equal(pending.summary.period.pending,1);
+  const before=await api(loginRole,product,archive);
+  assert.equal(before.metal.can_submit,true);
+  assert.equal(before.metal.can_decide,false);
+  assert.equal((await api('customer_admin',product,queue)).total,0);
+  await api('customer_admin',product,detail,undefined,404);
+  await api('customer_admin',product,archive,undefined,404);
+  const proposal={version:0,amount_mt:'0.24123',reason:'Synthetic verified laboratory document'};
+  await api('production_operator',product,detail+'/submit',proposal,403);
+  await api('customer_admin',product,detail+'/submit',proposal,404);
+  const key=crypto.randomUUID();
+  const requested=await api(loginRole,product,detail+'/submit',proposal);
+  assert.equal(requested.version,1);
+  const submitted=await api(approveRole,product,archive);
+  assert.equal(submitted.metal.can_decide,true);
+  assert.equal(submitted.metal.pending_metal_mt,'0.24123');
+  assert.equal(submitted.metal.confirmed_mt,null);
+  assert.equal((await api(approveRole,product,queue)).total,1);
+  const decision={version:1,reason:'Synthetic independent ARECOMS verification'};
+  const replies=await Promise.all([request(approveRole,product,detail+'/confirm',decision,'POST',key),
+   request(approveRole,product,detail+'/confirm',decision,'POST',key)]);
+  assert(replies.every(r=>r.statusCode===200));
+  assert.deepEqual(replies[0].json(),replies[1].json());
+  const confirmed=await api(loginRole,product,archive);
+  assert.equal(confirmed.metal.shipment_status,'COMPLETED');
+  assert.equal(confirmed.metal.confirmed_mt,'0.24123');
+  assert.deepEqual(confirmed.metal.history.map(e=>e.action),['CONFIRMED','SUBMITTED']);
+  assert.deepEqual(confirmed.rows,before.rows);
+  assert.deepEqual(confirmed.source_facts,before.source_facts);
+  assert.equal((await api(loginRole,product,queue)).total,0);
+  const report=await api('admin',product,'/cobalt/reports?from=2020-03-05&to=2020-03-05');
+  assert.equal(report.outbound.find(row=>row.document_no===search).arecoms_mt,'0.24123');
+  const revision={version:2,amount_mt:'0.25000',reason:'Synthetic correction to verify revision'};
+  await api('admin',product,detail+'/submit',revision);
+  const rejection={version:3,reason:'Original synthetic confirmation is correct'};
+  await api('admin',product,detail+'/confirm',rejection,403);
+  await api(approveRole,product,detail+'/reject',rejection);
+  assert.equal((await api(approveRole,product,detail)).confirmed_mt,'0.24123');
+  await assert.rejects(()=>c.query("UPDATE co_historical_metal_events SET reason='tamper' WHERE outbound_id=$1",[id]),/CO_RECORD_IMMUTABLE/);
+  f.historicalMetalSource.outboundId=id;
  });
  await check('archived copper contract number can be reused with the correct customer while current duplicates conflict',async()=>{
   const product='CU_CATHODE',route='/contracts',contractNo='AUDIT-ARCHIVE-REUSE';

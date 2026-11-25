@@ -1143,8 +1143,16 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "pending online and historical outbounds",
       "template": "/cobalt-metal"
+    },
+    {
+      "key": "co-historical-metal",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "historical ARECOMS entry and review",
+      "template": "/stock-outbound/historical/:id"
     },
     {
       "key": "historical-movements",
