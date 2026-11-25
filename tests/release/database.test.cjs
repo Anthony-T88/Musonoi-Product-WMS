@@ -337,7 +337,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const Excel=require('exceljs');
   for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
    const co=product==='CO_HYDROXIDE',number='EXCEL-AUDIT/2026/'+(co?'CO':'CU'),customer=f.customers[product].id;
-   const order=crypto.randomUUID(),rows=[{order_id:order,batch:'AUDIT-BATCH',truck:'AUDIT1234',transporter:'Audit Carrier',
+   const order=crypto.randomUUID(),rows=[{order_id:order,batch:'AUDIT-BATCH',truck:'AUDIT1234',trailer_two:'N/A',transporter:'Example International Logistics',
     driver:'Audit Driver',passport:'001234',quantity:'15',net_mt:'31.4539',gross_mt:'32.7828',loading_date:'2026-11-23'}];
    const snapshot={number,header:{issuer:'Audit Company',address:'Audit Address',rccm:'AUDIT-RCCM',id_nat:'AUDIT-IDNAT',
     nif:'AUDIT-NIF',contact:'Audit Contact',customer:'Audit Customer',product:co?'COBALT HYDROXIDE':'COPPER CATHODES',
@@ -363,6 +363,10 @@ test('isolated migration, initialization, business permission and concurrency ac
     assert.deepEqual(['A4','A5','A6','A7'].map(cell=>sheet.getCell(cell).text),
      ['RCCM: AUDIT-RCCM','ID-NAT: AUDIT-IDNAT','NIF: AUDIT-NIF','Contact: Audit Contact']);
     assert.equal(sheet.getCell('C11').text,mode);
+    assert.equal(sheet.getCell('E16').value,'N/A');
+    assert.equal(sheet.getCell('G16').value,'Example International Logistics');
+    assert.equal(sheet.getCell('G16').alignment.shrinkToFit,true);
+    assert.notEqual(sheet.getCell('G16').alignment.wrapText,true);
     assert.equal(sheet.getCell('I16').value,'001234');
     assert.equal(sheet.getCell('J16').value,15);
     assert.equal(sheet.getCell('K16').value,31.4539);

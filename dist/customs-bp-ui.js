@@ -418,6 +418,8 @@ window.CustomsBP={
    '<div class="business-toolbar wms-form-actions"><button type="button" class="button secondary" id="customs-bp-back-edit">'+
    t('返回编辑','Back to Editor')+'</button><button class="button primary">'+
    (this.preview.id?t('保存修订','Save Revision'):t('生成BP表','Generate BP Sheet'))+'</button></div></form></section>');
+  const sheet=document.querySelector('.bp-proof-sheet .bp-sheet');
+  document.fonts.ready.then(()=>{if(sheet?.isConnected)window.CustomsBPPrint?.fitLines(sheet);});
   $('customs-bp-back-edit').onclick=()=>{this.proof=null;this.editor();$('bp-number')?.focus();};
   const form=$('customs-bp-proof');
   form.onsubmit=e=>UI46Pages.submit(e,async()=>{

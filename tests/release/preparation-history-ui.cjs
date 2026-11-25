@@ -545,13 +545,13 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const contact={trailer_one:plate+'-TRL',driver_name:plate+' Driver',passport_no:plate+'-PASS',arrived_at:new Date(Date.now()-120000).toISOString(),
     ...(co?{transporter:'Synthetic Carrier',dispatch_version:vehicle.version}:{})};
    const registration=await api('admin',product,endpoint+'/'+vehicle.id,{...contact,trailer_two:'N/A'});
-   assert.equal(registration.trailer_two,'');
+   assert.equal(registration.trailer_two,'N/A');
    const otherContact={...contact,trailer_one:plate+'-TRL-2',driver_name:plate+' Driver 2',passport_no:plate+'-PASS-2',
     ...(co?{dispatch_version:other.version}:{})};
    const duplicate=await api('admin',product,endpoint+'/'+other.id,{...otherContact,trailer_two:contact.trailer_one},409);
    assert.match(duplicate.error,/挂车2|Trailer 2/);
    const second=await api('admin',product,endpoint+'/'+other.id,{...otherContact,trailer_two:' n / a '});
-   assert.equal(second.trailer_two,'');
+   assert.equal(second.trailer_two,'N/A');
    await api('production_operator',product,endpoint+'/'+vehicle.id,{action:'CLEAR',version:registration.version},403);
    const preparation=co?await api('admin',product,'/cobalt/preparations',{
     preparation_plan_id:fixtures[product].occupied.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:1}):null;
@@ -564,6 +564,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const form=page.locator(co?'#co-arrival-form':'#yard-arrival-form');
     const confirmed=()=>row.locator('a[href^="/loading-plans/new"]').waitFor();
     await confirmed();await edit();
+    assert.equal(await form.locator('[name=trailer_two]').inputValue(),'N/A');
     await form.locator('[name=driver_name]').fill('');
     await form.locator('[data-arrival-save]').click();
     await row.getByText(/待修改确认|Pending Confirmation/).waitFor();
@@ -578,19 +579,20 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert.match(await blocked.text(),/CO_LOADING_ARRIVAL_INVALID|尚未确认/);
     await edit();await form.locator('[name=driver_name]').waitFor();
     assert.equal(await form.locator('[name=driver_name]').inputValue(),'');
+    assert.equal(await form.locator('[name=trailer_two]').inputValue(),'N/A');
     await form.locator('[name=driver_name]').fill(contact.driver_name);
     await form.locator('[name=trailer_two]').fill('N/A');
     await form.locator('button[type=submit]').click();
     await page.locator('#operation-confirm-accept').click();
     await confirmed();await edit();
-    assert.equal(await form.locator('[name=trailer_two]').inputValue(),'');
+    assert.equal(await form.locator('[name=trailer_two]').inputValue(),'N/A');
     await form.locator('[data-arrival-clear]').click();
     await page.locator('#operation-confirm-accept').click();
     await row.getByText(/待到厂登记|Awaiting Arrival/).waitFor();
     assert.equal(await row.locator('a[href^="/loading-plans/new"]').count(),0);
     const table=co?'co_vehicle_arrivals':'vehicle_arrivals';
-    const {rows:[saved]}=await c.query('SELECT id,registration_phase,arrived_at,trailer_one,driver_name,passport_no FROM '+table+' WHERE dispatch_vehicle_id=$1',[vehicle.id]);
-    assert.deepEqual(saved,{id:registration.id,registration_phase:'CLEARED',arrived_at:null,trailer_one:'',driver_name:'',passport_no:''});
+    const {rows:[saved]}=await c.query('SELECT id,registration_phase,arrived_at,trailer_one,trailer_two,driver_name,passport_no FROM '+table+' WHERE dispatch_vehicle_id=$1',[vehicle.id]);
+    assert.deepEqual(saved,{id:registration.id,registration_phase:'CLEARED',arrived_at:null,trailer_one:'',trailer_two:'',driver_name:'',passport_no:''});
    }finally{await ctx.close();}
   });
   await t.test('Cobalt site and production task labels match the live detail workflow',async()=>{

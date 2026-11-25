@@ -374,6 +374,16 @@ case "${2:-base}" in
     migration=210_v489_effective_preparation_review.sql
     migration_count=210
     ;;
+  v489-ui3)
+    repo=/opt/musonoi-wms-release-v4.8.9-ui3
+    override=/etc/musonoi/preproduction-v489-ui3-build.override.yaml
+    source_revision=4.8.9-ui2
+    target_revision=4.8.9-ui3
+    target_version=4.8.9
+    release_branch=release/v4.8.9
+    migration=210_v489_effective_preparation_review.sql
+    migration_count=210
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 release_id=${target_version//./}
@@ -460,7 +470,7 @@ old, new=(json.loads((stage / name).read_text()) for name in ("compose-before.js
 for service in ("app","migrate"):
     assert new["services"][service]["build"]["context"]==sys.argv[2]
     new["services"][service]["build"]["context"]=old["services"][service]["build"]["context"]
-    if sys.argv[3] in ("4.8.7-ui1","4.8.7-ui2","4.8.7-ui3","4.8.8","4.8.8-ui1","4.8.8-ui2","4.8.8-ui3","4.8.8-ui4","4.8.8-ui5","4.8.8-ui6","4.8.8-ui7","4.8.8-ui8","4.8.8-ui9","4.8.8-ui10","4.8.8-ui11","4.8.8-ui12","4.8.8-ui13","4.8.8-ui14","4.8.9","4.8.9-ui1","4.8.9-ui2"):
+    if sys.argv[3] in ("4.8.7-ui1","4.8.7-ui2","4.8.7-ui3","4.8.8","4.8.8-ui1","4.8.8-ui2","4.8.8-ui3","4.8.8-ui4","4.8.8-ui5","4.8.8-ui6","4.8.8-ui7","4.8.8-ui8","4.8.8-ui9","4.8.8-ui10","4.8.8-ui11","4.8.8-ui12","4.8.8-ui13","4.8.8-ui14","4.8.9","4.8.9-ui1","4.8.9-ui2","4.8.9-ui3"):
         assert new["services"][service].pop("image").startswith("musonoi-wms:"+sys.argv[3]+"-")
         old["services"][service].pop("image",None)
 if sys.argv[3]=="4.8.7":

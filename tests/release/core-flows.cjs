@@ -30,7 +30,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await api(vehiclePath,'logistics_manager',{plan_version:sales.version,shipment_month:'2000-01',truck_no:'MISMATCH-'+salt},409);
   const vehicle=await api(vehiclePath,'logistics_manager',{plan_version:sales.version,truck_no:'RC2-'+salt,capacity_tonnes:'30',trailer_no:'RC2-TRAILER-'+salt,driver_name:'Synthetic Driver '+salt,passport_no:'Synthetic Passport '+salt,destination:'Synthetic Depot'});
   assert.equal(vehicle.shipment_month,sales.shipment_month);
-  f.rc2arrival=await api('/cobalt/sales/arrivals/'+vehicle.id,'logistics_field_operator',{dispatch_version:vehicle.version,arrived_at:new Date(Date.now()-1000).toISOString(),trailer_one:'RC2-TRAILER-'+salt,trailer_two:'',driver_name:'Synthetic Driver '+salt,passport_no:'Synthetic Passport '+salt,transporter:'Synthetic Transport',container_no:'',exception_remark:'Synthetic arrival'});
+  f.rc2arrival=await api('/cobalt/sales/arrivals/'+vehicle.id,'logistics_field_operator',{dispatch_version:vehicle.version,arrived_at:new Date(Date.now()-1000).toISOString(),trailer_one:'RC2-TRAILER-'+salt,trailer_two:'N/A',driver_name:'Synthetic Driver '+salt,passport_no:'Synthetic Passport '+salt,transporter:'Synthetic Transport',container_no:'',exception_remark:'Synthetic arrival'});
  });
  await check('native preparation preserves exact ARECOMS precision through same-account approved receipt',async()=>{
   const intakePlan=await P.approved(planApi,co,sales.id,P.batch(co,Number.parseInt(salt.slice(0,6),16)+1000));
@@ -153,6 +153,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(bpData.header.destination,'CHINA');
   assert.equal(bpData.header.loading_date,today);
   const bpRows=bpData.rows;
+  assert.equal(bpRows[0].trailer_two,'N/A');
   const agent=await api(bp+'/agencies','admin',{project_id:f.project,name:'Synthetic Cobalt Agency'});
   const bpBody={ids,token:bpData.token,header:{mode:'ROAD',border:'Kasumbalesa',signature_date:today},number:'',agency_id:agent.id,agency_version:agent.version};
   assert.match(bpData.number,/^\d{3}\/\d{4}\/CO$/);
@@ -182,6 +183,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const workbook=new(require('exceljs').Workbook)();
   await workbook.xlsx.load(exportResponse.rawPayload);
   const sheet=workbook.worksheets[0];
+  assert.equal(sheet.getCell('E16').value,'N/A');
   for(const [cell,label,field] of [['A4','RCCM','rccm'],['A5','ID-NAT','id_nat'],['A6','NIF','nif'],['A7','Contact','contact']])
    assert(sheet.getCell(cell).text===label+': '+template.fields[field],label);
   await api(bp+'/'+bpDoc.id+'/print','customer_admin',undefined,404);
@@ -307,6 +309,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(downloaded.headers['x-content-sha256'],generated.file_sha256);
   const book=new(require('exceljs').Workbook)();await book.xlsx.load(downloaded.rawPayload);
   const sheet=book.worksheets[0],bag=(await api('/cobalt/stock/batches/'+prep.id)).items[0];
+  assert.equal(sheet.getCell('E24').value,'N/A');
   assert.equal(sheet.getCell('C30').value,bag.bag_no);
   assert.equal(sheet.getCell('E30').value,'RC2-SEAL-'+salt);
   assert.equal(sheet.getCell('F30').value,647.123);

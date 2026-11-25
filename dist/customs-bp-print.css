@@ -1,11 +1,13 @@
 .bp-print-document{background:#eef2ef}
 .bp-print-document body{max-width:1080px;margin:16px auto;padding:0 12px}
 #bp-print{font:14px Arial,sans-serif;padding:.55rem 1rem;margin-bottom:.6rem}
-.bp-sheet{box-sizing:border-box;min-width:720px;background:#fff;color:#111;font:10pt/1.24 "Times New Roman","Microsoft YaHei",serif;padding:6mm}
+.bp-sheet{box-sizing:border-box;inline-size:285mm;margin-inline:auto;background:#fff;color:#111;font:10pt/1.24 "Times New Roman","Microsoft YaHei",serif;padding:0 .25mm}
 .bp-sheet h2{font:700 15pt/1.16 "Times New Roman",serif;text-align:center;margin:0 0 2mm;overflow-wrap:anywhere}
 .bp-sheet :is(p,dl,dd){margin:0}
+.bp-sheet .bp-line{display:block;min-inline-size:0;white-space:normal;overflow-wrap:anywhere}
+.bp-sheet .bp-single-line{white-space:nowrap}
 .bp-sheet .bp-issuer{display:flex;align-items:center;justify-content:space-between;gap:5mm;padding-bottom:2mm}
-.bp-sheet .bp-issuer p{overflow-wrap:anywhere}
+.bp-sheet .bp-issuer>div{flex:1;min-inline-size:0}
 .bp-sheet .bp-issuer p:first-child{font-size:12pt;font-weight:700}
 .bp-sheet .bp-issuer img{display:block;width:46mm;height:34mm;object-fit:contain;object-position:right center;flex:none}
 .bp-sheet .bp-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6mm;margin:0 0 3mm}
@@ -14,15 +16,16 @@
 .bp-sheet .bp-details dt{font-weight:700}
 .bp-sheet .bp-details dd{overflow-wrap:anywhere}
 .bp-sheet .bp-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font-variant-numeric:tabular-nums;font-size:9pt}
-.bp-sheet .bp-table :is(th,td){padding:1.05mm .65mm;border:1px solid #242424;overflow-wrap:anywhere;vertical-align:middle}
+.bp-sheet .bp-table :is(th,td){padding:1.05mm .45mm;border:1px solid #242424;overflow-wrap:anywhere;vertical-align:middle}
 .bp-sheet .bp-table thead{display:table-header-group}
 .bp-sheet .bp-table thead th,.bp-sheet .bp-total{font-weight:700}
-.bp-sheet .bp-width-4{width:4%}
+.bp-sheet .bp-width-2{width:2%}
+.bp-sheet .bp-width-6{width:6%}
 .bp-sheet .bp-width-7{width:7%}
 .bp-sheet .bp-width-8{width:8%}
-.bp-sheet .bp-width-9{width:9%}
-.bp-sheet .bp-width-10{width:10%}
 .bp-sheet .bp-width-11{width:11%}
+.bp-sheet .bp-width-15{width:15%}
+.bp-sheet .bp-width-17{width:17%}
 .bp-sheet .bp-signature{display:flex;justify-content:space-between;gap:10mm;padding:5mm 4mm 0;font-size:10pt;font-weight:700}
 .bp-sheet :is(tr,.bp-details,.bp-issuer,.bp-closing){break-inside:avoid}
 .bp-sheet .bp-table .bp-signoff td{border:0;padding:0}

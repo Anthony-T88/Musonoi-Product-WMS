@@ -1,7 +1,7 @@
 {
   "version": "4.8.9",
   "auditRevision": "v488",
-  "revision": "4.8.9-ui2",
+  "revision": "4.8.9-ui3",
   "files": [
     {
       "path": ".dockerignore",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "e0977bdd0989aef937a62de95f5e8f9aae673a5297e00531524d4312c99b6d6d"
+      "sha256": "ce2299260f203fb242e557ebcc494ec3618a79fd97e38d45f001f35a4208e3f2"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1253,7 +1253,7 @@
     },
     {
       "path": "dist/customs-bp-ui.js",
-      "sha256": "57389bc246e6c14fcc4ce0d5ad21b955a756b685e1d096345a7e0bac3dbc362d"
+      "sha256": "c7a16db0ab81d1dc50d038fc7a51475bfea6b4c7d9bc5d428962c3baa404e385"
     },
     {
       "path": "dist/customs-workspace.js",
@@ -1413,7 +1413,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "f1d1058108b588b164b49c3ff94693d0c8068ffb9d5be309ab9d6922e3047e59"
+      "sha256": "01bf744ee026e2958f99d69a535a576ca73bd43fc8e25c6d36e79174be653d66"
     },
     {
       "path": "dist/reports463.js",
@@ -1461,7 +1461,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "29ace047567517dcbecdf16d2ddc484529a9310963b5865f1b45a36c3d8a6e7f"
+      "sha256": "be791bd34f845c142957e4a22fae35bf619f1adcfdb8e57f36cb350197723376"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1545,7 +1545,7 @@
     },
     {
       "path": "dist/customs-bp-print.js",
-      "sha256": "c6227c55ce5e3ad0055f8989616ecdb5ba2063d935b7e20ddb7aabd8098562e8"
+      "sha256": "6961d3a27d48c0ec540364937623b12a9f78d3bf4dbd237385873c402ed89837"
     },
     {
       "path": "dist/customs-bp-logo.png",
@@ -1553,7 +1553,7 @@
     },
     {
       "path": "dist/customs-bp-print.css",
-      "sha256": "396c5d398a67937e9dc44a731cbf724bf2adec4095f739617aea09f500f1eb3a"
+      "sha256": "637cf6aeabf5e3ad5999b1894ba700bf4659710fc38759dbb2d011026dce2e3b"
     },
     {
       "path": "dist/customs-bp-paper.css",
@@ -1793,7 +1793,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "89f2a31a2a23ab6d0e7ad97abadb59ace08d6152897e38d52a0c535da7bd8ea4"
+      "sha256": "76e99e4803e0441cba072cddcc91c008584e5ea7f680db54d07db85b5347be41"
     },
     {
       "path": "scripts/db.cjs",
@@ -2037,11 +2037,11 @@
     },
     {
       "path": "server/customs-bp-print.cjs",
-      "sha256": "093062a9decb5e5a4caa43dddac07e46ecd45c989e67bc1cb5c5b9679fe9a97a"
+      "sha256": "c6b2c830147bc79fa0fab4583f8c933c352093d75c85fd4117feebde6e40500a"
     },
     {
       "path": "server/customs-bp-excel.cjs",
-      "sha256": "d7c733203d2c7b0b02f57cf06dd83f936bf83f7ab3088584646c205b588369db"
+      "sha256": "6f59f2128453bb49527b1fb223601448f6a8683449dc06f21ec3487a248d3543"
     },
     {
       "path": "server/customs-bp.cjs",
@@ -2249,7 +2249,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "e1412ee519b4d90a2e8c3e74076bdb9c072be6d3a48cae559713edd6cb7ef6cb"
+      "sha256": "108e2f5eb49e091fc0b6faacabed65ea3583383916652f30d4cd1dca1acd0980"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2389,7 +2389,7 @@
     },
     {
       "path": "server/vehicle-arrivals.cjs",
-      "sha256": "49b095ce2cb79c2d15fad8920ee53e26598b26c25deb08296f7257f32f10d966"
+      "sha256": "29faeadbe2ddbcbc4df8d33c9c2de9dd868278eb5af2b7bdf74317e40e75fd86"
     },
     {
       "path": "server/warehouse-templates.cjs",
@@ -2501,7 +2501,7 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "sha256": "6de89921bb10f9c928b654044ad56a14b834a3bb7aa9bd572224dc897c1b1419"
+      "sha256": "50b1ae906f67dc29ef72f28d16f44ca14a3221337cd7663e37bc33a1af8f85c4"
     },
     {
       "path": "tests/release/bp-customer.test.cjs",
@@ -2509,11 +2509,11 @@
     },
     {
       "path": "tests/release/core-flows.cjs",
-      "sha256": "bd54886567adb3c92156c4e6581bdbc744851ab4c54919701da2d9e105803b56"
+      "sha256": "61e5a8fe3ca2b7dfcaef7f226aa0f74297ac05b8163333c6b02686073a3f9c1e"
     },
     {
       "path": "tests/release/database.test.cjs",
-      "sha256": "4df4ca57d0ed0b5321a36385d40b44af26e62ba147e10c94ff97c8f20ddbe457"
+      "sha256": "96e7830c0193b04dcc63abe2d7d1d7305bb2740aabf0c690c2952f043d828cef"
     },
     {
       "path": "tests/release/deployment.test.cjs",
@@ -2589,7 +2589,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "3ac9ed23f7ab521b1a0173915547764f4bd1a848c08b802da03f04a8d33bc4ab"
+      "sha256": "20b2b3260e9ad3a71e66936d54309cdc7cc610201a4449fb6f4d03fc0ab94af2"
     },
     {
       "path": "tests/release/uiux-accessibility.json",
@@ -2765,7 +2765,7 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "a252a81790a874c5f93b3eac7fd783b014aeeb9ec3dd4078d4875f79b5be04c5"
+      "sha256": "e57cecca5d1d475a005f1735c4a7be0f5b9d0487494b21d309a7a138186dc510"
     },
     {
       "path": "tests/release/bundle-corrections-ui.cjs",
@@ -2777,7 +2777,7 @@
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "1b71eabf0cdfa970a8b7f1a31cae32e1e7e73867bb2e828c34d35290551f90a1"
+      "sha256": "6233751b729f47e99485a83bce439137865fa6eb4ba521a2237c14af16d17b56"
     },
     {
       "path": "deploy/remove-unposted-test-receipt.sql",

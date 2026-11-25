@@ -66,7 +66,7 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
   }
  }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
 });
-test('BP sheets center on landscape A4, enlarge short lists and keep English dates when paginating',async()=>{
+test('BP sheets fit ordinary fields on one line and keep full long text on landscape A4',async()=>{
  const fs=require('node:fs/promises'),BP=require('../../server/customs-bp-print.cjs'),http=require('node:http');
  const output=path.join(E.runtime,'bp-print');
  const assets={
@@ -78,8 +78,9 @@ test('BP sheets center on landscape A4, enlarge short lists and keep English dat
  const documents=new Map();
  for(const count of [1,2,3,6,10,70]){
   const rows=Array.from({length:count},(_,i)=>({batch:'SYNTHETIC-LOT-'+(i+1),truck:'DEMO-'+i,
-   trailer_one:'TRAILER-'+i,container:'CONTAINER-'+i,transporter:'Example Logistics Company',driver:'Demo Driver Surname',
-   ...(count===6?{container:'SYNTHETIC-CONTAINER-1234',transporter:'Synthetic International Transport and Logistics Company',
+   trailer_one:'TRAILER-'+i,trailer_two:'N/A',container:'CONTAINER-'+i,transporter:'Example Logistics Company',driver:'Demo Driver Surname',
+   ...(count===6?{transporter:'EXAMPLE ROAD HAULAGE LTD',driver:'EXAMPLE MICHAEL ANDREW DANIEL',passport:'1234567890'}:{}),
+   ...(count===6&&i===5?{container:'SYNTHETIC-CONTAINER-1234',transporter:'Synthetic International Transport and Logistics Company',
     driver:'Synthetic Example Driver With Five Given Names',passport:'SYNTHETIC-PASSPORT-2901'}:{}),
    quantity:16,net_mt:'30.123451',gross_mt:'31.123456'}));
   documents.set('/'+count,BP.html({number:'001/2026/CU',header:{issuer:'RUASHI MINING SAS',address:'Musonoi Project site, Kolwezi, Lualaba Province',
@@ -102,7 +103,7 @@ test('BP sheets center on landscape A4, enlarge short lists and keep English dat
  try{
   await fs.mkdir(output,{recursive:true});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
-  const page=await browser.newPage(),origin='http://127.0.0.1:'+site.address().port;
+  const page=await browser.newPage({viewport:{width:Math.round(285*96/25.4),height:900}}),origin='http://127.0.0.1:'+site.address().port;
   for(const [pathname]of documents){
    const count=Number(pathname.slice(1));await page.goto(origin+pathname);
    await page.locator('.bp-issuer img').evaluate(image=>image.decode());
@@ -111,10 +112,25 @@ test('BP sheets center on landscape A4, enlarge short lists and keep English dat
    assert.equal(await page.locator('.bp-closing > .bp-vehicle').count(),1);
    assert.equal(await page.locator('.bp-closing > .bp-total').count(),1);
    assert.equal(await page.locator('.bp-closing .bp-signature').count(),1);
+   assert.equal(await page.locator('.bp-vehicle').first().locator('td').nth(4).textContent(),'N/A');
    assert.equal(await page.locator('.bp-vehicle').first().locator('td').nth(10).textContent(),'30.123');
    assert.equal(await page.locator('.bp-details dt').filter({hasText:'Loading Date:'}).locator('..').locator('dd').textContent(),'23 November 2026');
    assert.equal(await page.locator('.bp-signature p').last().textContent(),'KOLWEZI, le 24 November 2026');
    await page.emulateMedia({media:'print'});
+   await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
+   const lines=await page.locator('.bp-line').evaluateAll(cells=>cells.map(cell=>{
+    const range=document.createRange();range.selectNodeContents(cell);
+    const rects=[...range.getClientRects()].filter(rect=>rect.width>0),bounds=cell.getBoundingClientRect();
+    return {text:cell.textContent,lines:new Set(rects.map(rect=>Math.round(rect.top))).size,
+     contained:rects.every(rect=>rect.left>=bounds.left-0.75&&rect.right<=bounds.right+0.75)};
+   }));
+   assert.deepEqual(lines.filter(line=>!line.contained).map(line=>line.text),[],count+' vehicles have unclipped text');
+   const longText=lines.filter(line=>line.lines>1).map(line=>line.text);
+   if(count===6){
+    assert(longText.includes('Synthetic International Transport and Logistics Company'));
+    assert(longText.includes('Synthetic Example Driver With Five Given Names'));
+    assert(longText.every(value=>value.startsWith('Synthetic ')||value.startsWith('SYNTHETIC-')),JSON.stringify(longText));
+   }else assert.deepEqual(longText,[],count+' vehicles use single-line field values');
    const paper=await page.locator('.bp-table').evaluate(table=>{
     const {left,right}=table.getBoundingClientRect();
     return {left,right:document.documentElement.clientWidth-right,fontSize:parseFloat(getComputedStyle(table).fontSize)};

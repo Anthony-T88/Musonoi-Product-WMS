@@ -3,7 +3,7 @@
 const path=require('node:path'),Excel=require('exceljs');
 const {longDate}=require('../dist/business-time.js');
 const {columns,companyFields,declarationFields,sheetTitle}=require('./customs-bp-print.cjs');
-const widths=[6,19,13,12,12,16,19,21,17,12,15,15];
+const widths=[5,19,12,11,11,14,24,25,15,11,15,15];
 const numeric=new Set(['quantity','net_mt','gross_mt']);
 const numberFormat=key=>key==='quantity'?'#,##0':'#,##0.000';
 
@@ -11,12 +11,19 @@ function merge(sheet,row,start,end,value){
  sheet.mergeCells(row,start,row,end);
  const cell=sheet.getCell(row,start);
  cell.value=value;
- cell.alignment={vertical:'middle',wrapText:true};
+ cell.alignment={vertical:'middle',shrinkToFit:true};
  return cell;
 }
 
 function lines(value,width){
  return String(value??'').split(/\r?\n/).reduce((count,line)=>count+Math.max(1,Math.ceil(line.length/width)),0);
+}
+
+function fitCell(cell,width,horizontal='left'){
+ // Let Excel scale moderately long text. Give longer values more rows of space.
+ const wrap=lines(cell.value,Math.floor(width*1.45))>1;
+ cell.alignment={horizontal,vertical:'middle',wrapText:wrap,shrinkToFit:!wrap};
+ return wrap?lines(cell.value,width):1;
 }
 
 async function workbook(snapshot){
@@ -29,14 +36,13 @@ async function workbook(snapshot){
  widths.forEach((width,index)=>{sheet.getColumn(index+1).width=width;});
  const title=merge(sheet,1,1,columns.length,sheetTitle(snapshot));
  title.font={name:'Arial',size:15,bold:true};
- title.alignment={horizontal:'center',vertical:'middle',wrapText:true};
- sheet.getRow(1).height=Math.max(28,lines(title.value,134)*18);
+ sheet.getRow(1).height=Math.max(28,fitCell(title,134,'center')*18);
 
  for(const [index,[label,key]] of companyFields.entries()){
   const text=header[key]?String(header[key]):'';
   const row=index+2,cell=merge(sheet,row,1,8,text&&label?label+': '+text:text||null);
   cell.font={name:'Arial',size:10,bold:index===0};
-  sheet.getRow(row).height=Math.max(18,lines(cell.value,106)*13);
+  sheet.getRow(row).height=Math.max(18,fitCell(cell,106)*13);
  }
  const logo=book.addImage({filename:path.join(__dirname,'../dist/customs-bp-logo.png'),extension:'png'});
  sheet.addImage(logo,{tl:{col:9.7,row:1.2},ext:{width:131,height:117},editAs:'oneCell'});
@@ -48,11 +54,11 @@ async function workbook(snapshot){
    name.font={name:'Arial',size:10,bold:true};
    const value=merge(sheet,row,start+2,start+5,header[key]||null);
    value.font={name:'Arial',size:10};
-   value.alignment={horizontal:'left',vertical:'middle',wrapText:true};
+   const height=fitCell(value,47)*13;
    if(key==='loading_date'&&/^\d{4}-\d{2}-\d{2}$/.test(value.value)&&Number.isFinite(Date.parse(value.value))){
     value.value=new Date(value.value+'T00:00:00Z');value.numFmt='[$-809]d mmmm yyyy';
    }
-   sheet.getRow(row).height=Math.max(sheet.getRow(row).height||0,20,lines(header[key],47)*13);
+   sheet.getRow(row).height=Math.max(sheet.getRow(row).height||0,20,height);
   }
  }
 
@@ -61,11 +67,11 @@ async function workbook(snapshot){
  const tableRow=(index,values,isHeader=false)=>{
   const row=sheet.getRow(index);
   row.values=values;
-  row.height=isHeader?30:Math.max(22,...values.map((value,col)=>lines(value,widths[col]-2)*13));
+  row.height=isHeader?24:22;
   row.eachCell({includeEmpty:true},(cell,col)=>{
    cell.font={name:'Arial',size:10,bold:isHeader,color:{argb:ink}};
-   cell.alignment={horizontal:isHeader||col===1?'center':numeric.has(columns[col-1][1])?'right':'left',
-    vertical:'middle',wrapText:true};
+   const horizontal=isHeader||col===1?'center':numeric.has(columns[col-1][1])?'right':'left';
+   row.height=Math.max(row.height,fitCell(cell,widths[col-1]-2,horizontal)*13);
    cell.border={top:isHeader?boldLine:undefined,bottom:line,left:line,right:line};
    if(isHeader)cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFECECEC'}};
    else if(numeric.has(columns[col-1][1]))cell.numFmt=numberFormat(columns[col-1][1]);

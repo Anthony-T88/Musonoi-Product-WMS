@@ -93,7 +93,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(imported.added_count,2);
  const {vehicles}=await api(dispatchPath+'?shipment_month='+shipment_month);
  const arrivals=[],arrivalVehicles=[vehicles.find(v=>v.truck_no===plate),vehicles.find(v=>v.truck_no==='ALT-'+seq)];
- const arrivalBody={arrived_at:new Date().toISOString(),trailer_one:'RC3-TRAILER-'+seq,driver_name:'Synthetic Driver '+seq,passport_no:'Synthetic Passport '+seq,transporter:'Synthetic Transport'};
+ const arrivalBody={arrived_at:new Date().toISOString(),trailer_one:'RC3-TRAILER-'+seq,trailer_two:'N/A',driver_name:'Synthetic Driver '+seq,passport_no:'Synthetic Passport '+seq,transporter:'Synthetic Transport'};
  for(const [i,vehicle] of arrivalVehicles.entries()){
   assert.equal(Number(vehicle.capacity_tonnes),30);
   const url='/loading-plans/arrivals/'+vehicle.id;
@@ -293,6 +293,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const identity=[['RCCM','rccm'],['ID-NAT','id_nat'],['NIF','nif'],['Contact','contact']];
  for(const [,field] of identity)assert(bpDraft.header[field]&&bpDraft.header[field]===initialTemplate.fields[field],field);
  const bpRows=bpDraft.rows;
+ assert.equal(bpRows[0].trailer_two,'N/A');
  assert.match(bpDraft.number,/^\d{3}\/\d{4}\/CU$/);
  const agency=await api(bpPath+'/agencies','admin',{project_id:f.project,name:'Synthetic clearance agency '+seq});
  const sharedAgencies=await app.inject({method:'GET',url:'/api/v1/cobalt'+bpPath+'/agencies',headers:{...sessions.admin,'x-product-code':'CO_HYDROXIDE'}});
@@ -416,6 +417,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(inv.pageSetup.fitToWidth,1);
  assert.equal(inv.pageSetup.fitToHeight,1);
  assert.equal(invoiceBook.getWorksheet('PL').pageSetup.fitToHeight,0);
+ assert.equal(invoiceBook.getWorksheet('PL').getCell('E24').value,'N/A');
  assert.equal(inv.getCell('D30').numFmt,'#,##0.000');
  assert.equal(inv.getCell('D30').result,2.0325);
  assert.equal(inv.getCell('E14').alignment.shrinkToFit,true);
