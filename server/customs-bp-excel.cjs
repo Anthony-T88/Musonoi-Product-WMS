@@ -1,6 +1,7 @@
 'use strict';
 
 const path=require('node:path'),Excel=require('exceljs');
+const {longDate}=require('../dist/business-time.js');
 const {columns,companyFields,declarationFields,sheetTitle}=require('./customs-bp-print.cjs');
 const widths=[6,19,13,12,12,16,19,21,17,12,15,15];
 const numeric=new Set(['quantity','net_mt','gross_mt']);
@@ -22,8 +23,8 @@ async function workbook(snapshot){
  const {header,rows,total}=snapshot,book=new Excel.Workbook();
  const sheet=book.addWorksheet('Bulletin de pesage',{
   views:[{showGridLines:false}],
-  pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:rows.length<=10?1:0,
-   margins:{left:0.24,right:0.24,top:0.47,bottom:0.47,header:0.2,footer:0.2}}
+  pageSetup:{paperSize:9,orientation:'landscape',horizontalCentered:true,fitToPage:true,fitToWidth:1,fitToHeight:rows.length<=10?1:0,
+   margins:{left:0.24,right:0.24,top:0.31,bottom:0.31,header:0.2,footer:0.2}}
  });
  widths.forEach((width,index)=>{sheet.getColumn(index+1).width=width;});
  const title=merge(sheet,1,1,columns.length,sheetTitle(snapshot));
@@ -49,7 +50,7 @@ async function workbook(snapshot){
    value.font={name:'Arial',size:10};
    value.alignment={horizontal:'left',vertical:'middle',wrapText:true};
    if(key==='loading_date'&&/^\d{4}-\d{2}-\d{2}$/.test(value.value)&&Number.isFinite(Date.parse(value.value))){
-    value.value=new Date(value.value+'T00:00:00Z');value.numFmt='yyyy-mm-dd';
+    value.value=new Date(value.value+'T00:00:00Z');value.numFmt='[$-809]d mmmm yyyy';
    }
    sheet.getRow(row).height=Math.max(sheet.getRow(row).height||0,20,lines(header[key],47)*13);
   }
@@ -89,7 +90,7 @@ async function workbook(snapshot){
   cell.border={top:boldLine,bottom:boldLine,left:line,right:line};
  }
  merge(sheet,closing+2,8,12,'SIGNATURE').font={name:'Arial',size:10,bold:true};
- merge(sheet,closing+3,8,12,'KOLWEZI, le '+(header.signature_date||'')).font={name:'Arial',size:10};
+ merge(sheet,closing+3,8,12,'KOLWEZI, le '+longDate(header.signature_date)).font={name:'Arial',size:10};
  sheet.getRow(closing+3).height=18;
  sheet.pageSetup.printArea='A1:L'+(closing+3);
  sheet.pageSetup.printTitlesRow=heading+':'+heading;

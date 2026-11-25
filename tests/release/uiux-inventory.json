@@ -968,7 +968,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "issued BP weights, expanded batches and Excel downloads",
+      "state": "issued BP weights, expanded batch dates, centered printing and Excel downloads",
       "template": "/customs/bp"
     },
     {

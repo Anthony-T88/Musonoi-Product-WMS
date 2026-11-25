@@ -66,16 +66,17 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
   }
  }finally{await browser?.close();await new Promise(resolve=>site.close(resolve));}
 });
-test('BP sheets omit placeholder rows, keep short lists on one A4 landscape page and paginate long lists',async()=>{
+test('BP sheets center on landscape A4, enlarge short lists and keep English dates when paginating',async()=>{
  const fs=require('node:fs/promises'),BP=require('../../server/customs-bp-print.cjs'),http=require('node:http');
  const output=path.join(E.runtime,'bp-print');
  const assets={
   '/customs-bp-print.css':'text/css',
+  '/customs-bp-paper.css':'text/css',
   '/customs-bp-print.js':'application/javascript',
   '/customs-bp-logo.png':'image/png'
  };
  const documents=new Map();
- for(const count of [1,3,6,10,70]){
+ for(const count of [1,2,3,6,10,70]){
   const rows=Array.from({length:count},(_,i)=>({batch:'SYNTHETIC-LOT-'+(i+1),truck:'DEMO-'+i,
    trailer_one:'TRAILER-'+i,container:'CONTAINER-'+i,transporter:'Example Logistics Company',driver:'Demo Driver Surname',
    ...(count===6?{container:'SYNTHETIC-CONTAINER-1234',transporter:'Synthetic International Transport and Logistics Company',
@@ -85,7 +86,7 @@ test('BP sheets omit placeholder rows, keep short lists on one A4 landscape page
    rccm:'Example RCCM',id_nat:'Example identifier',nif:'Example NIF',contact:'Example office contact',
    customer:'Example Warehouse Customer',product:'CATHODE DE CUIVRE',mode:'ROAD',destination:'Port of Lobito, Angola',
    border:'Example crossing',agency:'Example Customs Agent',license:'SYNTH-EB-001',loading_point:'RUASHI MINING MUSONOI PLANT',
-   loading_date:'2026-11-23',signature_date:'2026-11-23'},rows,total:require('../../server/customs-bp.cjs').totals(
+   loading_date:'2026-11-23',signature_date:'2026-11-24'},rows,total:require('../../server/customs-bp.cjs').totals(
     rows.map(r=>({...r,quantity:String(r.quantity)})),true)}));
  }
  const site=http.createServer(async(req,res)=>{
@@ -106,16 +107,27 @@ test('BP sheets omit placeholder rows, keep short lists on one A4 landscape page
    const count=Number(pathname.slice(1));await page.goto(origin+pathname);
    await page.locator('.bp-issuer img').evaluate(image=>image.decode());
    assert.equal(await page.locator('.bp-vehicle').count(),count);
+   assert(await page.locator('.bp-table').evaluate(table=>[...table.tBodies].every(body=>body.rows.length)));
    assert.equal(await page.locator('.bp-closing > .bp-vehicle').count(),1);
    assert.equal(await page.locator('.bp-closing > .bp-total').count(),1);
    assert.equal(await page.locator('.bp-closing .bp-signature').count(),1);
    assert.equal(await page.locator('.bp-vehicle').first().locator('td').nth(10).textContent(),'30.123');
+   assert.equal(await page.locator('.bp-details dt').filter({hasText:'Loading Date:'}).locator('..').locator('dd').textContent(),'23 November 2026');
+   assert.equal(await page.locator('.bp-signature p').last().textContent(),'KOLWEZI, le 24 November 2026');
+   await page.emulateMedia({media:'print'});
+   const paper=await page.locator('.bp-table').evaluate(table=>{
+    const {left,right}=table.getBoundingClientRect();
+    return {left,right:document.documentElement.clientWidth-right,fontSize:parseFloat(getComputedStyle(table).fontSize)};
+   });
+   assert(paper.left>=0&&paper.right>=0&&Math.abs(paper.left-paper.right)<=1,'Centered table for '+count+' vehicles');
+   if(count===2)assert(paper.fontSize>=13.5,'Two-vehicle sheet uses the enlarged print font');
+   await page.emulateMedia({media:null});
    const pdf=await page.pdf({path:path.join(output,'vehicles-'+count+'.pdf'),preferCSSPageSize:true});
    const bytes=pdf.toString('latin1'),pages=bytes.match(/\/Type\s*\/Page\b/g)?.length;
    const size=bytes.match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/);
    assert(size);assert(Math.abs(Number(size[1])-841.89)<1&&Math.abs(Number(size[2])-595.28)<1);
    if(count<=10)assert.equal(pages,1,count+' vehicles');else assert(pages>1,count+' vehicles');
-   if(count===6){
+   if(count===2||count===6){
     const nativeDefault=await page.pdf({format:'Letter',preferCSSPageSize:false});
     assert.equal(nativeDefault.toString('latin1').match(/\/Type\s*\/Page\b/g)?.length,1);
    }

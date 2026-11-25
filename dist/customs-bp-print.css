@@ -28,17 +28,17 @@
 .bp-sheet .bp-table .bp-signoff td{border:0;padding:0}
 .bp-sheet.bp-short .bp-vehicle td{padding-block:.6mm}
 .bp-sheet.bp-short .bp-signature{padding-block-start:3mm}
-.bp-print-document .bp-sheet.bp-measuring{position:absolute;inline-size:285mm;min-width:0;padding:0;visibility:hidden;zoom:1}
+.bp-print-document .bp-sheet.bp-enlarged{font-size:11.5pt}
+.bp-print-document .bp-sheet.bp-enlarged h2{font-size:17pt}
+.bp-print-document .bp-sheet.bp-enlarged .bp-issuer p:first-child{font-size:13pt}
+.bp-print-document .bp-sheet.bp-enlarged .bp-details dl div{grid-template-columns:34mm minmax(0,1fr)}
+.bp-print-document .bp-sheet.bp-enlarged .bp-table{font-size:10.25pt}
+.bp-print-document .bp-sheet.bp-enlarged .bp-table thead{font-size:9.5pt}
+.bp-print-document .bp-sheet.bp-enlarged .bp-signature{font-size:11pt}
+.bp-print-document .bp-sheet.bp-measuring{position:absolute;inset-inline-start:0;inline-size:285mm;min-width:0;padding:0 .25mm;visibility:hidden;zoom:1}
 /* Keep the preview inside the app aligned with the print window's document styles. */
+.customs-bp-review>.wms-section{min-inline-size:0}
 html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-sheet>h2{display:block;width:100%;text-align:center;margin:0 0 2mm}
 html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-table :is(th,td){white-space:normal;text-align:center;color:inherit;background:transparent}
 html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-signature{color:#111;font:700 10pt/1.24 "Times New Roman",serif}
 html[data-release-ui="46"] #page-content .bp-proof-sheet .bp-signature p{color:inherit;font:inherit}
-@page customs-bp-sheet{size:A4 landscape;margin:12mm 6mm}
-@media print{
- .bp-print-document,.bp-print-document body{background:#fff}
- .bp-print-document{page:customs-bp-sheet}
- .bp-print-document body{max-width:none;padding:0;margin:0}
- .bp-print-document .bp-sheet{min-width:0;padding:0;zoom:var(--bp-print-scale,1)}
- #bp-print{display:none}
-}

@@ -248,7 +248,7 @@ window.CustomsBP={
   try{
    const {items}=await API.request(this.base()+'/'+button.dataset.bpExpand+'/batches');
    if(!inside.isConnected)return;
-   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,PlanDisplay.documentNo(row.packing_list_no),this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt),row.loading_date]
+   const rows=items.map(row=>'<tr>'+[row.batch,row.truck,PlanDisplay.documentNo(row.packing_list_no),this.displayWeight(row.net_mt),this.displayWeight(row.gross_mt),BusinessTime.longDate(row.loading_date)]
     .map(value=>'<td>'+esc(value||'—')+'</td>').join('')+'</tr>');
    inside.innerHTML=ExportLicenses.table([['批次号','Lot No.'],['车头号','Truck Plate'],['装箱单号','Packing List No.'],
     ['净重','Net Weight'],['毛重','Gross Weight'],['装车日期','Loading Date']],rows,panel.id+'-details',true,{numeric:[3,4]});
@@ -337,7 +337,8 @@ window.CustomsBP={
   const t=this.t,d=this.preview,header=d.header,labels=new Map(this.headerLabels().map(([key,zh,en])=>[key,t(zh,en)]));
   const fixed=['issuer','address','rccm','id_nat','nif','contact','loading_point','destination'];
   const product=ProductContext.isCopper()?t('阴极铜','Copper Cathodes'):t('氢氧化钴','Cobalt Hydroxide');
-  const facts=keys=>UI46Pages.factList(keys.map(key=>[labels.get(key),esc((key==='product'?product:header[key])||'—')]));
+  const summary={...header,product,loading_date:BusinessTime.longDate(header.loading_date)};
+  const facts=keys=>UI46Pages.factList(keys.map(key=>[labels.get(key),esc(summary[key]||'—')]));
   const history=d.versions?'<details class="bp-versions"><summary>'+t('历史版本','Revision History')+'</summary><ul>'+
    d.versions.map(v=>'<li><a href="/api/v1'+this.base()+'/'+esc(d.id)+'/print?revision='+v.revision+'" target="_blank" rel="noopener">r'+v.revision+'</a> · '+
    esc(BusinessTime.display(v.created_at))+' · '+this.excelLink(d.id,v.revision,'bp-version-download')+'</li>').join('')+'</ul></details>':'';

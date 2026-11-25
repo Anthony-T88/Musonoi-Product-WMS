@@ -1,0 +1,5 @@
+@page{size:A4 landscape;margin:8mm 6mm}
+.bp-print-document,.bp-print-document body{background:#fff}
+.bp-print-document body{max-width:none;padding:0;margin:0}
+.bp-print-document .bp-sheet{inline-size:100%;min-width:0;margin-inline:auto;padding:0 .25mm;zoom:var(--bp-print-scale,1)}
+#bp-print{display:none}

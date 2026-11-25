@@ -155,7 +155,7 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | outbounds | `/outbounds` | 铜、钴 | 管理员、物流经理、生产经理 | 筛选、表格、状态、指标、预览 | 28 / 0 / 0 | 列表与只读预览 |
 | outbound-vehicles | `/outbounds` | 铜、钴 | 管理员、销售员、销售经理 | 表格 | 28 / 0 / 0 | — |
 | printers | `/outbounds` | 铜、钴 | 管理员 | 骨架、表单、反馈 | 12 / 0 / 0 | — |
-| 清关单据管理 | `/customs`、`/customs/bp`、`/customs/bp?view=documents`、`/customs/packing-list`、`/customs/templates` | 铜、钴 | 办公室业务员、管理员、获授权模板维护人员 | BP 批次净毛重及装车日期、归档修订、编制内代理簿、模板维护权限 | — | 首次编制使用默认模板。核对固定企业资料、BP 打印及 Excel 和保存过的模板版本 |
+| 清关单据管理 | `/customs`、`/customs/bp`、`/customs/bp?view=documents`、`/customs/packing-list`、`/customs/templates` | 铜、钴 | 办公室业务员、管理员、获授权模板维护人员 | BP 批次净毛重及装车日期、归档修订、编制内代理簿、模板维护权限 | — | 核对默认模板、企业资料和归档修订。核对 A4 横向居中、短表单页与长表续页，以及预览、打印和 Excel 的装车日期及签署日期 |
 | 装车出库管理只读预览 | `/outbounds` | 铜、钴 | 获授权查看装车单的岗位 | 选择在线单据，核对单据详情、更正与历史跳转，预览异常时保留详情入口 | — | 详情接口校验单据范围 |
 | 商业发票与装箱单 | `/customs/packing-list`、`/customs/packing-list/:id` | 铜、钴 | 有装车单查看权限的岗位 | 清关单据预览、批次行选择、授权生成和修订弹窗、单据详情、打印及归档 | — | 生成与下载校验权限。查询与版本展开按项目、仓库及客户范围 |
 | weight-settings | `/outbounds/weight-settings` | 铜、钴 | 管理员 | 骨架、表单 | 12 / 0 / 0 | — |

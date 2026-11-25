@@ -350,10 +350,13 @@ test('isolated migration, initialization, business permission and concurrency ac
     assert.equal(sheet.getCell('K16').value,31.4539);
     assert.equal(sheet.getCell('L17').value,32.7828);
     assert.equal(sheet.getCell('K16').numFmt,'#,##0.000');
-    assert.equal(sheet.getCell('H20').text,'KOLWEZI, le 2026-11-24');
+    assert.equal(sheet.getCell('I12').value.toISOString(),'2026-11-23T00:00:00.000Z');
+    assert.equal(sheet.getCell('I12').numFmt,'[$-809]d mmmm yyyy');
+    assert.equal(sheet.getCell('H20').text,'KOLWEZI, le 24 November 2026');
     assert.equal(sheet.getImages().length,1);
     assert.equal(sheet.rowCount,20);
     assert.equal(sheet.pageSetup.orientation,'landscape');
+    assert.equal(sheet.pageSetup.horizontalCentered,true);
     assert.equal(sheet.pageSetup.fitToHeight,1);
    };
    await checkRevision('',2,'RAILWAY');
