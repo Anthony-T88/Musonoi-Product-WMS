@@ -15,7 +15,10 @@ async function reopenedPlan(c,req,a){
 }
 async function eligibility(c,req,a){
  const {rows:[facts]}=await c.query(`SELECT EXISTS(SELECT 1 FROM workflow_reviews WHERE allocation_id=$1 AND action='APPROVE') was_approved,
-  EXISTS(SELECT 1 FROM loading_orders WHERE allocation_id=$1) has_loading,
+  v262_lot_approval_active($1) has_active_approval,
+  (EXISTS(SELECT 1 FROM loading_orders WHERE allocation_id=$1)
+   OR EXISTS(SELECT 1 FROM loading_plan_lot_locks WHERE allocation_id=$1)) has_loading,
+  EXISTS(SELECT 1 FROM preparation_reversals WHERE allocation_id=$1 AND state='PENDING') has_pending_reversal,
   (EXISTS(SELECT 1 FROM lot_work_history WHERE allocation_id=$1 AND action IN('WEIGH','SAMPLE-STAGE','SEAL','INHERIT'))
    OR EXISTS(SELECT 1 FROM inventory_events e JOIN allocation_items ai ON ai.bundle_id=e.bundle_id
     WHERE ai.allocation_id=$1 AND e.event_type IN('MOVE','ADJUST_LOCATION') AND e.occurred_at>=$2)) has_operations,
@@ -28,15 +31,16 @@ async function eligibility(c,req,a){
  const revokePermission=req.user.permissions.includes('lot:revoke')&&(owns||req.user.permissions.includes('allocation:review'));
  const eligibleState=['WORKING','RECTIFY'].includes(a.workflow_state);
  const blocks=[
-  [facts.was_approved,'APPROVED','本备货单曾通过审核，请按整批撤销流程办理'],
-  [facts.has_loading,'LOADING','已有装车记录，请先核对装车状态'],
+  [facts.has_active_approval,'APPROVED','本备货单的最终审核已生效，请按整批撤销流程办理'],
+  [facts.has_loading,'LOADING','已有装车匹配或装车记录，请先核对装车状态'],
+  [facts.has_pending_reversal,'REVERSAL','本备货单已有待审核的整批撤销申请，请先处理该申请'],
   [facts.sampling,'SAMPLING','捆包仍在实验室取样，请先登记返回并重新打包'],
   [facts.unverified_location,'LOCATION','有捆包的实际货位待定位或已停用，请先核实货位'],
   [!revokePermission,'PERMISSION','请由有撤销权限的创建人或备货审核人办理']
  ];
  const [,blocked_code,blocked_reason]=eligibleState?blocks.find(([blocked])=>blocked)||[]:[];
  const can_revoke=eligibleState&&!blocked_code;
- return {...facts,can_withdraw:owns&&canWrite&&a.workflow_state==='PENDING'&&!facts.was_approved&&!facts.has_loading,
+ return {...facts,can_withdraw:owns&&canWrite&&a.workflow_state==='PENDING'&&!facts.has_active_approval&&!facts.has_loading,
   can_revoke,can_reselect:can_revoke&&canWrite&&facts.has_plan&&a.workflow_state==='RECTIFY',
   blocked_code:blocked_code||null,blocked_reason:blocked_reason||'',reopened_preparation_plan_id:await reopenedPlan(c,req,a)};
 }

@@ -13,8 +13,9 @@ V261.states.CANCELLED='已撤销';V262.locationNames.PUBLIC_TEMPORARY='公共新
 const supplementLotDetail=V262.detail.bind(V262);
 const lotLabel=(zh,en)=>I18n.language==='en'?en:zh;
 const lotBlockLabels={
- APPROVED:['本备货单曾通过审核，请按整批撤销流程办理。','This order previously passed review. Use whole-batch reversal.'],
- LOADING:['已有装车记录，请先核对装车状态。','Loading records exist. Verify the loading status first.'],
+ APPROVED:['本备货单的最终审核已生效，请按整批撤销流程办理。','Final approval is in effect. Use whole-batch reversal.'],
+ LOADING:['已有装车匹配或装车记录，请先核对装车状态。','Loading matches or records exist. Verify the loading status first.'],
+ REVERSAL:['本备货单已有待审核的整批撤销申请，请先处理该申请。','Review the pending whole-batch reversal request first.'],
  SAMPLING:['捆包仍在实验室取样，请先登记返回并重新打包。','Record the return and repacking of any bundles still being sampled.'],
  LOCATION:['有捆包的实际货位待定位或已停用，请先核实货位。','Verify any unlocated bundles or inactive storage locations.'],
  PERMISSION:['请由有撤销权限的创建人或备货审核人办理。','An authorized creator or preparation reviewer can cancel this order.']

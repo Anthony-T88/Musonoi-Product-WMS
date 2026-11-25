@@ -32,7 +32,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
  const upgradeEvidence=[];
- for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195,198,199,200,201,203,204,205,207]){
+ for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195,198,199,200,201,203,204,205,207,209]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
    const {client:c,name}=await connect();
    await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');

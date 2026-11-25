@@ -129,7 +129,7 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | co-work-plan-detail | `/preparation/work-plans/:id` | 钴 | 管理员 | 骨架、状态 | 10 / 0 / 0 | 共用单据页眉 |
 | cu-preparation-from-plan | `/preparation/new` | 铜 | 管理员 | 骨架、表单、表格 | 10 / 0 / 0 | 现场逐捆、逐袋或匹配 |
 | co-preparation-from-plan | `/receipts/new` | 钴 | 管理员 | 骨架、表单 | 10 / 0 / 0 | 现场逐捆、逐袋或匹配 |
-| cu-lot | `/preparation/:id` | 铜 | 管理员、现场主管、物流经理、物流现场操作员 | 表格、反馈、撤销快照、驳回后撤销与重选 | 10 / 0 / 0 | 终审前按原计划及批次号重选。终审后按整批撤销流程审核。 |
+| cu-lot | `/preparation/:id` | 铜 | 管理员、现场主管、物流经理、物流现场操作员 | 表格、反馈、撤销快照、驳回后撤销与重选 | 10 / 0 / 0 | 覆盖首次驳回及授权更正后再次驳回，沿用原计划和批次号。当前终审已生效时按整批撤销流程审核。 |
 | co-preparation-alias | `/preparation/:id` | 钴 | 管理员 | 表格、指标 | 6 / 0 / 0 | 现场逐捆、逐袋或匹配 |
 | co-work-alias | `/preparation/:id/work` | 钴 | 管理员 | 表格、指标 | 6 / 0 / 0 | — |
 | cu-sampling | `/preparation/history-sampling` | 铜 | 管理员 | 骨架、反馈 | 0 / 2 / 0 | 历史入口与拒绝检查 |

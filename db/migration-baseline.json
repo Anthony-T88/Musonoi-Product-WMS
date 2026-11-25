@@ -837,6 +837,10 @@
     {
       "version": "209_v489_preapproval_revoke_permission.sql",
       "checksum": "2cf23b2e4710789020c11161c3ea7874064c387f495fe44cba598c5613e8a589"
+    },
+    {
+      "version": "210_v489_effective_preparation_review.sql",
+      "checksum": "dc21177a5ed748ba8975a02c0f1e147949db92a0b885b8ef229909b58b8f0187"
     }
   ]
 }
