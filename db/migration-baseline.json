@@ -833,6 +833,10 @@
     {
       "version": "208_v488_historical_cobalt_metal.sql",
       "checksum": "06bc9bcbd63ced84a3e71091a2dcb7c26c3e4a4d51d1db9bf9dd3311e645eb42"
+    },
+    {
+      "version": "209_v489_preapproval_revoke_permission.sql",
+      "checksum": "2cf23b2e4710789020c11161c3ea7874064c387f495fe44cba598c5613e8a589"
     }
   ]
 }

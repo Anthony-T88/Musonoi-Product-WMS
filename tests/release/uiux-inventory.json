@@ -744,7 +744,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "preparation detail including whole-batch reversal",
+      "state": "preparation detail, returned lot cancellation and reselection, whole-batch reversal",
       "template": "/preparation/:id"
     },
     {

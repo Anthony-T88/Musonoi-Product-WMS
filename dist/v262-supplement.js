@@ -11,15 +11,130 @@ Business.receipts=async function(){let current=new URLSearchParams(location.sear
 };
 V261.states.CANCELLED='已撤销';V262.locationNames.PUBLIC_TEMPORARY='公共新生产捆包堆存区';
 const supplementLotDetail=V262.detail.bind(V262);
-V262.detail=async function(id){if(location.pathname!=='/preparation/'+id)return;await supplementLotDetail(id);if(location.pathname!=='/preparation/'+id||!$('v262-summary'))return;const summaryNode=$('v262-summary');
- const reversalArea=document.createElement('section');reversalArea.id='preparation-reversal';reversalArea.className='wms-section';reversalArea.dataset.noI18n='';reversalArea.hidden=true;summaryNode.parentElement.append(reversalArea);
+const lotLabel=(zh,en)=>I18n.language==='en'?en:zh;
+const lotBlockLabels={
+ APPROVED:['本备货单曾通过审核，请按整批撤销流程办理。','This order previously passed review. Use whole-batch reversal.'],
+ LOADING:['已有装车记录，请先核对装车状态。','Loading records exist. Verify the loading status first.'],
+ SAMPLING:['捆包仍在实验室取样，请先登记返回并重新打包。','Record the return and repacking of any bundles still being sampled.'],
+ LOCATION:['有捆包的实际货位待定位或已停用，请先核实货位。','Verify any unlocated bundles or inactive storage locations.'],
+ PERMISSION:['请由有撤销权限的创建人或备货审核人办理。','An authorized creator or preparation reviewer can cancel this order.']
+};
+
+function mountLotPreapproval(a,toolbar){
+ const t=lotLabel,p=a.preapproval,id=a.id;
+ const action=(name,label,style)=>'<button type="button" class="button '+style+'" id="lot-'+name+'">'+label+'</button>';
+ const blocked=lotBlockLabels[p.blocked_code];
+ toolbar.insertAdjacentHTML('beforeend',
+  (p.can_withdraw?action('withdraw',t('撤回审核','Withdraw Review'),'secondary'):'')+
+  (p.can_reselect?action('reselect',t('重选捆包','Reselect Bundles'),'secondary'):'')+
+  (p.can_revoke?action('revoke',t('撤销备货','Cancel Preparation'),'danger-outline'):'')+
+  (p.reopened_preparation_plan_id?'<a class="button secondary" id="lot-reopen-plan" href="'+
+   esc(PreparationPlans.startRoute({id:p.reopened_preparation_plan_id}))+'">'+t('按原计划重选捆包','Reselect Bundles for the Original Plan')+'</a>':'')+
+  (blocked?'<span class="wms-feedback" role="status">'+esc(t(...blocked))+'</span>':''));
+ for(const kind of ['withdraw','reselect','revoke']){
+  const trigger=$('lot-'+kind);
+  if(!trigger)continue;
+  trigger.setAttribute('data-no-i18n','');
+  trigger.onclick=async()=>{
+   trigger.disabled=true;
+   try{
+    const current=await API.request('/v261/lots/'+id);
+    if(!toolbar.isConnected)return;
+    const field=({withdraw:'can_withdraw',reselect:'can_reselect',revoke:'can_revoke'})[kind];
+    if(!current.preapproval?.[field]){
+     notify(t('备货状态已变化，请核对最新操作。','Preparation status changed. Check the available actions.'));
+     await V262.detail(id);
+     return;
+    }
+    openLotPreapproval(kind,current);
+   }catch(error){notify(I18n.translate(error.message,true));}
+   finally{trigger.disabled=false;}
+  };
+ }
+}
+
+function openLotPreapproval(kind,a){
+ if($('lot-preapproval-dialog'))return;
+ const t=lotLabel,p=a.preapproval,withdraw=kind==='withdraw',reselect=kind==='reselect';
+ const title=withdraw?t('撤回备货审核','Withdraw Preparation Review'):
+  reselect?t('撤销本次备货并重选捆包','Cancel This Attempt and Reselect Bundles'):t('撤销备货','Cancel Preparation');
+ const confirm=withdraw?t('确认撤回','Withdraw Review'):reselect?t('确认撤销并重选','Cancel and Reselect'):t('确认撤销','Confirm Cancellation');
+ const facts=[
+  [t('销售计划','Sales Plan'),a.plan.code],
+  [t('当前分配客户','Assigned Customer'),a.plan.customer_name],
+  [t('备货捆数','Preparation Bundles'),a.quantities?.original_count??a.summary.total],
+  [t('已检斤捆数','Weighed Bundles'),a.summary.weighed],
+  [t('规划堆存货位','Planned Location'),copperSlotLabel(a.planned?.code)]
+ ];
+ const popup=document.createElement('dialog');
+ popup.id='lot-preapproval-dialog';
+ popup.className='product-dialog';
+ popup.setAttribute('data-no-i18n','');
+ popup.setAttribute('aria-labelledby','lot-preapproval-title');
+ popup.innerHTML='<form id="lot-preapproval-form"><header><h2 id="lot-preapproval-title">'+title+'</h2><p>'+esc(a.lot_no)+'</p></header>'+
+  '<dl class="confirmation-grid" id="lot-preapproval-facts">'+facts.map(([label,value])=>'<dt>'+label+'</dt><dd>'+esc(value??'—')+'</dd>').join('')+'</dl>'+
+  (withdraw?'<p class="work-notice">'+t('撤回后恢复备货作业，保留现有捆包和货位锁定。','Resume preparation with the current bundle and location reservations.')+'</p>':
+   '<div id="lot-revoke-fields"><p class="work-notice">'+(reselect?t('确认后从原备货计划进入选货。原作业记录保留。','After confirmation, select bundles for the original plan. The previous attempt stays in history.'):'')+
+   ' '+t('系统按核对结果释放备货锁定，捆包仍在当前实物货位。','The system releases eligible reservations. Bundles stay at their actual locations.')+'</p>'+
+   '<label>'+t('撤销原因','Reason for Cancellation')+'<textarea name="reason" maxlength="1000" rows="2" required></textarea></label>'+
+   '<label class="check-label"><input type="checkbox" name="work_stopped" required>'+t('已停止原备货作业','The prior preparation work has stopped')+'</label>'+
+   '<label class="check-label"><input type="checkbox" name="physical_state_verified" required>'+t('已逐捆核实当前实物位置','Verified each bundle’s actual location')+'</label>'+
+   '<label>'+t('现场作业及位置核实说明','Work and Location Check Notes')+'<textarea name="observation" maxlength="1000" rows="2"'+(p.has_operations?' required':'')+
+   '></textarea></label></div>')+
+  '<p id="lot-preapproval-error" class="error" role="alert"></p><footer>'+
+  '<button type="button" id="lot-preapproval-back" class="button secondary">'+t('返回','Back')+'</button>'+
+  '<button type="submit" class="button '+(withdraw?'primary':'danger')+'" id="lot-preapproval-confirm">'+confirm+'</button></footer></form>';
+ $('page-content').append(popup);
+ popup.addEventListener('close',()=>popup.remove(),{once:true});
+ popup.querySelector('#lot-preapproval-back').onclick=()=>popup.close();
+ const form=popup.querySelector('form'),error=popup.querySelector('[role=alert]');
+ form.onsubmit=async event=>{
+  event.preventDefault();
+  const button=event.submitter;
+  button.disabled=true;
+  const data=new FormData(form),input={version:a.version};
+  if(!withdraw)Object.assign(input,{
+   reason:data.get('reason'),observation:data.get('observation'),
+   work_stopped:data.has('work_stopped'),physical_state_verified:data.has('physical_state_verified')
+  });
+  let result;
+  try{result=await API.request('/v262/lots/'+a.id+'/'+(withdraw?'withdraw':'revoke'),{method:'POST',body:input});}
+  catch(failure){error.textContent=I18n.translate(failure.message,true);button.disabled=false;return;}
+  if(!popup.isConnected)return;
+  popup.close();
+  if(!withdraw){
+   for(const bundle of a.items)V262.drafts.delete(a.id+':'+bundle.id);
+   ProductContext.dirty=false;
+  }
+  window.dispatchEvent(new Event('inventory-changed'));
+  if(reselect&&result.reopened_preparation_plan_id){
+   await Router.go(PreparationPlans.startRoute({id:result.reopened_preparation_plan_id}));
+   return;
+  }
+  notify(withdraw?t('已撤回审核','Review withdrawn'):
+   result.reopened_preparation_plan_id?t('备货已撤销，原计划可重新选货','Preparation cancelled. The original plan is available.') :
+   t('备货已撤销','Preparation cancelled'));
+  await V262.detail(a.id);
+ };
+ popup.showModal();
+}
+
+V262.detail=async function(id){
+ if(location.pathname!=='/preparation/'+id)return;
+ const a=await supplementLotDetail(id);
+ if(!a||location.pathname!=='/preparation/'+id||!$('v262-summary'))return;
+ const summaryNode=$('v262-summary'),toolbar=$('v262-lot-actions');
+ if(a.preapproval&&toolbar){
+  $('v261-cancel')?.remove();
+  mountLotPreapproval(a,toolbar);
+ }
+ const reversalArea=document.createElement('section');
+ reversalArea.id='preparation-reversal';
+ reversalArea.className='wms-section';
+ reversalArea.dataset.noI18n='';
+ reversalArea.hidden=true;
+ summaryNode.parentElement.append(reversalArea);
  await PreparationReversal.mount(reversalArea,id);
- const a=await API.request('/v261/lots/'+id),p=a.preapproval;if(location.pathname!=='/preparation/'+id||!summaryNode.isConnected||summaryNode!==$('v262-summary')||!p)return;$('v261-cancel')?.remove();const area=document.createElement('template');area.innerHTML=`${p.can_withdraw?'<button type="button" class="button secondary" id="lot-withdraw">撤回审核</button>':''}${p.can_revoke?'<button type="button" class="button danger-outline" id="lot-revoke">撤销备货</button>':''}${p.blocked_reason?'<span class="quiet-note">'+esc(p.blocked_reason)+'</span>':''}`;const review=$('v261-approve')||$('v261-submit'),toolbar=review?.parentElement||$('v261-note').nextElementSibling;
- const revoke=area.content.querySelector('#lot-revoke');
- if(revoke&&review)review.after(revoke);
- toolbar.append(area.content);
- const popup=document.createElement('dialog');popup.id='lot-preapproval-dialog';popup.className='product-dialog';popup.innerHTML=`<form id="lot-preapproval-form"><header><h2 id="lot-preapproval-title"></h2><p>Lot ${esc(a.lot_no)} · ${esc(V261.states[a.workflow_state])}</p></header><dl class="confirmation-grid" id="lot-preapproval-facts"><dt>销售计划</dt><dd>${esc(a.plan.code)}</dd><dt>当前分配客户</dt><dd>${esc(a.plan.customer_name)}</dd><dt>原始备货捆数</dt><dd>${a.quantities?.original_count??a.summary.total}</dd><dt>已检斤 / 已取样</dt><dd>${a.summary.weighed} / ${a.items.filter(b=>['RETURNED','WEIGHED'].includes(b.sample_stage)).length} 捆</dd><dt>规划堆存货位</dt><dd>${esc(copperSlotLabel(a.planned.code))}</dd></dl><div id="lot-revoke-fields"><p class="work-notice" id="lot-preapproval-work-notice">${p.has_operations?'已存在检斤、取样、铅封或移位记录，撤销后全部保留。':''}不会自动移动捆包；货位仍有实物或业务占用时继续保留锁定。</p>${p.blocked_reason?'<p class="error">'+esc(p.blocked_reason)+'</p>':''}<label><span>撤销原因 <span class="required-mark">*</span></span><textarea name="reason" maxlength="1000" rows="2"></textarea></label><label class="check-label"><input type="checkbox" name="work_stopped">已停止原备货作业</label><label class="check-label"><input type="checkbox" name="physical_state_verified">已逐捆核实当前实物位置</label><label><span>现场作业及位置核实说明${p.has_operations?' <span class="required-mark">*</span>':''}</span><textarea name="observation" maxlength="1000" rows="2"></textarea></label></div><p id="lot-withdraw-note" class="work-notice">撤回后恢复备货作业中，保留检斤、铅封与取样状态，捆包及规划货位继续锁定。</p><p id="lot-preapproval-error" class="error" role="alert"></p><footer><button type="button" id="lot-preapproval-back" class="button secondary">返回</button><button class="button primary" id="lot-preapproval-confirm">确认</button></footer></form>`;$('page-content').append(popup);let action,current=a,policy=p;
- const open=async kind=>{try{current=await API.request('/v261/lots/'+id);policy=current.preapproval;if(!(kind==='withdraw'?policy?.can_withdraw:policy?.can_revoke)){notify('Lot状态或权限已变化，请刷新核对最新记录');return;}$('lot-preapproval-facts').innerHTML='<dt>销售计划</dt><dd>'+esc(current.plan.code)+'</dd><dt>当前分配客户</dt><dd>'+esc(current.plan.customer_name)+'</dd><dt>原始备货捆数</dt><dd>'+(current.quantities?.original_count??current.summary.total)+'</dd><dt>已检斤 / 已取样</dt><dd>'+current.summary.weighed+' / '+current.items.filter(b=>['RETURNED','WEIGHED'].includes(b.sample_stage)).length+' 捆</dd><dt>规划堆存货位</dt><dd>'+esc(copperSlotLabel(current.planned.code))+'</dd>';$('lot-preapproval-work-notice').textContent=(policy.has_operations?'已存在检斤、取样、铅封或移位记录，撤销后全部保留。':'')+'不会自动移动捆包；货位仍有实物或业务占用时继续锁定。';}catch(e){notify(e.message);return;}action=kind;$('lot-preapproval-title').textContent=kind==='withdraw'?'撤回备货审核':'撤销备货';$('lot-revoke-fields').hidden=kind!=='revoke';$('lot-withdraw-note').hidden=kind!=='withdraw';const form=$('lot-preapproval-form');form.elements.reason.required=kind==='revoke';form.elements.work_stopped.required=kind==='revoke';form.elements.physical_state_verified.required=kind==='revoke';form.elements.observation.required=kind==='revoke'&&policy.has_operations;$('lot-preapproval-error').textContent='';$('lot-preapproval-confirm').textContent=kind==='withdraw'?'确认撤回':'确认撤销';$('lot-preapproval-confirm').className='button '+(kind==='withdraw'?'primary':'danger');popup.showModal();};if($('lot-withdraw'))$('lot-withdraw').onclick=()=>open('withdraw');if($('lot-revoke'))$('lot-revoke').onclick=()=>open('revoke');$('lot-preapproval-back').onclick=()=>popup.close();$('lot-preapproval-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;const form=e.target;try{await API.request('/v262/lots/'+id+'/'+action,{method:'POST',body:{version:current.version,reason:form.elements.reason.value,observation:form.elements.observation.value,work_stopped:form.elements.work_stopped.checked,physical_state_verified:form.elements.physical_state_verified.checked}});popup.close();notify(action==='withdraw'?'已撤回审核，捆包及货位继续锁定':'备货已撤销，原备货计划可以重新选择');await this.detail(id);}catch(err){if(popup.isConnected){popup.querySelector('#lot-preapproval-error').textContent=err.message;e.submitter.disabled=false;}else notify('请核对操作结果：'+err.message);}};
 };
 V261.detail=V262.detail.bind(V262);Business.allocationDetail=V261.detail;
 StockMap.stateNames.TEMPORARY='公共新生产捆包堆存区';

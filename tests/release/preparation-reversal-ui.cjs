@@ -33,7 +33,7 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
    return r.json();
   }
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  const receipt=await api('production_operator',copper,'/receipts',{project_id:f.project,lines:[1,2].map(n=>({
+  const receipt=await api('production_operator',copper,'/receipts',{project_id:f.project,lines:[1,2,3,4].map(n=>({
    bundle_no:'MUS-'+day.slice(0,4)+'-065-00'+n,sheets_per_bundle:48,production_date:day,inbound_at:new Date().toISOString()
   }))});
   const submit=await api('production_operator',copper,'/receipts/'+receipt.id+'/submit',{version:receipt.version});
@@ -46,7 +46,7 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
   const fixtures={};
   for(const product of [copper,cobalt]){
    const co=product===cobalt,sale=await P.salesPlan(api,f,product),plan=await P.approved(api,product,sale,P.batch(product,921));
-   const payload=co?{total_bags:2}:{planned_location_id:slot.id,items:bundles.map(b=>({bundle_id:b.id,sample_required:false}))};
+   const payload=co?{total_bags:2}:{planned_location_id:slot.id,items:bundles.slice(0,2).map(b=>({bundle_id:b.id,sample_required:false}))};
    fixtures[product]={sale,plan,payload};
    await t.test(product+' cancels only work; same approved plan is directly executable with original batch',async()=>{
     const first=await api(operator,product,base(product),{...payload,preparation_plan_id:plan.id,preparation_plan_version:plan.version});
@@ -126,6 +126,82 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
 
   await app.listen({host:'127.0.0.1',port});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
+  await t.test('returned copper lot can cancel and reselect different bundles from the original approved plan',async()=>{
+   const planned=await api('admin',copper,'/masters/locations',{project_id:f.project,warehouse_id:f.warehouse,code:'P1-02',active:true});
+   await c.query("UPDATE stock_map_cells SET x=100,y=0,width=100,height=100 WHERE code='P1-02'");
+   await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code='P1-02' WHERE id=$1",[planned.id]);
+   const plan=await P.approved(api,copper,fixtures[copper].sale,P.batch(copper,923));
+   const create={preparation_plan_id:plan.id,preparation_plan_version:plan.version,planned_location_id:planned.id};
+   const [wrong,right]=bundles.slice(2);
+   const work=await api(operator,copper,base(copper),{...create,items:[{bundle_id:wrong.id,sample_required:false}]});
+   const lotPath=id=>base(copper)+'/'+id;
+   const weighAndSubmit=async(id,seal)=>{
+    const d=await api(operator,copper,lotPath(id));
+    const saved=await api(operator,copper,'/v262/lots/'+id+'/weigh',{version:d.version,
+     items:d.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.1000',seal_no:seal}))});
+    return api(operator,copper,lotPath(id)+'/submit',{version:saved.lot.version});
+   };
+   const queued=await weighAndSubmit(work.id,'RESELECT-OLD-SEAL');
+   const rejected=await api(supervisor,copper,lotPath(work.id)+'/reject',{version:queued.version,note:'Wrong bundle selected'});
+   assert.equal(rejected.workflow_state,'RECTIFY');
+   assert.equal((await api(operator,copper,lotPath(work.id))).preapproval.can_reselect,true);
+   const reviewer=(await api(supervisor,copper,lotPath(work.id))).preapproval;
+   assert.equal(reviewer.can_revoke,true);
+   assert.equal(reviewer.can_reselect,false);
+   const positions=async()=> (await c.query('SELECT id,location_id,physical_status FROM bundles WHERE id=ANY($1::uuid[]) ORDER BY id',[[wrong.id,right.id]])).rows;
+   const before=await positions();
+   const auth=f.accounts.find(a=>a.role===operator),context=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block'});
+   let replacement;
+   try{
+    const login=await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:auth.username,password:auth.password,language:'zh-CN'}});
+    assert(login.ok());
+    const page=await context.newPage();
+    await page.addLocatorHandler(page.locator('#task-notice[open] [data-task-dismiss]'),button=>button.click());
+    await page.goto(origin+'/preparation/'+work.id);
+    await page.locator('#lot-revoke').waitFor();
+    const reselect=page.getByRole('button',{name:'重选捆包',exact:true});
+    await reselect.click();
+    const dialog=page.locator('#lot-preapproval-dialog');
+    await dialog.getByRole('button',{name:'返回',exact:true}).click();
+    assert.equal((await c.query('SELECT workflow_state FROM allocations WHERE id=$1',[work.id])).rows[0].workflow_state,'RECTIFY');
+    await reselect.click();
+    await dialog.locator('[name=reason]').fill('Synthetic wrong bundle correction');
+    await dialog.locator('[name=work_stopped]').check();
+    await dialog.locator('[name=physical_state_verified]').check();
+    assert(await dialog.locator('[name=observation]').evaluate(input=>input.required));
+    await dialog.locator('[name=observation]').fill('Checked original bundle at its actual location');
+    const cancelled=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/v262/lots/'+work.id+'/revoke'));
+    await dialog.getByRole('button',{name:'确认撤销并重选',exact:true}).click();
+    const changed=await cancelled;
+    assert.equal(changed.status(),200,await changed.text());
+    assert.equal((await changed.json()).reopened_preparation_plan_id,plan.id);
+    await page.waitForURL(url=>url.pathname==='/preparation/new'&&url.searchParams.get('preparation_plan')===plan.id);
+    assert.equal(await page.locator('#v261-lot-no').inputValue(),plan.batch_no);
+    await page.locator('[data-v261-pick="'+right.id+'"]').check();
+    assert.equal(await page.locator('[data-v261-pick="'+wrong.id+'"]').isChecked(),false);
+    await page.locator('#v261-planned').selectOption(planned.id);
+    const created=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/v261/lots'));
+    await page.locator('#v261-create-submit').click();
+    const response=await created;
+    assert.equal(response.status(),200,await response.text());
+    replacement=await response.json();
+    assert.notEqual(replacement.id,work.id);
+    assert.equal(replacement.lot_no,work.lot_no);
+   }finally{await context.close();sessions.delete(operator);}
+   assert.deepEqual(await positions(),before);
+   const archived=await api(operator,copper,lotPath(work.id));
+   assert.equal(archived.workflow_state,'CANCELLED');
+   assert(archived.history.some(item=>item.action==='REJECT'&&item.note==='Wrong bundle selected'));
+   assert(archived.history.some(item=>item.action==='REVOKE'));
+   assert(archived.items.every(item=>item.released_at));
+   assert.deepEqual((await api(operator,copper,lotPath(replacement.id))).items.map(item=>item.id),[right.id]);
+   const retry=await weighAndSubmit(replacement.id,'RESELECT-NEW-SEAL');
+   assert.equal(retry.workflow_state,'PENDING');
+   const returned=await api(supervisor,copper,lotPath(replacement.id)+'/reject',{version:retry.version,note:'Synthetic cancellation path'});
+   await api(supervisor,copper,'/v262/lots/'+replacement.id+'/revoke',{version:returned.version,reason:'Verified stop',
+    observation:'Stock and locations checked',work_stopped:true,physical_state_verified:true});
+   assert.equal((await api(operator,copper,lotPath(replacement.id))).preapproval.reopened_preparation_plan_id,plan.id);
+  });
   await t.test('manager sees pending reversal in the actual work detail and approves in both products',async()=>{
    const a=f.accounts.find(x=>x.role===manager),context=await browser.newContext({viewport:{width:1280,height:900}});
    assert.equal((await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}})).status(),200);
