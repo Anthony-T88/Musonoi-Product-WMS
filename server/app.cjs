@@ -4,7 +4,7 @@ process.env.TZ='Africa/Lubumbashi';
 const Fastify=require('fastify'),{Pool}=require('pg'),path=require('node:path');
 const {config}=require('./config.cjs'),{verifyPassword,digest,token}=require('./security.cjs'),{transaction,where,order,listing,invalid,inventoryInput,inventorySource}=require('./inventory.cjs');
 const AccountPolicy=require('./account-policy.cjs'),LoginSession=require('./login-session.cjs');
-const ServiceErrors=require('./service-errors.cjs'),release=require('./release.cjs');
+const ServiceErrors=require('./service-errors.cjs'),DB=require('./database-connection.cjs'),release=require('./release.cjs');
 
 const problem=(status,message)=>Object.assign(Error(message),{statusCode:status});
 function publicAsset(req,reply){
@@ -12,10 +12,26 @@ function publicAsset(req,reply){
  const [file,query]=req.url.split('?');
  return /^\/[a-z0-9-]+\.(?:js|css)$/.test(file)&&file!=='/sw.js'&&query==='rev='+release.frontendRevision;
 }
+async function verifyStartupDatabase(db,cfg){
+ if(cfg.environment==='production'||cfg.db?.tier==='preproduction')await DB.verify(db,cfg);
+ try{
+  const {rows:[latest]}=await db.query('SELECT version,checksum FROM security_schema_status');
+  const expected=require('../db/migration-baseline.json').migrations.find(entry=>entry.version===release.requiredMigration);
+  if(latest&&latest.version===release.requiredMigration&&latest.checksum===expected?.checksum)return;
+ }catch(error){
+  if(error.code!=='42P01')throw error;
+ }
+ throw Object.assign(Error('数据库安全迁移未就绪，请先完成维护验收'),{code:'DB_SECURITY_SCHEMA_REQUIRED'});
+}
 async function build(options={}){
- const cfg=options.config||config();if(process.env.VERIFY_SOURCE_INTEGRITY==='1')require('./release-integrity.cjs').verify(cfg.root);const DB=require('./database-connection.cjs'),dbOptions=options.pool?null:DB.connection(cfg);if(dbOptions)await DB.network(cfg,dbOptions);const pool=options.pool||new Pool(dbOptions);
- if(cfg.environment==='production'||cfg.db?.tier==='preproduction'){try{await DB.verify(pool,cfg);}catch(e){if(!options.pool)await pool.end();throw e;}}
- try{const latest=(await pool.query('SELECT version,checksum FROM security_schema_status')).rows[0],required=require('./release.cjs').requiredMigration,expected=require('../db/migration-baseline.json').migrations.find(e=>e.version===required);if(!latest||latest.version!==required||latest.checksum!==expected?.checksum)throw Object.assign(Error('数据库安全迁移未就绪，请先完成维护验收'),{code:'DB_SECURITY_SCHEMA_REQUIRED'});}catch(e){if(!options.pool)await pool.end();if(e.code==='42P01')throw Object.assign(Error('数据库安全迁移未就绪，请先完成维护验收'),{code:'DB_SECURITY_SCHEMA_REQUIRED'});throw e;}
+ const cfg=options.config||config();
+ if(process.env.VERIFY_SOURCE_INTEGRITY==='1')require('./release-integrity.cjs').verify(cfg.root);
+ const dbOptions=options.pool?null:DB.connection(cfg);
+ if(dbOptions){
+  await DB.network(cfg,dbOptions);
+  await DB.verifyStartup(dbOptions,db=>verifyStartupDatabase(db,cfg));
+ }else await verifyStartupDatabase(options.pool,cfg);
+ const pool=options.pool||new Pool(dbOptions);
  const poolError=e=>ServiceErrors.report(e,null,options.errorReporter);pool.on('error',poolError);
  const Lease=require('./authorization-lease.cjs');
  const leasePool=options.authorizationPool||(options.pool?pool:new Pool({...dbOptions,max:Math.min(dbOptions.max||10,10),application_name:'musonoi-authorization'}));

@@ -3039,8 +3039,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "9d78d86bbaf30d469d677b19322963372d329a38719495e2899348a6e1334d91",
-      "bytes": 9920
+      "sha256": "862dd2616ffcbd7bdf15dfbd4a9908d8ea10e850e04d634fcf1b25eb3af62145",
+      "bytes": 10159
     },
     {
       "path": "scripts/db.cjs",
@@ -3124,8 +3124,8 @@
     },
     {
       "path": "server/app.cjs",
-      "sha256": "ca761220579e4c4b477b6fccd5ca99f6a835f8fcd21714e91bce3049d40b5aa9",
-      "bytes": 33679
+      "sha256": "cfbeb727bc5d17b5f38c694ad902fe7d02615ad8ed27657ad6accb29f5e02e69",
+      "bytes": 33689
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -3309,8 +3309,8 @@
     },
     {
       "path": "server/database-connection.cjs",
-      "sha256": "e36826433e415359f014cee894733f95c7ec73c02a4b6e7e57bce0177dba44df",
-      "bytes": 4379
+      "sha256": "e6702e5f49b5728ccc4f412cfa3ef6f804f0101c9755903811874f9a40b1e6f2",
+      "bytes": 6363
     },
     {
       "path": "server/dispatch-reader.cjs",
@@ -3829,7 +3829,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "08241487023f2bec6ced0f0454a71bbcd79f9933e03b2fb448acfcfd49122363",
+      "sha256": "af7d566503065413655624bbb7c1f5325bfd5ce52a3ecb26f0f7e1de7f23a363",
       "bytes": 100630
     },
     {
@@ -3954,8 +3954,8 @@
     },
     {
       "path": "tests/release/deployment.test.cjs",
-      "sha256": "5b66e0e157d452ebeccc9efceb4e69977db8948823e3702bfd361906d7d12335",
-      "bytes": 3302
+      "sha256": "e8fe1642ce9220498c34a6f95f21848e96060a9ef0ee1e6e1f781e3177160198",
+      "bytes": 5785
     },
     {
       "path": "tests/release/docker-acceptance.cjs",

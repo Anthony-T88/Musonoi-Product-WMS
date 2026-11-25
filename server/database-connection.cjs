@@ -1,6 +1,8 @@
 'use strict';
 // Shared by the application and maintenance tools. Never include URLs in errors.
 const fs=require('node:fs'),net=require('node:net'),dns=require('node:dns').promises;
+const {Client}=require('pg'),{setTimeout:delay}=require('node:timers/promises');
+const startupRetryCodes=new Set(['57P03','ECONNREFUSED','ETIMEDOUT']);
 function fail(code){throw Object.assign(Error(code),{code});}
 function number(value,fallback,min,max){const n=value===undefined||value===''?fallback:Number(value);if(!Number.isInteger(n)||n<min||n>max)fail('DB_INVALID_LIMIT');return n;}
 function settings(env=process.env){return {tier:env.DEPLOYMENT_TIER,hosts:env.DB_ALLOWED_HOSTS,name:env.DB_EXPECTED_NAME,ca:env.DB_TLS_CA_FILE,poolMax:env.DB_POOL_MAX,waitMs:env.DB_CONNECT_TIMEOUT_MS,major:env.DB_EXPECTED_MAJOR};}
@@ -47,5 +49,48 @@ async function verify(client,cfg,purpose='app'){
  }
  return {major,database:r.database,username:r.username};
 }
-function safeError(e){return {status:'FAILED',code:/^[A-Z0-9_]{2,60}$/.test(e?.code||'')?e.code:'DB_OPERATION_FAILED'};}
-module.exports={connection,settings,network,verify,fail,safeError};
+
+async function verifyStartup(options,verifyDatabase,{timeoutMs=180_000,intervalMs=2_000,
+ report=record=>console.log(JSON.stringify(record))}={}){
+ const started=performance.now();
+ const remaining=()=>Math.ceil(timeoutMs-(performance.now()-started));
+ let lastCode;
+ const timedOut=()=>Object.assign(Error('DB_STARTUP_TIMEOUT'),{code:'DB_STARTUP_TIMEOUT',lastCode});
+ for(;;){
+  const left=remaining();
+  if(left<=0)throw timedOut();
+  // Each attempt has its own connection. Closing it also cancels a stalled startup query.
+  const client=new Client({...options,connectionTimeoutMillis:Math.min(options.connectionTimeoutMillis,left)});
+  let connectionError;
+  client.on('error',error=>{connectionError=error;});
+  try{
+   await client.connect();
+   await verifyDatabase({query(text,values){
+    if(connectionError)throw connectionError;
+    const queryTimeout=remaining();
+    if(queryTimeout<=0)throw timedOut();
+    return client.query({text,values,query_timeout:queryTimeout});
+   }});
+   if(remaining()<=0)throw timedOut();
+   if(lastCode)report({status:'DB_READY',waitMs:Math.round(performance.now()-started)});
+   return;
+  }catch(error){
+   const failure=error.code?error:connectionError||error;
+   if(!failure.code&&failure.message==='Query read timeout')throw timedOut();
+   // The pinned PostgreSQL client reports handshake timeouts without an error code.
+   const code=failure.code??(failure.message==='timeout expired'?'ETIMEDOUT':null);
+   if(!startupRetryCodes.has(code))throw failure;
+   if(!lastCode)report({status:'DB_WAITING',code,timeoutMs});
+   lastCode=code;
+  }finally{
+   await client.end();
+  }
+  const pause=Math.min(intervalMs,remaining());
+  if(pause>0)await delay(pause);
+ }
+}
+function safeError(e){
+ const code=/^[A-Z0-9_]{2,60}$/.test(e?.code||'')?e.code:'DB_OPERATION_FAILED';
+ return {status:'FAILED',code,...(code==='DB_STARTUP_TIMEOUT'&&startupRetryCodes.has(e.lastCode)?{lastCode:e.lastCode}:{})};
+}
+module.exports={connection,settings,network,verify,verifyStartup,fail,safeError};
