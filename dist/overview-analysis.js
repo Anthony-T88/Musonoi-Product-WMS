@@ -234,18 +234,24 @@ window.OverviewAnalysis={
   svg+=axisText(this.t('日期','Date'),L+w/2,height-3,'middle')+unitLabel(unit,13);
   if(rightAxis)svg+=unitLabel(secondaryUnit,width-13);
   host.innerHTML=svg+'</svg>'+(!hasRecords?'<p class="oa-plot-empty">'+this.t('所选期间暂无记录','No records in this period')+'</p>':'');
-  const chart=host.querySelector('svg');
+  const chart=host.querySelector('svg'),scroller=host.parentElement;
   const tooltip=document.createElement('div');tooltip.className='oa-hover-tip';tooltip.hidden=true;tooltip.setAttribute('role','tooltip');host.append(tooltip);
   let visiblePeriod=-1;
-  const show=(index,transform)=>{
-   if(index===visiblePeriod&&!tooltip.hidden)return;
+  const show=(index,transform,reveal=false)=>{
+   if(!transform||(index===visiblePeriod&&!tooltip.hidden&&!reveal))return;
    visiblePeriod=index;
    const row=rows[index];
    const values=data.map(item=>item.name+' · '+(item.values[index]===null?'—':
     (count&&!item.secondary?CountValues.display(row[item.key]):this.number(item.values[index]))+' '+(item.secondary?secondaryUnit:unit)));
-   tooltip.textContent=[row.period,...values].join('\n');tooltip.hidden=false;
-   const anchor=new DOMPoint(x(index),T).matrixTransform(transform);
-   tooltip.style.left=Math.max(0,Math.min(host.clientWidth-tooltip.offsetWidth,anchor.x-host.getBoundingClientRect().left+8))+'px';
+   const anchor=new DOMPoint(x(index),T).matrixTransform(transform).x-host.getBoundingClientRect().left;
+   const visibleWidth=scroller.clientWidth;
+   if(reveal&&(anchor<scroller.scrollLeft||anchor>scroller.scrollLeft+visibleWidth)){
+    scroller.scrollLeft=Math.max(0,anchor-visibleWidth/2);
+   }
+   const left=scroller.scrollLeft;
+   tooltip.textContent=[row.period,...values].join('\n');
+   tooltip.style.maxWidth=visibleWidth+'px';tooltip.hidden=false;
+   tooltip.style.left=Math.max(left,Math.min(left+visibleWidth-tooltip.offsetWidth,anchor+8))+'px';
   };
   const hover=e=>{
    const transform=chart.getScreenCTM();
@@ -256,9 +262,18 @@ window.OverviewAnalysis={
    if(point.x<L||point.x>right||point.y<T||point.y>T+h){tooltip.hidden=true;return;}
    show(Math.min(rows.length-1,Math.floor((point.x-L)/w*rows.length)),transform);
   };
-  host.onpointerenter=hover;
-  host.onpointermove=hover;
-  host.onpointerleave=()=>{tooltip.hidden=true;};
+  const dismiss=()=>{tooltip.hidden=true;};
+  host.onpointerenter=host.onpointermove=host.onpointerdown=hover;
+  host.onpointerleave=chart.onblur=dismiss;
+  chart.setAttribute('tabindex','0');
+  chart.onkeydown=e=>{
+   if(e.key==='Escape'){dismiss();return;}
+   if(!['ArrowLeft','ArrowRight','Enter',' '].includes(e.key))return;
+   e.preventDefault();
+   const step=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;
+   const index=visiblePeriod<0?0:Math.max(0,Math.min(rows.length-1,visiblePeriod+step));
+   show(index,chart.getScreenCTM(),true);
+  };
  },
  stock(m){const t=this.t,labels={available:t('可用库存','Available'),locked:t('备货锁定','Preparation Locked'),preparing:t('备货作业中','Preparing'),review:t('待完工审核','Completion Review'),prepared:t('备货完成待匹配','Prepared, Unmatched'),assigned:t('已分配装车','Assigned to Loading'),loaded:t('已装车待出库','Loaded, Not Outbound')};return this.panel('库存状态结构','Inventory State',t('批次 / 数量 / 已知净重','Lots / Quantity / Known Net Weight'),'<div class="oa-state-list">'+m.states.map(s=>'<div><div class="oa-pair"><span>'+labels[s.key]+'</span><strong>'+this.structure(s,m.unit)+'</strong></div><progress max="'+Math.max(1,m.states.reduce((sum,row)=>sum+row.quantity,0))+'" value="'+s.quantity+'" aria-label="'+labels[s.key]+'"></progress></div>').join('')+'</div><div class="oa-quality"><div class="oa-pair"><span>'+t('实际重量确认覆盖','Actual Weight Coverage')+'</span><strong>'+(m.physical?this.number((m.physical-m.unknown)/m.physical*100,1)+'%':'—')+'</strong></div><p>'+m.unknown+' '+m.unit+' '+t('重量待确认','awaiting weight confirmation')+'</p></div>');},
  customers(m){const t=this.t;return this.panel('客户库存结构','Customer Inventory',t('批次 / 数量 / 已知净重','Lots / Quantity / Known Net Weight'),m.customers.length?m.customers.map(c=>'<div class="oa-customer"><div class="oa-pair"><span data-no-i18n>'+esc(c.name||t('未关联客户','Unassigned Customer'))+'</span><strong>'+this.structure(c,m.unit)+'</strong></div><progress max="'+Math.max(1,m.physical)+'" value="'+c.quantity+'" aria-label="'+esc(c.name||t('未关联客户','Unassigned Customer'))+'"></progress>'+(c.unknown?'<p class="oa-warning-text">'+c.unknown+' '+m.unit+' '+t('重量待确认','weight unconfirmed')+'</p>':'')+'</div>').join(''):this.empty('当前无客户库存','No current customer inventory'));},

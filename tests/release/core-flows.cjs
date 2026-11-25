@@ -369,6 +369,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(metal.legacy_metal_mt,null);assert.equal(metal.confirmed_mt,null);assert.equal(metal.shipment_status,'PENDING_ARECOMS');
   assert.equal((await api('/cobalt/metal?preparation_id='+p.id)).items.length,0);
   assert((await api('/cobalt/metal?view=outbound&status=PENDING_ARECOMS')).items.some(r=>r.order_id===order.id));
+  E.save('rc2-cobalt-browser-fixture.json',{database:name,account:f.accounts.find(account=>account.role==='admin'),
+   planId:sales.id,batchNo:intakePlan.batch_no});
  });
  }finally{await app?.close();await c.end();E.save('rc2-core-results.json',{checks,status:checks.every(x=>x.status==='PASS')?'PASS':'FAIL',syntheticOnly:true});}
 });

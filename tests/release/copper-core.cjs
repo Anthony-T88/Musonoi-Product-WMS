@@ -117,7 +117,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api(books+'?contract_id='+f.customers.CO_HYDROXIDE.contract,'customer_admin',undefined,404);
  await api(books+'?contract_id='+contract.id,'limited_viewer',undefined,403);
  const emptyOptions=await api('/export-permits/options?sales_plan_id='+plan.id);
- assert.equal(emptyOptions.unavailable_reason,'NO_ACTIVE_LICENSE');
+ // The integration fixture already has an active copper permit on another contract.
+ assert.equal(emptyOptions.unavailable_reason,'CONTRACT_MISMATCH');
  const permit=await api('/export-permits','sales_operator',{contract_id:contract.id,applied_on:today,proforma_no:'RMM-2609-CU-MECR-7500',quantity:'7500',unit_basis:'PHYSICAL_MT',unit:'MT',currency:'USD',unit_price:'1234.567891',price_unit:'USD/MT'});
  const permitPath='/export-permits/'+permit.id,licenseAction=async(action,payload)=>{
   const current=await api(permitPath),pending=await api(permitPath+'/actions','sales_operator',{action,payload,version:current.version,reason:'Synthetic licence acceptance'});
@@ -211,10 +212,13 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const manual=await api('/loading-plans/unified','admin',{...unlinked,invoice_no:replacement});
  assert.equal(manual.invoice_no,replacement);
  await api('/loading-plan-documents/'+manual.id+'/cancel','admin',{version:manual.version,reason:'Synthetic manual invoice check'});
- const otherContract=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:customer.contract,
+ const unlicensedContract=await api('/contracts','admin',{project_id:f.project,customer_id:customer.id,
+  contract_no:'RC3-NO-LICENSE-'+seq,effective_date:today,end_date:'2099-12-31',active:true});
+ const otherContract=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:unlicensedContract.id,
   target_weight:'25',quantity_tolerance:'5',preparation_month:shipment_month,remark:'Synthetic permit contract mismatch'});
  const mismatched=await api('/export-permits/options?sales_plan_id='+otherContract.id);
  assert.equal(mismatched.unavailable_reason,'CONTRACT_MISMATCH');
+ assert.deepEqual(mismatched.items,[]);
  const firstDocument=await api('/loading-plans/unified','admin',autoPlan);
  const byPlate=plate.toLowerCase().replaceAll('-',' ');
  const arrivalsByPlate=await api('/loading-plans/arrivals?'+new URLSearchParams({truck_no:byPlate,shipment_month}));
@@ -325,6 +329,12 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(sheetResponse.statusCode,200);assert(sheetResponse.body.includes(bpPreview.content));
  for(const [label,field] of identity)assert(sheetResponse.body.includes(label+': '+initialTemplate.fields[field]),label);
  const issuedTemplate=await api(bpPath+'/template','admin',{revision:initialTemplate.revision,fields:templateFields});
+ const {rows:[templateAudit]}=await c.query(`SELECT id,scope_context,before_data,after_data FROM audit_logs
+  WHERE entity_type='customs_bp_templates' AND entity_id=$1 AND action='customs_bp_template_saved'`,[issuedTemplate.id]);
+ assert(templateAudit,'Saving a BP template records an audit event');
+ assert.equal(templateAudit.scope_context,null);
+ assert.equal(templateAudit.before_data.revision,initialTemplate.revision);
+ assert.equal(templateAudit.after_data.revision,issuedTemplate.revision);
  const configured=await api(bpPath+'/template');
  assert.equal(configured.revision,1);
  assert.equal(configured.fields.contact,templateFields.contact);

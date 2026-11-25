@@ -73,12 +73,15 @@ function expectedLanding(spec,product,ids){
   'co-loading-execution':'/outbounds/'+ids.coLoad,
   'cu-corrections':'/outbounds',
   'cu-correction-detail':'/outbounds/loads/'+ids.cuCorrectionLoad+'?correction='+ids.cuCorrection,
-  shipping:'/outbounds?state=OUTBOUND',
+  shipping:'/customs/packing-list',
   'historical-receipts':'/receipts',
   'historical-loading-plans':'/loading-plans/query',
   'historical-outbounds':'/outbounds',
   'historical-stock-outbound':'/outbounds',
   'cu-invoice':'/customs/packing-list/'+ids.cuLoad,
+  'cu-packing-legacy':'/customs/packing-list/'+ids.cuLoad,
+  'cu-packing-detail-legacy':'/customs/packing-list/'+ids.cuLoad,
+  'co-packing-detail-legacy':'/customs/packing-list/'+ids.coLoad,
   'former-design-entry':'/workbench'
  };
  replacements['preparation-new']=co?'/receipts/new':'/preparation/new';

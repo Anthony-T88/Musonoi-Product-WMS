@@ -1,5 +1,31 @@
 'use strict';
 // Extends the existing catalog; one language state and one DOM translator are retained.
+Object.assign(TRANSLATIONS.en,{
+ '重选捆包':'Reselect Bundles',
+ '撤销备货':'Cancel Preparation',
+ '按原计划重选捆包':'Reselect Bundles for the Original Plan',
+ '撤回备货审核':'Withdraw Preparation Review',
+ '撤销本次备货并重选捆包':'Cancel Preparation and Reselect Bundles',
+ '确认撤回':'Confirm Withdrawal',
+ '确认撤销':'Confirm Cancellation',
+ '确认撤销并重选':'Cancel and Reselect',
+ '备货捆数':'Preparation Bundles',
+ '已检斤捆数':'Weighed Bundles',
+ '规划堆存货位':'Planned Storage Location',
+ '撤销原因':'Reason for Cancellation',
+ '已停止原备货作业':'The prior preparation work has stopped',
+ '已逐捆核实当前实物位置':'Verified each bundle’s actual location',
+ '现场作业及位置核实说明':'Work and Location Check Notes',
+ '撤回后恢复备货作业，保留现有捆包和货位锁定。':'Resume preparation with the current bundle and location reservations.',
+ '确认后从原备货计划进入选货。原作业记录保留。':'Select bundles for the original plan after confirmation. The previous attempt stays in history.',
+ '系统按核对结果释放备货锁定，捆包仍在当前实物货位。':'Eligible reservations are released. Bundles stay at their actual locations.',
+ '本备货单的最终审核已生效，请按整批撤销流程办理。':'Final approval is in effect. Use whole-batch reversal.',
+ '已有装车匹配或装车记录，请先核对装车状态。':'Loading matches or records exist. Verify the loading status first.',
+ '本备货单已有待审核的整批撤销申请，请先处理该申请':'Review the pending whole-batch reversal request first',
+ '捆包仍在实验室取样，请先登记返回并重新打包。':'Record the return and repacking of any bundles still being sampled.',
+ '有捆包的实际货位待定位或已停用，请先核实货位。':'Verify any unlocated bundles or inactive storage locations.',
+ '请由有撤销权限的创建人或备货审核人办理。':'An authorized creator or preparation reviewer can cancel this order.'
+});
 Object.assign(TRANSLATIONS.en,Object.fromEntries(`
 产品仓储管理系统=Product WMS
 穆松尼项目产品仓储管理系统首页=Musonoi Project Product WMS Home

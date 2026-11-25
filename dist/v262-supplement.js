@@ -13,12 +13,12 @@ V261.states.CANCELLED='已撤销';V262.locationNames.PUBLIC_TEMPORARY='公共新
 const supplementLotDetail=V262.detail.bind(V262);
 const lotLabel=(zh,en)=>I18n.language==='en'?en:zh;
 const lotBlockLabels={
- APPROVED:['本备货单的最终审核已生效，请按整批撤销流程办理。','Final approval is in effect. Use whole-batch reversal.'],
- LOADING:['已有装车匹配或装车记录，请先核对装车状态。','Loading matches or records exist. Verify the loading status first.'],
- REVERSAL:['本备货单已有待审核的整批撤销申请，请先处理该申请。','Review the pending whole-batch reversal request first.'],
- SAMPLING:['捆包仍在实验室取样，请先登记返回并重新打包。','Record the return and repacking of any bundles still being sampled.'],
- LOCATION:['有捆包的实际货位待定位或已停用，请先核实货位。','Verify any unlocated bundles or inactive storage locations.'],
- PERMISSION:['请由有撤销权限的创建人或备货审核人办理。','An authorized creator or preparation reviewer can cancel this order.']
+ APPROVED:'本备货单的最终审核已生效，请按整批撤销流程办理。',
+ LOADING:'已有装车匹配或装车记录，请先核对装车状态。',
+ REVERSAL:'本备货单已有待审核的整批撤销申请，请先处理该申请。',
+ SAMPLING:'捆包仍在实验室取样，请先登记返回并重新打包。',
+ LOCATION:'有捆包的实际货位待定位或已停用，请先核实货位。',
+ PERMISSION:'请由有撤销权限的创建人或备货审核人办理。'
 };
 
 function mountLotPreapproval(a,toolbar){
@@ -26,16 +26,15 @@ function mountLotPreapproval(a,toolbar){
  const action=(name,label,style)=>'<button type="button" class="button '+style+'" id="lot-'+name+'">'+label+'</button>';
  const blocked=lotBlockLabels[p.blocked_code];
  toolbar.insertAdjacentHTML('beforeend',
-  (p.can_withdraw?action('withdraw',t('撤回审核','Withdraw Review'),'secondary'):'')+
-  (p.can_reselect?action('reselect',t('重选捆包','Reselect Bundles'),'secondary'):'')+
-  (p.can_revoke?action('revoke',t('撤销备货','Cancel Preparation'),'danger-outline'):'')+
-  (p.reopened_preparation_plan_id?'<a class="button secondary" id="lot-reopen-plan" href="'+
-   esc(PreparationPlans.startRoute({id:p.reopened_preparation_plan_id}))+'">'+t('按原计划重选捆包','Reselect Bundles for the Original Plan')+'</a>':'')+
-  (blocked?'<span class="wms-feedback" role="status">'+esc(t(...blocked))+'</span>':''));
+  (p.can_withdraw?action('withdraw','撤回审核','secondary'):'')+
+  (p.can_reselect?action('reselect','重选捆包','secondary'):'')+
+  (p.can_revoke?action('revoke','撤销备货','danger-outline'):'')+
+  (p.reopened_preparation_plan_id?'<a class="button secondary" id="lot-reopen-plan" data-i18n href="'+
+   esc(PreparationPlans.startRoute({id:p.reopened_preparation_plan_id}))+'">按原计划重选捆包</a>':'')+
+  (blocked?'<span class="wms-feedback" role="status" data-i18n>'+esc(blocked)+'</span>':''));
  for(const kind of ['withdraw','reselect','revoke']){
   const trigger=$('lot-'+kind);
   if(!trigger)continue;
-  trigger.setAttribute('data-no-i18n','');
   trigger.onclick=async()=>{
    trigger.disabled=true;
    try{
@@ -57,33 +56,32 @@ function mountLotPreapproval(a,toolbar){
 function openLotPreapproval(kind,a){
  if($('lot-preapproval-dialog'))return;
  const t=lotLabel,p=a.preapproval,withdraw=kind==='withdraw',reselect=kind==='reselect';
- const title=withdraw?t('撤回备货审核','Withdraw Preparation Review'):
-  reselect?t('撤销本次备货并重选捆包','Cancel This Attempt and Reselect Bundles'):t('撤销备货','Cancel Preparation');
- const confirm=withdraw?t('确认撤回','Withdraw Review'):reselect?t('确认撤销并重选','Cancel and Reselect'):t('确认撤销','Confirm Cancellation');
+ const title=withdraw?'撤回备货审核':reselect?'撤销本次备货并重选捆包':'撤销备货';
+ const confirm=withdraw?'确认撤回':reselect?'确认撤销并重选':'确认撤销';
  const facts=[
-  [t('销售计划','Sales Plan'),a.plan.code],
-  [t('当前分配客户','Assigned Customer'),a.plan.customer_name],
-  [t('备货捆数','Preparation Bundles'),a.quantities?.original_count??a.summary.total],
-  [t('已检斤捆数','Weighed Bundles'),a.summary.weighed],
-  [t('规划堆存货位','Planned Location'),copperSlotLabel(a.planned?.code)]
+  ['销售计划',a.plan.code],
+  ['当前分配客户',a.plan.customer_name],
+  ['备货捆数',a.quantities?.original_count??a.summary.total],
+  ['已检斤捆数',a.summary.weighed],
+  ['规划堆存货位',copperSlotLabel(a.planned?.code)]
  ];
  const popup=document.createElement('dialog');
  popup.id='lot-preapproval-dialog';
  popup.className='product-dialog';
- popup.setAttribute('data-no-i18n','');
+ popup.setAttribute('data-i18n','');
  popup.setAttribute('aria-labelledby','lot-preapproval-title');
- popup.innerHTML='<form id="lot-preapproval-form"><header><h2 id="lot-preapproval-title">'+title+'</h2><p>'+esc(a.lot_no)+'</p></header>'+
-  '<dl class="confirmation-grid" id="lot-preapproval-facts">'+facts.map(([label,value])=>'<dt>'+label+'</dt><dd>'+esc(value??'—')+'</dd>').join('')+'</dl>'+
-  (withdraw?'<p class="work-notice">'+t('撤回后恢复备货作业，保留现有捆包和货位锁定。','Resume preparation with the current bundle and location reservations.')+'</p>':
-   '<div id="lot-revoke-fields"><p class="work-notice">'+(reselect?t('确认后从原备货计划进入选货。原作业记录保留。','After confirmation, select bundles for the original plan. The previous attempt stays in history.'):'')+
-   ' '+t('系统按核对结果释放备货锁定，捆包仍在当前实物货位。','The system releases eligible reservations. Bundles stay at their actual locations.')+'</p>'+
-   '<label>'+t('撤销原因','Reason for Cancellation')+'<textarea name="reason" maxlength="1000" rows="2" required></textarea></label>'+
-   '<label class="check-label"><input type="checkbox" name="work_stopped" required>'+t('已停止原备货作业','The prior preparation work has stopped')+'</label>'+
-   '<label class="check-label"><input type="checkbox" name="physical_state_verified" required>'+t('已逐捆核实当前实物位置','Verified each bundle’s actual location')+'</label>'+
-   '<label>'+t('现场作业及位置核实说明','Work and Location Check Notes')+'<textarea name="observation" maxlength="1000" rows="2"'+(p.has_operations?' required':'')+
+ popup.innerHTML='<form id="lot-preapproval-form"><header><h2 id="lot-preapproval-title">'+title+'</h2><p data-no-i18n>'+esc(a.lot_no)+'</p></header>'+
+  '<dl class="confirmation-grid" id="lot-preapproval-facts">'+facts.map(([label,value])=>'<dt>'+label+'</dt><dd data-no-i18n>'+esc(value??'—')+'</dd>').join('')+'</dl>'+
+  (withdraw?'<p class="work-notice">撤回后恢复备货作业，保留现有捆包和货位锁定。</p>':
+   '<div id="lot-revoke-fields"><p class="work-notice">'+(reselect?'<span>确认后从原备货计划进入选货。原作业记录保留。</span> ':'')+
+   '<span>系统按核对结果释放备货锁定，捆包仍在当前实物货位。</span></p>'+
+   '<label>撤销原因<textarea name="reason" maxlength="1000" rows="2" required></textarea></label>'+
+   '<label class="check-label"><input type="checkbox" name="work_stopped" required>已停止原备货作业</label>'+
+   '<label class="check-label"><input type="checkbox" name="physical_state_verified" required>已逐捆核实当前实物位置</label>'+
+   '<label>现场作业及位置核实说明<textarea name="observation" maxlength="1000" rows="2"'+(p.has_operations?' required':'')+
    '></textarea></label></div>')+
   '<p id="lot-preapproval-error" class="error" role="alert"></p><footer>'+
-  '<button type="button" id="lot-preapproval-back" class="button secondary">'+t('返回','Back')+'</button>'+
+  '<button type="button" id="lot-preapproval-back" class="button secondary">返回</button>'+
   '<button type="submit" class="button '+(withdraw?'primary':'danger')+'" id="lot-preapproval-confirm">'+confirm+'</button></footer></form>';
  $('page-content').append(popup);
  popup.addEventListener('close',()=>popup.remove(),{once:true});
@@ -100,7 +98,7 @@ function openLotPreapproval(kind,a){
   });
   let result;
   try{result=await API.request('/v262/lots/'+a.id+'/'+(withdraw?'withdraw':'revoke'),{method:'POST',body:input});}
-  catch(failure){error.textContent=I18n.translate(failure.message,true);button.disabled=false;return;}
+  catch(failure){error.textContent=failure.message;button.disabled=false;return;}
   if(!popup.isConnected)return;
   popup.close();
   if(!withdraw){

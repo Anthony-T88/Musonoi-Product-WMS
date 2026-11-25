@@ -210,9 +210,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  const f=E.fixture(),origin=f.appCfg.origin,app=await require('../../server/app.cjs').build({config:f.appCfg});let browser;const errors=[],shapes=[];
  try{
  await app.listen({host:'127.0.0.1',port:f.appCfg.port});browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
- const open=async role=>{const a=f.accounts.find(a=>a.role===role),context=await browser.newContext({viewport:{width:1440,height:1000}}),login=await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}});assert(login.ok(),'UI login '+role);const page=await context.newPage();page.setDefaultTimeout(18000);page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/v1/')&&r.status()>=500)errors.push(r.status()+' '+new URL(r.url()).pathname);});await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));return {page,context};};
+ const open=async(role,base=origin,accounts=f.accounts)=>{const a=accounts.find(a=>a.role===role),context=await browser.newContext({viewport:{width:1440,height:1000}}),login=await context.request.post(base+'/api/v1/auth/login',{headers:{origin:base},data:{username:a.username,password:a.password}});assert(login.ok(),'UI login '+role);const page=await context.newPage();page.setDefaultTimeout(18000);page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/v1/')&&r.status()>=500)errors.push(r.status()+' '+new URL(r.url()).pathname);});await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));return {page,context};};
  const ready=p=>p.waitForFunction(()=>window.AppSignedIn&&window.V469R2?.installed&&typeof Router!=='undefined'&&!Router.rendering&&document.getElementById('session-restore').hidden);
- const go=async(p,url,product='CO_HYDROXIDE')=>{await p.goto(origin+'/overview');await ready(p);await p.evaluate(code=>localStorage.setItem(ProductContext.key,code),product);await p.goto(origin+url);await ready(p);};
+ const go=async(p,url,product='CO_HYDROXIDE',base=origin)=>{await p.goto(base+'/overview');await ready(p);await p.evaluate(code=>localStorage.setItem(ProductContext.key,code),product);await p.goto(base+url);await ready(p);};
  const guest=await browser.newPage({viewport:{width:390,height:860}});guest.on('pageerror',e=>errors.push(e.message));await guest.goto(origin);
  await guest.locator('.login46-brand .login46-title-version').waitFor();
  assert.equal(await guest.locator('.login46-title-version').innerText(),'V'+release.version);
@@ -237,6 +237,23 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await guest.screenshot({path:path.join(E.runtime,'registration-network-en-390.png'),fullPage:true});
  await guest.close();
  const admin=await open('admin'),viewer=await open('production_operator'),page=admin.page;
+ for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+  await go(page,'/customs/packing-list',product);
+  const language=page.locator('.top-actions select[data-language]');
+  await language.selectOption('en');
+  await page.getByRole('heading',{name:'Lot List',exact:true}).waitFor();
+  await page.locator('[data-customs-nav] a[href="/customs/bp"]').click();
+  await page.getByRole('link',{name:/Lots Pending BP Creation/}).waitFor();
+  await page.getByRole('link',{name:/Lots on Created BP Sheets/}).click();
+  const expand=page.getByRole('button',{name:/Expand Lots/}).first();
+  if(await expand.count()){
+   await expand.click();
+   await page.getByRole('columnheader',{name:'Lot No.',exact:true}).first().waitFor();
+   await page.getByRole('button',{name:/Collapse Lots/}).first().click();
+  }
+  await language.selectOption('zh-CN');
+  await page.getByRole('link',{name:/已创建BP表批次/}).waitFor();
+ }
  await go(page,'/sales-plans','CU_CATHODE');
  assert.deepEqual(await page.locator('#s468-filter :is(input,select)').evaluateAll(controls=>controls.map(control=>control.name)),
   ['plan_no','contract_no','customer_id','shipment_month','status']);
@@ -262,20 +279,20 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await sales.locator('option[value]:not([value=""])').first().waitFor({state:'attached'});
   await sales.selectOption({index:1});
   assert(await form.locator('[name=customer]').inputValue());
-  const suffix=product==='CU_CATHODE'?20+Math.floor(Math.random()*79):100+Math.floor(Math.random()*899);
-  const batch=P.batch(product,suffix),batchField=form.locator('[name=batch_no]');
+  const batch=P.batch(product,48917),batchField=form.locator('[name=batch_no]');
   await saveDrafts.click();
   assert.equal(await batchField.getAttribute('aria-invalid'),'true');
   assert.match(await form.locator('[data-batch-validation]').innerText(),/填写批次号|Enter a lot number/);
   await form.screenshot({path:path.join(E.runtime,'wms-preparation-validation-'+product+'.png')});
   await batchField.fill(batch);
   assert.equal(await batchField.getAttribute('aria-invalid'),null);
-  await form.locator('[name=shipment_month]').fill(new Date().toISOString().slice(0,7));
+  await form.locator('[name=shipment_month]').fill(P.localMonth());
   const saved=planner.page.waitForResponse(response=>response.request().method()==='POST'&&response.url().endsWith('/preparation-plans/batch'),{timeout:6000});
   await saveDrafts.click();
   const saveResponse=await saved.catch(async error=>{
    const invalid=await form.locator(':invalid').evaluateAll(fields=>fields.map(field=>field.name));
-   throw Error(product+' plan form did not submit '+JSON.stringify({invalid,errors}),{cause:error});
+   const validation=await form.locator('[data-batch-validation]').textContent();
+   throw Error(product+' plan form did not submit '+JSON.stringify({invalid,validation,errors}),{cause:error});
   });
   assert.equal(saveResponse.status(),200,product+' '+await saveResponse.text());
   const operationKey=saveResponse.request().headers()['idempotency-key'];
@@ -355,9 +372,16 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await ready(page);assert.equal(await page.locator('[data-primary-route=cobalt-metal]').count(),0);
  await go(page,'/inventory/'+f.preparation);
  await go(viewer.page,'/inventory/'+f.preparation);assert.equal(await viewer.page.locator('[data-co2-select],#co2-place').count(),0);
- await go(page,'/workbench/permissions');await page.locator('[data-role=admin]').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.s46-r2-matrix input[type=checkbox]').length===70);
- assert.equal(await page.locator('.s46-r2-matrix input[type=checkbox]').count(),70);
- assert.equal(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').count(),26);
+ await go(page,'/workbench/permissions');
+ await page.locator('[data-role=admin]').press('Enter');
+ await page.locator('.s46-r2-matrix').waitFor();
+ const permissionMatrix=await page.evaluate(()=>{
+  const catalog=Accounts.permissionCatalog.workflow;
+  const codes=Accounts.roles.find(role=>role.code==='admin').caps.filter(code=>catalog[code]);
+  return {codes:codes.sort(),modules:[...new Set(codes.map(code=>catalog[code].module))].sort()};
+ });
+ assert.deepEqual(await page.locator('.s46-r2-matrix input[type=checkbox]').evaluateAll(inputs=>inputs.map(input=>input.value).sort()),permissionMatrix.codes);
+ assert.deepEqual(await page.locator('.s46-r2-matrix tbody tr[data-permission-module]').evaluateAll(rows=>rows.map(row=>row.dataset.permissionModule).sort()),permissionMatrix.modules);
  assert(await page.locator('.s46-r2-matrix thead').isVisible());
  const cobalt=page.locator('.s46-permission-items').filter({has:page.locator('input[value="co:create"]')});
  assert.equal(await cobalt.count(),1);
@@ -377,16 +401,17 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert.equal(await page.locator('.s46-access').count(),0);
  assert.equal(await page.evaluate(()=>ClientRelease.revision),release.frontendRevision);
  await page.setViewportSize({width:1440,height:1000});
- await go(page,'/reports?section=outbound&view=shipping');
+ const historicalMetalPeriod='from=2020-03-05&to=2020-03-05';
+ await go(page,'/reports?section=outbound&view=shipping&'+historicalMetalPeriod);
  await page.waitForFunction(()=>window.Reports463?.current?.data?.kind==='shipping'&&document.querySelector('.r463-stats'));
- const ship=await page.evaluate(()=>Object.fromEntries(Reports463.current.data.metrics.map(m=>[m.key,m.value])));assert.equal(ship.metal,0.35641);assert.equal(ship.metalPending,1);
- assert.match(await page.locator('.r463-stats').innerText(),/0\.35641/);
+ const ship=await page.evaluate(()=>Object.fromEntries(Reports463.current.data.metrics.map(m=>[m.key,m.value])));assert.equal(ship.metal,0.24123);assert.equal(ship.metalPending,0);
+ assert.match(await page.locator('.r463-stats').innerText(),/0\.24123/);
  await page.locator('#r481-filter details summary').click();assert(await page.locator('input[name=lot]').isVisible());
  await page.goto(origin+'/workbench/accounts');await ready(page);await page.locator('#account-filter').waitFor();assert.equal(await page.locator('#account-registration-requests').count(),1);
  await page.locator('#account-create').click();for(const name of ['username','contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.locator('[data-account-action="edit"]').first().click();for(const name of ['contact_phone','contact_email'])assert(await page.locator('#account-edit input[name='+name+']').isVisible());await page.locator('#account-cancel').click();
  await page.evaluate(()=>I18n.change('zh-CN'));
- await go(page,'/overview');await page.locator('.oa-kpis-cobalt').waitFor();
+ await go(page,'/overview?'+historicalMetalPeriod);await page.locator('.oa-kpis-cobalt').waitFor();
  assert.deepEqual(await page.locator('.oa-kpis-cobalt .oa-kpi > span').allTextContents(),['备货作业中吨包','已备货待出库库存','装车中库存','在库库存预估金属量','ARECOMS确认车数与钴金属量','已出库重量']);
  assert.equal(await page.locator('.oa-kpis-confirmation .oa-kpi').count(),0);
  assert.match(await page.locator('.oa-kpis-cobalt .oa-kpi').nth(4).innerText(),/\d+\.\d{5}\s*金属吨/);
@@ -410,17 +435,30 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert.deepEqual(await page.locator('.co2-batches thead th').allTextContents(),headers);
  assert.match(await page.locator('.co2-batches tbody td:nth-child(4)').first().innerText(),/\d+\.\d{4}\b/);
  assert.equal(await page.locator('.co2-batches tbody td:nth-child(8)').first().evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');
- const plan=await page.evaluate(async()=>{const rows=(await API.request('/cobalt/sales/arrivals')).items;return rows.find(r=>r.registration_state==='PLANNED')?.sales_plan_id;});
- assert(plan);
+ const plan=f.dispatchMonthPlans.CO_HYDROXIDE.id;
+ const plannedLoad=await page.evaluate(async({plan,preparation})=>{
+  const dispatch='/cobalt/sales/plans/'+plan+'/dispatch';
+  const {plan:record}=await API.request(dispatch),plate='UI-CO-'+Date.now(),trailer=plate+'-TR';
+  const transport={driver_name:'Synthetic UI driver',passport_no:plate+'-P',transporter:'Synthetic UI carrier'};
+  const vehicle=await API.request(dispatch+'/vehicles',{method:'POST',body:{
+   plan_version:record.version,truck_no:plate,trailer_no:trailer,capacity_tonnes:'30',destination:'Synthetic UI destination',...transport}});
+  const arrival=await API.request('/cobalt/sales/arrivals/'+vehicle.id,{method:'POST',body:{
+   dispatch_version:vehicle.version,trailer_one:trailer,arrived_at:new Date().toISOString(),container_no:'',exception_remark:'',...transport}});
+  const source={sales_plan_id:plan,preparation_id:preparation,arrival_id:arrival.id};
+  const {versions}=await API.request('/cobalt/loading/preview?'+new URLSearchParams(source));
+  return API.request('/cobalt/loading/plans',{method:'POST',body:{
+   ...source,...versions,planned_load_date:BusinessTime.today(),invoice_no:plate,
+   destination:'Synthetic UI destination',export_license_no:'SYNTHETIC'}});
+ },{plan,preparation:f.preparation});
  await go(page,'/sales-plans/'+plan+'/dispatch');
  await page.locator('#co-dispatch-table').waitFor();
  assert.equal(await page.locator('input[name=shipment_month]').count(),0);
- await go(page,'/loading-plans?arrival_state=PLANNED');await page.locator('#co-arrivals-table').waitFor();
- assert(await page.locator('#co-arrivals-table a[href^="/loading-plans/orders/"]').count()>0);
- await go(page,'/overview');
+ await go(page,'/loading-plans?arrival_state=PLANNED');
+ await page.locator('#co-arrivals-table a[href="/loading-plans/orders/'+plannedLoad.id+'"]').waitFor();
+ await go(page,'/overview?'+historicalMetalPeriod);
  await page.locator('#co-metal-months meter').first().waitFor();
- await go(page,'/cobalt-metal?view=outbound&status=COMPLETED');await page.locator('#co-metal-list').waitFor();
- assert.match(await page.locator('#co-metal-list').innerText(),/0\.35641/);
+ await go(page,'/cobalt-metal?view=outbound&status=COMPLETED&'+historicalMetalPeriod);await page.locator('#co-metal-list').waitFor();
+ assert.match(await page.locator('#co-metal-list').innerText(),/0\.24123/);
  assert.equal(await page.locator('.co-metal-kpis .oa-kpis-confirmation .oa-kpi').count(),3);
  assert.equal(await page.locator('.co-metal-kpis .oa-kpis-cobalt').count(),0);
  assert.equal(await page.locator('.sidebar [data-primary-route=cobalt-metal]').count(),1);
@@ -435,12 +473,12 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.screenshot({path:path.join(E.runtime,'cobalt-metal-'+language+'.png'),fullPage:true});
  }
  await page.setViewportSize({width:1440,height:1000});
- const detailLink=page.locator('#co-metal-list a[href$="#co-metal-detail"]').first(),detailUrl=await detailLink.getAttribute('href');
+ const detailLink=page.locator('#co-metal-list a[href="/stock-outbound/historical/'+f.historicalMetalSource.outboundId+'#co-metal-detail"]'),detailUrl=await detailLink.getAttribute('href');
  await detailLink.press('Enter');await page.waitForURL(origin+detailUrl);
  await page.locator('#co-metal-detail').waitFor();
- assert.match(await page.locator('#co-metal-detail').innerText(),/0\.12345/);
+ assert.match(await page.locator('#co-metal-detail').innerText(),/0\.00827/);
  await page.emulateMedia({media:'print'});assert(await page.locator('#co-metal-detail').isVisible());
- assert.match(await page.locator('#co-metal-detail').innerText(),/0\.35641/);
+ assert.match(await page.locator('#co-metal-detail').innerText(),/0\.24123/);
  await page.emulateMedia({media:null});
  await go(page,'/receipts/'+f.preparation+'/work');
  await page.locator('.co469-page .co-metal-section').first().waitFor();
@@ -488,8 +526,17 @@ test('real browser: current cobalt stock, independent permissions and both langu
    assert.equal(await plot.locator('.oa-y-right').count(),ticks.length);
   }else{
    const unit=key==='vehicles'?'辆|vehicles':'捆|bundles';
-   const titles=await plot.locator('svg title').allTextContents();
-   assert(titles.length&&titles.every(value=>new RegExp(' · \\d+ ('+unit+')$').test(value)));
+   const reading=key==='vehicles'?'vehicles':'inbound_units';
+   const mark=plot.locator('.oa-bar[data-oa-period],.oa-dot[data-oa-period]').last();
+   await mark.waitFor();
+   const index=Number(await mark.getAttribute('data-oa-period'));
+   const row=JSON.parse(await plot.getAttribute('data-rows'))[index];
+   await mark.hover();
+   const tooltip=plot.getByRole('tooltip');
+   await tooltip.waitFor();
+   const [period,value]=(await tooltip.textContent()).split('\n');
+   assert.equal(period,row.period);
+   assert.match(value,new RegExp(' · '+row[reading]+' ('+unit+')$'));
   }
  }
  assert.match(await page.locator('.oa-kpis .oa-kpi').nth(1).innerText(),/备货作业中捆包|Bundles in Preparation/);
@@ -560,11 +607,11 @@ test('real browser: current cobalt stock, independent permissions and both langu
     const children=[...form.querySelectorAll(':scope > label > input,:scope > label > select,:scope > .wms-filter-actions > .button')];
     const rects=children.map(el=>el.getBoundingClientRect()),range=values=>Math.max(...values)-Math.min(...values);
     return {controls:rects.length,bottoms:range(rects.map(r=>r.bottom)),heights:range(rects.map(r=>r.height)),
-     reset:form.querySelectorAll('[data-wms-reset]').length,number:getComputedStyle(document.querySelector('#export-license-table [data-wms-column=number]')).textAlign};
+     reset:form.querySelectorAll('[data-wms-reset]').length,numberAlignment:[...new Set([...document.querySelectorAll('#export-license-table [data-wms-column=number]')].map(cell=>getComputedStyle(cell).textAlign))]};
    });
    assert.equal(geometry.controls,9);
    assert.equal(geometry.reset,1);
-   assert.equal(geometry.number,'end');
+   assert.deepEqual(geometry.numberAlignment,['center']);
    assert(geometry.heights<=2,product+' filter alignment at '+width+' '+JSON.stringify(geometry));
   }
   await page.setViewportSize({width:1440,height:1000});
@@ -577,7 +624,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await filter.locator('[data-wms-reset]').click();
   await page.waitForURL(origin+'/export-licenses');
   await page.locator('#export-license-table a').first().waitFor();
-  const expiring=product==='CU_CATHODE'?'SYNTH-EXPIRED':'RC2-LICENSE';
+  const expiring=product==='CU_CATHODE'?'SYNTH-EXPIRED':'LICENSE-AUDIT-CO_HYDROXIDE-NUMBER';
   await page.locator('#export-license-table tbody tr').filter({hasText:expiring}).first().locator('a').first().click();
   await page.locator('[data-permit-action="extend"]').click();
   const extension=page.locator('#permit-extension-form'),expiry=extension.locator('input[name=until]');
@@ -599,25 +646,35 @@ test('real browser: current cobalt stock, independent permissions and both langu
   assert.equal(await form.locator('[name=contract_id]').inputValue(),contractValue);
   assert.equal(await form.locator('[data-book-field]').count(),7);
   const book=page.locator('#permit-book-dialog');
+  const runLabel=Date.now().toString(36);
+  const label=value=>value+' '+runLabel;
   const addRecord=async(key,value)=>{
    await form.locator('[data-book-open='+key+']').click();
    await book.locator('input[name=value]').fill(value);
-   if(key.endsWith('_account'))await book.locator('input[name=account_name]').fill('Synthetic account holder');
-   await book.locator('button.primary').click();
+   if(key.endsWith('_account')){
+    await book.locator('input[name=account_name]').fill('Synthetic account holder');
+    await book.locator('input[name=swift_code]').fill(key.startsWith('issuing')?'TST1CD01':'TST2GB2L123');
+   }
+   const saved=page.waitForResponse(response=>response.url().endsWith('/export-permits/record-books')&&response.request().method()==='POST');
+   await book.locator('[data-book-save]').click();
+   const response=await saved;
+   assert(response.ok(),key+' '+await response.text());
    await book.waitFor({state:'hidden'});
    return form.locator('[data-book-field='+key+']');
   };
-  for(const [key,value] of [['clearing_agent','Synthetic customs'],['issuing_bank','Synthetic issuing bank A'],['issuing_bank_account','SYNTH-A-001'],['offshore_bank','Synthetic offshore bank'],['offshore_bank_account','SYNTH-OFF-001'],['destination','Synthetic destination'],['note','Synthetic initial note']]){
+  for(const [key,value] of [['clearing_agent',label('Synthetic UI customs')],['issuing_bank',label('Synthetic UI issuing bank A')],['issuing_bank_account','SYNTH-A-001'],['offshore_bank',label('Synthetic UI offshore bank')],['offshore_bank_account','SYNTH-OFF-001'],['destination',label('Synthetic UI license destination')],['note',label('Synthetic UI initial note')]]){
    await (await addRecord(key,value)).selectOption({label:value});
   }
-  const issuing=await addRecord('issuing_bank','Synthetic issuing bank B');
-  await issuing.selectOption({label:'Synthetic issuing bank B'});
+  const issuing=await addRecord('issuing_bank',label('Synthetic UI issuing bank B'));
+  await issuing.selectOption({label:label('Synthetic UI issuing bank B')});
   const account=form.locator('[data-book-field=issuing_bank_account]');
   assert.equal(await account.inputValue(),'');
   assert.equal(await account.locator('option').filter({hasText:'SYNTH-A-001'}).count(),0);
-  await issuing.selectOption({label:'Synthetic issuing bank A'});
+  await issuing.selectOption({label:label('Synthetic UI issuing bank A')});
   assert.equal(await account.locator('option:checked').innerText(),'SYNTH-A-001');
   assert.equal(await form.locator('[data-account-holder=issuing_bank_account]').inputValue(),'Synthetic account holder');
+  assert.equal(await form.locator('[data-account-swift=issuing_bank_account]').inputValue(),'TST1CD01');
+  assert.equal(await form.locator('[data-account-swift=offshore_bank_account]').inputValue(),'TST2GB2L123');
   const reference='SYNTH-UI-'+product+'-'+Date.now();
   await form.locator('[name=proforma_no]').fill(reference);
   await form.locator('[name=quantity]').fill('12.345678');
@@ -626,20 +683,19 @@ test('real browser: current cobalt stock, independent permissions and both langu
   assert.equal(await form.locator('[name=unit_basis],[name=price_unit],[name=currency]').count(),0);
   await form.locator('button[type=submit],button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
-  assert.match(await page.locator('.wms-facts').first().innerText(),new RegExp(reference));
+  await page.locator('.permit-identity').getByRole('heading',{name:reference,exact:true}).waitFor();
   await page.locator('a[href$="/edit"]').click();
   await form.locator('[data-book-field=issuing_bank_account] option:checked').filter({hasText:'SYNTH-A-001'}).waitFor({state:'attached'});
-  await (await addRecord('note','Synthetic browser edit')).selectOption({label:'Synthetic browser edit'});
+  await (await addRecord('note',label('Synthetic browser edit'))).selectOption({label:label('Synthetic browser edit')});
   await page.locator('#export-license-application button.primary').click();
   await page.waitForURL(/\/export-licenses\/[0-9a-f-]{36}$/);
-  await page.getByText('Synthetic browser edit',{exact:true}).waitFor();
   await page.locator('#permit-tab-processing').click();
-  assert.match(await page.locator('#permit-panel-processing').innerText(),/Synthetic browser edit/);
+  await page.locator('#permit-panel-processing').getByText(label('Synthetic browser edit'),{exact:true}).waitFor();
   await page.screenshot({path:path.join(E.runtime,'export-license-'+product+'.png'),fullPage:true});
   await go(page,'/export-licenses/new',product);
   await form.locator('[name=contract_id]').selectOption({index:1});
-  await form.locator('[data-book-field=note] option').filter({hasText:'Synthetic browser edit'}).waitFor({state:'attached'});
-  await form.locator('[data-book-field=issuing_bank]').selectOption({label:'Synthetic issuing bank A'});
+  await form.locator('[data-book-field=note] option').filter({hasText:label('Synthetic browser edit')}).waitFor({state:'attached'});
+  await form.locator('[data-book-field=issuing_bank]').selectOption({label:label('Synthetic UI issuing bank A')});
   assert.equal(await form.locator('[data-book-field=issuing_bank_account] option').filter({hasText:'SYNTH-A-001'}).count(),1);
   await page.screenshot({path:path.join(E.runtime,'license-record-books-'+product+'.png'),fullPage:true});
   await page.setViewportSize({width:390,height:844});
@@ -653,30 +709,34 @@ test('real browser: current cobalt stock, independent permissions and both langu
   await page.screenshot({path:path.join(E.runtime,'license-record-books-390-'+product+'.png'),fullPage:true});
   await page.setViewportSize({width:1440,height:1000});
  }
- const invoicePlan=await page.evaluate(async()=>{
-  const data=await API.request('/cobalt/sales-workflow/plans');
-  return data.items.find(p=>p.remark==='Synthetic rc2 flow')?.id;
- });
- assert(invoicePlan);
- await go(page,'/sales-plans');
- await page.locator('#ux10-sales-table').waitFor();
- assert.equal(await page.locator('.sales-execution-metrics .v34-kpi').count(),4);
- await page.screenshot({path:path.join(E.runtime,'v473-sales-plan-list.png'),fullPage:true});
- await go(page,'/sales-plans/'+invoicePlan);
- await page.locator('#sales-related-plans').waitFor();
- assert(await page.locator('.business-toolbar a[href="/sales-plans/'+invoicePlan+'/dispatch"]').first().isVisible());
- await page.screenshot({path:path.join(E.runtime,'v473-sales-plan-detail.png'),fullPage:true});
- const invoiceRow=page.locator('#sales-invoice-table tbody tr').filter({hasText:'NO-ASSAY-'});
- const fits=()=>page.locator('#sales-invoice-table').evaluate(table=>table.parentElement.scrollWidth<=table.parentElement.clientWidth+2);
- assert(await fits());
- await page.setViewportSize({width:390,height:844});
- assert(await fits());
- await page.setViewportSize({width:1440,height:1000});
- await invoiceRow.locator('[data-confirm-invoice]').click();
- await page.locator('#operation-confirm-accept').click();
- await invoiceRow.getByText(/^(Confirmed|已确认)$/).waitFor();
- assert.equal(await invoiceRow.locator('[data-confirm-invoice]').count(),0);
- await page.locator('#sales-invoice-batches').screenshot({path:path.join(E.runtime,'cobalt-confirmed-invoice.png')});
+ const invoiceFlow=JSON.parse(require('node:fs').readFileSync(path.join(E.runtime,'rc2-cobalt-browser-fixture.json'),'utf8'));
+ const invoicePort=4398,invoiceOrigin='http://127.0.0.1:'+invoicePort;
+ const invoiceApp=await require('../../server/app.cjs').build({config:{...E.appConfig(invoiceFlow.database),port:invoicePort,origin:invoiceOrigin}});
+ try{
+  await invoiceApp.listen({host:'127.0.0.1',port:invoicePort});
+  const invoiceSession=await open('admin',invoiceOrigin,[invoiceFlow.account]),invoicePage=invoiceSession.page;
+  const invoiceGo=url=>go(invoicePage,url,'CO_HYDROXIDE',invoiceOrigin);
+  await invoiceGo('/sales-plans');
+  await invoicePage.locator('#ux10-sales-table').waitFor();
+  assert.equal(await invoicePage.locator('.sales-execution-metrics .v34-kpi').count(),4);
+  await invoicePage.screenshot({path:path.join(E.runtime,'v473-sales-plan-list.png'),fullPage:true});
+  await invoiceGo('/sales-plans/'+invoiceFlow.planId);
+  await invoicePage.locator('#sales-related-plans').waitFor();
+  assert(await invoicePage.locator('.business-toolbar a[href="/sales-plans/'+invoiceFlow.planId+'/dispatch"]').first().isVisible());
+  await invoicePage.screenshot({path:path.join(E.runtime,'v473-sales-plan-detail.png'),fullPage:true});
+  const invoiceRow=invoicePage.locator('#sales-invoice-table tbody tr').filter({has:invoicePage.getByText(invoiceFlow.batchNo,{exact:true})});
+  const fits=()=>invoicePage.locator('#sales-invoice-table').evaluate(table=>table.parentElement.scrollWidth<=table.parentElement.clientWidth+2);
+  assert(await fits());
+  await invoicePage.setViewportSize({width:390,height:844});
+  assert(await fits());
+  await invoicePage.setViewportSize({width:1440,height:1000});
+  await invoiceRow.locator('[data-confirm-invoice]').click();
+  await invoicePage.locator('#operation-confirm-accept').click();
+  await invoiceRow.getByText(/^(Confirmed|已确认)$/).waitFor();
+  assert.equal(await invoiceRow.locator('[data-confirm-invoice]').count(),0);
+  await invoicePage.locator('#sales-invoice-batches').screenshot({path:path.join(E.runtime,'cobalt-confirmed-invoice.png')});
+  await invoiceSession.context.close();
+ }finally{await invoiceApp.close();}
  await go(page,'/receipts/new','CU_CATHODE');
  await page.locator('.r10-draft-flow').waitFor();
  assert.equal(await page.locator('.ui46-entry-summary').count(),0);
@@ -714,7 +774,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
   assert.deepEqual(await host.locator('.oa-date-tick').allTextContents(),JSON.parse(await host.getAttribute('data-rows')).map(row=>row.period));
  }
  assert(await page.locator('.oa-execution :is(th,td)').evaluateAll(cells=>
-  cells.length>0&&cells.every(cell=>getComputedStyle(cell).textAlign===(cell.cellIndex===0?'start':'end'))));
+  cells.length>0&&cells.every(cell=>getComputedStyle(cell).textAlign==='center')));
  await page.setViewportSize({width:390,height:860});
  assert(await page.locator('.oa-plot-scroll').first().evaluate(el=>el.scrollWidth>=el.clientWidth));
  await page.setViewportSize({width:1440,height:1000});
@@ -753,7 +813,7 @@ test('real browser: current cobalt stock, independent permissions and both langu
  assert(await page.locator('#co469-location').isVisible());
  const limited=await open('limited_account_manager');await limited.page.goto(origin+'/workbench/accounts');await ready(limited.page);await limited.page.locator('#account-filter').waitFor();assert.equal(await limited.page.locator('#account-registration-requests').count(),0);assert.equal(await limited.page.locator('#account-create').count(),1);const options=await limited.context.request.get(origin+'/api/v1/users/options');assert(options.ok());assert(!(await options.json()).roles.some(r=>r.code==='admin'));
  const roleManager=await open('limited_role_manager');await roleManager.page.goto(origin+'/workbench/permissions');await ready(roleManager.page);await roleManager.page.locator('[data-role]').first().waitFor();assert.equal(await roleManager.page.locator('[data-role=admin]').count(),0);const own=await roleManager.page.evaluate(()=>CurrentUser.role_code);assert.equal(await roleManager.page.locator('[data-role="'+own+'"]').count(),0);await roleManager.page.locator('[data-role]').first().click();await roleManager.page.locator('.s46-r2-matrix').waitFor();const prohibited=roleManager.page.locator('.s46-r2-matrix input[value="users:manage"]');assert(await prohibited.count()===0||await prohibited.isDisabled());await limited.page.screenshot({path:path.join(E.runtime,'limited-accounts.png'),fullPage:true});await roleManager.page.screenshot({path:path.join(E.runtime,'limited-roles.png'),fullPage:true});
- assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:70,permissionModules:26,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
+ assert.deepEqual(errors,[]);E.save('ui-results.json',{status:'PASS',shapes,permissionCheckboxes:permissionMatrix.codes.length,permissionModules:permissionMatrix.modules.length,managementViews:['admin-registration-entry','limited-account-manager','limited-role-manager'],errors,workingDatabaseWrites:0});
  }finally{await browser?.close();await app.close();}
 });
 
@@ -802,27 +862,35 @@ test('dispatch and list layouts: both products, responsive filters and one-vehic
  }
  await page.setViewportSize({width:1440,height:1000});
  for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
-  const fixture=f.dispatchMonthPlans[product];
-  await go(page,'/sales-plans/'+fixture.id+'/dispatch',product);
-  const plate=product==='CU_CATHODE'?'CU1235':'CO1235',target=page.locator('tr').filter({hasText:plate});
-  const group=page.locator('details').filter({has:target});
-  if(product==='CU_CATHODE')await group.evaluate(node=>node.open=true);
-  const action=target.locator('[data-dispatch-vehicle-month]');
-  await action.waitFor();
-  assert.match(await action.evaluate(node=>node.previousElementSibling?.dataset.cancelVehicle||node.previousElementSibling?.dataset.dispatchRemove||''),/^[0-9a-f-]{36}$/);
+  const co=product==='CO_HYDROXIDE',fixture=f.dispatchMonthPlans[product];
+  const operator=f.accounts.find(a=>a.role===(co?'sales_operator':'sales_manager'));
+  const signedIn=await ctx.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:operator.username,password:operator.password}});
+  assert(signedIn.ok());
+  const sourcePage='/sales-plans/'+fixture.target+'/dispatch';
+  const sourceApi=(co?'/cobalt/sales':'')+'/plans/'+fixture.target+'/dispatch';
+  await go(page,sourcePage,product);
+  const data=await page.evaluate(url=>API.request(url),sourceApi);
+  const plate=co?'CO1235':'CU1235',vehicle=data.vehicles.find(row=>row.truck_no===plate&&row.can_transfer);
+  const destination=data.dispatch_month.targets.find(plan=>plan.id===fixture.id);
+  assert(vehicle&&destination,'A transferable fixture vehicle and its destination sales plan are required');
+  const action=page.locator('[data-dispatch-vehicle-month="'+vehicle.id+'"]');
+  await action.waitFor({state:'attached'});
+  if(!co)await action.locator('xpath=ancestor::details[1]').evaluate(node=>node.open=true);
   await action.click();
   const form=page.locator('#dispatch-vehicle-month-form');await form.waitFor();
-  assert.equal(await form.locator('input[readonly]').inputValue(),plate);
-  const previous=await form.locator('input[type=month]').inputValue(),next=previous==='2088-11'?'2088-12':'2088-11';
-  await form.locator('input[type=month]').fill(next);
-  await form.locator('button[type=submit],button.primary').click();
+  await form.getByText(plate,{exact:true}).waitFor();
+  await form.locator('select[name=shipment_month]').selectOption(destination.shipment_month);
+  await form.locator('select[name=target_plan_id]').selectOption(destination.id);
+  await form.locator('button[type=submit]').click();
   await form.waitFor({state:'hidden'});
-  const newMonth=target.getByText(next,{exact:true});
-  await newMonth.waitFor({state:'attached'});
-  if(product==='CU_CATHODE')await group.evaluate(node=>node.open=true);
-  await newMonth.waitFor();
-  const another=page.locator('tr').filter({hasText:product==='CU_CATHODE'?'CU1234':'CO1234'});
-  assert((await another.allTextContents()).some(text=>text.includes(fixture.month)));
+  await page.locator('tr').filter({hasText:plate}).waitFor({state:'detached'});
+  const after=await page.evaluate(url=>API.request(url),sourceApi);
+  assert.deepEqual(after.vehicles.map(row=>row.id).sort(),data.vehicles.filter(row=>row.id!==vehicle.id).map(row=>row.id).sort());
+  await go(page,'/sales-plans/'+destination.id+'/dispatch',product);
+  const moved=page.locator('tr').filter({hasText:plate});
+  await moved.waitFor({state:'attached'});
+  if(!co)await moved.locator('xpath=ancestor::details[1]').evaluate(node=>node.open=true);
+  await moved.getByText(destination.shipment_month,{exact:true}).waitFor();
  }
 
   assert.deepEqual(errors,[]);

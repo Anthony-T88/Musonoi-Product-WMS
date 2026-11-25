@@ -1098,6 +1098,22 @@
       "template": "/outbounds/packing-list/:id"
     },
     {
+      "key": "cu-packing-detail-legacy",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/:id/packing-list"
+    },
+    {
+      "key": "co-packing-detail-legacy",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "standard",
+      "template": "/outbounds/:id/packing-list"
+    },
+    {
       "key": "co-packing",
       "products": [
         "CO_HYDROXIDE"

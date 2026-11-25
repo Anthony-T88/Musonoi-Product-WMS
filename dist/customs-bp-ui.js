@@ -7,15 +7,15 @@ window.CustomsBP={
  feedback(error){
   const labels={
    BP_INVALID_FIELD:['请核对填写内容及长度。','Check the submitted fields and their lengths.'],
-   BP_SELECTION_REQUIRED:['请勾选至少一个批次。','Select at least one batch.'],
-   BP_CUSTOMER_MISMATCH:['同一张BP表只能选择同一客户的批次。','Choose batches for a single customer per BP sheet.'],
+   BP_SELECTION_REQUIRED:['请勾选至少一个批次。','Select at least one lot.'],
+   BP_CUSTOMER_MISMATCH:['同一张BP表只能选择同一客户的批次。','Choose lots for a single customer per BP sheet.'],
    BP_NOT_FOUND:['BP表不存在或超出查看范围。','This BP sheet is unavailable in your scope.'],
-   BP_SOURCE_CHANGED:['选中单据的审批或数据已变化，请重新选择并生成预览。','A selected document or approval changed. Select the batches again.'],
+   BP_SOURCE_CHANGED:['选中单据的审批或数据已变化，请重新选择并生成预览。','A selected document or approval changed. Select the lots again.'],
    BP_REQUIRED_DETAILS:['装车单缺少车头号、件数或重量，请补齐来源单据后重试。','Complete the truck plate, package count or weights on the loading order and try again.'],
    BP_DECLARATION_REQUIRED:['请选择运输方式、出境口岸、清关代理和签署日期。','Select the transport mode, exit border, customs agency and signature date.'],
    BP_TEMPLATE_FIELDS_REQUIRED:['请填写所有模板固定资料。','Complete all fixed template fields.'],
    BP_TEMPLATE_CHANGED:['模板已有新版本，请重新打开后编辑。','A newer template exists. Reopen it to make changes.'],
-   BP_BATCH_LOCKED:['所选批次已生成BP表，请返回列表查看已生成记录。','A selected batch is already on a BP sheet. Return to the list to view the issued sheet.'],
+   BP_BATCH_LOCKED:['所选批次已生成BP表，请返回列表查看已生成记录。','A selected lot is already on a BP sheet. Return to the list to view the issued sheet.'],
    BP_REVISION_CHANGED:['该BP表已有新版本，请返回列表重新打开。','A newer BP revision exists. Open the sheet again from the list.'],
    BP_AGENCY_CHANGED:['清关代理已更新，请刷新记录后重新选择。','The customs agency changed. Refresh the book and make a new selection.'],
    BP_AGENCY_NOT_FOUND:['清关代理已删除或超出查看范围。','The customs agency was removed or is outside your scope.'],
@@ -64,7 +64,7 @@ window.CustomsBP={
    RowsPerPage.read('bp-'+prefix+'page',RowsPerPage.standard,q.get(prefix+'page_size')));
   const d=await API.request(base+'?'+q);
   if(location.href!==url||this.base()!==base)return;
-  const pendingTitle=t('待创建BP表批次','Batches Pending BP Creation'),archiveTitle=t('已创建BP表批次','Batches on Created BP Sheets');
+  const pendingTitle=t('待创建BP表批次','Lots Pending BP Creation'),archiveTitle=t('已创建BP表批次','Lots on Created BP Sheets');
   const tab=(value,label,count,active)=>{
    const params=new URLSearchParams(q);
    params.set('view',value);
@@ -72,7 +72,7 @@ window.CustomsBP={
    return '<a class="button secondary" href="/customs/bp?'+esc(params)+'"'+(active?' aria-current="page"':'')+'>'+label+' <strong>'+count+'</strong></a>';
   };
   const headers=[['选择','Select'],['备货批次','Preparation Lot'],['客户','Customer'],['车头号','Truck Plate'],['净重','Net Weight'],['物流审批时间','Logistics Approval']];
-  const rows=d.items.map((row,i)=>'<tr><td><input type="checkbox" data-bp-select="'+i+'" aria-label="'+esc(t('选择批次 ','Select batch ')+(row.batch||row.truck))+
+  const rows=d.items.map((row,i)=>'<tr><td><input type="checkbox" data-bp-select="'+i+'" aria-label="'+esc(t('选择批次 ','Select lot ')+(row.batch||row.truck))+
    '"></td><td>'+esc(row.batch||'—')+'</td><td>'+esc(row.customer)+
    '</td><td>'+esc(row.truck||'—')+'</td><td>'+esc(this.displayWeight(row.net_mt))+'</td><td>'+esc(BusinessTime.display(row.approved_at))+'</td></tr>');
   Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page" data-page-composed data-no-i18n>'+CustomsWorkspace.nav('bp')+
@@ -110,7 +110,7 @@ window.CustomsBP={
    return ['<tr><td>'+number+' <span class="bp-archive-version">r'+row.revision+'</span></td><td>'+row.vehicle_count+'</td><td>'+esc(row.customer||'—')+'</td><td>'+
     esc(this.displayWeight(row.net_mt))+'</td><td>'+esc(this.displayWeight(row.gross_mt))+'</td><td>'+esc(BusinessTime.display(row.created_at))+
     '</td><td><div class="bp-archive-actions"><button type="button" class="button secondary compact" data-bp-expand="'+id+'" data-bp-number="'+number+
-    '" aria-expanded="false" aria-controls="'+panel+'" aria-label="'+t('展开批次','Expand Batches')+' '+number+'">'+t('展开批次','Expand Batches')+
+    '" aria-expanded="false" aria-controls="'+panel+'" aria-label="'+t('展开批次','Expand Lots')+' '+number+'">'+t('展开批次','Expand Lots')+
     '</button><button type="button" class="button secondary compact" data-bp-edit-doc="'+id+'" aria-label="'+t('编辑BP表 ','Edit BP Sheet ')+number+'">'+t('编辑','Edit')+
     '</button>'+this.excelLink(id,row.revision)+'<a class="button secondary compact" href="/api/v1'+this.base()+'/'+id+'/print" target="_blank" rel="noopener">'+t('预览 / 打印','Preview / Print')+'</a></div></td></tr>',
     '<tr class="bp-batch-expansion" id="'+panel+'" hidden><td colspan="7"><div class="bp-batch-panel" aria-live="polite"></div></td></tr>'];
@@ -238,13 +238,13 @@ window.CustomsBP={
  async expand(button){
   const t=this.t,panel=$(button.getAttribute('aria-controls')),inside=panel.querySelector('.bp-batch-panel'),open=panel.hidden;
   panel.hidden=!open;
-  const caption=open?t('收起批次','Collapse Batches'):t('展开批次','Expand Batches');
+  const caption=open?t('收起批次','Collapse Lots'):t('展开批次','Expand Lots');
   button.textContent=caption;
   button.setAttribute('aria-label',caption+' '+button.dataset.bpNumber);
   button.setAttribute('aria-expanded',String(open));
   if(!open||inside.dataset.loaded||inside.getAttribute('aria-busy')==='true')return;
   inside.setAttribute('aria-busy','true');
-  inside.textContent=t('正在读取批次…','Loading batches…');
+  inside.textContent=t('正在读取批次…','Loading lots…');
   try{
    const {items}=await API.request(this.base()+'/'+button.dataset.bpExpand+'/batches');
    if(!inside.isConnected)return;
@@ -266,8 +266,8 @@ window.CustomsBP={
   const sync=()=>{
    const count=this.selected.size;
    status.textContent=count>200?t('每张BP最多选200辆车。','Select up to 200 vehicles per BP sheet.'):
-    this.selectedCustomer?this.selectedCustomer.name+' · '+t('已选择 '+count+' 辆车，仅可继续勾选同一客户','Selected '+count+' vehicle(s). Add batches for this customer only.'):
-     t('每张BP表可选择同一客户的一个或多个批次','Select one or more batches for a single customer');
+    this.selectedCustomer?this.selectedCustomer.name+' · '+t('已选择 '+count+' 辆车，仅可继续勾选同一客户','Selected '+count+' vehicle(s). Add lots for this customer only.'):
+     t('每张BP表可选择同一客户的一个或多个批次','Select one or more lots for a single customer');
    button.disabled=pending||!count||count>200;
    clear.disabled=!count;
    for(const input of controls){

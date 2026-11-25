@@ -295,7 +295,10 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      await c.query('DELETE FROM sales_invoice_confirmations WHERE loading_id=$1',[proof.backfill]);
     }
     await c.query('DROP VIEW historical_sales_arrivals');
-    await c.query(require('../../scripts/migration-chain.cjs').load().at(-1).sql);
+   const completionMigration=require('../../scripts/migration-chain.cjs').load()
+    .find(entry=>entry.version==='207_v488_historical_dispatch_completion.sql');
+   assert(completionMigration,'Historical dispatch completion migration is required');
+   await c.query(completionMigration.sql);
     for(const product of products){
      const proof=fixtures[product].historicalTrip.verified;
      const [restored]=await confirmed(proof.backfill);
@@ -708,6 +711,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const plot=page.locator('[data-oa-plot="net"]');
     await plot.locator('.oa-date-tick').filter({hasText:'2020-03-15'}).waitFor();
     assert.deepEqual(await headings(),initialHeadings);
+    const canvas=await plot.elementHandle();
     if(co)await page.setViewportSize({width:390,height:844});
     const assertPeriod=async(period,kind)=>{
      await page.mouse.move(0,0);
@@ -716,12 +720,15 @@ test('copper and cobalt preparation batches and historical navigation on indepen
       await tick.hover();
      }else{
       const position=await tick.evaluate(label=>{
-       const chart=label.ownerSVGElement;
-       const box=chart.getBoundingClientRect();
-       const point=new DOMPoint(Number(label.getAttribute('x')),82).matrixTransform(chart.getScreenCTM());
-       return {x:point.x-box.left,y:point.y-box.top};
+       const chart=label.ownerSVGElement,scroller=chart.closest('.oa-plot-scroll');
+       scroller.scrollIntoView({block:'center',inline:'nearest'});
+       const point=()=>new DOMPoint(Number(label.getAttribute('x')),82).matrixTransform(chart.getScreenCTM());
+       scroller.scrollLeft+=point().x-scroller.getBoundingClientRect().left-scroller.clientWidth/2;
+       const {x,y}=point();
+       return {x,y,visible:chart.contains(document.elementFromPoint(x,y))};
       });
-      await plot.locator('svg').hover({position});
+      assert(position.visible,period+' is inside the visible chart viewport');
+      await page.mouse.move(position.x,position.y);
      }
      const tooltip=plot.getByRole('tooltip');
      await tooltip.waitFor();
@@ -732,7 +739,16 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
      for(const date of ['2020-03-03','2020-03-15','2020-03-19'])await assertPeriod(date,'plot');
      await assertPeriod('2020-03-15','label');
+     const tooltip=plot.getByRole('tooltip'),chart=plot.locator('svg');
+     await chart.press('ArrowRight');
+     assert.equal((await tooltip.innerText()).split('\n')[0],'2020-03-16');
+     await chart.press('Escape');
+     await tooltip.waitFor({state:'hidden'});
+     await plot.locator('.oa-date-tick').filter({hasText:'2020-03-15'}).dispatchEvent('pointerdown',{pointerType:'touch'});
+     await tooltip.waitFor();
+     assert.equal((await tooltip.innerText()).split('\n')[0],'2020-03-15');
     }
+    assert(await canvas.evaluate(node=>node.isConnected),'Resizing keeps the same chart panel');
    }finally{await ctx.close();}
   });
   for(const product of products)await t.test(product+' creation keeps draft by save and offers all eligible licenses',async()=>{

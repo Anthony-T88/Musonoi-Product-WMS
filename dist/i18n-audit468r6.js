@@ -681,7 +681,7 @@ Object.assign(TRANSLATIONS.en,{
  "待确认审批角色": "Approval Role Pending",
  "历史节点仅展示已记录证据，不补造审批。": "Historical steps display recorded evidence only.",
  "单据详情": "Document Details",
- "装车、客户或运输资料已变更，请在清关批次列表重新生成单据。": "Loading, customer or transport details changed. Generate a new revision from the customs batch list.",
+ "装车、客户或运输资料已变更，请在清关批次列表重新生成单据。": "Loading, customer or transport details changed. Generate a new revision from the customs lot list.",
  "当前单据需更新。": "The document needs a new revision.",
  "尚未生成清关单据。": "Customs documents have not been generated.",
  "进入备货作业页": "Open Preparation Work",

@@ -183,14 +183,29 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
     await page.addLocatorHandler(page.locator('#task-notice[open] [data-task-dismiss]'),button=>button.click());
     await page.goto(origin+'/preparation/'+work.id);
     await page.locator('#lot-revoke').waitFor();
+    const language=page.locator('.top-actions select[data-language]');
+    assert.equal(await language.getAttribute('aria-label'),'语言/Language');
+    assert.deepEqual(await language.locator('option').allTextContents(),['中文','English']);
+    await language.selectOption('en');
+    const englishReselect=page.getByRole('button',{name:'Reselect Bundles',exact:true});
+    await englishReselect.waitFor();
+    await page.getByRole('button',{name:'Cancel Preparation',exact:true}).waitFor();
+    await englishReselect.click();
+    const dialog=page.locator('#lot-preapproval-dialog');
+    await dialog.getByRole('heading',{name:'Cancel Preparation and Reselect Bundles',exact:true}).waitFor();
+    await dialog.getByRole('button',{name:'Cancel and Reselect',exact:true}).waitFor();
+    assert.doesNotMatch(await dialog.innerText(),/\p{Script=Han}/u);
+    await dialog.locator('#lot-preapproval-back').click();
+    await language.selectOption('zh-CN');
+    assert.deepEqual(await language.locator('option').allTextContents(),['中文','English']);
     const reselect=page.getByRole('button',{name:'重选捆包',exact:true});
+    await reselect.waitFor();
     for(const width of [1280,390,1440]){
      await page.setViewportSize({width,height:900});
      assert(await reselect.isVisible());
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
     }
     await reselect.click();
-    const dialog=page.locator('#lot-preapproval-dialog');
     await dialog.getByRole('button',{name:'返回',exact:true}).click();
     assert.equal((await c.query('SELECT workflow_state FROM allocations WHERE id=$1',[work.id])).rows[0].workflow_state,'RECTIFY');
     await reselect.click();

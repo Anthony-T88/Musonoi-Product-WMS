@@ -46,7 +46,7 @@ window.CustomsWorkspace={
   Router.page(t('清关单据管理','Customs Documents'),'<div class="wms-page customs-packing-workspace" data-no-i18n data-page-composed>'+
    '<div class="packing-workspace-toolbar">'+this.nav('packing')+template+'</div>'+this.packingFilters(q,data.customer_options)+
    '<div class="customs-packing-split"><section class="wms-section packing-list-panel" aria-labelledby="customs-packing-list-heading">'+
-   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('批次列表','Batch List')+'</h2></header>'+
+   '<header class="packing-panel-heading"><h2 id="customs-packing-list-heading">'+t('批次列表','Lot List')+'</h2></header>'+
    ExportLicenses.table(labels,entries,'customs-packing-list',true,{numeric:[2]})+Management.pager(data)+'</section>'+
    '<aside id="customs-packing-preview" class="wms-preview" aria-labelledby="customs-packing-preview-heading" tabindex="-1">'+
    '<header class="packing-panel-heading"><h2 id="customs-packing-preview-heading">'+

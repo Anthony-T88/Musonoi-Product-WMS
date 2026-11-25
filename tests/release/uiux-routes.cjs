@@ -189,6 +189,8 @@ function pages(ids){
  add('cu-corrections','/outbounds/corrections',[CU]);
  add('cu-correction-detail','/outbounds/corrections/:id',[CU],{example:'cuCorrection'});
  add('cu-packing-legacy','/outbounds/packing-list/:id',[CU],{example:'cuLoad'});
+ add('cu-packing-detail-legacy','/outbounds/:id/packing-list',[CU],{example:'cuLoad'});
+ add('co-packing-detail-legacy','/outbounds/:id/packing-list',[CO],{example:'coLoad'});
  add('co-packing','/customs/packing-list/:id',[CO],{example:'coLoad',screenshot:true,state:'cobalt document details, preview and archive history'});
  add('shipping','/export-shipments',BOTH,{screenshot:true});
  add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true,state:'copper document details, preview and archive history'});

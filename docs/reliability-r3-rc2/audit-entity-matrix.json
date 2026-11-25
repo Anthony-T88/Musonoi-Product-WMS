@@ -4,6 +4,21 @@
   "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
   "entries": [
     {
+      "entity": "customs_bp_templates",
+      "policy": "ADMIN_ONLY",
+      "basis": "Versioned product-wide customs template; global audit access requires system administration."
+    },
+    {
+      "entity": "customs_bp_documents",
+      "policy": "ADMIN_ONLY",
+      "basis": "BP revision history uses the source scopes on the document route. Global audit retains administrator-only access."
+    },
+    {
+      "entity": "customs_bp_agencies",
+      "policy": "ADMIN_ONLY",
+      "basis": "The shared agency book uses project authorization. Global audit retains administrator-only access."
+    },
+    {
       "entity": "allocations",
       "policy": "AUTHORITATIVE",
       "basis": "plan_id -> sales_plans + planned location warehouse"
