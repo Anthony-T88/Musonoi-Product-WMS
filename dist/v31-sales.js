@@ -72,7 +72,7 @@ const Dispatch={
    const removeButton=remove&&r.can_remove&&!r.cancelled_at?'<button type="button" class="button secondary danger" data-dispatch-remove="'+r.id+'">删除车辆</button>':'';
    const changeButton=this.vehicleMonthButton(r,change&&r.can_transfer);
    return `<tr><td>${r.source_row}</td><td data-no-i18n>${esc(r.truck_no)}</td>${saved?'<td data-no-i18n>'+esc(r.shipment_month||'—')+'</td>':''}
-    ${transportOnly?'':`<td>${r.capacity_tonnes?Tonnes.format(r.capacity_tonnes):'未提供'}</td>`}<td data-no-i18n>${esc(r.transporter||'—')}</td><td data-no-i18n>${esc(r.destination||'—')}</td><td>${saved?r.cancelled_at?'已取消 · 不计入':r.counted===false?'重复车辆 · 不计入':'已保存':DispatchTransport.outcome(r,transportOnly)}</td>
+    ${transportOnly?'':`<td>${r.capacity_tonnes?Tonnes.format(r.capacity_tonnes):'未提供'}</td>`}<td data-no-i18n>${esc(r.transporter||'—')}</td><td data-no-i18n>${esc(r.destination||'—')}</td><td>${saved?r.cancelled_at?'已取消 · 不计入':r.counted===false?'重复车辆 · 不计入':r.historical_source_id?'已到场（历史）':'已保存':DispatchTransport.outcome(r,transportOnly)}</td>
     ${actions?'<td><div class="wms-dispatch-row-actions">'+(removeButton+changeButton||'<span>—</span>')+'</div></td>':''}</tr>`;
   }).join('')}</tbody></table></div>`;
  },

@@ -117,9 +117,9 @@ function pages(ids){
  add('co-export-license-edit','/export-licenses/:id/edit',[CO],{example:'coPermitDraft',state:'applying'});
  add('sales-new','/sales-plans/new',BOTH,{roles:['sales_operator']});
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
-  add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved'});
+  add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved, with historical invoice confirmation when matched'});
   add(prefix+'-sales-edit','/sales-plans/:id/edit',[product],{example:prefix+'Plan'});
-  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'saved vehicle plate search, dispatch month transfer and Excel backfill'});
+  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'saved vehicle plate search, dispatch month transfer, Excel backfill and historical matches'});
  }
  add('cu-sales-shipping','/sales-plans/:id/shipping',[CU],{example:'cuPlan'});
  add('legacy-sales-new','/preparation/plans/new',[CU]);
@@ -150,7 +150,7 @@ function pages(ids){
  add('cu-weighings','/outbounds/weighings',[CU],{state:'retired permission'});
  add('cu-weigh-new','/outbounds/weighings/new',[CU]);
  add('cu-weigh','/outbounds/weighings/:id',[CU],{example:'cuWeigh',state:'retired permission'});
- add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'single-row plate search, arrival and optional second trailer'});
+ add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'plate search, optional second trailer and historical arrivals'});
  for(const [product,key,example] of [[CU,'cu-arrival','cuArrivalPending'],[CO,'co-arrival','coArrival']]){
   add(key,'/loading-plans',[product],{example,state:'waiting-arrival'});
   const entry=cases.at(-1);

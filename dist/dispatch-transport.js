@@ -25,7 +25,7 @@ window.DispatchTransport={
   };
  },
  missingRows(rows){
-  return rows.filter(row=>!row.cancelled_at&&!row.transport_locked&&row.counted!==false&&(!row.transporter?.trim()||!row.destination?.trim()));
+  return rows.filter(row=>!row.cancelled_at&&!row.transport_locked&&!row.historical_source_id&&row.counted!==false&&(!row.transporter?.trim()||!row.destination?.trim()));
  },
  notice(rows,canImport,closed){
   const count=this.missingRows(rows).length;
@@ -66,6 +66,13 @@ window.DispatchTransport={
   if(result.transport_locked_count)parts.push('装车单锁定 '+result.transport_locked_count);
   if(result.cancelled_count)parts.push('取消行 '+result.cancelled_count);
   return parts.join(' · ');
+ },
+ historicalSummary({linked,invoice_confirmed,invoice_missing,ambiguous}){
+  const t=this.t;
+  return [t('历史匹配并登记到场','Historical arrivals matched')+' '+linked,
+   t('自动确认开票','Invoices confirmed')+' '+(invoice_confirmed||0),
+   ...(invoice_missing?[t('缺少发票号','Missing invoice number')+' '+invoice_missing]:[]),
+   ...(ambiguous?[t('需核对趟次','Trips to verify')+' '+ambiguous]:[])].join(' · ');
  },
  bindImport(form,{path,month,planVersion,error,render,reload,savePath=path,confirm=false,errorText=e=>I18n.translate(e.message,true)}){
   if(!form)return;
@@ -152,7 +159,9 @@ window.DispatchTransport={
     const saved=await API.request(savePath,{method:'POST',body:pending,timeoutMs:30000});
     ProductContext.dirty=false;
     await reload();
-    notify(I18n.translate(this.summary(saved),true));
+    const historical=saved.historical;
+    const arrivalMessage=historical&&(historical.linked||historical.ambiguous)?this.historicalSummary(historical):'';
+    notify([I18n.translate(this.summary(saved),true),arrivalMessage].filter(Boolean).join(' · '));
    }catch(err){if(form.isConnected)showError(err);}
    finally{
     saving=previewButton.disabled=fileField.disabled=false;

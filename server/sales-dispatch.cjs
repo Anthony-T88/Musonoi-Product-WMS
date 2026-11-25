@@ -1,6 +1,7 @@
 'use strict';
 const X=require('xlsx'),B=require('./business-common.cjs'),A=require('./allocations.cjs'),{createHash}=require('crypto');
 const Month=require('./dispatch-month.cjs'),Transport=require('./dispatch-transport.cjs');
+const History=require('./historical-sales.cjs');
 const {readTransaction}=require('./cobalt.cjs');
 const {truckKey}=Transport;
 const digest=b=>createHash('sha256').update(b).digest('hex');
@@ -20,6 +21,7 @@ async function parse(body){
 async function summary(c,planId,month){return (await c.query("SELECT count(*)::int vehicle_count,count(v.capacity_tonnes)::int known_capacity_count,count(*) FILTER(WHERE v.capacity_tonnes IS NULL)::int unknown_capacity_count,coalesce(sum(v.capacity_tonnes),0)::text total_capacity_tonnes FROM sales_dispatch_vehicle_keys k JOIN sales_dispatch_vehicles v ON v.id=k.vehicle_id WHERE v.cancelled_at IS NULL AND k.sales_plan_id=$1 AND($2::text IS NULL OR k.shipment_month=$2)",[planId,month||null])).rows[0];}
 function monthValue(v,required=false){if(v===undefined||v===''){if(required)throw B.error(400,'请选择发运月份');return null;}if(typeof v!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v))throw B.error(400,'请选择有效发运月份');return v;}
 const occupied=(id,plan,key)=>`EXISTS(SELECT 1 FROM vehicle_arrivals WHERE dispatch_vehicle_id=${id} AND registration_phase<>'CLEARED')
+  OR ${History.arrivalExists(false,id)}
   OR EXISTS(SELECT 1 FROM loading_plan_documents d JOIN loading_plan_groups g ON g.id=d.group_id
    WHERE g.sales_plan_id=${plan} AND upper(regexp_replace(d.vehicle_no,'[[:space:]-]','','g'))=${key})
   OR EXISTS(SELECT 1 FROM loading_orders l JOIN loading_order_lots q ON q.loading_id=l.id JOIN allocations a ON a.id=q.allocation_id
@@ -38,10 +40,11 @@ async function list(c,req){
   SELECT v.id,d.shipment_month,NULL::text FROM sales_dispatch_imports d JOIN sales_dispatch_vehicles v ON v.import_id=d.id
   WHERE d.sales_plan_id=$1 AND NOT EXISTS(SELECT 1 FROM sales_dispatch_vehicle_keys k WHERE k.vehicle_id=v.id)
  )
- SELECT v.*,s.shipment_month,(s.truck_key IS NOT NULL) counted,
+ SELECT v.*,s.shipment_month,(s.truck_key IS NOT NULL) counted,h.source_id historical_source_id,
   NOT (${occupied('v.id','$1',"coalesce(s.truck_key,upper(regexp_replace(v.truck_no,'[[:space:]-]','','g')))")}) can_remove,
   NOT (${recorded('v.id')}) without_history
   FROM selected s JOIN sales_dispatch_vehicles v ON v.id=s.vehicle_id JOIN sales_dispatch_imports d ON d.id=v.import_id
+  LEFT JOIN historical_sales_arrivals h ON h.cu_dispatch_id=v.id
   WHERE v.cancellation_reason IS DISTINCT FROM 'MANUAL_DELETE'
   AND ($2::text IS NULL OR s.shipment_month=$2) ORDER BY d.created_at DESC,v.source_row`,[plan.id,month]);
  const importIds=[...new Set(vehicles.map(v=>v.import_id))];
@@ -106,7 +109,8 @@ async function register({app,pool,permitted,csrf}){
     if(!item.truck_no)continue;
     const cancelled=await c.query(`UPDATE sales_dispatch_vehicles v SET cancelled_at=clock_timestamp(),cancellation_reason=$4
      FROM sales_dispatch_vehicle_keys k WHERE k.vehicle_id=v.id AND k.sales_plan_id=$1 AND k.shipment_month=$2
-     AND k.truck_key=$3 AND v.cancelled_at IS NULL RETURNING v.id,v.cancelled_at`,[plan.id,month,truckKey(item.truck_no),item.reason]);
+     AND k.truck_key=$3 AND v.cancelled_at IS NULL AND NOT ${History.arrivalExists(false,'v.id')}
+     RETURNING v.id,v.cancelled_at`,[plan.id,month,truckKey(item.truck_no),item.reason]);
     cancelled_existing_count+=cancelled.rowCount;
     for(const row of cancelled.rows)await B.audit(c,req,'sales_dispatch_vehicle_cancelled','sales_dispatch_vehicles',row.id,
      {cancelled_at:null},{...row,truck_no:item.truck_no,reason:item.reason,file_name:body.file_name,file_sha256:parsed.file_sha256});
@@ -114,6 +118,7 @@ async function register({app,pool,permitted,csrf}){
    const {fresh,updates,tally}=await Transport.analyzeImport(c,plan.id,month,parsed.items,{transportOnly:body.transport_only,lock:true});
    await Transport.fillFromImport(c,req,plan,month,body,parsed,updates,false);
    let imported;
+   const dispatchIds=[];
    if(fresh.length){
     imported=(await c.query('INSERT INTO sales_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING *',
      [plan.id,month,body.file_name,parsed.file_sha256,fresh.length,req.user.id])).rows[0];
@@ -122,11 +127,13 @@ async function register({app,pool,permitted,csrf}){
       [imported.id,parsed.mapping.sheet,item.source_row,item.truck_no,item.trailer_no,item.capacity_tonnes,item.transporter,item.destination]);
      await c.query('INSERT INTO sales_dispatch_vehicle_keys(sales_plan_id,shipment_month,truck_key,vehicle_id) VALUES($1,$2,$3,$4)',
       [plan.id,month,truckKey(item.truck_no),vehicle.id]);
+     dispatchIds.push(vehicle.id);
     }
    }
    const {new_count:added_count,...results}=tally;
+   const historical=await History.afterDispatchImport(c,req,plan,month,dispatchIds);
    const result={...imported,...results,added_count,cancelled_count:body.transport_only?0:parsed.cancelled_count,
-    cancelled_existing_count,summary:await summary(c,plan.id,month)};
+    cancelled_existing_count,summary:await summary(c,plan.id,month),...(historical?{historical}:{})};
    if(imported)await B.audit(c,req,'sales_dispatch_imported','sales_dispatch',imported.id,null,result);
    else if(!updates.length)await B.audit(c,req,'sales_dispatch_duplicates_skipped','sales_plans',plan.id,null,result);
    return result;

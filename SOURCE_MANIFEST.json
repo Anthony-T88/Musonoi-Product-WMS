@@ -1,7 +1,7 @@
 {
   "version": "4.8.8",
   "auditRevision": "v488",
-  "revision": "4.8.8-ui13",
+  "revision": "4.8.8-ui14",
   "files": [
     {
       "path": ".dockerignore",
@@ -17,7 +17,7 @@
     },
     {
       "path": "db/migration-baseline.json",
-      "sha256": "ab68a338e2b2d06e2cf0b46a4f45e3d6f254f7b61028ec90b1057c5e22379ebe"
+      "sha256": "d6d00ed4c177d54ce19f7c6d25e0cdf833240d11f6da10a9d273d5fa6b2d221a"
     },
     {
       "path": "db/migration-guards/172-admin-permissions.json",
@@ -1037,7 +1037,7 @@
     },
     {
       "path": "dist/cobalt-sales-ui.js",
-      "sha256": "b8ff2411eb787862d2be37eaa3231d35173fdeb923fff5349319f3731ac6d1a3"
+      "sha256": "0e44fc65e24c46b9bce0b158eeff13fa06973c3f8d9c43161eeda3c5afbdcaaf"
     },
     {
       "path": "dist/cobalt-stock-ui.js",
@@ -1077,7 +1077,7 @@
     },
     {
       "path": "dist/copper461.js",
-      "sha256": "09f0b1e4abbda3d9f69231ddb2a17359e6ddfb86e9659b2e1b120db0a0c91f4d"
+      "sha256": "38b3cef026ef09678b82c4219840849fcd51d855c814e898ccb0dab2696bb22d"
     },
     {
       "path": "dist/core.js",
@@ -1145,7 +1145,7 @@
     },
     {
       "path": "dist/i18n-audit468r6.js",
-      "sha256": "0ab1e7aa609297580b832eb9ea830b331adfbeee5e1b986a71d7eae2f17bacd6"
+      "sha256": "8aeabae824a3d800e1f31ef8bd7c7e7c58e98fdaab0b6ce10947f139b0424d94"
     },
     {
       "path": "dist/i18n-dictionary.js",
@@ -1185,7 +1185,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "b0b96c3749f4fb39acc2952734f72f40fcb280e865d90a5835c104625fdcd2cd"
+      "sha256": "27f3b30c84bbed037b9844f7fcbac227f22a0f80ff7e41ffd70329a28870278f"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1413,7 +1413,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "2037e301c989294cc76c3fbbca054c0ab08c0123550197ec7857e0711ec349fc"
+      "sha256": "acd77618825e7bfdda7f62f3e6f86c6b5bfe347d1ed274df7afec1a24cfa0d50"
     },
     {
       "path": "dist/reports463.js",
@@ -1461,7 +1461,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "f9b9386cdcb52d65f2bf786543f7131c54206c97580e0f8c87d0200370bd5756"
+      "sha256": "1b6f47fed3b8b0b2c01c3ac66fbe9066e4a12726272f149f950d1e6d1c750974"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1577,7 +1577,7 @@
     },
     {
       "path": "dist/ux10-sales.js",
-      "sha256": "8b689cc2e70d1830ccdffb22372e26f0ea596e6672d4d744db06306fec883c82"
+      "sha256": "ee29ff294e28b3a1f19b4726e53f1a61145253dba77189ee2d49b55e5823ad1d"
     },
     {
       "path": "dist/ux10.css",
@@ -1657,11 +1657,11 @@
     },
     {
       "path": "dist/dispatch-transport.js",
-      "sha256": "799e186af88be7651461c217db29bfdd9c4557427c6aec79a92d811f814d0ca8"
+      "sha256": "bce4d6ee1d1afc810902272152abe5f6a90a5732549b36c77890d237a6d4856b"
     },
     {
       "path": "dist/v31-sales.js",
-      "sha256": "9de6da8a2b9fa9f78a28fe03f017b319859b030557c762428f4996b697e838ba"
+      "sha256": "6d81dde2e9989d79df3cc42a6c85001118a7306c0584ee7d235a7fcfc07b2e43"
     },
     {
       "path": "dist/v31-single-plan.js",
@@ -1757,7 +1757,7 @@
     },
     {
       "path": "dist/vehicle-arrivals.js",
-      "sha256": "b64198ee2e31b127494e14f9bd9219ab529b1171c36ee88bddce01ad0f68db9f"
+      "sha256": "376e44c3c9c1fa9d9c33fe73f5a66c776489dfe02425800a64eb221c5c2c7cc2"
     },
     {
       "path": "dist/workflows.js",
@@ -1789,7 +1789,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "dafa1f17ffe5fb4da4caf1d9c19ba1f27d30cf6f99b4ab4e87ed6692edced96c"
+      "sha256": "9d78d86bbaf30d469d677b19322963372d329a38719495e2899348a6e1334d91"
     },
     {
       "path": "scripts/db.cjs",
@@ -1913,7 +1913,7 @@
     },
     {
       "path": "server/cobalt-loading.cjs",
-      "sha256": "1664058477bc97813747a25cbe6cb361bcd90e8b9e0f93db2ea0a5fa20fffd74"
+      "sha256": "96207d9f8fc9b098b81d0742ba844664bb6424906ba186501c1f1dbdee4478fe"
     },
     {
       "path": "server/cobalt-map-config.cjs",
@@ -1937,11 +1937,11 @@
     },
     {
       "path": "server/cobalt-reports.cjs",
-      "sha256": "805fd2c9bc74f79ca479915b5562650c542bf12b2060daa0d4874e99b8ea9c62"
+      "sha256": "137d13fbe4a8145cd2483a364310e0a437d32bb195878a786cd67574f0db6345"
     },
     {
       "path": "server/cobalt-sales.cjs",
-      "sha256": "8b440289630cf442fba39e545c5033e7ddbe144ada82d933ac16a60e606961ae"
+      "sha256": "ca6a5dd85d2c1b9a29f7f3a2c0727048492087fc8bff4b4c4b27716cff825c46"
     },
     {
       "path": "server/cobalt-stock-archive.cjs",
@@ -1965,7 +1965,7 @@
     },
     {
       "path": "server/cobalt461.cjs",
-      "sha256": "238aebd54caffc3ed2b3c804f34c47f1f23d9667659692498274c61fa13a5dca"
+      "sha256": "1abd58483c72d8013740796bee5aba1f6c4225486a79d2cbc100ede1eb1fe666"
     },
     {
       "path": "server/commercial-invoice.cjs",
@@ -1989,7 +1989,7 @@
     },
     {
       "path": "server/copper461.cjs",
-      "sha256": "fc1dde5bcffb0ee15f7398ddc326e2037783cf34c60a8bc944731659c0b3748e"
+      "sha256": "1fa3d1369eac9aea7aa2763b1cc072459d2eddebe7a79981f9d131d93ecf473f"
     },
     {
       "path": "server/dashboard.cjs",
@@ -2085,7 +2085,7 @@
     },
     {
       "path": "server/historical-sales.cjs",
-      "sha256": "19381677e509f766eb9336ca13731c02a3ca1b8d05918d172044ba4c09c5794f"
+      "sha256": "b7d02f7eb546bf8346c401ed64689a3a31a19a94ba57a92b7bfd6c357fad9aaa"
     },
     {
       "path": "server/inventory-control.cjs",
@@ -2245,7 +2245,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "5ecbff1f7d65a3c6101d698f8fb4dfe11cac292c6ab4b866a5316f95ce36c266"
+      "sha256": "9f3fb6947efedc9bb3c641d9084cf173dc8ba4ce549be238a056ee75dca9f11b"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2293,11 +2293,11 @@
     },
     {
       "path": "server/sales-dispatch.cjs",
-      "sha256": "c83cb044118692b7c58d75560b4eee64d66633c3a961b58816e08f203a552cb8"
+      "sha256": "3f941d65dd5ce819f8066c3311eef3386b09b89cd5e98b2a4a3b9328b6cbc40a"
     },
     {
       "path": "server/sales-invoices.cjs",
-      "sha256": "02298d0f49b76d8ce6874cfbeec5f46cd6442609a2b665cffb4fee37b0ba451f"
+      "sha256": "fdec7b8df9d99ef75febf48c7bcafff9a51c0c132f94b9913b3f8f95eb7bf0a7"
     },
     {
       "path": "server/sampling.cjs",
@@ -2381,11 +2381,11 @@
     },
     {
       "path": "server/vehicle-arrival-export.cjs",
-      "sha256": "f919ac072c81fe8b3f52b6bcf868c2751a32605c9a886021f0e5961166496361"
+      "sha256": "b550d31501e36115073ca8e66d27488e7f61ea3a64dbaee9797048aa257149ec"
     },
     {
       "path": "server/vehicle-arrivals.cjs",
-      "sha256": "97ad1812b67a8875b456c7472e1ad90ea1282c68bb7ef4e49eeeea145c36c615"
+      "sha256": "49b095ce2cb79c2d15fad8920ee53e26598b26c25deb08296f7257f32f10d966"
     },
     {
       "path": "server/warehouse-templates.cjs",
@@ -2637,7 +2637,7 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "c8dd6a7e07b818501a0bab71423e076bf77402b976a20854b0641c173fbd2d86"
+      "sha256": "d7e175e1134796b6d1b2eb29b311ab5f770e679b4897f135a64b3f6d63357585"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -2649,7 +2649,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "375e522cb123e1fb3c1e24bae230b4b4385f64d14841a040689c8c8f7981c29c"
+      "sha256": "28f9959c10ddd418ea8d90fdecf284d705d3d2a234ae653f918f8df5e51c5ddc"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -2720,6 +2720,10 @@
       "sha256": "1c686907b31a4fa2a822f8812c3517d4aa9b58fd0870b70977f597a0f8706de4"
     },
     {
+      "path": "db/migrations/207_v488_historical_dispatch_completion.sql",
+      "sha256": "fc91a3f74ec7c75147c5ffdb53e5b158c6e00c33a70ee667ec5635f303383d9b"
+    },
+    {
       "path": "db/migrations/201_v488_customs_dispatch.sql",
       "sha256": "e120a82bbcdcb8e9469b96006b22391ca996cef42f4bd9093c587375d137ff1d"
     },
@@ -2745,7 +2749,7 @@
     },
     {
       "path": "deploy/upgrade-preproduction-v483.sh",
-      "sha256": "9d2692642c989ce76f03a7b612578a1bcd53c73ca0a00b281b66f40b0bbe2fce"
+      "sha256": "b87c8535fd3f56b326cec6fff430ff9fbf5540e1bbc98bbac17cfde10bc0ca4a"
     },
     {
       "path": "tests/release/bundle-corrections-ui.cjs",
@@ -2757,7 +2761,7 @@
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "c0d0a6f2a3d7be1bb091317a37f7c540163a3a1d717fb066252fd5a495c1215f"
+      "sha256": "024e1a2cd8ff25f4d3d9083a86abbb402c53418be4c891941a23b1171cee26ea"
     },
     {
       "path": "deploy/remove-unposted-test-receipt.sql",

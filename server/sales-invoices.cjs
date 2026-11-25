@@ -76,8 +76,10 @@ async function shipments(c,req,planId,loadingId=null,batchId=null){
  const scope=co?`EXISTS(SELECT 1 FROM user_scopes u WHERE u.user_id=$1 AND u.project_id=p.project_id
    AND(u.warehouse_id IS NULL OR u.warehouse_id=p.warehouse_id) AND(u.customer_id IS NULL OR u.customer_id=p.customer_id))`:shipping.scope;
  const joins=co?'JOIN co_sales_plans p ON p.id=s.plan_id':'JOIN sales_plans p ON p.id=s.plan_id LEFT JOIN loading_orders l ON l.id=s.loading_id';
- const {rows}=await c.query(`SELECT s.*,s.net_mt::text,actor.display_name confirmed_by_name
+ const {rows}=await c.query(`SELECT s.*,s.net_mt::text,actor.display_name confirmed_by_name,
+  CASE WHEN history.source_id IS NOT NULL THEN history.source_invoice_no ELSE s.source_invoice_no END source_invoice_no
   FROM sales_invoice_shipments s ${joins} LEFT JOIN users actor ON actor.id=s.confirmed_by
+  LEFT JOIN historical_sales_arrivals history ON history.source_id=s.historical_source_id
   WHERE s.product_code=$2 AND s.plan_id=$3 AND ($4::uuid IS NULL OR s.loading_id=$4)
   AND ($5::uuid IS NULL OR s.batch_id=$5)
   AND (s.historical_source_id IS NULL AND (${scope}) OR s.historical_source_id IS NOT NULL AND ${archiveScope})

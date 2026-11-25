@@ -1198,3 +1198,5 @@ Object.assign(TRANSLATIONS.en,{
  '请使用批量装箱单导入':'Use batch packing list import'
 });
 globalThis.AuditLocale468R6=true;
+
+Object.assign(TRANSLATIONS.en,{'已到场（历史）':'Arrived (Historical)','该车辆已依据关联历史出库单登记到场':'This vehicle has already arrived according to the linked historical shipment.'});

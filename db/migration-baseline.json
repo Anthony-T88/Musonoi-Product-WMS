@@ -825,6 +825,10 @@
     {
       "version": "206_v488_dispatch_plan_transfer.sql",
       "checksum": "33d9add3555ee66bcf7ecd81a3b490630b491f8a06864887e47f658e2037399d"
+    },
+    {
+      "version": "207_v488_historical_dispatch_completion.sql",
+      "checksum": "fc91a3f74ec7c75147c5ffdb53e5b158c6e00c33a70ee667ec5635f303383d9b"
     }
   ]
 }

@@ -108,7 +108,7 @@ window.SalesReviewUI={
     if(!automatic.isConnected)return;
     if(result.linked)await this.form(plan.id);
     const message=$('sales-history-result');
-    if(message)message.textContent=I18n.language==='en'?`${result.linked} linked. ${result.ambiguous} need trip verification.`:`已关联 ${result.linked} 条，另有 ${result.ambiguous} 条需核对趟次。`;
+    if(message)message.textContent=DispatchTransport.historicalSummary(result);
    }catch(e){if(error.isConnected)error.textContent=e.message;}
    finally{automatic.disabled=false;}
   };
