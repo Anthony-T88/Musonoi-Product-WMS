@@ -86,6 +86,7 @@ window.UI46Pages={
  },
  changePassword(){
   const t=this.t;
+  if(CurrentUser.role_code==='general_manager'){notify(t('总经理账号密码由维护人员轮换。','Maintenance rotates the General Manager password.'));return;}
   const field=(name,zh,en,autocomplete,min=1)=>'<label class="wms-field">'+t(zh,en)+
    '<input name="'+name+'" type="password" autocomplete="'+autocomplete+'" required minlength="'+min+'" maxlength="128"></label>';
   dialog(t('修改密码','Change Password'),'<form id="change-password-form" class="user-form" data-no-i18n data-wms-validation>'+

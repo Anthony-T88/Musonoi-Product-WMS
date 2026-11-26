@@ -3,12 +3,46 @@
   "historicalBackfill": false,
   "visibility": "Every immutable scope fragment must be covered; never actor-current-scope fallback",
   "entries": [
-    {"entity":"customs_bp_templates","policy":"ADMIN_ONLY","basis":"Versioned product-wide customs template; global audit access requires system administration."},
-    {"entity":"customs_bp_documents","policy":"ADMIN_ONLY","basis":"BP revision history uses the source scopes on the document route. Global audit retains administrator-only access."},
-    {"entity":"customs_bp_agencies","policy":"ADMIN_ONLY","basis":"The shared agency book uses project authorization. Global audit retains administrator-only access."},
-    {"entity":"preparation_plans","policy":"ADMIN_ONLY","basis":"Scoped workflow events are listed through the preparation-plan route."},
-    {"entity":"historical_movement_documents","policy":"ADMIN_ONLY","basis":"Only system administrators access the separate historical ledger and its import audit."},
-    {"entity":"document_drafts","policy":"ADMIN_ONLY","basis":"Private working content is never audited. Global audit retains only the owner's form type and draft version."},
+    {
+      "entity": "access_change_requests",
+      "policy": "ADMIN_ONLY",
+      "basis": "account governance across data scopes"
+    },
+    {
+      "entity": "audit_logs",
+      "policy": "ADMIN_ONLY",
+      "basis": "audit evidence export and its digest"
+    },
+    {
+      "entity": "customs_bp_templates",
+      "policy": "ADMIN_ONLY",
+      "basis": "Versioned product-wide customs template; global audit access requires system administration."
+    },
+    {
+      "entity": "customs_bp_documents",
+      "policy": "ADMIN_ONLY",
+      "basis": "BP revision history uses the source scopes on the document route. Global audit retains administrator-only access."
+    },
+    {
+      "entity": "customs_bp_agencies",
+      "policy": "ADMIN_ONLY",
+      "basis": "The shared agency book uses project authorization. Global audit retains administrator-only access."
+    },
+    {
+      "entity": "preparation_plans",
+      "policy": "ADMIN_ONLY",
+      "basis": "Scoped workflow events are listed through the preparation-plan route."
+    },
+    {
+      "entity": "historical_movement_documents",
+      "policy": "ADMIN_ONLY",
+      "basis": "Only system administrators access the separate historical ledger and its import audit."
+    },
+    {
+      "entity": "document_drafts",
+      "policy": "ADMIN_ONLY",
+      "basis": "Private working content is never audited. Global audit retains only the owner's form type and draft version."
+    },
     {
       "entity": "export_licenses",
       "policy": "ADMIN_ONLY",

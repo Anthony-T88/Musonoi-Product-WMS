@@ -29,6 +29,8 @@
 !scripts/production-db.cjs
 !scripts/preproduction-db.cjs
 !scripts/production-bootstrap.cjs
+!scripts/general-manager.cjs
+!scripts/database-backup.cjs
 !scripts/maintenance-connection.cjs
 !scripts/migration-chain.cjs
 !scripts/verify-release.cjs

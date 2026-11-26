@@ -1,0 +1,6 @@
+# Reviewed PostgreSQL TCP rules for a dedicated WMS database instance.
+# Insert the approved hostssl rules before the deny. Retain approved local
+# maintenance/replication rules and remove any broader rule above this block.
+# hostssl musonoi_production musonoi_app 192.0.2.11/32 scram-sha-256
+# hostssl musonoi_production migration_owner 192.0.2.12/32 scram-sha-256
+host all all all reject

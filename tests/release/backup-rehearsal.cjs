@@ -1,12 +1,18 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {createHash}=require('node:crypto'),{spawnSync}=require('node:child_process'),{Client}=require('pg');
+const {createHash,randomBytes,randomUUID}=require('node:crypto'),{spawn,spawnSync}=require('node:child_process'),{Client}=require('pg');
 const E=require('./environment.cjs');
+const Archive=require('../../scripts/database-backup.cjs');
 const out=path.resolve(process.argv[2]),pgBin=process.argv[3],start=Date.now(),result={status:'FAIL',stages:[],syntheticOnly:true};
 const digest=(bytes)=>createHash('sha256').update(bytes).digest('hex');
-function pg(name,args){
+function pgOptions(name){
  const u=E.configuration();
- const run=spawnSync(pgBin?path.join(pgBin,name+(process.platform==='win32'?'.exe':'')):name,args,{windowsHide:true,encoding:'utf8',env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),PGPASSWORD:decodeURIComponent(u.password)}});
+ return {command:pgBin?path.join(pgBin,name+(process.platform==='win32'?'.exe':'')):name,
+  options:{windowsHide:true,encoding:'utf8',env:{...process.env,PGHOST:u.hostname,PGPORT:u.port||'5432',PGUSER:decodeURIComponent(u.username),PGPASSWORD:decodeURIComponent(u.password)}}};
+}
+function pg(name,args){
+ const {command,options}=pgOptions(name);
+ const run=spawnSync(command,args,options);
  result.stages.push({name,status:run.status??1,milliseconds:Date.now()-start});
  if(run.status!==0)throw Error(name+' failed: '+(run.stderr||run.error?.message||''));
  return run.stdout;
@@ -29,15 +35,23 @@ async function main(){
  const f=E.fixture(),source=new Client(E.options(f.database));await source.connect();
  assert.equal((await source.query('SELECT environment FROM system_info WHERE singleton')).rows[0]?.environment,'test');
  const target=await E.database();
- const dump=path.resolve('.runtime','v472-synthetic-rehearsal.dump');
+ const dump=path.join(out,'.v490-restore-'+randomUUID()+'.dump');
+ const encrypted=path.join(out,'v490-synthetic-backup.enc'),key=randomBytes(32);
  try{
   const before=await counts(source);
   assert(before.export_licenses.n>=2,'requires completed copper and cobalt synthetic samples');
   assert(before.export_license_allocations.n>=3,'requires allocation history');
   result.pgServer=(await source.query('SHOW server_version')).rows[0].server_version;
   result.pgClient=pg('pg_dump',['--version']).trim();
-  pg('pg_dump',['--format=custom','--file',dump,'--dbname',f.database,'--no-password']);
-  const bytes=fs.readFileSync(dump);result.backup={size:bytes.length,sha256:digest(bytes)};
+  const {command,options}=pgOptions('pg_dump');
+  const sourceProcess=spawn(command,['--format=custom','--dbname',f.database,'--no-password'],{...options,stdio:['ignore','pipe','ignore']});
+  const completed=new Promise(resolve=>{sourceProcess.once('error',()=>resolve(false));sourceProcess.once('close',code=>resolve(code===0));});
+  try{
+   await Archive.seal(sourceProcess.stdout,encrypted,key,async()=>{assert(await completed,'pg_dump failed');});
+  }catch(error){sourceProcess.kill();await completed;throw error;}
+  await Archive.verify(encrypted,key);
+  await Archive.unseal(encrypted,dump,key);
+  const bytes=fs.readFileSync(encrypted);result.backup={size:bytes.length,sha256:digest(bytes),authenticated:true};
   const catalog=pg('pg_restore',['--list',dump]);assert(catalog.includes('export_license_allocations'));
   pg('pg_restore',['--exit-on-error','--single-transaction','--no-owner','--dbname',target.name,'--no-password',dump]);
   assert.deepEqual(await counts(target.client),before);
@@ -59,6 +73,10 @@ async function main(){
    result.stages.push({name:'health-login-and-both-products',status:0,milliseconds:Date.now()-start});
   }finally{await app.close();}
   result.status='PASS';
- }finally{await Promise.allSettled([source.end(),target.client.end()]);}
+ }finally{
+  key.fill(0);
+  try{fs.unlinkSync(dump);}catch(e){if(e.code!=='ENOENT')throw e;}
+  await Promise.allSettled([source.end(),target.client.end()]);
+ }
 }
 main().catch(e=>{result.error=e.message;console.error(e.message);process.exitCode=1;}).finally(()=>{fs.writeFileSync(path.join(out,'local-backup-rehearsal.json'),JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));});

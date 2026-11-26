@@ -4,3 +4,6 @@ PRODUCTION_OWNER_ENV_FILE=/etc/musonoi/owner.env
 DB_CA_FILE=/etc/musonoi/managed-db-ca.pem
 BOOTSTRAP_CONFIG_FILE=/etc/musonoi/bootstrap.json
 BOOTSTRAP_PASSWORD_FILE=/etc/musonoi/first-admin-password
+# Set these only for the one-time manager provisioning/rotation service.
+MANAGER_ENV_FILE=/etc/musonoi/general-manager.env
+MANAGER_PASSWORD_FILE=/etc/musonoi/general-manager-password

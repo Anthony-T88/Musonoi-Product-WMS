@@ -29,7 +29,8 @@ function connection(cfg,purpose='app'){
   if(!ca.includes('-----BEGIN CERTIFICATE-----'))fail('DB_CA_INVALID');
   ssl={ca,rejectUnauthorized:true,minVersion:'TLSv1.2',...(net.isIP(host)?{}:{servername:host})};
  }
- return {host,port:number(u.port,5432,1,65535),database,user,password,ssl,max:number(d.poolMax,10,1,50),connectionTimeoutMillis:number(d.waitMs,5000,500,60000),options:'-c timezone=Africa/Lubumbashi',application_name:'musonoi-v36-'+purpose};
+ return {host,port:number(u.port,5432,1,65535),database,user,password,ssl,max:number(d.poolMax,10,1,50),connectionTimeoutMillis:number(d.waitMs,5000,500,60000),
+  options:'-c timezone=Africa/Lubumbashi -c idle_in_transaction_session_timeout=120000',application_name:'musonoi-'+purpose};
 }
 function privateIp(ip){return /^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(ip)||/^(fc|fd)[0-9a-f]{2}:/i.test(ip);}
 async function network(cfg,options){
@@ -43,8 +44,17 @@ async function verify(client,cfg,purpose='app'){
  if(cfg.environment==='production'){
   if(major!==Number(cfg.db?.major||16))fail('DB_UNCONFIRMED_MAJOR');
   if(!(await client.query('SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()')).rows[0]?.ssl)fail('DB_TLS_REQUIRED');
-  const role=(await client.query('SELECT rolsuper,rolcreatedb,rolcreaterole,rolbypassrls FROM pg_roles WHERE rolname=current_user')).rows[0];
-  if(purpose==='app'&&(r.username!=='musonoi_app'||Object.values(role||{}).some(Boolean)))fail('DB_APP_ROLE_PRIVILEGED');
+  if(purpose==='app'){
+   const {rows:[role]}=await client.query(`SELECT rolsuper,rolcreatedb,rolcreaterole,rolbypassrls,rolreplication,
+     has_database_privilege(current_database(),'CREATE') database_create,
+     has_schema_privilege('public','CREATE') schema_create,
+     EXISTS(SELECT 1 FROM pg_roles granted WHERE granted.rolname<>current_user
+      AND pg_has_role(current_user,granted.oid,'MEMBER')) role_membership,
+     EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relowner=pg_roles.oid) owns_data
+     FROM pg_roles WHERE rolname=current_user`);
+   if(r.username!=='musonoi_app'||!role||Object.values(role).some(Boolean))fail('DB_APP_ROLE_PRIVILEGED');
+  }
   if(purpose==='owner'&&r.username==='musonoi_app')fail('DB_ACCOUNT_SEPARATION_REQUIRED');
  }
  return {major,database:r.database,username:r.username};

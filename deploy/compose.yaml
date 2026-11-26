@@ -7,5 +7,7 @@ services:
     extends: {file: compose.production.yaml, service: migrate}
   bootstrap:
     extends: {file: compose.production.yaml, service: bootstrap}
+  general-manager:
+    extends: {file: compose.production.yaml, service: general-manager}
 volumes:
   uploads:

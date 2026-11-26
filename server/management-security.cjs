@@ -21,6 +21,7 @@ function userVisible(parameter='$1',alias='u'){
 }
 async function target(c,a,id){if(isAdmin(a))return;const r=await c.query(`SELECT 1 FROM users u WHERE u.id=$2 AND ${userVisible('$1')}`,[a.id,id]);if(!r.rowCount)throw B.error(404,'账号不存在或不在可管理范围内');}
 async function grantRole(c,a,code){
+ if(code==='general_manager')throw B.error(403,'总经理角色由维护人员设置');
  const role=await require('./role-catalog.cjs').valid(c,code);if(!role)throw B.error(400,'请选择有效角色');
  if(!isAdmin(a)){if(code==='admin')throw B.error(403,'仅系统管理员可分配管理员角色');if(builtIn(role)&&code!==a.role_code)throw B.error(403,'不同内置岗位须由系统管理员分配');const permissions=(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[code])).rows.map(r=>r.permission_code);if(permissions.some(p=>!a.permissions.includes(p)))throw B.error(403,'角色权限超出本人授权上限');}
  return role;

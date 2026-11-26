@@ -222,6 +222,7 @@ function pages(ids){
  add('workbench','/workbench',BOTH);
  add('accounts','/workbench/accounts',BOTH,{screenshot:true});
  add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});
+ add('access-approvals','/workbench/access-approvals',BOTH,{state:'approval inbox for an account manager',screenshot:true});
  add('diagnostics','/workbench/diagnostics',BOTH);
  add('former-design-entry','/workbench/design',BOTH);
  add('audit','/audit',BOTH,{screenshot:true,roles:['production_operator']});

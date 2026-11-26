@@ -2,6 +2,7 @@
 'use strict';
 process.env.TZ='Africa/Lubumbashi';
 const Fastify=require('fastify'),{Pool}=require('pg'),path=require('node:path');
+const {randomUUID}=require('node:crypto'),RequestAudit=require('./request-audit.cjs');
 const {config}=require('./config.cjs'),{verifyPassword,digest,token}=require('./security.cjs'),{transaction,where,order,listing,invalid,inventoryInput,inventorySource}=require('./inventory.cjs');
 const AccountPolicy=require('./account-policy.cjs'),LoginSession=require('./login-session.cjs');
 const ServiceErrors=require('./service-errors.cjs'),DB=require('./database-connection.cjs'),release=require('./release.cjs');
@@ -25,6 +26,7 @@ async function verifyStartupDatabase(db,cfg){
 }
 async function build(options={}){
  const cfg=options.config||config();
+ const proxy=require('./trusted-proxy.cjs').policy(cfg.trustedProxyIps);
  if(process.env.VERIFY_SOURCE_INTEGRITY==='1')require('./release-integrity.cjs').verify(cfg.root);
  const dbOptions=options.pool?null:DB.connection(cfg);
  if(dbOptions){
@@ -36,24 +38,31 @@ async function build(options={}){
  const Lease=require('./authorization-lease.cjs');
  const leasePool=options.authorizationPool||(options.pool?pool:new Pool({...dbOptions,max:Math.min(dbOptions.max||10,10),application_name:'musonoi-authorization'}));
  if(leasePool!==pool)leasePool.on('error',poolError);
- const proxy=require('./trusted-proxy.cjs').policy(cfg.trustedProxyIps);
- const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:proxy.trust});
- app.addHook('onRequest',async(req,reply)=>{proxy.validate(req);reply.raw.once('close',()=>{if(!reply.raw.writableFinished)req.authorizationCancelled=true;});});
+ const app=Fastify({logger:false,bodyLimit:1024*1024,trustProxy:proxy.trust,requestIdHeader:false,genReqId:()=>randomUUID()});
+ app.addHook('onRequest',async(req,reply)=>{
+  reply.header('X-WMS-Request-Id',req.id);
+  proxy.validate(req);
+  reply.raw.once('close',()=>{if(!reply.raw.writableFinished)req.authorizationCancelled=true;});
+ });
  // Separate lease and work pools prevent pool starvation when concurrent requests need both.
  const releaseLease=async req=>{try{await Lease.release(req);}catch(e){ServiceErrors.report(e,req,options.errorReporter);}};
  app.addHook('onRoute',route=>{const handler=route.handler;route.handler=async function(req,reply){try{return await handler.call(this,req,reply);}finally{await releaseLease(req);}};});
  app.addHook('onError',releaseLease);
  app.addHook('onResponse',releaseLease);
+ if(cfg.environment==='production'||options.requestAuditReporter){
+  app.addHook('onResponse',async(req,reply)=>RequestAudit.monitor(req,reply,options.requestAuditReporter));
+ }
  await app.register(require('@fastify/cookie'));
  await app.register(require('@fastify/rate-limit'),{global:false});
  app.addHook('onClose',async()=>{if(!options.authorizationPool&&!options.pool)await leasePool.end();if(leasePool!==pool)leasePool.removeListener('error',poolError);if(!options.pool)await pool.end();pool.removeListener('error',poolError);});
- app.setErrorHandler(async(e,req,reply)=>{try{await require('./v265.cjs').enrichSealError(pool,req,e);}catch{}const business=require('./v27-errors.cjs')(e,req)||require('./v265.cjs').businessError(e,req);if(req.user&&req.method!=='GET'&&/^\/api\/v1\//.test(req.url)){try{await pool.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data,request_id,outcome) VALUES($1,'operation_failed',$2,$3,$4,$5,'FAILED')",[req.user.id,req.routeOptions?.url?.split('/')[3]||'business',req.params?.id||null,{status:business?(e.statusCode||409):ServiceErrors.status(e),code:business?.code||e.code||'BUSINESS_VALIDATION_FAILED'},req.id]);}catch{}}if(business&&e.code!=='SESSION_REPLACED'){reply.code(e.statusCode||409).send(business);return;}const status=ServiceErrors.status(e);if(status>=500){const errorId=ServiceErrors.report(e,req,options.errorReporter);reply.code(status).send({error:(status===503?'数据库或服务暂不可用，请稍后重试。':'服务处理失败，请联系管理员；提交结果请查询确认。')+' 错误编号：'+errorId,errorId});}else reply.code(status).send({error:e.validation?'请求参数无效':e.message,...(['HISTORY_BEFORE_START','SESSION_REPLACED'].includes(e.code)?{code:e.code,details:e.details}:['CO_WORK_INCOMPLETE','CO_WORK_SEAL_DUPLICATE','CO_LOADING_NOT_READY'].includes(e.message)?{details:e.details}:{})});});
+ app.setErrorHandler(async(e,req,reply)=>{req.auditErrorCode=RequestAudit.safeCode(e.code);try{await require('./v265.cjs').enrichSealError(pool,req,e);}catch{}const business=require('./v27-errors.cjs')(e,req)||require('./v265.cjs').businessError(e,req);if(req.user&&req.method!=='GET'&&/^\/api\/v1\//.test(req.url)){try{await pool.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data,request_id,outcome) VALUES($1,'operation_failed',$2,$3,$4,$5,'FAILED')",[req.user.id,req.routeOptions?.url?.split('/')[3]||'business',req.params?.id||null,{status:business?(e.statusCode||409):ServiceErrors.status(e),code:business?.code||e.code||'BUSINESS_VALIDATION_FAILED'},req.id]);}catch{}}if(business&&e.code!=='SESSION_REPLACED'){reply.code(e.statusCode||409).send(business);return;}const status=ServiceErrors.status(e);if(status>=500){const errorId=ServiceErrors.report(e,req,options.errorReporter);req.serviceErrorId=errorId;reply.code(status).send({error:(status===503?'数据库或服务暂不可用，请稍后重试。':'服务处理失败，请联系管理员；提交结果请查询确认。')+' 错误编号：'+errorId,errorId});}else reply.code(status).send({error:e.validation?'请求参数无效':e.message,...(['HISTORY_BEFORE_START','SESSION_REPLACED'].includes(e.code)?{code:e.code,details:e.details}:['CO_WORK_INCOMPLETE','CO_WORK_SEAL_DUPLICATE','CO_LOADING_NOT_READY'].includes(e.message)?{details:e.details}:{})});});
  app.addHook('onSend',async(req,reply,payload)=>{reply.header('Permissions-Policy','camera=(self), microphone=(), geolocation=()').header('X-Content-Type-Options','nosniff').header('Referrer-Policy','same-origin').header('Cache-Control',publicAsset(req,reply)?'public, max-age=31536000, immutable':'no-store').header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'"+(req.routeOptions.config.gatePrint?" 'unsafe-inline'":"")+"; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");if(req.user&&Buffer.isBuffer(payload)&&String(reply.getHeader('content-type')||'').includes('spreadsheetml')&&!/\/shipping\/[^/]+\/packing-list\.xlsx/.test(req.url)&&!require('./cobalt-packing.cjs').allowed(req.url.split('?')[0],'GET')&&!['/api/v1/report-center/export','/api/v1/cobalt/reports/export','/api/v1/cobalt/metal/export'].includes(req.url.split('?')[0])&&!require('./gate-permits.cjs').download(req.url.split('?')[0]))return require('./export-language.cjs').workbook(payload,req.user.language_code);return payload;});
  async function dbEnvironment(c=pool){const r=await c.query('SELECT environment FROM system_info WHERE singleton');if(r.rows[0]?.environment!==cfg.environment)throw Error('Database environment mismatch');}
  async function userInfo(c,user){const role=(await c.query('SELECT name,name_en FROM roles WHERE code=$1',[user.role_code])).rows[0];return {role_name:role?.name,role_name_en:role?.name_en,...require('./employee-identity.cjs').enrich(user),permissions:(await c.query('SELECT permission_code FROM role_permissions WHERE role_code=$1',[user.role_code])).rows.map(r=>r.permission_code)};}
  async function auth(req){const reader=Lease.requiresLease(req)?await Lease.acquire(req,leasePool):pool;await dbEnvironment(reader);const sid=req.cookies.musonoi_session;if(!sid)throw problem(401,'请先登录');const row=(await reader.query('SELECT u.id,u.username,u.display_name,u.role_code,u.language_code,s.csrf_hash,s.replaced_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active AND u.deleted_at IS NULL',[digest(sid)])).rows[0];if(row?.replaced_at)throw Object.assign(problem(401,'您的账号已在其他设备登录，当前会话已失效，请重新登录。'),{code:'SESSION_REPLACED'});if(!row||!await AccountPolicy.allowed(reader,row))throw problem(401,'登录已失效，请重新登录');delete row.replaced_at;req.user=await userInfo(reader,row);}
  const permitted=code=>async req=>{await auth(req);if(!req.user.permissions.includes(code))throw problem(403,'当前账号没有此操作权限');};
  async function csrf(req){if(req.headers.origin!==cfg.origin)throw problem(403,'请求来源不受信任');if(!req.user||digest(String(req.headers['x-csrf-token']||''))!==req.user.csrf_hash)throw problem(403,'安全令牌无效，请重新登录');}
+ const accessApprovals=require('./access-approvals.cjs').create({app,pool,auth,csrf,cfg});
  require('./activity-people.cjs')({app,pool});
  const cobaltUX7=(await pool.query("SELECT to_regclass('public.co_customer_profiles') IS NOT NULL ok")).rows[0].ok;
  const cobaltMetalEnabled=await require('./cobalt-metal.cjs').enabled(pool),cobaltEnabled=await require('./cobalt.cjs').enabled(pool),cobaltWorkEnabled=await require('./cobalt-work.cjs').enabled(pool),cobaltStockEnabled=await require('./cobalt-stock.cjs').enabled(pool),cobaltSalesEnabled=await require('./cobalt-sales.cjs').enabled(pool),cobaltLoadingEnabled=await require('./cobalt-loading.cjs').enabled(pool),cobaltExecutionEnabled=await require('./cobalt-execution.cjs').enabled(pool),cobaltPackingEnabled=await require('./cobalt-packing.cjs').enabled(pool);require('./product-context.cjs').install({app,auth,csrf,secure:cfg.secure,cobaltEnabled,cobaltWorkEnabled,cobaltStockEnabled,cobaltSalesEnabled,cobaltLoadingEnabled,cobaltExecutionEnabled,cobaltPackingEnabled,cobaltMetalEnabled});
@@ -135,6 +144,7 @@ async function build(options={}){
  });
  app.get('/api/v1/me',{preHandler:auth},async req=>{const {csrf_hash,...u}=req.user;return u;});
  app.post('/api/v1/auth/change-password',{preHandler:[auth,csrf]},async(req,reply)=>{
+  if(req.user.role_code==='general_manager')throw problem(403,'总经理账号密码由维护人员轮换');
   const {status,code,error}=await LoginSession.changePassword(pool,req,AccountPolicy.allowed);
   if(status!==200)return reply.code(status).send({code,error});
   reply.clearCookie('musonoi_session',{path:'/',httpOnly:true,sameSite:'strict',secure:cfg.secure});
@@ -169,10 +179,10 @@ async function build(options={}){
  if(b.format==='csv'){const clean=x=>{let s=String(x);if(/^[\s\u0000-\u001f]*[=+@\-]/.test(s)||/^[\t\r\n]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};return reply.type('text/csv; charset=utf-8').send('\ufeff'+[headers,...matrix].map(r=>r.map(clean).join(',')).join('\r\n'));}
  return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(await require('./warehouse-templates.cjs').inventory(rows,req.user.language_code));
  });
- app.get('/api/v1/audit',{preHandler:permitted('audit:read')},req=>require('./management-security.cjs').read(pool,req,'audit:read',async(c,a)=>({items:(await c.query('SELECT a.id,a.action,a.entity_type,a.entity_id,a.before_data,a.after_data,a.occurred_at,u.username FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE '+require('./audit-security.cjs').visible('a','$2')+' ORDER BY a.id DESC LIMIT 100',[a.id,a.role_code==='admin'])).rows})));
- await require('./accounts.cjs').register({app,pool,permitted,csrf});
- await require('./registration-requests.cjs')({app,pool,permitted,csrf,secure:cfg.secure,origin:cfg.origin});
- await AccountPolicy.register({app,pool,permitted,csrf});
+ app.get('/api/v1/audit',{preHandler:permitted('audit:read')},req=>require('./management-security.cjs').read(pool,req,'audit:read',async(c,a)=>({items:(await c.query('SELECT a.id,a.action,a.entity_type,a.entity_id,a.before_data,a.after_data,a.occurred_at,u.username FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE '+require('./audit-security.cjs').visible('a','$2')+' ORDER BY a.id DESC LIMIT 100',[a.id,a.role_code==='admin'])).rows.map(require('./audit-security.cjs').record)})));
+ await require('./accounts.cjs').register({app,pool,permitted,csrf,accessApprovals});
+ await require('./registration-requests.cjs')({app,pool,permitted,csrf,secure:cfg.secure,origin:cfg.origin,accessApprovals});
+ await AccountPolicy.register({app,pool,permitted,csrf,accessApprovals});
  await require('./contracts.cjs')({app,pool,cfg,permitted,csrf});
  await require('./masters.cjs')({app,pool,cfg,permitted,csrf});
  await require('./receipts.cjs').register({app,pool,cfg,permitted,csrf});
@@ -231,6 +241,12 @@ async function build(options={}){
  await app.register(require('@fastify/static'),{root:options.uiRoot||path.join(cfg.root,'dist'),index:false});
  for(const route of ['/sales-plans','/sales-plans/*','/loading-plans','/loading-plans/*','/export-shipments','/export-shipments/*','/export-licenses','/export-licenses/*','/cobalt-metal','/reports','/stocktaking','/stocktaking/*','/audit','/stock-map','/stock-map/*','/overview','/overview/*','/inventory','/inventory/*','/customers','/customers/*','/receipts','/receipts/*','/preparation','/preparation/*','/outbounds','/outbounds/*','/workbench','/workbench/*'])app.get(route,async(req,reply)=>{const pathname=req.url.split('?')[0],coPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&(cobaltStockEnabled&&/^\/(?:inventory(?:\/[0-9a-f-]{36})?|stock-map|overview)$/.test(pathname)||/^\/preparation(?:\/(?:new|[0-9a-f-]{36}(?:\/work)?))?$/.test(pathname));const coSalesPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&cobaltSalesEnabled&&/^\/(?:sales-plans(?:\/(?:new|[0-9a-f-]{36}(?:\/(?:edit|dispatch))?))?|customers|loading-plans)$/.test(pathname);const coLoadingPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&cobaltLoadingEnabled&&/^\/loading-plans\/(?:query|new|orders\/[0-9a-f-]{36}|[0-9a-f-]{36}\/edit)$/.test(pathname);const coExecutionPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&cobaltExecutionEnabled&&(/^\/loading-plans\/execution\/[0-9a-f-]{36}$/.test(pathname)||/^\/outbounds(?:\/[0-9a-f-]{36})?$/.test(pathname));const coPackingPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&cobaltPackingEnabled&&/^\/outbounds\/[0-9a-f-]{36}\/packing-list$/.test(pathname);const coRefinedPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&cobaltUX7&&(/^\/receipts(?:\/(?:new|[0-9a-f-]{36}(?:\/work)?))?$/.test(pathname)||pathname==='/export-shipments');const coCountPage=req.cookies.musonoi_product==='CO_HYDROXIDE'&&/^\/stocktaking(?:\/(?:new|[0-9a-f-]{36}))?$/.test(pathname);const coTodos=pathname==='/overview'&&req.query.management==='todos';const gatePage=['departures','printers'].includes(req.query.view)&&pathname==='/outbounds';const coMetalPage=pathname==='/cobalt-metal'&&cobaltMetalEnabled&&req.cookies.musonoi_product==='CO_HYDROXIDE';const permission=coMetalPage?(req.query.view==='outbound'?'outbound:read':null):gatePage?'gate:read':coTodos?null:coCountPage?(pathname.endsWith('/new')?'stocktake:write':'stocktake:read'):coRefinedPage?(pathname==='/export-shipments'?'loading-plan:read':pathname.endsWith('/new')?'co:create':'co:read'):coPackingPage?'load:read':coExecutionPage?'load:read':coLoadingPage?(pathname.endsWith('/new')||pathname.endsWith('/edit')?'loading-plan:write':'loading-plan:read'):coSalesPage?(pathname==='/customers'?'customer:read':pathname==='/loading-plans'?'vehicle-arrival:read':pathname.endsWith('/dispatch')?'dispatch:read':pathname.endsWith('/new')?'plan:write':'plan:read'):coPage?(pathname==='/overview'?'dashboard:read':/^\/(inventory|stock-map)(\/|$)/.test(pathname)?'inventory:read':pathname.endsWith('/new')?'co:create':'co:read'):AccountPolicy.pagePermission(pathname);return require('./ui-page-response.cjs').serve(req,reply,{auth,permitted,permission,systemHub:pathname==='/workbench',authenticatedView:coTodos||coMetalPage});});
  for(const legacy of ['/samples','/samples/*','/sampling','/sampling/*'])app.get(legacy,async(req,reply)=>reply.redirect('/preparation/history-sampling'));
+ app.get('/workbench/access-approvals',(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{
+  permission:async request=>{
+   await auth(request);
+   if(!request.user.permissions.some(p=>['users:manage','roles:manage','access-change:approve'].includes(p)))throw problem(403,'当前账号没有此页面权限');
+  }
+ }));
  const Historical=require('./historical-movements.cjs'),Backfill=require('./historical-backfill.cjs');
  for(const route of ['/workbench/historical-movements','/workbench/historical-movements/:id']){
   app.get(route,(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{permission:Historical.administrator(auth)}));

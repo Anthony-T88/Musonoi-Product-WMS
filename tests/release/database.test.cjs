@@ -31,6 +31,78 @@ test('isolated migration, initialization, business permission and concurrency ac
  await check('preproduction CLI dry-run and confirmed apply use the same verified migration chain',async()=>{
   const {execFileSync}=require('node:child_process'),url=E.options(old.name).connectionString,env={...process.env,APP_ENV:'test',DEPLOYMENT_TIER:'preproduction',DATABASE_OWNER_URL:url,DB_ALLOWED_HOSTS:'127.0.0.1',DB_EXPECTED_NAME:old.name,TEST_BACKUP_VERIFIED:'yes'};const run=args=>JSON.parse(execFileSync(process.execPath,['scripts/preproduction-db.cjs',...args],{cwd:E.root,env,windowsHide:true,encoding:'utf8'}));assert.equal(run([]).status,'DRY_RUN_ROLLED_BACK');assert.equal(run(['--apply','--confirm-database',old.name]).added,0);
  });
+ await check('arrival upgrade backfills blank trailer 2 fields in confirmed copper and cobalt arrivals once',async()=>{
+  const {client:c,name}=await connect();
+  await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
+  const beforeRepair=chain.findIndex(entry=>entry.version.startsWith('211_'));
+  for(const entry of chain.slice(0,beforeRepair))await Chain.execute(c,entry);
+  await c.query("INSERT INTO system_info VALUES(true,'test')");
+  const fixture=await E.seed(c,name),actor=fixture.accounts[0].id,month='2088-10';
+  const cases=[
+   {phase:'CONFIRMED',trailer:'',repair:true},
+   {phase:'CONFIRMED',trailer:' \t\u00a0\u3000',repair:true},
+   {phase:'CONFIRMED',trailer:'TRAILER-04'},
+   {phase:'CONFIRMED',trailer:'N/A'},
+   {phase:'DRAFT',trailer:''},
+   {phase:'CLEARED',trailer:''},
+   {phase:'CONFIRMED',trailer:'',legacy:true}
+  ];
+  const rows=[];
+  for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
+   const co=product==='CO_HYDROXIDE',customer=fixture.customers[product],table=co?'co_vehicle_arrivals':'vehicle_arrivals';
+   const plan=(await (co?
+    c.query("INSERT INTO co_sales_plans(project_id,warehouse_id,customer_id,contract_id,shipment_month,target_weight,planned_vehicle_count,destination,created_by,updated_by) VALUES($1,$2,$3,$4,$5,1,1,'Depot',$6,$6) RETURNING id",
+     [fixture.project,fixture.warehouse,customer.id,customer.contract,month,actor]):
+    c.query('INSERT INTO sales_plans(project_id,customer_id,contract_id,preparation_month,target_weight,quantity_tolerance,planned_lot_count,created_by) VALUES($1,$2,$3,$4,1,0,1,$5) RETURNING id',
+     [fixture.project,customer.id,customer.contract,month,actor]))).rows[0].id;
+   for(const role of ['sales_manager','commerce_manager']){
+    const reviewer=fixture.accounts.find(account=>account.role===role).id;
+    await c.query("SELECT ux10_review_sales_plan($1,$2,$3,(SELECT version FROM sales_plan_approvals WHERE plan_id=$2),'APPROVED','')",
+     [product,plan,reviewer]);
+   }
+   const batch=co?null:(await c.query("INSERT INTO sales_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by) VALUES($1,$2,'synthetic.xlsx',$3,$4,$5) RETURNING id",
+    [plan,month,'a'.repeat(64),cases.length,actor])).rows[0].id;
+   for(const [index,{phase,trailer,repair,legacy}] of cases.entries()){
+    const dispatch=(await (co?
+     c.query('INSERT INTO co_dispatch_vehicles(sales_plan_id,shipment_month,truck_no,created_by,updated_by) VALUES($1,$2,$3,$4,$4) RETURNING id',
+      [plan,month,'CO-211-'+index,actor]):
+     c.query("INSERT INTO sales_dispatch_vehicles(import_id,source_sheet,source_row,truck_no,trailer_no) VALUES($1,'Dispatch',$2,$3,'') RETURNING id",
+      [batch,index+2,'CU-211-'+index]))).rows[0].id;
+    const row=(await (co?
+     c.query("INSERT INTO co_vehicle_arrivals(sales_plan_id,dispatch_vehicle_id,registration_phase,trailer_one,trailer_two,driver_name,passport_no,transporter,arrived_at,registered_by,updated_by) VALUES($1,$2,$3,'TR-01',$4,'Test Driver','TEST','Test Carrier',now(),$5,$5) RETURNING *",
+      [plan,dispatch,phase,trailer,actor]):
+     c.query("INSERT INTO vehicle_arrivals(sales_plan_id,dispatch_vehicle_id,registration_phase,trailer_one,trailer_two,driver_name,passport_no,shipment_month,registered_by) VALUES($1,$2,$3,'TR-01',$4,'Test Driver','TEST',$5,$6) RETURNING *",
+      [plan,dispatch,phase,trailer,month,actor]))).rows[0];
+    if(legacy)await c.query("INSERT INTO document_drafts(id,actor_id,product_code,form_key,route,fields,updated_at) VALUES($1,$2,$3,$4,$5,'[]',$6::timestamptz+interval '1 second')",
+     [crypto.randomUUID(),actor,product,co?'co-arrival-form':'yard-arrival-form','/arrivals?vehicle_id='+dispatch,row.updated_at]);
+    rows.push({table,row,repair});
+   }
+  }
+  await c.query("DELETE FROM role_permissions WHERE role_code='admin' AND permission_code='vehicle-arrival:write'");
+  const verify=async repairApplied=>{
+   for(const {table,row,repair} of rows){
+    const actual=(await c.query('SELECT * FROM '+table+' WHERE id=$1',[row.id])).rows[0];
+    assert.deepEqual(actual,repairApplied&&repair?{...row,trailer_two:'N/A',version:row.version+1}:row);
+   }
+  };
+  assert.equal((await migrate(c,{environment:'test'})).added,chain.length-beforeRepair);
+  await verify(false);
+  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,chain.length-beforeRepair);
+  await verify(true);
+  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,0);
+  await verify(true);
+  const audits=(await c.query("SELECT entity_type,entity_id,actor_id,before_data,after_data FROM audit_logs WHERE action='arrival_trailer_two_backfilled'")).rows;
+  assert.equal(audits.length,rows.filter(item=>item.repair).length);
+  for(const {table,row} of rows.filter(item=>item.repair)){
+   const audit=audits.find(item=>item.entity_id===row.id);
+   assert.equal(audit.entity_type,table);
+   assert.equal(audit.actor_id,null);
+   assert.equal(audit.before_data.trailer_two,row.trailer_two);
+   assert.equal(audit.after_data.trailer_two,'N/A');
+  }
+  const co=rows.find(item=>item.table==='co_vehicle_arrivals').row;
+  await assert.rejects(()=>c.query("UPDATE co_vehicle_arrivals SET trailer_two='ALTERED',version=version+1 WHERE id=$1",[co.id]),/CO_SALES_SCOPE_PERMISSION/);
+ });
  const upgradeEvidence=[];
  for(const from of [172,173,174,175,176,177,178,179,180,181,182,184,185,186,190,193,194,195,198,199,200,201,203,204,205,207,209]){
   await check(`direct ${from} → ${chain.length} preserves every existing synthetic business table and refuses wrong environment`,async()=>{
@@ -78,7 +150,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
      const projected=['vehicle_arrivals','co_vehicle_arrivals'].includes(table)?"(to_jsonb(t)-'registration_phase')":table==='stocktakes'?"(to_jsonb(t)-'period_month')":table==='co_stocktakes'?"(to_jsonb(t)-'task_type'-'period_month')":table==='sales_dispatch_vehicles'?"(to_jsonb(t)-'transporter'-'destination'-'transport_version')":table==='co_dispatch_vehicles'?"(to_jsonb(t)-'destination')":table==='co_loading_plans'?"(to_jsonb(t)-'transporter')":table==='historical_sales_dispatch_links'?"(to_jsonb(t)-'automatic')":table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='preparation_plans'?"(to_jsonb(t)-'reversal_id')":table==='preparation_plan_events'?"(to_jsonb(t)-'allocation_id'-'co_preparation_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":table==='export_license_record_books'?"(to_jsonb(t)-'archived_at'-'version'-'account_name'-'swift_code')":table==='export_license_actions'?"(to_jsonb(t)-'processing_snapshot')":table==='export_licenses'?"(to_jsonb(t)-'issuing_bank_account'-'offshore_bank'-'offshore_bank_account'-'processing_records'-'issuing_bank_account_name'-'offshore_bank_account_name'-'standard_amount'-'issuing_bank_swift'-'offshore_bank_swift')":"to_jsonb(t)";
-     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager') AND permission_code IN('dispatch:read','dispatch:month'))":table==='role_permissions'?"WHERE permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager','admin') AND permission_code IN('dispatch:read','dispatch:month'))":table==='permissions'?"WHERE code NOT LIKE 'export-license:%' AND code<>'dispatch:month' AND code NOT IN('inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template')":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
+     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE permission_code<>'access-change:approve' AND NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager') AND permission_code IN('dispatch:read','dispatch:month'))":table==='roles'?"WHERE code<>'general_manager'":table==='role_permissions'?"WHERE permission_code<>'access-change:approve' AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager','admin') AND permission_code IN('dispatch:read','dispatch:month'))":table==='permissions'?"WHERE code<>'access-change:approve' AND code NOT LIKE 'export-license:%' AND code<>'dispatch:month' AND code NOT IN('inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template')":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
     return result;
@@ -91,7 +163,7 @@ test('isolated migration, initialization, business permission and concurrency ac
      SELECT 'trigger', tgrelid::regclass::text, tgname, pg_get_triggerdef(oid)
      FROM pg_trigger WHERE NOT tgisinternal AND tgrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace)
      ORDER BY 1,2,3`);
-    return rows;
+    return rows.filter(row=>!row.name.startsWith('v490_manager_'));
    };
    const before=await snapshot(),beforeCatalog=(await catalog()).filter(row=>row.name!=='co_dispatch_vehicle_import_plan_fk');
    await assert.rejects(()=>migrate(c,{environment:'production',apply:true,backupVerified:true}),{code:'MIGRATION_TEST_CONVERSION_FORBIDDEN'});
@@ -277,7 +349,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     previous_month:'2088-10',shipment_month:shift.previous_month,target_plan_id:sameMonth},409);
    const previewPath=targetPath+'/import-preview',savePath=targetPath+(co?'/import':''),routeBook=XLSX.utils.book_new();
    XLSX.utils.book_append_sheet(routeBook,XLSX.utils.aoa_to_sheet([
-    ['HORSE','TON','TRANSPORTEUR','DESTINATION','STATUS'],
+    ['Horse Reg. No.','TON','Transport Company Name','Placeoffloaded','STATUS'],
     [truck.toLowerCase()+'-12 34',99,'Other Carrier',''],
     [plate,99,'Other Carrier','Depot North'],
     [truck+'5555',88,'Other Carrier','Depot South'],
