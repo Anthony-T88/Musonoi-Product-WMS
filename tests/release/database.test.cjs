@@ -17,6 +17,26 @@ test('isolated migration, initialization, business permission and concurrency ac
   const {rows:[plan]}=await c.query("SELECT 'SP-'||short_document_serial(nextval('sales_plan_numbers')) code");
   assert.equal(plan.code,'SP-01');
  });
+ await check('suffix migration keeps old claim evidence and quarantines conflicting aliases',async()=>{
+  const c=production.client,owner=crypto.randomUUID(),other=crypto.randomUUID();
+  const claims=[
+   ['MUS-2026-370-28',owner],
+   ['MUS-2026-370-28A',owner],['MUS-2026-370-028A',owner],
+   ['MUS-2026-370-28B',owner],['MUS-2026-370-028B',other]
+  ];
+  await c.query('BEGIN');
+  try{
+   for(const [label,account] of claims)await c.query('INSERT INTO bundle_number_registry VALUES($1,$2,false,$3)',[label,account,JSON.stringify([{bundle_no:label}])]);
+   await c.query(chain.at(-1).sql);
+   const {rows}=await c.query("SELECT * FROM bundle_number_registry WHERE number_key LIKE 'MUS-2026-370-%' ORDER BY number_key");
+   assert.deepEqual(rows.map(row=>[row.number_key,row.owner_id,row.conflicted,row.sources.map(source=>source.bundle_no).sort()]),[
+    ['MUS-2026-370-28',owner,false,['MUS-2026-370-28']],
+    ['MUS-2026-370-28A',owner,false,['MUS-2026-370-028A','MUS-2026-370-28A']],
+    ['MUS-2026-370-28B',null,true,['MUS-2026-370-028B','MUS-2026-370-28B']]
+   ]);
+   assert.equal((await c.query("SELECT v265_bundle_key('  mus-2026-37-001a  ') key")).rows[0].key,'MUS-2026-037-1A');
+  }finally{await c.query('ROLLBACK');}
+ });
  await check('bootstrap requires reviewed map, verified backup; dry-run/apply/retry preserve identities',async()=>{
   const c=production.client,sourceHash=crypto.createHash('sha256').update('SYNTHETIC TEST GEOMETRY ONLY').digest('hex'),plan={admin:{username:'audit_bootstrap',displayName:'Synthetic bootstrap admin',language:'zh-CN'},project:{code:'AUDIT',name:'Synthetic audit project'},warehouse:{code:'AUDIT',name:'Synthetic audit warehouse'},formalCells:['P1-01'],mapSourceSha256:sourceHash},password=crypto.randomBytes(24).toString('base64url');
   await assert.rejects(()=>initialize(c,plan,password,{apply:true}),{code:'BOOTSTRAP_VERIFIED_BACKUP_REQUIRED'});await assert.rejects(()=>initialize(c,plan,password),{code:'BOOTSTRAP_MAP_SOURCE_MISMATCH'});

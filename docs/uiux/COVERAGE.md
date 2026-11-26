@@ -121,10 +121,10 @@ V4.7.6 增量覆盖见[版本验收报告](../v4.7.6/验收报告.md)。新增�
 | legacy-sales-edit | `/preparation/plans/:id/edit` | 铜 | 管理员 | 骨架、表单、表格、状态、指标 | 6 / 0 / 0 | — |
 | legacy-sales-shipping | `/preparation/plans/:id/shipping` | 铜 | 管理员 | 骨架、表格、指标、反馈 | 6 / 0 / 0 | — |
 | receipts | `/receipts` | 铜、钴 | 管理员、现场操作员、现场主管、生产经理 | 筛选、表格、状态、指标、预览、骨架、反馈 | 28 / 4 / 0 | 列表与只读预览 |
-| receipt-new | `/receipts/new` | 铜、钴 | 管理员、现场操作员 | 骨架、表单、表格、反馈、筛选、状态 | 22 / 2 / 0 | — |
+| receipt-new | `/receipts/new` | 铜、钴 | 管理员、现场操作员 | 骨架、表单、表格、反馈、筛选、状态 | 22 / 2 / 0 | 阴极铜手录识别捆包号的字母后缀并自动带出生产批次 |
 | cu-receipt | `/receipts/:id` | 铜 | 管理员 | 骨架、表格、指标 | 6 / 0 / 0 | — |
 | cu-receipt-edit | `/receipts/:id/edit` | 铜 | 管理员 | 骨架、表单、表格 | 6 / 0 / 0 | — |
-| cu-receipt-import | `/receipts/import` | 铜 | 管理员 | 骨架、表单 | 6 / 0 / 0 | — |
+| cu-receipt-import | `/receipts/import` | 铜 | 管理员 | 骨架、表单 | 6 / 0 / 0 | Excel 预览保留字母后缀并校验重复包号 |
 | co-prep | `/receipts/:id` | 钴 | 管理员、现场主管、物流经理 | 表格、指标、撤销快照 | 10 / 0 / 0 | 已批准整批可申请撤销，新计划沿用实物袋号。 |
 | co-prep-work | `/receipts/:id` | 钴 | 管理员、现场操作员、现场主管 | 表格、指标 | 14 / 0 / 0 | 现场逐捆、逐袋或匹配 |
 | co-prep-draft | `/receipts/:id` | 钴 | 管理员 | 表格 | 6 / 0 / 0 | 现场逐捆、逐袋或匹配 |

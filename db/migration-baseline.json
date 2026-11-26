@@ -849,6 +849,10 @@
     {
       "version": "212_v490_access_approvals.sql",
       "checksum": "69dfad5032cf023e53583f0f4942ab2cc91037b45410f57294286cd9ea58fedb"
+    },
+    {
+      "version": "213_v490_bundle_number_suffix.sql",
+      "checksum": "2137238651ccd849a421c071ae3188595bd9e3b783f5d7f5ffaa64ecd6a0df13"
     }
   ]
 }

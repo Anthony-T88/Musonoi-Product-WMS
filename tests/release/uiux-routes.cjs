@@ -130,7 +130,7 @@ function pages(ids){
  add('receipt-new','/receipts/new',BOTH,{screenshot:true,roles:['logistics_field_operator']});
  add('cu-receipt','/receipts/:id',[CU],{example:'cuReceipt'});
  add('cu-receipt-edit','/receipts/:id/edit',[CU],{example:'cuReceiptDraft',state:'draft'});
- add('cu-receipt-import','/receipts/import',[CU],{state:'single Excel drop'});
+ add('cu-receipt-import','/receipts/import',[CU],{state:'single Excel drop, bundle number with letter suffix'});
  add('co-prep','/receipts/:id',[CO],{example:'coPrep',screenshot:true,state:'completed or whole-batch reversal',roles:['site_supervisor','logistics_manager']});
  add('co-prep-work','/receipts/:id',[CO],{example:'coPrepEditable',screenshot:true,state:'editable',roles:['logistics_field_operator','site_supervisor']});
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});

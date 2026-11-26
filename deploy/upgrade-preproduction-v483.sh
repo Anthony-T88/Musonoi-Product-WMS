@@ -384,6 +384,17 @@ case "${2:-base}" in
     migration=210_v489_effective_preparation_review.sql
     migration_count=210
     ;;
+  v490-ui1)
+    repo=/opt/musonoi-wms-release-v4.9.0-ui1
+    override=/etc/musonoi/preproduction-v490-ui1-build.override.yaml
+    source_revision=4.8.9-ui3
+    alternate_source_revision=4.9.0
+    target_revision=4.9.0-ui1
+    target_version=4.9.0
+    release_branch=release/v4.9.0
+    migration=213_v490_bundle_number_suffix.sql
+    migration_count=213
+    ;;
   *) printf 'Unrecognized release mode\n'; exit 1 ;;
 esac
 release_id=${target_version//./}
@@ -414,6 +425,9 @@ fi
 before=$(query -d "$target" -c 'SELECT version FROM security_schema_status')
 case "$before" in
   "$migration") added=0 ;;
+  212_v490_access_approvals.sql) [[ $target_revision == 4.9.0-ui1 ]]; added=1 ;;
+  211_v489_arrival_trailer_two_backfill.sql) [[ $target_revision == 4.9.0-ui1 ]]; added=2 ;;
+  210_v489_effective_preparation_review.sql) [[ $target_revision == 4.9.0-ui1 ]]; added=3 ;;
   209_v489_preapproval_revoke_permission.sql) [[ $target_revision == 4.8.9-ui1 ]]; added=1 ;;
   208_v488_historical_cobalt_metal.sql) [[ $target_revision == 4.8.9 ]]; added=1 ;;
   207_v488_historical_dispatch_completion.sql) [[ $target_revision == 4.8.9 ]]; added=2 ;;
@@ -454,7 +468,7 @@ if [[ $target_revision == 4.8.7 ]]; then
   sed -i '/^  app:$/a\    restart: unless-stopped' "$stage/build.yaml"
   printf '  database:\n    restart: unless-stopped\n' >> "$stage/build.yaml"
 fi
-if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui1 || $target_revision == 4.8.8-ui2 || $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui1 || $target_revision == 4.8.8-ui2 || $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
   sed -i "/^  app:$/a\    image: musonoi-wms:${target_revision}-${commit:0:12}" "$stage/build.yaml"
   sed -i "/^  migrate:$/a\    image: musonoi-wms:${target_revision}-migrate-${commit:0:12}" "$stage/build.yaml"
 fi
@@ -470,7 +484,7 @@ old, new=(json.loads((stage / name).read_text()) for name in ("compose-before.js
 for service in ("app","migrate"):
     assert new["services"][service]["build"]["context"]==sys.argv[2]
     new["services"][service]["build"]["context"]=old["services"][service]["build"]["context"]
-    if sys.argv[3] in ("4.8.7-ui1","4.8.7-ui2","4.8.7-ui3","4.8.8","4.8.8-ui1","4.8.8-ui2","4.8.8-ui3","4.8.8-ui4","4.8.8-ui5","4.8.8-ui6","4.8.8-ui7","4.8.8-ui8","4.8.8-ui9","4.8.8-ui10","4.8.8-ui11","4.8.8-ui12","4.8.8-ui13","4.8.8-ui14","4.8.9","4.8.9-ui1","4.8.9-ui2","4.8.9-ui3"):
+    if sys.argv[3] in ("4.8.7-ui1","4.8.7-ui2","4.8.7-ui3","4.8.8","4.8.8-ui1","4.8.8-ui2","4.8.8-ui3","4.8.8-ui4","4.8.8-ui5","4.8.8-ui6","4.8.8-ui7","4.8.8-ui8","4.8.8-ui9","4.8.8-ui10","4.8.8-ui11","4.8.8-ui12","4.8.8-ui13","4.8.8-ui14","4.8.9","4.8.9-ui1","4.8.9-ui2","4.8.9-ui3","4.9.0-ui1"):
         assert new["services"][service].pop("image").startswith("musonoi-wms:"+sys.argv[3]+"-")
         old["services"][service].pop("image",None)
 if sys.argv[3]=="4.8.7":
@@ -511,7 +525,28 @@ SELECT 'vehicle_arrivals',count(*),md5(coalesce(string_agg((to_jsonb(x)-'registr
 SELECT 'co_vehicle_arrivals',count(*),md5(coalesce(string_agg((to_jsonb(x)-'registration_phase')::text,E'\n' ORDER BY id),'')) FROM co_vehicle_arrivals x;
 SELECT 'loads',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM loading_orders x;
 SQL
-if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui1 || $target_revision == 4.8.8-ui2 || $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+if [[ $target_revision == 4.9.0-ui1 ]]; then
+  sed -i "/^SELECT 'permissions',/s/FROM role_permissions x;/FROM role_permissions x WHERE permission_code<>'access-change:approve';/" "$stage/reconcile.sql"
+  sed -i "/^SELECT '\(vehicle_arrivals\|co_vehicle_arrivals\)',/d" "$stage/reconcile.sql"
+  cat >> "$stage/reconcile.sql" <<'SQL'
+WITH arrivals AS (
+ SELECT 'vehicle_arrivals' entity,'CU_CATHODE' product,id,dispatch_vehicle_id,updated_at,registration_phase,
+  trailer_two,version,to_jsonb(a) payload FROM vehicle_arrivals a
+ UNION ALL
+ SELECT 'co_vehicle_arrivals','CO_HYDROXIDE',id,dispatch_vehicle_id,updated_at,registration_phase,
+  trailer_two,version,to_jsonb(a) FROM co_vehicle_arrivals a
+), reconciled AS (
+ SELECT entity,id,CASE WHEN registration_phase='CONFIRMED'
+  AND btrim(coalesce(trailer_two,''),U&'\0009\000A\000B\000C\000D\0020\00A0\3000')=''
+  AND NOT arrival_legacy_draft(product,dispatch_vehicle_id,updated_at)
+  THEN payload||jsonb_build_object('trailer_two','N/A','version',version+1)
+  ELSE payload END payload
+ FROM arrivals
+)
+SELECT entity,count(*),md5(coalesce(string_agg(payload::text,E'\n' ORDER BY id),'')) FROM reconciled GROUP BY entity ORDER BY entity;
+SQL
+fi
+if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui1 || $target_revision == 4.8.8-ui2 || $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
   sed -i "/^SELECT 'preparation_plans',/s/to_jsonb(x)::text/(to_jsonb(x)-'state'-'version')::text/" "$stage/reconcile.sql"
   cat >> "$stage/reconcile.sql" <<'SQL'
 SELECT 'copper_lots',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM allocations x;
@@ -544,7 +579,7 @@ SELECT 'licenses',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER
 SELECT 'license_record_books',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM export_license_record_books x;
 SQL
 fi
-if [[ $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+if [[ $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
   cat >> "$stage/reconcile.sql" <<'SQL'
 SELECT 'licenses',count(*),md5(coalesce(string_agg((to_jsonb(x)-'issuing_bank_swift'-'offshore_bank_swift')::text,E'\n' ORDER BY id),'')) FROM export_licenses x;
 SELECT 'license_record_books',count(*),md5(coalesce(string_agg((to_jsonb(x)-'swift_code')::text,E'\n' ORDER BY id),'')) FROM export_license_record_books x;
@@ -554,17 +589,17 @@ SELECT 'bp_claims',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDE
 SELECT 'bp_agencies',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM customs_bp_agencies x;
 SELECT 'bp_templates',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM customs_bp_templates x;
 SQL
-  if [[ $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+  if [[ $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
     sed -i "s/-'issuing_bank_swift'-'offshore_bank_swift'//;s/-'swift_code'//" "$stage/reconcile.sql"
   fi
 fi
-if [[ $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+if [[ $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
   cat >> "$stage/reconcile.sql" <<'SQL'
 SELECT 'customs_bp',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM customs_bp_documents x;
 SELECT 'customs_bp_counters',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY product_code,business_year),'')) FROM customs_bp_counters x;
 SQL
 fi
-if [[ $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+if [[ $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
   cat >> "$stage/reconcile.sql" <<'SQL'
 SELECT 'cu_dispatch',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY id),'')) FROM sales_dispatch_vehicles x;
 SELECT 'cu_dispatch_keys',count(*),md5(coalesce(string_agg(to_jsonb(x)::text,E'\n' ORDER BY vehicle_id),'')) FROM sales_dispatch_vehicle_keys x;
@@ -592,7 +627,7 @@ query -d "$restore" < "$stage/reconcile.sql" > "$stage/restored"
 cmp "$stage/before" "$stage/restored"
 [[ $(query -d "$restore" -c 'SELECT version FROM security_schema_status') == "$before" ]]
 printf 'RESTORE_VERIFIED\n'
-if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]] && ((added)); then
+if [[ $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]] && ((added)); then
   # Exercise the exact migration and application startup on the restored copy first.
   "${new[@]}" run --rm --no-deps -e DB_EXPECTED_NAME="$restore" -e TEST_BACKUP_VERIFIED=yes migrate node -e '
     const name=process.env.DB_EXPECTED_NAME;
@@ -640,7 +675,7 @@ status config | json_is frontendRevision "$target_revision"
 [[ $("${new[@]}" ps -q database) == "$old_db" ]]
 mounts "$old_db" | cmp "$stage/db-mounts"
 mounts "$("${new[@]}" ps -q app)" | cmp "$stage/app-mounts"
-if [[ $target_revision == 4.8.7 || $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui1 || $target_revision == 4.8.8-ui2 || $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* ]]; then
+if [[ $target_revision == 4.8.7 || $target_revision == 4.8.7-ui1 || $target_revision == 4.8.7-ui2 || $target_revision == 4.8.7-ui3 || $target_revision == 4.8.8 || $target_revision == 4.8.8-ui1 || $target_revision == 4.8.8-ui2 || $target_revision == 4.8.8-ui3 || $target_revision == 4.8.8-ui4 || $target_revision == 4.8.8-ui5 || $target_revision == 4.8.8-ui6 || $target_revision == 4.8.8-ui7 || $target_revision == 4.8.8-ui8 || $target_revision == 4.8.8-ui9 || $target_revision == 4.8.8-ui10 || $target_revision == 4.8.8-ui11 || $target_revision == 4.8.8-ui12 || $target_revision == 4.8.8-ui13 || $target_revision == 4.8.8-ui14 || $target_revision == 4.8.9* || $target_revision == 4.9.0-ui1 ]]; then
   docker update --restart unless-stopped "$old_db" > /dev/null
   for container in "$old_db" "$("${new[@]}" ps -q app)"; do
     [[ $(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$container") == unless-stopped ]]

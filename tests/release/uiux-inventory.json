@@ -638,7 +638,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "single Excel drop",
+      "state": "single Excel drop, bundle number with letter suffix",
       "template": "/receipts/import"
     },
     {

@@ -67,11 +67,36 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    }
    assert.deepEqual(await P.invoiceCandidate(client,{proforma_no:'QA-FORM',next_serial:'1'}),{invoice:'QA-FORM-03',serial:'3'});
   });
-  await t.test('receipt workbook accepts an unpadded bundle serial and returns two digits',async()=>{
+  await t.test('manual receipts and Excel imports keep distinct letter suffixes through confirmed stock',async()=>{
+   const base='MUS-2026-370-28';
+   const line=bundle_no=>({bundle_no,sheets_per_bundle:48,production_date:'2026-11-11',inbound_at:'2026-11-11T10:30:00+02:00'});
+   const save=(lines,origin='MANUAL',status=200)=>request('admin',CU,'/receipts',{project_id:f.project,lines,origin},status);
+   const manual=await save([line(base),line(base+'a')]);
+   assert.deepEqual(manual.lines.map(item=>item.bundle_no),[base,base+'A']);
+   await save([line('MUS-2026-370-028A')],'MANUAL',409);
+   await save([line(base+'A1')],'MANUAL',400);
+
    const book=new(require('exceljs').Workbook)(),sheet=book.addWorksheet('Receipts');
-   sheet.addRows([['捆包编号','捆包片数','生产日期','入库时间'],['MUS-2026-100-1',48,'2026-11-11','2026-11-11 10:30']]);
-   const parsed=await require('../../server/production-receipt-reader.cjs').parse(Buffer.from(await book.xlsx.writeBuffer()));
-   assert.equal(parsed.lines[0].bundle_no,'MUS-2026-100-01');
+   sheet.addRow(['捆包编号','捆包片数','生产日期','入库时间']);
+   for(const no of [base+'b','MUS-2026-100-1','MUS-2026-100-1c'])sheet.addRow([no,48,'2026-11-11','2026-11-11 10:30']);
+   const preview=async(status=200)=>request('admin',CU,'/v26/receipts/import-preview',{
+    project_id:f.project,file_base64:Buffer.from(await book.xlsx.writeBuffer()).toString('base64')
+   },status);
+   const workbook=await preview();
+   assert.equal(workbook.valid,true);
+   assert.deepEqual(workbook.lines.map(item=>item.bundle_no),[base+'B','MUS-2026-100-01','MUS-2026-100-01C']);
+   sheet.addRow(['MUS-2026-370-028b',48,'2026-11-11','2026-11-11 10:30']);
+   await preview(409);
+   assert.equal((await client.query('SELECT count(*)::int n FROM bundles WHERE bundle_no LIKE $1',[base+'%'])).rows[0].n,0);
+
+   const excel=await save(workbook.lines,'EXCEL');
+   assert.equal(excel.origin,'EXCEL');
+   for(const doc of [manual,excel]){
+    const submitted=await request('admin',CU,'/receipts/'+doc.id+'/submit',{version:doc.version});
+    await request('production_manager',CU,'/receipts/'+doc.id+'/confirm',{version:submitted.version});
+   }
+   const {rows}=await client.query('SELECT bundle_no FROM bundles WHERE receipt_id=ANY($1::uuid[]) ORDER BY bundle_no',[[manual.id,excel.id]]);
+   assert.deepEqual(rows.map(item=>item.bundle_no),['MUS-2026-100-01','MUS-2026-100-01C',base,base+'A',base+'B']);
   });
   const reason='Matched historical packing list and original seal record';
   for(const product of [CU,CO])await t.test(product+' duplicate reviews, source rows, totals and replay',async()=>{
@@ -136,6 +161,29 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
   await request('admin',CO,'/cobalt/stock/map?warehouse_id='+randomUUID(),null,403);
   await app.listen({port,host:'127.0.0.1'});
   browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined});
+  await t.test('production receipt form accepts the letter suffix and displays its numeric batch',async()=>{
+   const editor=await browser.newContext(),a=account('admin');
+   try{
+    const loggedIn=await editor.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}});
+    assert.equal(loggedIn.status(),200);
+    const page=await editor.newPage();
+    await page.addInitScript(id=>localStorage.setItem('musonoi-product:'+id,'CU_CATHODE'),a.id);
+    await page.goto(origin+'/receipts/new');
+    await page.waitForFunction(()=>window.AppSignedIn&&typeof Router!=='undefined'&&!Router.rendering);
+    const form=page.locator('#v26-receipt'),number=form.locator('[data-field=bundle_no]');
+    await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.locator('[data-task-dismiss]').click());
+    await number.fill('MUS-2026-370-29a');
+    assert.equal(await number.inputValue(),'MUS-2026-370-29A');
+    assert.equal(await number.evaluate(input=>input.checkValidity()),true);
+    assert.equal(await form.locator('[data-batch]').inputValue(),'MUS-2026-370');
+    await form.locator('[data-field=sheets_per_bundle]').fill('48');
+    const saved=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/api/v1/receipts');
+    await form.locator('button[type=submit],button:not([type])').filter({hasText:/保存草稿|Save Draft/i}).click();
+    const response=await saved;
+    assert.equal(response.status(),200,await response.text());
+    assert.equal((await response.json()).lines[0].bundle_no,'MUS-2026-370-29A');
+   }finally{await editor.close();}
+  });
   const context=await browser.newContext({viewport:{width:1440,height:900}}),admin=account('admin');
   const login=await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:admin.username,password:admin.password}});
   assert.equal(login.status(),200);
