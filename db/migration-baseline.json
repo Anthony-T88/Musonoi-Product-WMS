@@ -893,6 +893,10 @@
     {
       "version": "223_v490_admin_business_self_review.sql",
       "checksum": "7b8e1813103919b932af037d510bdaed05b77923519faebb5abbb63c3a181765"
+    },
+    {
+      "version": "224_v490_current_copper_seal_claims.sql",
+      "checksum": "e76aeba9396a6832d3f9e84e77427e7318b3d5c59bac1496b4037605dee6d271"
     }
   ]
 }

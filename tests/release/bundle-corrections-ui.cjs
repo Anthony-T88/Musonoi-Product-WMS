@@ -16,17 +16,20 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
    const state={cookie:r.cookies.map(item=>item.name+'='+item.value).join('; '),'x-csrf-token':r.json().csrfToken};
    logins.set(role,state);return state;
   }
-  async function api(role,url,body,expected=200,method=body?'POST':'GET'){
+  async function request(role,url,body,method=body?'POST':'GET'){
    const headers=logins.get(role)||await signIn(role);
-   const r=await app.inject({url:'/api/v1'+url,method,payload:body,headers:{...headers,origin,'x-product-code':cu,'idempotency-key':crypto.randomUUID()}});
+   return app.inject({url:'/api/v1'+url,method,payload:body,headers:{...headers,origin,'x-product-code':cu,'idempotency-key':crypto.randomUUID()}});
+  }
+  async function api(role,url,body,expected=200,method){
+   const r=await request(role,url,body,method);
    assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,300));return r.json();
   }
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  const lines=[1,2,3].map(n=>({...E.receiptBundle(day,n),sheets_per_bundle:48,inbound_at:new Date().toISOString()}));
+  const lines=[1,2,3,4,5,6].map(n=>({...E.receiptBundle(day,n),sheets_per_bundle:48,inbound_at:new Date().toISOString()}));
   const receipt=await api(requester,'/receipts',{project_id:f.project,lines});
   const submitted=await api(requester,'/receipts/'+receipt.id+'/submit',{version:receipt.version});
   await api(reviewer,'/receipts/'+receipt.id+'/confirm',{version:submitted.version});
-  const {rows:[main,second,delegated]}=await c.query('SELECT * FROM bundles WHERE receipt_id=$1 ORDER BY bundle_no',[receipt.id]);
+  const {rows:[main,second,delegated,originalSealBundle,firstCandidate,secondCandidate]}=await c.query('SELECT * FROM bundles WHERE receipt_id=$1 ORDER BY bundle_no',[receipt.id]);
   const base=row=>'/bundles/'+row.id+'/corrections';
   const proposed=row=>({version:row.version,changes:{sheets_per_bundle:49},reason:'Synthetic label verified'});
   const current=async id=>(await c.query('SELECT * FROM bundles WHERE id=$1',[id])).rows[0];
@@ -61,6 +64,68 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
    await api(reviewer,base(second)+'/'+draft.id+'/review',{decision:'APPROVED'},409);
    await api(reviewer,base(second)+'/'+draft.id+'/review',{decision:'REJECTED',note:'Preparation locking happened during review'});
    assert.equal((await current(second.id)).sheets_per_bundle,48);
+  });
+  await t.test('approved seal correction releases the old number for a different preparation bundle',async()=>{
+   const planApi=(role,product,url,body)=>api(role,url,body);
+   const sales=await P.salesPlan(planApi,f,cu);
+   async function prepare(bundle,sequence){
+    const code='P1-0'+sequence;
+    await c.query("UPDATE stock_map_cells SET x=$2,y=0,width=100,height=100 WHERE code=$1",[code,sequence*100]);
+    const slot=await api('admin','/masters/locations',{project_id:f.project,warehouse_id:f.warehouse,code,active:true});
+    await c.query("UPDATE locations SET map_usage='FORMAL',map_cell_code=$2 WHERE id=$1",[slot.id,code]);
+    const plan=await P.approved(planApi,cu,sales,P.batch(cu,819+sequence));
+    const work=await api(operator,'/v261/lots',{preparation_plan_id:plan.id,planned_location_id:slot.id,items:[{bundle_id:bundle.id,sample_required:false}]});
+    return api(operator,'/v261/lots/'+work.id);
+   }
+   const oldSeal='SYNTH-WRONG-SEAL',newSeal='SYNTH-CORRECTED-SEAL';
+   const weighPath=work=>'/v262/lots/'+work.id+'/weigh';
+   const weigh=(work,seal)=>({version:work.version,items:work.items.map(item=>({
+    bundle_id:item.id,item_version:item.item_version,gross_weight:'2.0350',seal_no:seal
+   }))});
+   async function available(bundle,value,expected){
+    const result=await api(operator,'/identity/check',{kind:'seal',items:[{bundle_id:bundle.id,value}]});
+    assert.equal(result.valid,expected);
+    if(!expected)assert.equal(result.conflicts[0].code,'DUPLICATE_SEAL_NO');
+   }
+   let original=await prepare(originalSealBundle,2);
+   original=(await api(operator,weighPath(original),weigh(original,oldSeal))).lot;
+   await api(operator,'/v262/lots/'+original.id+'/revoke',{version:original.version,reason:'Synthetic release for correction',
+    work_stopped:true,physical_state_verified:true,observation:'Weighed bundle and seal inspected in place'});
+   const a=await prepare(firstCandidate,3),b=await prepare(secondCandidate,4);
+   const draft=async()=>api(requester,base(originalSealBundle),{
+    version:(await current(originalSealBundle.id)).version,changes:{seal_no:newSeal},reason:'Synthetic old seal was entered in error'
+   });
+   const review=(correction,decision,note)=>api(reviewer,base(originalSealBundle)+'/'+correction.id+'/review',{decision,note});
+   const first=await draft();
+   await available(firstCandidate,oldSeal,false);
+   assert.equal((await api(operator,weighPath(a),weigh(a,oldSeal),409)).code,'DUPLICATE_SEAL_NO');
+   await review(first,'REJECTED','Retain the current seal until the evidence is verified');
+   await available(firstCandidate,oldSeal,false);
+   const second=await draft();
+   await review(second,'APPROVED','Verified the correct physical seal');
+   assert.equal((await current(originalSealBundle.id)).seal_no,newSeal);
+   await available(firstCandidate,' '+oldSeal.toLowerCase()+' ',true);
+   await available(firstCandidate,' '+newSeal.toLowerCase()+' ',false);
+   assert.equal((await api(operator,weighPath(a),weigh(a,newSeal.toLowerCase()),409)).code,'DUPLICATE_SEAL_NO');
+   const outcomes=await Promise.all([request(operator,weighPath(a),weigh(a,oldSeal)),request(operator,weighPath(b),weigh(b,oldSeal.toLowerCase()))]);
+   assert.deepEqual(outcomes.map(result=>result.statusCode).sort(),[200,409],outcomes.map(result=>result.body).join(' / '));
+   assert.equal(outcomes.find(result=>result.statusCode===409).json().code,'DUPLICATE_SEAL_NO');
+   const won=outcomes[0].statusCode===200?firstCandidate:secondCandidate;
+   const lost=won.id===firstCandidate.id?secondCandidate:firstCandidate;
+   assert.equal((await current(won.id)).seal_no.toUpperCase(),oldSeal);
+   assert.equal((await current(lost.id)).seal_no,null);
+   const winningLot=outcomes.find(result=>result.statusCode===200).json().lot;
+   const losingLot=won.id===firstCandidate.id?b:a;
+   const replacement='SYNTH-PREPARATION-EDIT';
+   await api(operator,weighPath(winningLot),weigh(winningLot,replacement));
+   await available(lost,oldSeal,true);
+   await api(operator,weighPath(losingLot),weigh(losingLot,oldSeal));
+   assert.equal((await current(won.id)).seal_no,replacement);
+   assert.equal((await current(lost.id)).seal_no,oldSeal);
+   const history=await api(reviewer,'/v262/bundles/'+originalSealBundle.id+'/metadata-history');
+   const evidence=history.items.find(item=>item.kind==='BUNDLE_CORRECTION');
+   assert.equal(evidence.before_data.seal_no,oldSeal);
+   assert.equal(evidence.after_data.seal_no,newSeal);
   });
   await app.listen({host:'127.0.0.1',port});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
