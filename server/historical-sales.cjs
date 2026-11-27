@@ -13,6 +13,58 @@ async function assertNotArrived(c,req,id){
   '该车辆已依据关联历史出库单登记到场');
 }
 
+const sourceInScope=(h,actor,project,customer,warehouse)=>`EXISTS(
+ SELECT 1 FROM historical_backfills b JOIN user_scopes s ON s.user_id=${actor} AND s.project_id=b.project_id
+ WHERE b.source_id=${h}.source_id AND b.project_id=${project}
+  AND (${warehouse} IS NULL OR b.warehouse_id=${warehouse})
+  AND (b.customer_id IS NULL OR b.customer_id=${customer})
+  AND (s.warehouse_id IS NULL OR s.warehouse_id=b.warehouse_id)
+  AND (s.customer_id IS NULL OR s.customer_id=${customer})
+)`;
+const manualInvoice=h=>`historical_dispatch_has_manual_invoice(${h}.product_code,${h}.plan_id,${h}.source_id)`;
+const canDetach=(h,actor,project,customer,warehouse='NULL::uuid')=>
+ 'COALESCE('+h+'.automatic AND '+sourceInScope(h,actor,project,customer,warehouse)+' AND NOT '+manualInvoice(h)+',false)';
+
+function cancellationError(req,code){
+ const messages={
+  HISTORICAL_DISPATCH_LINK_PROTECTED:['该车辆关联了人工确认的历史单据，不能撤销派车','This dispatch cannot be cancelled because its historical document was linked manually.','Cette affectation est liée manuellement à un document historique et ne peut pas être annulée.'],
+  HISTORICAL_DISPATCH_INVOICE_PROTECTED:['该车辆的历史发票已经人工确认，不能撤销派车','This dispatch cannot be cancelled because its historical invoice was confirmed manually.','La facture historique a été confirmée manuellement. Cette affectation ne peut pas être annulée.'],
+  HISTORICAL_DISPATCH_SOURCE_SCOPE:['无权解除该历史单据的派车关联','You do not have permission to unlink this historical document.','Vous n’avez pas l’autorisation de dissocier ce document historique.'],
+  HISTORICAL_DISPATCH_ONLINE_WORK:['该车辆已有在线到厂或装车记录，不能撤销派车','This dispatch cannot be cancelled because it has a vehicle arrival or loading record.','Cette affectation ne peut pas être annulée car une arrivée ou un chargement a été enregistré.']
+ };
+ const message=messages[code];
+ if(!message)return null;
+ const language=req.user.language_code;
+ return B.error(code==='HISTORICAL_DISPATCH_SOURCE_SCOPE'?403:409,message[language==='en'?1:language==='fr'?2:0]);
+}
+
+async function prepareDispatchCancellation(c,req,plan,dispatchId){
+ const co=req.productCode===cobalt;
+ // The caller already locked the dispatch. Recheck against concurrent historical imports, voids and invoice confirmations.
+ await c.query('SELECT pg_advisory_xact_lock(477189)');
+ const {rows:[linked]}=await c.query(
+  'SELECT h.source_id,h.automatic,'+sourceInScope('h','$3','$4','$5','$6::uuid')+' in_scope,'+manualInvoice('h')+' manual_invoice,'
+  +(co?'EXISTS(SELECT 1 FROM co_vehicle_arrivals WHERE dispatch_vehicle_id=$1)':'false')+' online_arrival '
+  +'FROM historical_sales_arrivals h WHERE h.'+dispatchColumn(co)+'=$1 AND h.plan_id=$2',
+  [dispatchId,plan.id,req.user.id,plan.project_id,plan.customer_id,co?plan.warehouse_id:null]);
+ if(!linked)return null;
+ if(!linked.in_scope)throw cancellationError(req,'HISTORICAL_DISPATCH_SOURCE_SCOPE');
+ if(linked.online_arrival)throw cancellationError(req,'HISTORICAL_DISPATCH_ONLINE_WORK');
+ if(!linked.automatic)throw cancellationError(req,'HISTORICAL_DISPATCH_LINK_PROTECTED');
+ if(linked.manual_invoice)throw cancellationError(req,'HISTORICAL_DISPATCH_INVOICE_PROTECTED');
+ return linked.source_id;
+}
+
+async function finishDispatchCancellation(c,req,plan,dispatchId,sourceId,reason){
+ if(!sourceId)return;
+ try{
+  await c.query('SELECT historical_dispatch_detach_cancelled($1,$2,$3,$4,$5,$6,$7)',
+   [req.productCode,plan.id,dispatchId,sourceId,req.user.id,reason,req.id]);
+ }catch(error){
+  throw cancellationError(req,error.message)||error;
+ }
+}
+
 function candidateSql(co){
  const vehicles=co?`SELECT v.id,v.sales_plan_id,v.shipment_month,v.truck_no,v.trailer_no,p.code plan_no,
   p.project_id,p.warehouse_id,p.customer_id,k.contract_no
@@ -143,4 +195,5 @@ async function afterDispatchImport(c,req,plan,month,dispatchIds){
  return autoLink(c,req,{plan,month,dispatchIds});
 }
 
-module.exports={candidates,link,autoLink,afterDispatchImport,arrivalExists,assertNotArrived};
+module.exports={candidates,link,autoLink,afterDispatchImport,arrivalExists,assertNotArrived,canDetach,
+ prepareDispatchCancellation,finishDispatchCancellation};

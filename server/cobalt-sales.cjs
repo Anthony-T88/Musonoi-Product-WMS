@@ -26,6 +26,7 @@ function vehicleFields(b){const v={trailer_no:optional(b.trailer_no,80),transpor
 async function saveVehicle(c,req,p,b,source=null){const truck=plate(b.truck_no),f=vehicleFields(b),columns=['sales_plan_id','shipment_month','truck_no','created_by','updated_by',...Object.keys(f)],values=[p.id,source?b.shipment_month:Month.effective(p,b.shipment_month),truck,req.user.id,req.user.id,...Object.values(f)];if(source){Object.assign(f,{});columns.push('import_id','source_row','source_sheet');values.push(source.id,b.source_row,source.sheet);}return (await c.query('INSERT INTO co_dispatch_vehicles('+columns.join(',')+') VALUES('+values.map((_,i)=>'$'+(i+1)).join(',')+') RETURNING *',values)).rows[0];}
 async function importPlan(c,req,plan,body,parsed){
  const month=Transport.importMonth(plan,body);
+ await Transport.assertImportAvailable(c,req,plan,parsed,{co:true,transportOnly:body.transport_only});
  let cancelled_count=0;
  for(const item of body.transport_only?[]:parsed.cancelled||[]){
   const changed=await c.query(`UPDATE co_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason=$4,
@@ -57,12 +58,16 @@ async function listDispatch(c,req){
  const plan=await access(c,req,'plan',req.params.id),shipmentMonth=req.query.shipment_month?month(req.query.shipment_month):null;
  const {rows:vehicles}=await c.query(`SELECT v.*,${Transport.cobaltTransportLocked} transport_locked,a.id arrival_id,a.arrived_at,
   h.source_id historical_source_id,
+  v.cancelled_at IS NULL AND a.id IS NULL AND (h.source_id IS NULL OR history.can_detach) can_cancel,
+  history.can_detach historical_auto_detach,
   NOT (${transferHistory}) AND v.cancelled_at IS NULL can_transfer,
   CASE WHEN v.cancelled_at IS NOT NULL THEN 'CANCELLED' WHEN h.source_id IS NOT NULL THEN 'HISTORICAL_ARRIVED'
    WHEN a.id IS NOT NULL THEN 'WAITING_PLAN' ELSE 'WAITING_ARRIVAL' END arrival_state
   FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id
   LEFT JOIN historical_sales_arrivals h ON h.co_dispatch_id=v.id
-  WHERE v.sales_plan_id=$1 AND ($2::text IS NULL OR v.shipment_month=$2) ORDER BY v.created_at DESC,v.id`,[plan.id,shipmentMonth]);
+  CROSS JOIN LATERAL (SELECT a.id IS NULL AND ${History.canDetach('h','$3','$4','$5','$6::uuid')} can_detach) history
+  WHERE v.sales_plan_id=$1 AND ($2::text IS NULL OR v.shipment_month=$2) ORDER BY v.created_at DESC,v.id`,
+  [plan.id,shipmentMonth,req.user.id,plan.project_id,plan.customer_id,plan.warehouse_id]);
  const byImport=new Map();
  for(const v of vehicles){
   if(!v.import_id)continue;
@@ -160,10 +165,12 @@ async function register({app,pool,permitted,csrf,auth}){
   if(plan.version!==B.version(body.plan_version))throw error(409,'CO_SALES_STALE');
   const month=Transport.importMonth(plan,body),parsed=await D.parse(body);
   if(parsed.needs_mapping)return parsed;
+  await Transport.assertImportAvailable(c,req,plan,parsed,{co:true,transportOnly:body.transport_only});
   const change=await Transport.analyzeImport(c,plan.id,month,parsed.items,{co:true,transportOnly:body.transport_only});
   return {...parsed,shipment_month:month,items:change.items,...change.tally};
  }));
  app.post(prefix+'/plans/:id/dispatch/import',{bodyLimit:3000000,preHandler:writes('dispatch:write')},req=>mutation(pool,req,'dispatch:write',async c=>{
+  await c.query('SELECT pg_advisory_xact_lock(21004)');
   const plan=await access(c,req,'plan',req.params.id,true);
   if(plan.status!=='OPEN')throw error(409,'CO_SALES_LOCKED');
   const body=req.body;
@@ -175,7 +182,18 @@ async function register({app,pool,permitted,csrf,auth}){
  }));
  app.post(prefix+'/plans/:id/dispatch/vehicles',{preHandler:writes('dispatch:write')},req=>mutation(pool,req,'dispatch:write',async c=>{const p=await access(c,req,'plan',req.params.id,true);if(p.status!=='OPEN')throw error(409,'CO_SALES_LOCKED');const b=req.body;fields(b,['plan_version','shipment_month','truck_no','trailer_no','transporter','destination','driver_name','passport_no','planned_arrival_date','capacity_tonnes','remark']);if(p.version!==B.version(b.plan_version))throw error(409,'CO_SALES_STALE');return {...await saveVehicle(c,req,p,b),...metadata(p)};}));
  app.post(prefix+'/vehicles/:id',{preHandler:writes('dispatch:write')},req=>mutation(pool,req,'dispatch:write',async c=>{const {v,p}=await vehicle(c,req,req.params.id),b=req.body;fields(b,['version','trailer_no','transporter','destination','driver_name','passport_no','planned_arrival_date','capacity_tonnes','remark']);if(v.version!==B.version(b.version))throw error(409,'CO_SALES_STALE');const storedDate=v.planned_arrival_date instanceof Date?v.planned_arrival_date.toISOString().slice(0,10):v.planned_arrival_date;const f=vehicleFields({...v,planned_arrival_date:storedDate,...b}),keys=Object.keys(f);return {...(await c.query('UPDATE co_dispatch_vehicles SET '+keys.map((k,i)=>k+'=$'+(i+1)).join(',')+',version=version+1,updated_by=$'+(keys.length+1)+',updated_at=clock_timestamp() WHERE id=$'+(keys.length+2)+' RETURNING *',[...Object.values(f),req.user.id,v.id])).rows[0],...metadata(p)};}));
- app.post(prefix+'/vehicles/:id/cancel',{preHandler:writes('dispatch:write')},req=>mutation(pool,req,'dispatch:write',async c=>{const {v,p}=await vehicle(c,req,req.params.id),b=req.body;fields(b,['version','reason']);if(v.version!==B.version(b.version))throw error(409,'CO_SALES_STALE');await History.assertNotArrived(c,req,v.id);const row=(await c.query('UPDATE co_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason=$2,version=version+1,updated_by=$3,updated_at=clock_timestamp() WHERE id=$1 RETURNING *',[v.id,B.text(b.reason,'CO_SALES_REASON',1000),req.user.id])).rows[0];return {...row,...metadata(p)};}));
+ app.post(prefix+'/vehicles/:id/cancel',{preHandler:writes('dispatch:write')},req=>mutation(pool,req,'dispatch:write',async c=>{
+  await c.query('SELECT pg_advisory_xact_lock(21004)');
+  const {v,p}=await vehicle(c,req,req.params.id),b=req.body;
+  fields(b,['version','reason']);
+  if(v.version!==B.version(b.version))throw error(409,'CO_SALES_STALE');
+  const reason=B.text(b.reason,'CO_SALES_REASON',1000);
+  const sourceId=await History.prepareDispatchCancellation(c,req,p,v.id);
+  const row=(await c.query('UPDATE co_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason=$2,version=version+1,updated_by=$3,updated_at=clock_timestamp() WHERE id=$1 RETURNING *',
+   [v.id,reason,req.user.id])).rows[0];
+  await History.finishDispatchCancellation(c,req,p,v.id,sourceId,reason);
+  return {...row,...metadata(p)};
+ }));
  app.get(prefix+'/arrivals',{preHandler:permitted('vehicle-arrival:read')},req=>C.readTransaction(pool,c=>arrivals(c,req)));
  app.post(prefix+'/arrivals/export',{preHandler:[permitted('vehicle-arrival:read'),permitted('inventory:export'),csrf]},async(req,reply)=>{const q=req.body||{};if(Object.keys(q).some(k=>!['shipment_month','arrival_state','project_id','warehouse_id','customer_id','sales_plan_id','search','arrival_date','truck_no'].includes(k)))throw error(400,'CO_SALES_INPUT');const data=await C.readTransaction(pool,c=>arrivals(c,{...req,query:q},true));return require('./vehicle-arrival-export.cjs').send({pool,req,reply,product:'CO_HYDROXIDE',items:data.items});});
  app.post(prefix+'/arrivals/:id',{preHandler:writes('vehicle-arrival:write')},req=>mutation(pool,req,'vehicle-arrival:write',async c=>{await c.query('SELECT pg_advisory_xact_lock(21004)');const {v,p}=await vehicle(c,req,req.params.id),b=req.body;fields(b,['dispatch_version','version','action','arrived_at','trailer_one','trailer_two','driver_name','passport_no','transporter','container_no','exception_remark']);if(v.version!==B.version(b.dispatch_version))throw error(409,'CO_SALES_STALE');await History.assertNotArrived(c,req,v.id);const old=(await c.query('SELECT * FROM co_vehicle_arrivals WHERE dispatch_vehicle_id=$1 FOR UPDATE',[v.id])).rows[0];if(old&&await require('./cobalt-loading.cjs').enabled(c)&&(await c.query("SELECT 1 FROM co_loading_plans lp WHERE arrival_id=$1 AND lp.status<>'CANCELLED' AND NOT EXISTS(SELECT 1 FROM export_license_allocations x WHERE x.co_plan_id=lp.id AND x.state='RELEASED') LIMIT 1",[old.id])).rowCount)throw error(409,'CO_LOADING_ARRIVAL_FROZEN');const Yard=require('./vehicle-arrivals.cjs'),f=Yard.arrivalFields(b,old,true);if(f.registration_phase==='CONFIRMED')await Yard.assertUniqueArrival(c,req,p.project_id,v.id,'CO_HYDROXIDE',f);const keys=Object.keys(f);let row;if(old)row=(await c.query('UPDATE co_vehicle_arrivals SET '+keys.map((k,i)=>k+'=$'+(i+1)).join(',')+',version=version+1,updated_by=$'+(keys.length+1)+',updated_at=clock_timestamp() WHERE id=$'+(keys.length+2)+' RETURNING *',[...Object.values(f),req.user.id,old.id])).rows[0];else row=(await c.query('INSERT INTO co_vehicle_arrivals('+keys.join(',')+',dispatch_vehicle_id,sales_plan_id,registered_by,updated_by) VALUES('+keys.map((_,i)=>'$'+(i+1)).join(',')+',$'+(keys.length+1)+',$'+(keys.length+2)+',$'+(keys.length+3)+',$'+(keys.length+3)+') RETURNING *',[...Object.values(f),v.id,p.id,req.user.id])).rows[0];return {...row,...metadata(p)};}));

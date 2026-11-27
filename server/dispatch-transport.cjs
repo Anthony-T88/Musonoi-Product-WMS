@@ -20,6 +20,33 @@ function importMonth(plan,body){
  return body.shipment_month;
 }
 
+async function assertImportAvailable(c,req,plan,parsed,{co=false,transportOnly=false}={}){
+ if(transportOnly)return;
+ // Keep re-uploads in the original plan valid, including after an authorized month transfer.
+ const ownership=co?`FROM co_dispatch_imports i JOIN co_dispatch_vehicles v ON v.import_id=i.id
+  JOIN co_sales_plans p ON p.id=v.sales_plan_id`:
+  `FROM sales_dispatch_imports i JOIN sales_dispatch_vehicles v ON v.import_id=i.id
+  LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id
+  JOIN sales_plans p ON p.id=coalesce(k.sales_plan_id,i.sales_plan_id)`;
+ const shipmentMonth=co?'v.shipment_month':'coalesce(k.shipment_month,i.shipment_month)';
+ const {rows:[conflict]}=await c.query(`SELECT p.code,${shipmentMonth} shipment_month,
+  EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$6 AND s.project_id=p.project_id
+   AND (s.customer_id IS NULL OR s.customer_id=p.customer_id)${co?' AND (s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id)':''}) visible
+  ${ownership}
+  WHERE i.file_sha256=$1 AND v.source_sheet=$2 AND v.cancelled_at IS NULL AND i.sales_plan_id<>$3 AND p.id<>$3
+   AND p.project_id=$4 AND p.customer_id=$5
+  ORDER BY visible DESC,i.created_at,p.id,v.id LIMIT 1`,
+  [parsed.file_sha256,parsed.mapping.sheet,plan.id,plan.project_id,plan.customer_id,req.user.id]);
+ if(!conflict)return;
+ const reference=conflict.visible?` (${[conflict.code,conflict.shipment_month].filter(Boolean).join(' · ')})`:'';
+ const message=req.user.language_code==='en'
+  ?`This dispatch sheet has already been imported into another sales plan${reference}. Check the existing import before continuing.`
+  :req.user.language_code==='fr'
+   ?`Cette feuille de répartition a déjà été importée dans un autre plan de vente${reference}. Vérifiez l’importation existante avant de continuer.`
+   :`该派车单已导入其他销售计划${reference}，请核对已有派车记录。`;
+ throw B.error(409,message);
+}
+
 async function analyzeImport(c,planId,month,items,{co=false,transportOnly=false,lock=false}={}){
  const groups=new Map();
  for(const item of items){
@@ -129,4 +156,4 @@ function register({app,pool,permitted,csrf}){
      B.mutate(pool,req,c=>save(c,req,co)));
 }
 
-module.exports={register,allowed,truckKey,importMonth,analyzeImport,fillFromImport,cobaltTransportLocked,requireForLoading};
+module.exports={register,allowed,truckKey,importMonth,assertImportAvailable,analyzeImport,fillFromImport,cobaltTransportLocked,requireForLoading};

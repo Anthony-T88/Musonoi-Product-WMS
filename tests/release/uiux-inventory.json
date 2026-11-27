@@ -538,7 +538,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "saved vehicle plate search, dispatch month transfer, Excel backfill and historical matches",
+      "state": "vehicle search, month transfer, Excel backfill, duplicate sheet check and removal of automatic historical matches",
       "template": "/sales-plans/:id/dispatch"
     },
     {
@@ -562,7 +562,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "saved vehicle plate search, dispatch month transfer, Excel backfill and historical matches",
+      "state": "vehicle search, month transfer, Excel backfill, duplicate sheet check and removal of automatic historical matches",
       "template": "/sales-plans/:id/dispatch"
     },
     {

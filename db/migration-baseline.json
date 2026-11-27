@@ -897,6 +897,10 @@
     {
       "version": "224_v490_current_copper_seal_claims.sql",
       "checksum": "e76aeba9396a6832d3f9e84e77427e7318b3d5c59bac1496b4037605dee6d271"
+    },
+    {
+      "version": "225_v490_dispatch_historical_detach.sql",
+      "checksum": "f7c4056a12da67fbb17e083f0f3a6a39b4f68cb0f876c8c7e0d39366f4cfca10"
     }
   ]
 }

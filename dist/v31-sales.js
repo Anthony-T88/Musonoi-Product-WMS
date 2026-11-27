@@ -93,7 +93,23 @@ const Dispatch={
    </form></section>`:''}<h3>已保存派车单</h3>${search.form}${writable?'':DispatchTransport.notice(d.vehicles,false,d.plan.status==='CLOSED')}${d.imports.filter(i=>groups.has(i.id)).map(i=>`<details class="lp-load-summary" data-dispatch-import="${esc(i.id)}" ${search.term||expanded.has(i.id)?'open':''}><summary><strong data-no-i18n>${esc([...new Set(groups.get(i.id).map(row=>row.shipment_month))].sort().join(' / '))}</strong> · <span data-no-i18n>${esc(i.file_name)}</span> · ${groups.get(i.id).length} 辆</summary><p data-no-i18n>${esc(i.created_by_name)} · ${esc(new Date(i.created_at).toLocaleString())}</p>${this.table(groups.get(i.id),{saved:true,remove:Business.can('dispatch:write'),change:d.dispatch_month.can_change})}</details>`).join('')||'<p>'+(search.term?esc(search.empty):'暂无派车记录')+'</p>'}`);
   DispatchTransport.bindSearch();
   this.bindVehicleMonth(path,d.vehicles,d.dispatch_month.targets,()=>this.page(id));
- document.querySelectorAll('[data-dispatch-remove]').forEach(button=>button.onclick=async()=>{const vehicle=d.vehicles.find(v=>v.id===button.dataset.dispatchRemove);if(!vehicle)return;button.disabled=true;try{await API.request('/plans/'+id+'/dispatch/vehicles/'+vehicle.id,{method:'DELETE',body:{reason:'长期未到厂，手动删除'},confirmation:{title:'确认删除未到厂车辆',rows:[['车头号',vehicle.truck_no],['发运月份',vehicle.shipment_month]],note:'删除后不再显示、不计入车辆及载重统计；历史记录保留。同车同月重新上传不会自动恢复。',commentLabel:'删除说明（选填）'}});await this.page(id);notify('车辆已删除，历史记录已保留');}catch(err){if(err.message!==I18n.translate('操作已取消'))notify(err.message);button.disabled=false;}});
+  for(const button of document.querySelectorAll('[data-dispatch-remove]'))button.onclick=async()=>{
+   const vehicle=d.vehicles.find(v=>v.id===button.dataset.dispatchRemove);
+   if(!vehicle)return;
+   const historical=vehicle.historical_auto_detach;
+   const confirmation=historical?DispatchTransport.historicalRemoval(vehicle):{
+    title:'确认删除未到厂车辆',rows:[['车头号',vehicle.truck_no],['发运月份',vehicle.shipment_month]],
+    note:'删除后不再显示、不计入车辆及载重统计；历史记录保留。同车同月重新上传不会自动恢复。'
+   };
+   button.disabled=true;
+   try{
+    await API.request('/plans/'+id+'/dispatch/vehicles/'+vehicle.id,{method:'DELETE',
+     body:{reason:historical?'撤销误导入派车':'长期未到厂，手动删除'},
+     confirmation:{...confirmation,commentLabel:'删除说明（选填）'}});
+    await this.page(id);notify('车辆已删除，历史记录已保留');
+   }catch(err){if(err.message!==I18n.translate('操作已取消'))notify(err.message);}
+   finally{button.disabled=false;}
+  };
   DispatchTransport.bindImport($('dispatch-form'),{
    path,month:d.dispatch_month.month,error:$('dispatch-error'),
    render:(rows,transportOnly)=>this.table(rows,{transportOnly}),reload:()=>this.page(id)

@@ -5,6 +5,15 @@ window.DispatchTransport={
  // Cobalt pages translate their own markup and opt out of the global DOM translator.
  label:value=>ProductContext.isCopper()?value:I18n.translate(value,true),
  state:new WeakMap(),
+ historicalRemoval(vehicle){
+  const t=this.t;
+  return {
+   title:t('确认撤销误导入的车辆','Confirm Removal of Mistakenly Imported Vehicle'),
+   rows:[[t('车头号','Truck Plate'),vehicle.truck_no],[t('发运月份','Shipment Month'),vehicle.shipment_month]],
+   note:t('本次删除会解除该车辆的自动历史匹配及相关的自动开票确认。原始历史单据保留。',
+    'This removes the automatic historical match and related automatic invoice confirmation for this vehicle. The original historical document is retained.')
+  };
+ },
  search(id,rows){
   const t=this.t,term=(new URLSearchParams(location.search).get('truck_no')||'').slice(0,80),path='/sales-plans/'+encodeURIComponent(id)+'/dispatch';
   const plate=value=>String(value??'').toUpperCase().replace(/[\s-]+/g,'');
