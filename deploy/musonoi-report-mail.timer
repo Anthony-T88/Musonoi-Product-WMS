@@ -1,0 +1,10 @@
+[Unit]
+Description=Musonoi scheduled report delivery check
+
+[Timer]
+OnCalendar=*-*-* *:00:00 Africa/Lubumbashi
+AccuracySec=1s
+Unit=musonoi-maintenance@mail.service
+
+[Install]
+WantedBy=timers.target

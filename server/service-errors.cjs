@@ -5,7 +5,7 @@ function status(error){return error.statusCode||(unavailable.has(error.code)||/^
 function report(error,req,sink=record=>console.error(JSON.stringify(record))){
  const errorId=randomUUID();
  // Deliberately exclude messages, SQL, detail, bodies, URLs, headers and cookies.
- sink({event:'service_error',errorId,requestId:req?.id||null,method:req?.method||null,route:req?.routeOptions?.url||null,code:/^[A-Z0-9_]{2,40}$/.test(error.code||'')?error.code:null,status:status(error)});
+ sink({event:'service_error',time:new Date().toISOString(),errorId,requestId:req?.id||null,method:req?.method||null,route:req?.routeOptions?.url||null,code:/^[A-Z0-9_]{2,40}$/.test(error.code||'')?error.code:null,status:status(error)});
  return errorId;
 }
 module.exports={status,report};

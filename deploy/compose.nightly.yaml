@@ -1,0 +1,66 @@
+# Optional on-host jobs. Merge with the existing deployment Compose files.
+services:
+  nightly-backup:
+    build:
+      context: "${WMS_REPO_DIR:-..}"
+      dockerfile: deploy/Dockerfile
+      target: nightly-backup
+      args:
+        WMS_PG_CLIENT_MAJOR: "${WMS_PG_CLIENT_MAJOR:-17}"
+    env_file:
+      - path: "${WMS_BACKUP_JOB_ENV_FILE:-/etc/musonoi/nightly-backup.env}"
+        required: false
+    environment:
+      WMS_DATABASE_BACKUP_DIR: /maintenance/database
+      WMS_LOG_BACKUP_DIR: /maintenance/logs
+      WMS_BACKUP_KEY_FILE: /run/wms-backup/backup.key
+      WMS_RUNTIME_LOG_FILE: /run/wms-runtime.log
+    volumes:
+      - type: bind
+        source: "${WMS_BACKUP_HOST_DIR:-/var/lib/musonoi/nightly}"
+        target: /maintenance
+        bind: {create_host_path: false}
+      - type: bind
+        source: "${WMS_BACKUP_SECRET_DIR:-/etc/musonoi/nightly-backup}"
+        target: /run/wms-backup
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: "${WMS_RUNTIME_LOG_SOURCE:-/dev/null}"
+        target: /run/wms-runtime.log
+        read_only: true
+        bind: {create_host_path: false}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    profiles: [nightly]
+
+  report-mail:
+    build:
+      context: "${WMS_REPO_DIR:-..}"
+      dockerfile: deploy/Dockerfile
+      target: report-mail
+    env_file:
+      - path: "${WMS_REPORT_JOB_ENV_FILE:-/etc/musonoi/report-job.env}"
+        required: false
+    environment:
+      WMS_REPORT_MAIL_CONFIG_FILE: /run/wms-mail/reports.json
+      WMS_REPORT_MAIL_NETRC_FILE: /run/wms-mail/smtp.netrc
+      WMS_REPORT_MAIL_STATE_DIR: /var/lib/wms-mail
+    command: [node, scripts/report-mail.cjs]
+    volumes:
+      - type: bind
+        source: "${WMS_REPORT_SECRET_DIR:-/etc/musonoi/report-mail}"
+        target: /run/wms-mail
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: "${WMS_REPORT_STATE_DIR:-/var/lib/musonoi/report-mail}"
+        target: /var/lib/wms-mail
+        bind: {create_host_path: false}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    profiles: [report-mail]

@@ -32,6 +32,7 @@ function lint(){
  const {pages}=R,inventory=pages({});
  assert.equal(new Set(inventory.map(row=>row.key)).size,inventory.length,'Duplicate audit scenario key');
  assert.deepEqual(inventory.map(({key,products,state,template})=>({key,products,state,template})),M.inventory.scenarios);
+ assert.deepEqual(R.exceptionScenarios,M.inventory.exceptionScenarios,'Exception scenario registry changed');
  for(const product of R.BOTH)assert(M.inventory.registry[product]?.length,'Empty locked route registry '+product);
  for(const key of core)assert(inventory.some(row=>row.key===key),'Core page missing: '+key);
  const shell=fs.readFileSync(path.join(E.root,'dist/index.html'),'utf8');

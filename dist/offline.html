@@ -6,20 +6,32 @@
  <title data-title-en="Product WMS · Offline">产品仓储管理系统 · 当前离线</title>
  <script src="/release.js"></script>
  <link rel="stylesheet" href="/styles.css">
- <link rel="stylesheet" href="/field.css">
+ <link rel="stylesheet" href="/uiux-governance.css">
+ <link rel="stylesheet" href="/exception-pages.css">
 </head>
-<body>
- <main data-copy-zh>
-  <h1>产品仓储管理系统 · 当前离线</h1>
-  <p>没有显示缓存库存，正式库存操作必须由服务器确认。</p>
-  <p>重新联网后返回系统，查询未确认操作结果。不要使用新幂等键重复提交。</p>
-  <a class="button primary" href="/">重新连接</a>
- </main>
- <main data-copy-en>
-  <h1>Product WMS · Offline</h1>
-  <p>No cached inventory is shown. Stock operations require server confirmation.</p>
-  <p>Reconnect and check any unconfirmed requests before submitting again.</p>
-  <a class="button primary" href="/">Reconnect</a>
+<body class="wms-exception-offline">
+ <header class="wms-exception-brand">
+  <img src="/assets/metorex-ruashi-logo.png" alt="METOREX · Ruashi Mining" width="38" height="36">
+  <div data-copy-zh><strong>产品仓储管理系统</strong><small>穆松尼项目</small></div>
+  <div data-copy-en><strong>Product WMS</strong><small>Musonoi Project</small></div>
+ </header>
+ <main class="wms-exception-entry-body">
+  <section data-copy-zh class="wms-exception" data-tone="warning" aria-labelledby="offline-title-zh">
+   <div class="wms-exception-message">
+    <div class="wms-exception-top"><span class="wms-exception-icon" aria-hidden="true">×</span></div>
+    <h1 id="offline-title-zh">当前设备未连接网络</h1>
+    <p>恢复可访问 WMS 的网络后再连接系统。如有待确认的提交，请先查询提交结果。</p>
+    <div class="wms-exception-actions"><a class="button primary" href="/">检查连接</a></div>
+   </div>
+  </section>
+  <section data-copy-en class="wms-exception" data-tone="warning" aria-labelledby="offline-title-en">
+   <div class="wms-exception-message">
+    <div class="wms-exception-top"><span class="wms-exception-icon" aria-hidden="true">×</span></div>
+    <h1 id="offline-title-en">Your device is offline</h1>
+    <p>Reconnect to a network that can reach WMS. Check the outcome of any pending submission first.</p>
+    <div class="wms-exception-actions"><a class="button primary" href="/">Check connection</a></div>
+   </div>
+  </section>
  </main>
 </body>
 </html>

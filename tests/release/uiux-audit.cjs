@@ -48,7 +48,8 @@ async function inspect(page,guest=false,checks=[],dialog=''){
    return [parent?'#'+parent.id:'',e.localName+(e.id?'#'+e.id:''),type||'',named||'',classes,attrs.join(','),head||''].join('|');
   };
   const title=readable([...document.querySelectorAll('main h1,#login-panel h1')].find(visible))||document.title;
-  const notice=[...root?.querySelectorAll('.error,[role=alert],.product-construction,.s46-state[data-sys-code="SYS-14"] h2')||[]].filter(visible).map(readable).filter(Boolean);
+  const notice=[...root?.querySelectorAll('.error,[role=alert],.product-construction,.s46-state[data-sys-code="SYS-14"] h2,.wms-route-error h2')||[]].filter(visible).map(readable).filter(Boolean);
+  const routeFailure=[...root?.querySelectorAll('.wms-route-error h2')||[]].some(visible);
   const languageCandidates=[];
   if((window.I18n?.language||document.documentElement.lang)==='en'){
    const remaining=new Set(),han=/[\p{Script=Han}]/u;
@@ -156,7 +157,7 @@ async function inspect(page,guest=false,checks=[],dialog=''){
     else columnAlignment.push({table:signature(table),heading:readable(title)});
    });
   }
-  return {title,notice,design,languageCandidates,centeredColumns,columnAlignment,headings:headings.length,duplicates:[...new Set(duplicates)],repeatedLinks:[...new Set(repeatedLinks)],
+  return {title,notice,routeFailure,design,languageCandidates,centeredColumns,columnAlignment,headings:headings.length,duplicates:[...new Set(duplicates)],repeatedLinks:[...new Set(repeatedLinks)],
    noName,actionClips,filterClips,overflow,widest,controls:controls.length,tableCount:[...root?.querySelectorAll('table')||[]].filter(visible).length,
    filters:[...root?.querySelectorAll('form.filters,[role=search]')||[]].filter(visible).length,styles,
    contrastCandidates,forbiddenFields,verifiedControls:Object.fromEntries(checks.map(s=>[s,[...document.querySelectorAll(s)].some(visible)])),
@@ -166,10 +167,10 @@ async function inspect(page,guest=false,checks=[],dialog=''){
 
 function outcome(metrics,errors,status){
  const message=metrics.notice.join(' · ');
- if(status===403||/没有此页面权限|无权访问|not have permission|no permission|permission denied|cannot access this page/i.test(message))return 'denied';
+ if(status===403||/没有此页面权限|无权访问|没有权限访问此页面|not have access|not have permission|no permission|permission denied|cannot access this page/i.test(message))return 'denied';
  if(errors.length||status>=400||metrics.empty)return 'failed';
  if(/当前产品无此页面|Page unavailable for this product/i.test(message+' '+metrics.title))return 'other-product';
- if(/页面暂不可用|Page Unavailable|页面不存在/i.test(metrics.title)||
+ if(metrics.routeFailure||/页面暂不可用|Page Unavailable|页面不存在/i.test(metrics.title)||
     (!metrics.controls&&/不存在|no longer|not found|not in scope|条件不符|须先|不可编辑|无法编辑|not editable|invalid|unavailable/i.test(message)))return 'unavailable';
  return 'rendered';
 }

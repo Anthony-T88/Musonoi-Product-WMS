@@ -21,10 +21,12 @@ const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATIO
     if(draft&&form.isConnected)await DocumentDrafts.fill(form,(await API.request(api+'/'+draft.id)).fields);
    }catch(error){reportError(error);}
   }
-  let working=false;
+  let working=false,pending=false;
   const save=async action=>{
-   if(working)return;
-   const controls=[...form.querySelectorAll('button')];working=true;
+   if(working||pending)return;
+   const controls=[...form.querySelectorAll('.wms-arrival-actions button')];working=true;
+   form.querySelector('.wms-feedback.error')?.replaceChildren();
+   form.querySelector('[data-exception-arrival]')?.remove();
    for(const button of controls)button.disabled=true;
    try{
     if(action!=='DRAFT'&&!await OperationConfirm.ask({title:action==='CLEAR'?t('取消到场并清除登记信息？','Cancel arrival and clear its details?'):
@@ -36,8 +38,31 @@ const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATIO
     await Router.go(back);
     if(action==='DRAFT')notify(t('草稿已保存，待修改确认','Draft saved. Pending confirmation.'));
     if(action==='CLEAR')notify(t('已取消到场并清除登记信息','Arrival cancelled and details cleared'));
-   }catch(error){reportError(error);}
-   finally{working=false;for(const button of controls)button.disabled=false;}
+   }catch(error){
+    if(error.uncertain&&error.operationKey){
+     pending=true;
+     WmsException.arrival(form,'unknown',{check:async()=>{
+      const result=await API.check(error.operationKey);
+      if(!result.committed)return t('暂未查到确认记录，请稍后再试。','No confirmation was found. Check again in a moment.');
+      notify(t('服务器已确认提交','The server confirmed the submission'));
+      ProductContext.dirty=false;await Router.go(back);
+     }});
+    }else if(error.statusCode===409&&/版本已变化|CO_SALES_STALE/.test([error.code,error.message].join(' '))){
+     WmsException.arrival(form,'conflict',{latest:async()=>{
+      const filter=route.startsWith('/cobalt/')?{vehicle_id:vehicleId}:{shipment_month:r.shipment_month};
+      const data=await API.request(route.slice(0,route.lastIndexOf('/'))+'?'+new URLSearchParams(filter));
+      const latest=data.items.find(item=>(item.dispatch_vehicle_id||item.id)===vehicleId);
+      if(!latest)return t('已无法找到此车辆的登记记录。','The latest arrival record could not be found.');
+      const fields=['driver_name','trailer_one','trailer_two','container_no'];
+      if(route.startsWith('/cobalt/'))fields.push('transporter');
+      if(!latest.arrival_id)return t('最新记录未保存登记资料。','The latest record has no saved arrival details.');
+      return t('最新登记 · ','Latest arrival · ')+fields.map(name=>{
+       const label=form.elements.namedItem(name)?.closest('label')?.textContent.trim()||name;
+       return label+' '+(latest[name]||'—');
+      }).join(' · ');
+     }});
+    }else reportError(error);
+   }finally{working=false;for(const button of controls)button.disabled=pending;}
   };
   form.onsubmit=e=>{e.preventDefault();return save('CONFIRM');};
   form.querySelector('[data-arrival-save]').onclick=()=>save('DRAFT');

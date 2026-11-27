@@ -1,0 +1,11 @@
+[Unit]
+Description=Musonoi WMS maintenance (%i)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/musonoi/nightly-host.env
+ExecStart=/bin/bash ${WMS_REPO_DIR}/deploy/nightly-host.sh %i
+UMask=0077
+TimeoutStartSec=2h

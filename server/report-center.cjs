@@ -169,11 +169,13 @@ async function report(c,req,input){
   metrics:columns(Object.keys(metric)).map(item=>({...item,value:metric[item.key]})),
   labels:localLabels,scopeLabel,warehouses,customers:customerOptions,canExport:req.user.permissions.includes('inventory:export')};
 }
-async function workbook(data,req){
+async function workbook(data,req,{summaryOnly=false}={}){
  const ctx=W.make(req),t=ctx.t;
  const product=data.product==='CO_HYDROXIDE'?t('氢氧化钴','Cobalt Hydroxide'):t('阴极铜','Copper Cathodes');
  const subtitle=[product,data.from+' – '+data.to,'MT',data.scopeLabel].filter(Boolean).join('  /  ');
- for(const [key,cn,en] of [['summary','汇总','Summary'],['detail','明细','Detail']]){
+ const sheets=[['summary','汇总','Summary']];
+ if(!summaryOnly)sheets.push(['detail','明细','Detail']);
+ for(const [key,cn,en] of sheets){
   const section=data[key],sheet=W.sheet(ctx,cn,en,data.title,subtitle);
   const columns=section.columns.map(col=>W.col(col.key,col.label,col.label,col.type==='enum'?null:col.type,Math.max(18,col.label.length+5)));
   const rows=section.rows.map(row=>Object.fromEntries(section.columns.map(col=>[col.key,col.type==='enum'?data.labels[row[col.key]]??row[col.key]:row[col.key]])));

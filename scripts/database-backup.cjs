@@ -28,6 +28,7 @@ async function seal(source,output,key,beforePublish=async()=>{}){
   await pipeline(source,cipher,fs.createWriteStream(temp,{flags:'a'}));
   await beforePublish();
   await fsp.appendFile(temp,cipher.getAuthTag());
+  await verify(temp,key);
  });
 }
 async function openArchive(input,key,destination){
@@ -57,20 +58,15 @@ function keyFrom(file){
  if(!/^[0-9a-f]{64}$/i.test(text))throw failure('BACKUP_KEY_INVALID');
  return Buffer.from(text,'hex');
 }
-async function dump(output,key){
- const DB=require('../server/database-connection.cjs'),M=require('./maintenance-connection.cjs');
- const cfg=M.configuration();
- const client=await M.open(cfg);
- try{
-  if((await client.query('SELECT environment FROM system_info WHERE singleton')).rows[0]?.environment!=='production'){
-   throw failure('BACKUP_TARGET_ENVIRONMENT_MISMATCH');
-  }
- }finally{await client.end();}
+async function captureDatabase(output,key,cfg,variables=process.env){
+ const DB=require('../server/database-connection.cjs');
  const db=DB.connection(cfg,'owner');
- const env=Object.fromEntries(Object.entries(process.env).filter(([name])=>!/^PG/i.test(name)));
- Object.assign(env,{PGPASSWORD:db.password,PGSSLMODE:'verify-full',PGSSLROOTCERT:cfg.db.ca,
+ const env=Object.fromEntries(Object.entries(variables).filter(([name])=>!/^PG/i.test(name)));
+ Object.assign(env,{PGPASSWORD:db.password,
   PGGSSENCMODE:'disable',PGAPPNAME:'musonoi-encrypted-backup',PGCONNECT_TIMEOUT:'10'});
- const proc=spawn(process.env.WMS_PG_DUMP||'pg_dump',
+ if(cfg.environment==='production')Object.assign(env,{PGSSLMODE:'verify-full',PGSSLROOTCERT:cfg.db.ca});
+ else env.PGSSLMODE='disable';
+ const proc=spawn(variables.WMS_PG_DUMP||'pg_dump',
   ['--format=custom','--no-password','--host',db.host,'--port',String(db.port),'--username',db.user,'--dbname',db.database],
   {env,windowsHide:true,stdio:['ignore','pipe','ignore']});
  const completed=new Promise(resolve=>{
@@ -84,9 +80,19 @@ async function dump(output,key){
   await completed;
   throw e;
  }
- await verify(output,key);
 }
-module.exports={seal,unseal,verify};
+async function dump(output,key){
+ const M=require('./maintenance-connection.cjs');
+ const cfg=M.configuration();
+ const client=await M.open(cfg);
+ try{
+  if((await client.query('SELECT environment FROM system_info WHERE singleton')).rows[0]?.environment!=='production'){
+   throw failure('BACKUP_TARGET_ENVIRONMENT_MISMATCH');
+  }
+  await captureDatabase(output,key,cfg);
+ }finally{await client.end();}
+}
+module.exports={seal,unseal,verify,keyFrom,captureDatabase};
 if(require.main===module)(async()=>{
  const [mode,input,output]=process.argv.slice(2);
  if(!['backup','verify','decrypt'].includes(mode)||!input||(mode==='decrypt')!==!!output)throw failure('BACKUP_ARGUMENTS_INVALID');

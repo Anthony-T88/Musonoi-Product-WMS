@@ -1,0 +1,129 @@
+.wms-exception {
+  --exception-ink: var(--uix-info);
+  --exception-fill: var(--uix-info-soft);
+  box-sizing: border-box;
+  min-inline-size: 0;
+  border: var(--uix-border-width) solid var(--uix-border);
+  border-radius: var(--uix-radius);
+  background: var(--uix-surface);
+  color: var(--uix-text);
+  font: 400 var(--uix-body)/var(--uix-line) var(--uix-font);
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.wms-exception[data-tone="warning"] {
+  --exception-ink: var(--uix-warning);
+  --exception-fill: var(--uix-warning-soft);
+}
+.wms-exception[data-tone="error"] {
+  --exception-ink: var(--uix-danger);
+  --exception-fill: var(--uix-danger-soft);
+}
+.wms-exception-message { padding: clamp(var(--uix-panel-gap), 4vw, calc(2 * var(--uix-panel-gap))); }
+.wms-exception-top,
+.wms-exception-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uix-gap-sm);
+}
+.wms-exception-top { justify-content: space-between; margin-block-end: var(--uix-gap); }
+.wms-exception-icon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--uix-touch);
+  block-size: var(--uix-touch);
+  border-radius: var(--uix-radius);
+  background: var(--exception-fill);
+  color: var(--exception-ink);
+  font-size: var(--uix-title);
+  font-weight: var(--uix-weight-emphasis);
+  line-height: 1;
+}
+.wms-exception-code {
+  padding: var(--uix-gap-xs) var(--uix-gap-sm);
+  border: var(--uix-border-width) solid var(--uix-border);
+  border-radius: var(--uix-radius);
+  color: var(--uix-muted);
+  font: var(--uix-caption)/var(--uix-line) ui-monospace, Consolas, monospace;
+}
+.wms-exception :is(h1, h2, h3) {
+  margin: 0;
+  color: var(--uix-text);
+  font-size: var(--uix-title);
+  line-height: var(--uix-title-line);
+}
+.wms-exception p { margin-block: var(--uix-gap-sm) 0; max-inline-size: 62ch; color: var(--uix-muted); }
+.wms-exception-actions { margin-block-start: var(--uix-gap); }
+.wms-exception-actions:empty { display: none; }
+.wms-exception-actions .button {
+  min-block-size: var(--uix-control);
+  max-inline-size: 100%;
+  white-space: normal;
+}
+.wms-exception-details {
+  margin-block-start: var(--uix-panel-gap);
+  border-block-start: var(--uix-border-width) solid var(--uix-border);
+  color: var(--uix-muted);
+}
+.wms-exception-details summary { padding-block-start: var(--uix-gap); cursor: pointer; }
+.wms-exception-details code { color: var(--uix-text); overflow-wrap: anywhere; }
+.wms-exception-result {
+  margin-block-start: var(--uix-gap);
+  padding: var(--uix-gap-sm);
+  border-radius: var(--uix-radius);
+  background: var(--uix-surface);
+  color: var(--uix-text);
+}
+.wms-exception-inline {
+  margin-block: var(--uix-gap);
+  border-inline-start: .1875rem solid var(--exception-ink);
+  background: var(--exception-fill);
+}
+.wms-exception-inline .wms-exception-message { padding: var(--uix-gap); }
+.wms-exception-inline :is(h2, h3) { color: var(--exception-ink); font-size: var(--uix-section); }
+.wms-exception-inline .wms-exception-icon { background: var(--uix-surface); }
+.wms-exception-inline .wms-exception-code { background: var(--uix-surface); }
+.wms-exception-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--uix-gap-sm);
+  padding: var(--uix-gap-sm) var(--uix-panel-gap);
+  border-block-end: var(--uix-border-width) solid var(--uix-border);
+  background: var(--uix-surface);
+  color: var(--uix-text);
+  font: 400 var(--uix-body)/var(--uix-line) var(--uix-font);
+  text-align: start;
+}
+.wms-exception-brand img { object-fit: contain; flex: none; }
+.wms-exception-brand :is(strong, small) { display: block; }
+.wms-exception-brand small { color: var(--uix-muted); }
+.wms-exception-entry-body {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  box-sizing: border-box;
+  padding: clamp(var(--uix-panel-gap), 5vw, calc(3 * var(--uix-panel-gap)));
+  background: radial-gradient(ellipse at top, var(--uix-success-soft), var(--uix-canvas) 75%);
+}
+.wms-exception-entry-body .wms-exception { inline-size: min(100%, 36rem); box-shadow: var(--uix-shadow-dialog); }
+body.wms-exception-entry-visible #session-restore:not([hidden]),
+body.wms-exception-offline {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: start;
+  min-block-size: 100vh;
+  padding: 0;
+  overflow-y: auto;
+}
+body.wms-exception-offline { display: block; }
+body.wms-exception-offline > main { display: flex; min-block-size: calc(100vh - 4rem); padding: 0; }
+body.wms-exception-offline > main[hidden] { display: none; }
+.wms-exception :is(a, button, summary, [tabindex]):focus-visible {
+  outline: var(--uix-focus-ring) solid var(--uix-focus);
+  outline-offset: var(--uix-gap-xs);
+}
+@media (pointer: coarse) {
+  .wms-exception :is(.button, summary) { min-block-size: var(--uix-touch); }
+}

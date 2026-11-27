@@ -12,14 +12,25 @@ server {
     access_log /var/log/nginx/wms-security.log wms_security;
     client_max_body_size 3m;
     add_header Strict-Transport-Security "max-age=31536000" always;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header Forwarded "";
+    proxy_read_timeout 130s;
     location / {
         proxy_pass http://127.0.0.1:4174;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header Forwarded "";
-        proxy_read_timeout 130s;
+        proxy_intercept_errors on;
+        error_page 502 503 504 =503 /wms-unavailable.html;
+    }
+    location = /wms-unavailable.html {
+        internal;
+        # Keep this asset on the proxy host so it remains available when the application stops.
+        alias /opt/musonoi-wms/dist/wms-unavailable.html;
+        expires -1;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:4174;
         # Match the application's limit for packing-list batches, including Base64 overhead.
         location = /api/v1/historical-movements/batch/preview { client_max_body_size 15m; proxy_pass http://127.0.0.1:4174; }
         location = /api/v1/historical-movements/batch/confirm { client_max_body_size 15m; proxy_pass http://127.0.0.1:4174; }

@@ -1,11 +1,11 @@
 {
   "version": "4.9.0",
   "auditRevision": "v488",
-  "revision": "4.9.0-ui1",
+  "revision": "4.9.0-ui2",
   "files": [
     {
       "path": ".dockerignore",
-      "sha256": "9cd6668694540415944863aecadd2e7138c0cde3a5b072a432bf4b792fcb9c69"
+      "sha256": "3c39d59ba4f00f29f3fa3a329d4410819a9a6aa12b1941a6e55bdd6884d3c859"
     },
     {
       "path": ".env.example",
@@ -885,7 +885,7 @@
     },
     {
       "path": "deploy/Dockerfile",
-      "sha256": "6ea8e9bb695953d3d38880ce4bbf1236e864e5581138003c8ba6ccb320d26574"
+      "sha256": "eea206b54be34e54180a08b7610da16ab142343d9049d08f56c8649ce6da5bc3"
     },
     {
       "path": "deploy/environment.example",
@@ -897,7 +897,7 @@
     },
     {
       "path": "deploy/nginx.conf.example",
-      "sha256": "f03a53afad437711910eda9d5d90963f5eb6b5007f55583b65d3247efc3e30f4"
+      "sha256": "b17bc30b1696d844bb2c320361ee6fa99d4a56cf0d76dc2642fa21d6408d33f0"
     },
     {
       "path": "deploy/pg_hba.wms.conf.example",
@@ -941,11 +941,11 @@
     },
     {
       "path": "dist/api.js",
-      "sha256": "44811f160479ac3fccdc3ff41782ca4d4fab0f5db69d79670ff2b675b8e7a535"
+      "sha256": "7ca4fbb137c8bdf6049e9670b7a055b2b99ee047650ab5210ff4dd511b135ac7"
     },
     {
       "path": "dist/app.js",
-      "sha256": "a1ab83cd7a2bc7297646b0855b5ddb1060b3124f317d07310d1e17d46aa3b4d5"
+      "sha256": "b76783a0ed0f263116d8d193adbae3cc0020159a17a4887070662969c6b363a7"
     },
     {
       "path": "dist/approval-display468r10.css",
@@ -981,7 +981,7 @@
     },
     {
       "path": "dist/boot.js",
-      "sha256": "b781bd42dbe278076fdb585c5e0371c5afd8e79731567ff61941e36d4c043d01"
+      "sha256": "5f3d42d19dbf968d0b11c54d7cda3704167d3ec30322cdbed0213937c8bc9cfb"
     },
     {
       "path": "dist/bundle-number.js",
@@ -1061,7 +1061,7 @@
     },
     {
       "path": "dist/cobalt-stock-ui.js",
-      "sha256": "00a738f81de5b6cac81ead41b53c6b9bbea6a269099c66fcbc69528377126304"
+      "sha256": "b79de069edf2914aba6c5b28a216eaa40c969b0f50fe971d47995bf7f7808373"
     },
     {
       "path": "dist/cobalt-stock469r2.css",
@@ -1073,7 +1073,7 @@
     },
     {
       "path": "dist/cobalt-ui.js",
-      "sha256": "1ea0844f572d59c3e184e3807eeeb6575df4dbfa548128b44aec8254b2374f3f"
+      "sha256": "536d66e018a5ef9105cd78a24868a74672d57ee6d92497f16ea49757047e1989"
     },
     {
       "path": "dist/cobalt-work-ui.js",
@@ -1157,7 +1157,7 @@
     },
     {
       "path": "dist/historical-movements.js",
-      "sha256": "e7e07496af38195350493e1889804fcde1fdce1e6369d421cd88836137417fb9"
+      "sha256": "56d4077a5c57dbec00fdb4c56b3daeb84a23fee5ad4460116b28bd1bfec83638"
     },
     {
       "path": "dist/history-ui.js",
@@ -1205,7 +1205,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "67fc9ef0125127668f00e7b7e2b8c7c2285442ccf0ca9431e8de9dbc89e072c1"
+      "sha256": "d5ed20e1d823daf4a2d9521b4763c057b41b82250a39d981166f8fd56a3c5ad3"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1293,7 +1293,7 @@
     },
     {
       "path": "dist/offline.html",
-      "sha256": "aa0e27caf2a7beb0b08364637f0a03232730020a1c1fd530a07f8ffad140a357"
+      "sha256": "d668620e60bf1f1f27fa65433542a193b1d46aad3404a7d79bec7e22d69dd822"
     },
     {
       "path": "dist/operation-workspace.css",
@@ -1433,7 +1433,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "d99a61b57f2c84645b5724669b2e68174f53fdf24bb5da061cf25ef3218575b7"
+      "sha256": "28f5f7a873c50a5ecba7c3916181307edee3ea6f2539120287d49edec97d680c"
     },
     {
       "path": "dist/reports463.js",
@@ -1445,7 +1445,7 @@
     },
     {
       "path": "dist/router.js",
-      "sha256": "6c16cef2059eb92d1d2586d4ef142294d7ada2644b0625a0bef9be1417392e96"
+      "sha256": "4ecd89c747e448e67e6512b560add1ffaf5cdff056da1e00d7d14380769f4386"
     },
     {
       "path": "dist/shipping-overview-ui.js",
@@ -1481,7 +1481,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "7a63bee705656780d67b59e0529ec9301bdc2a09e284fbb5928dc4d67148fcbf"
+      "sha256": "78c1f8b482b5bebd9de47b15854bf61243dd6223371521e4bdabe840badcd464"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1493,7 +1493,7 @@
     },
     {
       "path": "dist/system46.js",
-      "sha256": "89de9ecd3dda7e61171291347e36a7e448b91e6e6699c79276a369ac136a9457"
+      "sha256": "0ae5cc19e709b12a9ac5995c93e5ff04af29d1a97452d2253669ed84db795013"
     },
     {
       "path": "dist/task-notifications.js",
@@ -1781,7 +1781,7 @@
     },
     {
       "path": "dist/vehicle-arrivals.js",
-      "sha256": "376e44c3c9c1fa9d9c33fe73f5a66c776489dfe02425800a64eb221c5c2c7cc2"
+      "sha256": "57be6bfea1de0c490e22021a16f82c9565c695a2a2dab7b7a6949e814530a9f3"
     },
     {
       "path": "dist/workflows.js",
@@ -1813,11 +1813,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "9a75a4315572965b929f0ed641344073fba2d7dda0435d6bd07a8a2bef4bcc51"
+      "sha256": "679782bbfe15046fa1636e916d0f04d8274a929fe512d793f095b695059483e5"
     },
     {
       "path": "scripts/database-backup.cjs",
-      "sha256": "046f01749ee9bd440afb8db25848d689604b25e9299741f8a03ce0071d7de618"
+      "sha256": "80a43f0448c657bfe8f3da177f2a33ae558b5394c4792776dba98f728aff7fed"
     },
     {
       "path": "scripts/db.cjs",
@@ -1849,7 +1849,7 @@
     },
     {
       "path": "scripts/run-release-tests.cjs",
-      "sha256": "c53672bdbd43a2b98f083be4959cd7f2f72a56d4b1ccda6ba1b0c1655eee84fd"
+      "sha256": "291757c93f5515483e4db167c30a861be95de5acc143e056f819154fca177b23"
     },
     {
       "path": "scripts/start-current.cjs",
@@ -1889,7 +1889,7 @@
     },
     {
       "path": "server/app.cjs",
-      "sha256": "38a36dedb809778f817bf430e6f5053867429744a8d517c94ee34fb49bbe0bea"
+      "sha256": "d0a7b5ae1df71c1822a15c4e9fbfd5a70c8023e2479751474d2b71f266aa4ca9"
     },
     {
       "path": "server/approval-presentation.cjs",
@@ -2281,7 +2281,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "9cb4a1341f1fc4811b04dcd7447a49549433045dd0590a8b553069f04a58cf23"
+      "sha256": "f505dfe5ed06df61bc2a90ea313a99689b2fa1dc441830e4cedd0e3822d3a9fb"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2289,7 +2289,7 @@
     },
     {
       "path": "server/report-center.cjs",
-      "sha256": "2e8a6cf6e9e223ab4072e9c85191909f3b571dc6ca2a97070f27fa470d8b4550"
+      "sha256": "ccec52596d1497a7317d051524fb57d308694f59bfcd29898c4e1a6af9108ca5"
     },
     {
       "path": "server/report-periods.cjs",
@@ -2349,7 +2349,7 @@
     },
     {
       "path": "server/service-errors.cjs",
-      "sha256": "edf656c630dc187506b933618617c2214fc05d3319fd7e8cb42c72fddcafcd10"
+      "sha256": "fc4e5a96d4a65260fcdc203118681bb841b8c6b698c64721e9d798692a881a8b"
     },
     {
       "path": "server/stock-balance.cjs",
@@ -2641,7 +2641,7 @@
     },
     {
       "path": "tests/release/uiux-audit.cjs",
-      "sha256": "679bd1a29010a4401097dfccd6d263cf020f6db0d0adbb5bac4d2b48d2945df1"
+      "sha256": "c25cbde4ee9f162243e810dcf805fe2096f7d73b351334376f5ed9b207c405ce"
     },
     {
       "path": "tests/release/uiux-baselines/inventory_CU_CATHODE_zh-CN_admin_390.png",
@@ -2685,7 +2685,7 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "fb212999673a851f01aac3ae1ae3bcef2d6cae6f7d4cb6ad146493d24cc78acf"
+      "sha256": "35325562dfe242c65d16a4d62dd8ee1dc5be85d3f465bc64727d6313e374ccfe"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -2693,11 +2693,11 @@
     },
     {
       "path": "tests/release/uiux-quality.cjs",
-      "sha256": "5883390a45aa5412eee427fb526e0d6824ac1066af87fd2a2291307fd9623461"
+      "sha256": "b36c66e214d60b68200b9a9dd95381b5f6bf8cd25f364dcc7a3f427423947c39"
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "50764a773ffdc8cc19bc2126acc7a55a43d20fefc94ecaf5bd30aa9a0bac89b8"
+      "sha256": "bcffd365f6ab9174f8a23c9722c7260137f7372262e88021692abd6688e0e271"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -2846,6 +2846,70 @@
     {
       "path": "scripts/preproduction-cobalt-map.cjs",
       "sha256": "7b365d1c382da1f20f6c163d7882579df62812b56f0b1cea1e9387acc86b7585"
+    },
+    {
+      "path": "deploy/compose.nightly.yaml",
+      "sha256": "14b0606337f7520de2b0949d0dc84d0a6e03e19c2b7c2001df501cffe481ab66"
+    },
+    {
+      "path": "deploy/musonoi-backup-database.timer",
+      "sha256": "39ca8e865827e7e1ce8037be6a42958de096f44f371ab2229dcaea6ed47efdff"
+    },
+    {
+      "path": "deploy/musonoi-backup-logs.timer",
+      "sha256": "41d9ddb81fd19bfee979f2bb451213283bbd7f3b76cda6a20570ff1036ff595c"
+    },
+    {
+      "path": "deploy/musonoi-maintenance@.service",
+      "sha256": "d19919cc32084e9618d76b9fbeb75db2690eb2d66b0cb0f976ad8111c19abda1"
+    },
+    {
+      "path": "deploy/musonoi-report-mail.timer",
+      "sha256": "c006984928bdc4f51cc50ed6fc588e5ae851d1adb3962d76a66fc604cd1596a9"
+    },
+    {
+      "path": "deploy/nightly-host.env.example",
+      "sha256": "bd8e8104add62d89c16e101b1acc56b644fab6ce96f7c476c46aeeedce6c3cb6"
+    },
+    {
+      "path": "deploy/nightly-host.sh",
+      "sha256": "daae6adf5eb491523a64e11e6584855f4b54c351980d0ae67d821b30c70950d4"
+    },
+    {
+      "path": "deploy/nightly-local-test.ps1",
+      "sha256": "02ed508eb23c289142e5e161bcac58e3111bcbec083fb4c1c5846dee8146d2fd"
+    },
+    {
+      "path": "dist/exception-pages.css",
+      "sha256": "7c8182bbaf7863c48259826169e9f50494337faa21318677c8d30809ddf44f80"
+    },
+    {
+      "path": "dist/exception-pages.js",
+      "sha256": "2a643fe66ff20217b16864bfe565d9bae3cd44348b970e1a005363cfaa682908"
+    },
+    {
+      "path": "dist/wms-unavailable.html",
+      "sha256": "7dbcbe1d0f7e0d8f58fa5ff9487e4920b0fea166d7198cb9f1737d625974c080"
+    },
+    {
+      "path": "scripts/nightly-backup.cjs",
+      "sha256": "5a54659e068711a075837e61ecebbf5c7f394be7408ffdd30b33e05a4c70bfd0"
+    },
+    {
+      "path": "scripts/report-mail.cjs",
+      "sha256": "731748b78316edc741a0169e8a36274b5a41f156aa913e391e3b340f2fea3dc6"
+    },
+    {
+      "path": "tests/release/exception-pages.cjs",
+      "sha256": "4df8e9909e18435e0566d846975c6ae7b2acb1c204c0e3105d45632cad835c9c"
+    },
+    {
+      "path": "tests/release/nightly-backup.test.cjs",
+      "sha256": "08639ccb1b615dc89e901ce6bb92109e8be2b7050e73d894cd685ec7a7ae46eb"
+    },
+    {
+      "path": "tests/release/report-mail.test.cjs",
+      "sha256": "bb58cb054939ca13648861e17cf8e2c0d5c85c39ac20f5802480ce00577e9a6e"
     }
   ]
 }

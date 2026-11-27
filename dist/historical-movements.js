@@ -526,7 +526,7 @@ window.HistoricalMovements={
     if(target)target.scrollIntoView();else window.scrollTo({top:0});
    }catch(error){
     System46.lastFailure={route:location.pathname+location.search,status:error.statusCode||0,message:error.message};
-    Router.page(this.t('页面暂不可用','Page Unavailable'),System46.stateHTML(error.statusCode===403?'denied':'error'));
+    WmsException.route(error);
    }finally{
     Router.rendering=false;UnifiedNavigation.refresh();AdaptiveLayout.queue();
    }

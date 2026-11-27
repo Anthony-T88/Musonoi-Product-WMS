@@ -31,6 +31,9 @@
 !scripts/production-bootstrap.cjs
 !scripts/general-manager.cjs
 !scripts/database-backup.cjs
+!scripts/nightly-backup.cjs
+!scripts/report-mail.cjs
+!scripts/preproduction-cobalt-map.cjs
 !scripts/maintenance-connection.cjs
 !scripts/migration-chain.cjs
 !scripts/verify-release.cjs
@@ -52,6 +55,8 @@
 **/.env.*
 **/*.pem
 **/*.key
+**/*.netrc
+**/*.private.*
 **/*.enc
 **/*.dump
 **/*.backup

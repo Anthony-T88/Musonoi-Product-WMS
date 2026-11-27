@@ -1,9 +1,11 @@
 // Copyright (c) 2026 唐雷 (Tang Lei). All rights reserved.
 'use strict';
 (async()=>{
+ window.WmsBootStarted=true;
  const el=id=>document.getElementById(id),load=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=(location.protocol==='file:'?src:'/'+src)+'?rev='+assetRevision;s.async=false;s.onload=resolve;s.onerror=()=>reject(Error((document.documentElement.lang==='en'?'Could not load ':'资源加载失败：')+src));document.head.append(s);});
  const t=(zh,en)=>window.I18n?.language==='en'?en:zh;
- function unavailable(){
+ function unavailable(error){
+  if(window.WmsException){const state=WmsException.kind(error);WmsException.entry(['offline','unavailable','connection','timeout'].includes(state)?state:'startup',{error});return;}
   window.AppSignedIn=false;document.body.classList.add('boot-pending','ui-resource-blocked');
   const box=el('session-restore'),card=document.createElement('section'),title=document.createElement('h1'),hint=document.createElement('p'),button=document.createElement('button');
   box.hidden=false;box.setAttribute('role','alert');card.className='wms-boot-state';title.textContent=t('暂时无法打开系统','Could Not Open WMS');
@@ -11,10 +13,11 @@
   button.type='button';button.className='button primary';button.textContent=t('重新加载','Reload');button.onclick=()=>location.reload();
   card.append(title,hint,button);box.replaceChildren(card);el('login-panel').hidden=true;button.focus();
  }
- function replacedSession(){
-  const notice=el('login-error'),title=document.createElement('strong'),hint=document.createElement('span');
-  notice.classList.add('wms-session-notice');notice.dataset.noI18n='';title.textContent=t('账号已在其他设备登录','Signed In on Another Device');
-  hint.textContent=t('当前会话已结束。请重新登录继续办理。','This session ended. Sign in again to continue.');notice.replaceChildren(title,hint);el('login-username').focus();
+ function sessionEnded(state){
+  if(!window.WmsException)return;
+  WmsException.entry(state,{onSignIn:()=>{
+   WmsException.clearEntry();el('login-panel').hidden=false;el('login-username').focus();
+  }});
  }
  window.Connected=true;
  el('login-panel').hidden=true;document.querySelector('.workspace').setAttribute('inert','');document.querySelector('.sidebar').setAttribute('inert','');
@@ -23,7 +26,7 @@
   if(!window.AppSignedIn)return;
   window.AppSignedIn=false;
   document.body.classList.add('boot-pending');
-  if(event?.detail?.code==='SESSION_REPLACED'||event?.detail?.replaced)sessionStorage.setItem('musonoi-session-replaced','1');
+  sessionStorage.setItem('musonoi-session-ended',event?.detail?.code==='SESSION_REPLACED'||event?.detail?.replaced?'replaced':'expired');
   location.reload();
  }
  window.addEventListener('session-expired',signedOut);
@@ -43,12 +46,12 @@
  await load('product-context.js');await ProductContext.init();
  const scripts=[],enqueue=src=>scripts.push(load(src));
  enqueue('core.js');enqueue('ui.js');enqueue('app.js');enqueue('accounts-ui.js');enqueue('access-approvals.js');enqueue('employee-identity.js');enqueue('business.js');enqueue('receipts-ui.js');enqueue('import-ui.js');enqueue('allocations-ui.js');enqueue('history-ui.js');enqueue('workflows.js');enqueue('controls.js');enqueue('overview-ui.js');enqueue('labels-ui.js');enqueue('network-ui.js');enqueue('customers-ui.js');enqueue('stock-map.js');enqueue('bundle-number.js');enqueue('v26-ui.js');if(cfg.lotWorkV261)enqueue('v261-ui.js');if(cfg.lotWorkV262)enqueue('v262-ui.js');if(cfg.supplementV262)enqueue('v262-supplement.js');enqueue('v265-ui.js');enqueue('v27-ui.js');enqueue('v271-map.js');enqueue('v27-stocktaking.js');enqueue('v27-reliability.js');enqueue('router.js');enqueue('v272-ui.js');enqueue('v30-ui.js');if(cfg.loadingPlanV31)enqueue('v31-ui.js');if(cfg.invoiceHeaderV31)enqueue('v31-header.js');if(cfg.loadingPlanAccessV31)enqueue('v31-plan-access.js');if(cfg.unifiedLoadingV31)enqueue('v31-single-plan.js');if(cfg.salesDispatchV31)enqueue('v31-sales.js');if(cfg.dispatchCapacityV31)enqueue('v31-outbound-center.js');if(cfg.inventoryControlV32)enqueue('v32-ui.js');if(cfg.inventoryDepthV33)enqueue('v33-ui.js');if(cfg.managementV34){enqueue('v34-ui.js');enqueue('confirm-ui.js');enqueue('v34-interactions.js');if(cfg.arrivalWorkflowV34)enqueue('vehicle-arrivals.js');}enqueue("interaction-completion.js");enqueue("audit-labels.js");enqueue("v35.js");enqueue("v36.js");enqueue("receipt-import-preview.js");if(cfg.cobaltV38)enqueue('cobalt-ui.js');if(cfg.cobaltWorkV39)enqueue('cobalt-work-ui.js');if(cfg.cobaltStockV40)enqueue('cobalt-stock-ui.js');if(cfg.cobaltSalesV41)enqueue('cobalt-sales-ui.js');if(cfg.cobaltLoadingV42)enqueue('cobalt-loading-ui.js');if(cfg.cobaltExecutionV43)enqueue('cobalt-execution-ui.js');if(cfg.cobaltPackingV44)enqueue('cobalt-packing-ui.js');if(cfg.cobaltReportsV441)enqueue('cobalt-reports-ui.js');if(cfg.cobaltUX7)enqueue('cobalt-refinement-ui.js');if(cfg.cobaltUX7)enqueue('product-polish-ui.js');if(cfg.cobaltUX9)enqueue('shipping-overview-ui.js');if(cfg.gatePermits)enqueue('gate-ui.js');if(cfg.salesApprovalUX10){enqueue('ux10-flow.js');enqueue('ux10-sales.js');enqueue('ux10-layout.js');}if(cfg.outboundWorkspaceUX11)enqueue('ux11.js');enqueue('cobalt-management.js');enqueue('navigation.js');enqueue('ui452.js');enqueue('overview-analysis.js');enqueue('operation-workspace.js');enqueue('approval-display468r10.js');enqueue('cobalt-preparation469.js');enqueue('v469.js');enqueue('cobalt-stock469r2.js');enqueue('permissions469r2.js');enqueue('preparation-plans.js');enqueue('preparation-reversal.js');enqueue('stocktake-list.js');enqueue('stock-map-review.js');enqueue('packing-print.js');enqueue('dispatch-transport.js');enqueue('customs-workspace.js');enqueue('customs-bp-ui.js');
- try{await Promise.all(scripts);}catch(e){e.code='UI_RESOURCE_MISSING';unavailable();throw e;}
- if(!window.PreparationPlans||!window.V469R2||!window.CobaltStock469R2||!window.Permissions469R2||!window.V469||!window.CobaltPreparation469||!window.ApprovalDisplay||!window.LoadingFiltersR9||!window.GateWorkspace468||!window.Audit468R6||!window.AuditLocale468R6||!window.OverviewAnalysis||!window.UIExperience||!window.RoutePermissions||!window.UI46||!window.UI46Pages||!window.System46||typeof System46.audit!=='function'||!window.Copper461||!window.Cobalt461||!window.Business461||!window.PlanDisplay||!window.DocumentLayouts||!window.CobaltMap465||!window.CobaltMapSite||!window.UI465||!window.LoadingDetails465||!window.NextSteps467||!window.Handover467||!window.Sound467||!window.Operations468R3||!window.Operations468R4||!window.UI468||!window.UI463||!window.Reports463||['--v469r2-ready','--v469-ready','--approval-display468r10-ready','--loading-filters469-ready','--gate468-ready','--audit468r6-styles-ready','--op468r4-styles-ready','--op468r3-styles-ready','--ui468-styles-ready','--overview-analysis-ready','--ui465-styles-ready','--ui463-styles-ready','--ui46-styles-ready','--ui46-pages-styles-ready','--system46-styles-ready','--copper461-styles-ready','--business461-styles-ready'].some(k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim()!=='1')){const e=Error(t('当前界面资源未加载完整，请重新加载。','Interface resources are incomplete. Reload to continue.'));e.code='UI_RESOURCE_MISSING';unavailable();throw e;}try{UI46.init();UI463.init();UI465.install();UI468.init();ApprovalDisplay.init();V469.init();V469R2.init();}catch(e){e.code='UI_RESOURCE_MISSING';unavailable();throw e;}await load('inventory-archives.js');await load('document-drafts.js');await load('historical-movements.js');HistoricalMovements.install();CustomsWorkspace.install();await Router.init();DocumentDrafts.install();ProductContext.mount();document.body.classList.remove('boot-pending');document.querySelector('.workspace').removeAttribute('inert');document.querySelector('.sidebar').removeAttribute('inert');el('session-restore').hidden=true;if(ProductContext.isCopper()&&cfg.supplementV262)await ReceiptAlerts.start();if(ProductContext.isCopper())await V265.start();if(cfg.managementV34)await load('task-notifications.js');window.Copper461?.installNotifier();window.Cobalt461?.installNotifier();if(!CurrentUser.permissions.includes('users:manage'))document.getElementById('business-menu')?.remove();if(!CurrentUser.permissions.includes('allocation:read'))document.querySelector('.top-actions a[href="#field"]')?.remove();if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
+ try{await Promise.all(scripts);}catch(e){e.code='UI_RESOURCE_MISSING';unavailable(e);throw e;}
+ if(!window.PreparationPlans||!window.V469R2||!window.CobaltStock469R2||!window.Permissions469R2||!window.V469||!window.CobaltPreparation469||!window.ApprovalDisplay||!window.LoadingFiltersR9||!window.GateWorkspace468||!window.Audit468R6||!window.AuditLocale468R6||!window.OverviewAnalysis||!window.UIExperience||!window.RoutePermissions||!window.UI46||!window.UI46Pages||!window.System46||typeof System46.audit!=='function'||!window.Copper461||!window.Cobalt461||!window.Business461||!window.PlanDisplay||!window.DocumentLayouts||!window.CobaltMap465||!window.CobaltMapSite||!window.UI465||!window.LoadingDetails465||!window.NextSteps467||!window.Handover467||!window.Sound467||!window.Operations468R3||!window.Operations468R4||!window.UI468||!window.UI463||!window.Reports463||['--v469r2-ready','--v469-ready','--approval-display468r10-ready','--loading-filters469-ready','--gate468-ready','--audit468r6-styles-ready','--op468r4-styles-ready','--op468r3-styles-ready','--ui468-styles-ready','--overview-analysis-ready','--ui465-styles-ready','--ui463-styles-ready','--ui46-styles-ready','--ui46-pages-styles-ready','--system46-styles-ready','--copper461-styles-ready','--business461-styles-ready'].some(k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim()!=='1')){const e=Error(t('当前界面资源未加载完整，请重新加载。','Interface resources are incomplete. Reload to continue.'));e.code='UI_RESOURCE_MISSING';unavailable(e);throw e;}try{UI46.init();UI463.init();UI465.install();UI468.init();ApprovalDisplay.init();V469.init();V469R2.init();}catch(e){e.code='UI_RESOURCE_MISSING';unavailable(e);throw e;}await load('inventory-archives.js');await load('document-drafts.js');await load('historical-movements.js');HistoricalMovements.install();CustomsWorkspace.install();await Router.init();DocumentDrafts.install();ProductContext.mount();document.body.classList.remove('boot-pending');document.querySelector('.workspace').removeAttribute('inert');document.querySelector('.sidebar').removeAttribute('inert');el('session-restore').hidden=true;if(ProductContext.isCopper()&&cfg.supplementV262)await ReceiptAlerts.start();if(ProductContext.isCopper())await V265.start();if(cfg.managementV34)await load('task-notifications.js');window.Copper461?.installNotifier();window.Cobalt461?.installNotifier();if(!CurrentUser.permissions.includes('users:manage'))document.getElementById('business-menu')?.remove();if(!CurrentUser.permissions.includes('allocation:read'))document.querySelector('.top-actions a[href="#field"]')?.remove();if('serviceWorker' in navigator&&window.isSecureContext)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
  }
  // An existing HttpOnly session survives reload. The CSRF token is fetched only same-origin.
  try{await enter();}catch(err){
-  if(err.statusCode!==401){unavailable();return;}
+  if(err.statusCode!==401){unavailable(err);return;}
   el('login-panel').hidden=false;el('session-restore').hidden=true;
   const changedLanguage=sessionStorage.getItem('musonoi-password-changed');
   if(changedLanguage){
@@ -57,10 +60,13 @@
    const notice=el('login-error');notice.classList.add('wms-password-changed');notice.setAttribute('role','status');
    notice.dataset.noI18n='';notice.textContent=t('密码已修改，请使用新密码重新登录。','Password changed. Sign in again with your new password.');
    el('login-username').focus();
-  }else if(err.code==='SESSION_REPLACED'||/已在其他设备登录/.test(err.message)||sessionStorage.getItem('musonoi-session-replaced')==='1'){
-   sessionStorage.removeItem('musonoi-session-replaced');replacedSession();
+  }else{
+   const ended=sessionStorage.getItem('musonoi-session-ended');
+   sessionStorage.removeItem('musonoi-session-ended');
+   if(err.code==='SESSION_REPLACED'||ended==='replaced')sessionEnded('replaced');
+   else if(err.code==='SESSION_EXPIRED'||ended==='expired')sessionEnded('expired');
   }
  }
  el('login-form').querySelector('button[type=submit]').disabled=false;
- }catch(err){unavailable();}
-})().catch(e=>{document.getElementById('login-error').textContent=e.message;document.getElementById('login-panel').hidden=false;});
+ }catch(err){unavailable(err);}
+})().catch(error=>{if(window.WmsException)WmsException.entry('startup',{error});else document.getElementById('login-panel').hidden=false;});

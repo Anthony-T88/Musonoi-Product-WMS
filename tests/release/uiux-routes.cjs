@@ -229,4 +229,19 @@ function pages(ids){
  return cases;
 }
 
-module.exports={CU,CO,BOTH,examples,pages,missingId};
+const exceptionScenarios=[
+ ['startup','/','missing boot resource'],
+ ['unavailable','/','HTTP 503 during session restore'],
+ ['offline','/offline.html','cached entry without access to WMS'],
+ ['expired','/','expired session can return to sign-in'],
+ ['replaced','/','replaced session can return to sign-in'],
+ ['forbidden','/workbench/permissions','return to an authorized route'],
+ ['notFound','/loading-plans/missing-document','return to vehicle arrivals'],
+ ['server','/inventory','HTTP 500 and real reference'],
+ ['timeout','/inventory','retry existing filters or focus the filter'],
+ ['conflict','/loading-plans','latest record with form values retained'],
+ ['unknown','/loading-plans','read-only operation status before resubmitting'],
+ ['validation','/loading-plans','required fields complete before arrival confirmation']
+];
+
+module.exports={CU,CO,BOTH,examples,pages,missingId,exceptionScenarios};

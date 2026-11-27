@@ -26,7 +26,14 @@ function dateValue(value){const s=value.trim().replaceAll('/','-');if(!s)return 
 const filterValues=()=>Object.fromEntries(keys.map(k=>[k,['start','end'].includes(k)?dateValue($(k).value)||'':$(k).value]));
 for(const id of ['start','end']){const input=$(id),wrapper=document.createElement('span');wrapper.className='inventory-date-input';input.before(wrapper);wrapper.append(input);const picker=document.createElement('input');picker.type='date';picker.id=id+'-calendar';picker.tabIndex=-1;picker.className='inventory-date-calendar';picker.setAttribute('aria-label','选择入库日期');const button=document.createElement('button');button.type='button';button.className='inventory-date-button';button.textContent='▦';button.setAttribute('aria-label','选择日期');button.title='选择日期';button.onclick=()=>{picker.value=dateValue(input.value)||'';if(picker.showPicker)picker.showPicker();else{picker.focus();picker.click();}};picker.onchange=()=>{input.value=picker.value.replaceAll('-','/');input.dispatchEvent(new Event('change',{bubbles:true}));};wrapper.append(button,picker);}
 function inventoryColumnCount(){return document.querySelectorAll('#inventory .table-scroll thead th').length;}
-function serviceError(error){serviceReady=false;selected.clear();$('metrics').replaceChildren();$('rows').innerHTML=`<tr><td colspan="${inventoryColumnCount()}" class="empty"><strong>数据库查询失败</strong>${esc(error.message)}</td></tr>`;$('result-count').textContent='不可用';$('page-summary').textContent='库存数据暂不可用';$('csv').disabled=true;$('excel').disabled=true;notify(error.message);}
+function serviceError(error){
+ serviceReady=false;selected.clear();$('metrics').replaceChildren();$('result-count').textContent='不可用';$('page-summary').textContent='库存数据暂不可用';$('csv').disabled=true;$('excel').disabled=true;
+ const host=$('stock-query-exception');
+ if(location.pathname==='/inventory'&&!$('inventory').hidden&&error.statusCode!==401&&window.WmsException){
+  $('rows').replaceChildren();WmsException.query(host,error,()=>render(),()=>$('search').focus());return;
+ }
+ $('rows').innerHTML=`<tr><td colspan="${inventoryColumnCount()}" class="empty"><strong>数据库查询失败</strong>${esc(error.message)}</td></tr>`;notify(error.message);
+}
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 function notify(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
 const DialogDismiss={
@@ -91,6 +98,7 @@ async function render(){
       filtered=result.items;part=filtered;page=result.page;totalRows=result.total;metrics=result.summary;serviceReady=true;
     }catch(error){if(sequence===requestSequence)serviceError(error);return;}
   }else{filtered=I.query(I.data,f,sort,direction);totalRows=filtered.length;const ids=new Set(filtered.map(r=>r.id));selected=new Set([...selected].filter(id=>ids.has(id)));page=Math.min(page,Math.max(1,Math.ceil(totalRows/size)));part=filtered.slice((page-1)*size,page*size);}
+  $('stock-query-exception').replaceChildren();
   const pages=Math.max(1,Math.ceil(totalRows/size));
   updateMetrics(metrics);$('result-count').textContent=totalRows+' 捆';$('table-subtitle').textContent='当前筛选结果 · 库存明细 · 净重单位：吨';
   const active=keys.filter(k=>f[k]).length;$('filter-summary').textContent=active?`已应用 ${active} 项筛选 · 日期按入库日期（含首尾）`:'筛选条件实时生效 · 日期按入库日期（含首尾）';
