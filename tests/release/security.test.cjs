@@ -75,6 +75,26 @@ test('first batch management security regressions',async t=>{
  await check('legacy audit endpoint uses the same project isolation',async()=>{const r=await api(audit,'GET','/audit');assert.equal(r.statusCode,200);assert(!r.json().items.some(e=>e.id===foreignLog));assert(r.json().items.some(e=>e.id===ownLog));});
  await check('ordinary operators have no management access; system administrator retains audit access',async()=>{for(const url of ['/users','/security/roles','/v27/audit'])assert.equal((await api(ordinary,'GET',url)).statusCode,403);assert.equal((await api(root,'GET','/v27/audit/'+foreignLog)).statusCode,200);});
  await check('system administrator account options retain every current built-in role',async()=>{const r=await api(root,'GET','/users/options');assert.equal(r.statusCode,200);assert(require('../../server/role-catalog.cjs').builtins.every(code=>r.json().roles.some(role=>role.code===code)));});
+ await check('system administrator can grant recommended business permissions to a different role',async()=>{
+  const listed=await api(root,'GET','/security/roles');
+  assert.equal(listed.statusCode,200,listed.body);
+  const {catalog,items}=listed.json(),request='inventory:correct-request',create='preparation-plan:write';
+  assert.deepEqual(catalog.workflow[request].roles,['production_operator','logistics_field_operator']);
+  for(const code of ['admin','logistics_office_operator'])assert(items.find(row=>row.code===code).caps.includes(request));
+  assert(!items.find(row=>row.code==='logistics_office_operator').permissions.includes(request));
+  const granted=await api(root,'POST','/security/roles',{name:'Synthetic business grants',permissions:[create]});
+  assert.equal(granted.statusCode,200,granted.body);
+  assert.deepEqual(granted.json().permissions,['plan:read',create]);
+  const role=granted.json();
+  const changed=await api(root,'PUT','/security/roles/'+role.code,{version:role.version,permissions:[create,request]});
+  assert.equal(changed.statusCode,200,changed.body);
+  assert.deepEqual(changed.json().permissions,['inventory:correct-request','inventory:read','plan:read',create]);
+  const user=await account('new_business_role',role.code,scope);
+  const live=await api(await login(user),'GET','/me');
+  assert.equal(live.statusCode,200,live.body);
+  assert(live.json().permissions.includes(request));
+  assert(!live.json().permissions.includes('inventory:correct-review'));
+ });
  await check('restricted role creation and editing succeed only within the live permission ceiling',async()=>{
   const created=await api(roles,'POST','/security/roles',{name:'Synthetic allowed role',permissions:['inventory:read']});assert.equal(created.statusCode,200,created.body);const r=created.json();assert.equal((await api(roles,'PUT','/security/roles/'+r.code,{version:r.version,permissions:['inventory:read','master:read']})).statusCode,200);const current=(await c.query('SELECT version FROM roles WHERE code=$1',[r.code])).rows[0];assert.equal((await api(roles,'PATCH','/security/roles/'+r.code,{version:current.version,name:'Synthetic renamed role'})).statusCode,200);assert.equal((await api(roles,'POST','/security/roles',{name:'Synthetic excessive grant',permissions:['users:manage']})).statusCode,403);
  });
@@ -175,7 +195,7 @@ test('first batch management security regressions',async t=>{
   const a=await account('parallel_export',await role('parallel_export',['inventory:read','inventory:export','master:read']),scope),session=await login(a),results=await Promise.all(Array.from({length:24},(_,i)=>api(session,'POST','/inventory/exports',{format:'csv',filters:{}},'127.42.0.'+(i+1))));assert(results.every(r=>r.statusCode===200),JSON.stringify(results.map(r=>r.statusCode)));
  });
  await check('language preference is ordered safely and does not revoke normal sessions',async()=>{const r=await api(ordinary,'POST','/me/language',{language:'en'});assert.equal(r.statusCode,200,r.body);assert.equal((await api(ordinary,'GET','/me')).statusCode,200);});
- await check('role-code gates cannot be acquired by assigning another built-in role with matching raw grants',async()=>{
+ await check('restricted account manager cannot assign another built-in role with matching grants',async()=>{
   const permissions=(await c.query("SELECT permission_code FROM role_permissions WHERE role_code='production_manager'")).rows.map(r=>r.permission_code),a=await account('legacy_raw_manager',await role('legacy_raw_manager',[...permissions,'users:manage']),scope),session=await login(a);assert.equal((await api(session,'POST','/users',{username:'sec_builtin_gate',display_name:'Synthetic denied role gate',password:crypto.randomBytes(20).toString('base64url'),role_code:'production_manager',scopes:scope})).statusCode,403);
  });
  await check('case changes in UUID text cannot bypass the own-role change prohibition',async()=>{assert.equal((await api(manager,'PATCH','/users/'+am.id.toUpperCase(),{role_code:viewerRole})).statusCode,403);});
@@ -188,8 +208,9 @@ test('first batch management security regressions',async t=>{
    const snapshot=async()=>{
     const result={};
     for(const table of ['users','roles','role_permissions','user_scopes','sessions','audit_logs']){
-     const projection=table==='roles'?"to_jsonb(t)||jsonb_build_object('version',t.version-(EXISTS(SELECT 1 FROM role_permissions p WHERE p.role_code=t.code AND p.permission_code='co:metal-submit'))::int)":"to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email'";
-     const filter=table==='roles'?"WHERE code<>'general_manager'":table==='audit_logs'?"WHERE after_data->>'migration' IS DISTINCT FROM '220_v490_cobalt_metal_permissions'":'';
+     const migrationAudits="a.action='role_permissions_changed' AND a.entity_type='roles' AND a.after_data->>'migration' IN('220_v490_cobalt_metal_permissions','221_v490_configurable_business_roles')";
+     const projection=table==='roles'?`to_jsonb(t)||jsonb_build_object('version',t.version-(SELECT count(*) FROM audit_logs a WHERE ${migrationAudits} AND a.entity_id=t.code))`:"to_jsonb(t)-'scope_context'-'contact_phone'-'contact_email'";
+     const filter=table==='roles'?"WHERE code<>'general_manager'":table==='audit_logs'?"WHERE coalesce(after_data->>'migration','') NOT IN('220_v490_cobalt_metal_permissions','221_v490_configurable_business_roles')":'';
      result[table]=(await old.client.query(`SELECT count(*)::int n,md5(coalesce(string_agg(value,'' ORDER BY value),'')) digest
       FROM (SELECT (${projection})::text value FROM ${table} t ${filter}) snapshot`)).rows[0];
     }
@@ -203,6 +224,10 @@ test('first batch management security regressions',async t=>{
    const previouslyRetained=await retained();
    const metalRoles=(await old.client.query("SELECT role_code FROM role_permissions WHERE permission_code='outbound:logistics-review' UNION SELECT 'logistics_office_operator'")).rows;
    const metalGrants=metalRoles.flatMap(row=>['co:metal-read','co:metal-submit'].map(code=>row.role_code+'/'+code));
+   const preparationGrants=(await old.client.query(`SELECT legacy.role_code||'/'||legacy.code AS grant_key
+    FROM (VALUES ('export_supervisor','plan:read','preparation-plan:write'),('admin','plan:read','preparation-plan:write'),
+     ('logistics_manager','allocation:review','preparation-plan:review'),('admin','allocation:review','preparation-plan:review')) legacy(role_code,prior,code)
+    JOIN role_permissions p ON p.role_code=legacy.role_code AND p.permission_code=legacy.prior`)).rows.map(row=>row.grant_key);
    const retiredPrinters=(await old.client.query("SELECT role_code FROM role_permissions WHERE permission_code='printer:manage' ORDER BY role_code")).rows;
    assert.deepEqual(retiredPrinters.map(row=>row.role_code),['admin','sales_manager']);
    const appliedCount=(await old.client.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n;
@@ -212,7 +237,7 @@ test('first batch management security regressions',async t=>{
    const dispatchGrants=['admin/dispatch:month','sales_manager/dispatch:month','sales_manager/dispatch:read','sales_operator/dispatch:month','sales_operator/dispatch:read'];
    const laterGrants=[...dispatchGrants,'production_operator/inventory:correct-request','logistics_field_operator/inventory:correct-request',
     'production_manager/inventory:correct-review','site_supervisor/lot:reverse-request','logistics_manager/lot:reverse-review',
-    'logistics_office_operator/customs:bp','admin/customs:bp','admin/customs:bp-template',...metalGrants].sort();
+    'logistics_office_operator/customs:bp','admin/customs:bp','admin/customs:bp-template',...metalGrants,...preparationGrants].sort();
    const {rows:added}=await old.client.query('SELECT '+grantKey+' AS key FROM role_permissions WHERE '+grantKey+'=ANY($1::text[])',[laterGrants]);
    assert.deepEqual(added.map(row=>row.key).sort(),laterGrants);
    assert.equal((await old.client.query("SELECT 1 FROM role_permissions WHERE permission_code='printer:manage'")).rowCount,0);

@@ -236,7 +236,7 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(({id,product})=>localStorage.setItem('musonoi-product:'+id,product),{id:admin.id,product:CO});
   await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.locator('[data-task-dismiss]').click());
-  await t.test('every editable role shows the full permission catalog within its grant constraints',async()=>{
+  await t.test('every editable role shows the full permission catalog with role recommendations',async()=>{
    await page.goto(origin+'/workbench/permissions');
    const matrix=page.locator('.s46-r2-matrix'),roleButtons=page.locator('.account-role-picker [data-role]');
    await matrix.waitFor();
@@ -251,9 +251,8 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await page.locator('[data-role=admin]').click();
    const correction=matrix.locator('input[value="inventory:correct-request"]');
    await correction.waitFor();
-   assert(await correction.isDisabled());
-   assert.equal(await correction.isChecked(),false);
-   assert.match(await correction.locator('xpath=..').innerText(),/适用角色.*生产管理部操作员.*物流现场操作员/);
+   assert(await correction.isEnabled());
+   assert.match(await correction.locator('xpath=..').innerText(),/建议岗位.*生产管理部操作员.*物流现场操作员/);
    await page.locator('[data-role=logistics_field_operator]').click();
    await correction.waitFor();
    assert(await correction.isEnabled());

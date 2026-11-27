@@ -22,11 +22,11 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
    assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,300));return r.json();
   }
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  const lines=[1,2].map(n=>({...E.receiptBundle(day,n),sheets_per_bundle:48,inbound_at:new Date().toISOString()}));
+  const lines=[1,2,3].map(n=>({...E.receiptBundle(day,n),sheets_per_bundle:48,inbound_at:new Date().toISOString()}));
   const receipt=await api(requester,'/receipts',{project_id:f.project,lines});
   const submitted=await api(requester,'/receipts/'+receipt.id+'/submit',{version:receipt.version});
   await api(reviewer,'/receipts/'+receipt.id+'/confirm',{version:submitted.version});
-  const {rows:[main,second]}=await c.query('SELECT * FROM bundles WHERE receipt_id=$1 ORDER BY bundle_no',[receipt.id]);
+  const {rows:[main,second,delegated]}=await c.query('SELECT * FROM bundles WHERE receipt_id=$1 ORDER BY bundle_no',[receipt.id]);
   const base=row=>'/bundles/'+row.id+'/corrections';
   const proposed=row=>({version:row.version,changes:{sheets_per_bundle:49},reason:'Synthetic label verified'});
   const current=async id=>(await c.query('SELECT * FROM bundles WHERE id=$1',[id])).rows[0];
@@ -43,7 +43,7 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
 
   });
   await t.test('locked stock, approval roles and the old direct edit boundary',async()=>{
-   await api('admin',base(main),proposed(main),403);
+   await api('logistics_office_operator',base(main),proposed(main),403);
    await api('admin','/v262/bundles/'+main.id+'/sheets',{version:main.version,sheets_per_bundle:51,reason:'Should require approval'},409,'PATCH');
    const draft=await api(operator,base(second),proposed(second));
    await api(requester,base(second),proposed(second),409);
@@ -111,6 +111,50 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
     assert.equal((await c.query("SELECT count(*)::int n FROM bundle_metadata_history WHERE bundle_id=$1 AND kind='BUNDLE_CORRECTION'",[main.id])).rows[0].n,1);
    }finally{await login.context.close();}
   });
+  await t.test('administrator delegates a recommended correction permission to sales and the account uses it',async()=>{
+   const permission='inventory:correct-request',review='inventory:correct-review',role='sales_operator';
+   const management=await open('admin');
+   try{
+    const p=management.page;await p.goto(origin+'/workbench/permissions');
+    await p.locator('[data-role=admin]').click();
+    const choice=p.locator('.s46-r2-matrix input[value="'+permission+'"]');
+    await choice.waitFor();
+    assert(await choice.isEnabled());
+    await p.locator('[data-role='+role+']').click();
+    await choice.waitFor();
+    assert(await choice.isEnabled());
+    assert.equal(await choice.isChecked(),false);
+    assert.match(await choice.locator('xpath=..').innerText(),/Suggested roles:.*Production Operator.*Logistics Field Operator/);
+    await choice.check();
+    await p.locator('.s46-r2-matrix input[value="'+review+'"]').check();
+    const [saved]=await Promise.all([
+     p.waitForResponse(r=>r.request().method()==='PUT'&&new URL(r.url()).pathname==='/api/v1/security/roles/'+role),
+     p.locator('#role-save').click()
+    ]);
+    assert.equal(saved.status(),200,await saved.text());
+    const grants=(await saved.json()).permissions;
+    assert(grants.includes(permission)&&grants.includes(review));
+   }finally{await management.context.close();}
+
+   const sales=await open(role,'zh-CN');
+   try{
+    const url='/inventory/'+delegated.bundle_no,p=sales.page;
+    await p.goto(origin+url);
+    await p.getByRole('button',{name:'申请捆包信息更正'}).click();
+    const form=p.locator('#bundle-correction-form');
+    await form.locator('[name=sheets_per_bundle]').fill('52');
+    await form.locator('[name=reason]').fill('Synthetic delegated correction proof');
+    const [submitted]=await Promise.all([
+     p.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/v1'+base(delegated)),
+     form.getByRole('button',{name:'提交审核'}).click()
+    ]);
+    assert.equal(submitted.status(),200,await submitted.text());
+    assert.equal((await submitted.json()).state,'PENDING');
+    await p.getByText('Synthetic delegated correction proof',{exact:true}).waitFor();
+    assert.equal(await p.locator('#bundle-correction-records [data-bundle-correction]').count(),0);
+    assert.equal((await current(delegated.id)).sheets_per_bundle,48);
+   }finally{await sales.context.close();}
+  });
   await t.test('grant and revoke show the affected permissions and honor cancellation',async()=>{
    const {context,page}=await open('admin');
    try{
@@ -120,7 +164,7 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
     assert.equal(await page.locator('input[value="printer:manage"]').count(),0);
     await read.click();
     await page.getByRole('heading',{name:'Disable Dependent Permissions'}).waitFor();
-    assert.match(await page.locator('#operation-confirm').innerText(),/Sales Confirmation of Physical Gate Exit/);
+    assert.match(await page.locator('#operation-confirm').innerText(),/Confirm Physical Gate Exit/);
     await page.locator('#operation-confirm-cancel').click();assert(await read.isChecked());
     await read.click();await page.locator('#operation-confirm-accept').click();assert(!(await read.isChecked()));
     if(!await print.isVisible())await gate.locator('details').filter({has:page.locator('input[value="gate:print"]')}).locator('summary').click();

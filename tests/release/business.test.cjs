@@ -75,7 +75,8 @@ test('dispatch imports use the plan month and vehicle edits reject invalid, unau
  assert.deepEqual(transfer,req.body);
  Month.validate(transfer,'2026-11');
  assert.throws(()=>Month.validate(transfer,'2026-12'),{statusCode:409});
- assert.equal(Month.settings({...req,user:{...req.user,role_code:'logistics_manager'}},plan).can_change,false);
+ assert.equal(Month.settings({...req,user:{...req.user,role_code:'logistics_manager'}},plan).can_change,true);
+ assert.equal(Month.settings({...req,user:{...req.user,permissions:[]}},plan).can_change,false);
  assert.throws(()=>Month.transferInput({...req,body:{...req.body,target_plan_id:undefined}}),{statusCode:400});
  assert.throws(()=>Month.transferInput({...req,body:{...req.body,shipment_month:'2026-13'}}),{statusCode:400});
  assert.throws(()=>Month.effective(plan,'2026-12'),{statusCode:409});

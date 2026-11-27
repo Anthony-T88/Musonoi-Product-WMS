@@ -1,11 +1,18 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const Lease=require('../../server/authorization-lease.cjs');
-test('co matching review catalog only offers the approved site supervisor role',()=>{
+test('business-role recommendations do not filter active permissions or their dependencies',()=>{
  const P=require('../../server/workflow-permissions.cjs');
  assert.deepEqual(P.catalog['co:loading-review'].roles,['site_supervisor']);
- assert.equal(P.assignable('admin','co:loading-review'),false);
- assert.equal(P.assignable('site_supervisor','co:loading-review'),true);
+ for(const code of ['admin','site_supervisor','custom_audit']){
+  const grants=['co:loading-review','inventory:correct-request','access-change:approve'];
+  const role=P.present({code,caps:grants,permissions:grants,recommended_permissions:grants});
+  assert.deepEqual(role.caps,['co:loading-review','inventory:correct-request']);
+  assert.deepEqual(role.permissions,role.caps);
+ }
+ const R=require('../../server/role-catalog.cjs');
+ assert.deepEqual(R.expand(['preparation-plan:write','preparation-plan:review']),['plan:read','preparation-plan:review','preparation-plan:write']);
+ assert.deepEqual(R.expand(['lot:reverse-request','lot:reverse-review']),['allocation:read','co:read','lot:reverse-request','lot:reverse-review']);
 });
 test('cancelled request cannot retain an authorization lease',async()=>{
  let returned=0;const client={query:async()=>({rows:[]}),release:()=>returned++};

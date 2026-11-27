@@ -4,7 +4,7 @@ const Lease=require('./authorization-lease.cjs');
 const guid='[0-9a-f-]{36}';
 const cu='CU_CATHODE',co='CO_HYDROXIDE';
 const specs={
- 'preparation-plan-form':{path:'/preparation/work-plans(?:/'+guid+')?',module:'preparation',permissions:['plan:read'],roles:['admin','export_supervisor'],target:'preparation_plans'},
+ 'preparation-plan-form':{path:'/preparation/work-plans(?:/'+guid+')?',module:'preparation',permissions:['preparation-plan:write'],target:'preparation_plans'},
  'v26-receipt':{path:'/receipts/new',module:'receipts',permissions:['receipt:write'],product:cu},
  'receipt-editor':{path:'/receipts/'+guid+'/edit',module:'receipts',permissions:['receipt:write'],product:cu,target:'receipts'},
  'v26-preparation':{path:'/preparation/new',module:'preparation',permissions:['allocation:write'],product:cu},
@@ -35,7 +35,7 @@ const specs={
 };
 const allowed=(path,method)=>/^\/api\/v1\/cobalt\/document-drafts(?:\/[0-9a-f-]{36})?$/.test(path)&&['GET','PUT','DELETE'].includes(method);
 const can=(req,spec)=>spec&&(!spec.product||spec.product===req.productCode)&&
- (!spec.roles||spec.roles.includes(req.user.role_code))&&spec.permissions.every(permission=>req.user.permissions.includes(permission));
+ spec.permissions.every(permission=>req.user.permissions.includes(permission));
 const refNames={
  project_id:['projects','projects'],warehouse_id:['warehouses','warehouses'],
  customer_id:['copper_customers','co_customer_profiles'],contract_id:['customer_contracts','co_sales_contracts'],

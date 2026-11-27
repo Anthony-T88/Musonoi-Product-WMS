@@ -2,8 +2,8 @@
 
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs');
 const requestPermission='lot:reverse-request',reviewPermission='lot:reverse-review';
-const canRequest=req=>req.user.role_code==='site_supervisor'&&req.user.permissions.includes(requestPermission);
-const canReview=req=>req.user.role_code==='logistics_manager'&&req.user.permissions.includes(reviewPermission);
+const canRequest=req=>req.user.permissions.includes(requestPermission);
+const canReview=req=>req.user.permissions.includes(reviewPermission);
 const co=req=>req.productCode==='CO_HYDROXIDE';
 const link=(product,id)=>product==='CO_HYDROXIDE'?'/receipts/'+id:'/preparation/'+id;
 const cobaltPath=/^\/api\/v1\/cobalt\/preparations\/[0-9a-f-]{36}\/reversal(?:\/[0-9a-f-]{36}\/review)?$/i;
@@ -82,13 +82,10 @@ function register({app,pool,permitted,csrf}){
   const authorizedRead=permitted(cobalt?'co:read':'allocation:read');
   app.get(base,{preHandler:authorizedRead},req=>C.readTransaction(pool,c=>read(c,req,B.uuid(req.params.id))));
   for(const review of [false,true])app.post(base+(review?'/:reversal/review':''),{preHandler:[
-   authorizedRead,permitted(review?reviewPermission:requestPermission),csrf,async req=>{
-    if(!(review?canReview(req):canRequest(req)))throw B.error(403,'PREPARATION_REVERSAL_FORBIDDEN');
-    await access(pool,req,B.uuid(req.params.id));
-   }
+   authorizedRead,permitted(review?reviewPermission:requestPermission),csrf,async req=>{await access(pool,req,B.uuid(req.params.id));}
   ]},req=>{
    const run=c=>mutate(c,req,B.uuid(req.params.id),review);
-   return cobalt?C.mutation(pool,req,review?reviewPermission:requestPermission,null,run):B.mutate(pool,req,run);
+   return cobalt?C.mutation(pool,req,review?reviewPermission:requestPermission,run):B.mutate(pool,req,run);
   });
  }
 }

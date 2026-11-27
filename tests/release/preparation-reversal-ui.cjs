@@ -109,7 +109,7 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
    const facts=await api(supervisor,product,path);
    assert(facts.can_request,JSON.stringify(facts));
    await api(operator,product,path,requestBody(facts.version),403);
-   await api('admin',product,path,requestBody(facts.version),403);
+   await api('export_supervisor',product,path,requestBody(facts.version),403);
    await api(supervisor,product,path,{...requestBody(facts.version),verified:false},400);
    const replay=crypto.randomUUID(),first=(await request(supervisor,product,path,requestBody(facts.version),replay));
    assert.equal(first.statusCode,200,first.body);

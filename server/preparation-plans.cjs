@@ -3,16 +3,15 @@
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs');
 const cobalt=req=>req.productCode==='CO_HYDROXIDE';
 const stateLabels=['DRAFT','PENDING','APPROVED','REJECTED','CANCELLED'];
-const holds=(user,role)=>user.role_code==='admin'||user.role_code===role;
-const canCreate=req=>holds(req.user,'export_supervisor')&&req.user.permissions.includes('plan:read');
-const canReview=req=>holds(req.user,'logistics_manager')&&req.user.permissions.includes('allocation:review');
+const canCreate=req=>req.user.permissions.includes('preparation-plan:write');
+const canReview=req=>req.user.permissions.includes('preparation-plan:review');
 const canStart=req=>req.user.permissions.includes(cobalt(req)?'co:create':'allocation:write');
 function assertRead(user,product){
  const startPermission=product==='CO_HYDROXIDE'?'co:create':'allocation:write';
  if(!user.permissions.includes('plan:read')&&!user.permissions.includes(startPermission)&&!canReview({user}))throw B.error(403,'备货计划超出授权');
 }
 const read=async req=>assertRead(req.user,req.productCode);
-function assertCreate(user){if(!canCreate({user}))throw B.error(403,'当前岗位无权创建备货计划');}
+function assertCreate(user){if(!canCreate({user}))throw B.error(403,'当前账号无权创建备货计划');}
 const cobaltBase='/api/v1/cobalt/preparation-plans';
 const allowed=(path,method)=>method==='GET'&&['/operations/status','/occupied'].some(s=>path===cobaltBase+s)||
  method==='POST'&&['/batch','/batch/preview','/batch/submit','/batch/approve'].some(s=>path===cobaltBase+s)||
@@ -162,7 +161,7 @@ async function saveBatch(c,req){
  return {items:saved};
 }
 async function save(c,req,id=null,body=req.body,{preview=false,bulk=false}={}){
- if(!canCreate(req))throw B.error(403,'由出口主管创建和修改备货计划');
+ if(!canCreate(req))throw B.error(403,'当前账号无权创建和修改备货计划');
  fields(body,id?['sales_plan_id','customer_id','batch_no','shipment_month','version']:['sales_plan_id','customer_id','batch_no','shipment_month','reversal_id']);
  const prior=id?await access(c,req,id,true):null;
  if(prior&&(!actions(req,prior).edit||prior.version!==B.version(body.version)))throw B.error(409,'备货计划状态或版本已变化');
@@ -200,7 +199,7 @@ async function transition(c,req,id,operation,body=req.body){
  fields(body,['version','reason']);
  const old=await access(c,req,id,true),action=actions(req,old);
  const submit=operation==='submit';
- if(submit&&!canCreate(req)||!submit&&!canReview(req))throw B.error(403,'当前岗位无权办理该备货计划');
+ if(submit&&!canCreate(req)||!submit&&!canReview(req))throw B.error(403,'当前账号无权办理该备货计划');
  if(old.version!==B.version(body.version)||!(submit?action.submit:action.review))throw B.error(409,'备货计划状态、办理人或版本已变化');
  const reason=operation==='reject'||body.reason?B.text(body.reason,'审批意见',1000):'';
  if(operation!=='reject')await sales(c,req,old.sales_plan_id,true);
@@ -265,7 +264,7 @@ function register({app,pool,auth,csrf}){
   }));
   app.get(prefix+'/:id',{preHandler:[auth,read]},req=>C.readTransaction(pool,c=>detail(c,req,req.params.id)));
   const mutate=(method,url,authorize,handler)=>app.route({method,url,preHandler:[auth,read,csrf,async req=>{
-   if(!authorize(req))throw B.error(403,'当前岗位无权办理该备货计划');
+   if(!authorize(req))throw B.error(403,'当前账号无权办理该备货计划');
    if(req.params?.id)await access(pool,req,req.params.id);
   }],handler:req=>B.mutate(pool,req,c=>handler(c,req))});
   mutate('POST',prefix,canCreate,(c,req)=>save(c,req));

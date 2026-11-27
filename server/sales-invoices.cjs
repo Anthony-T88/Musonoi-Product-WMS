@@ -1,8 +1,7 @@
 'use strict';
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),shipping=require('./export-shipping.cjs');
 const copper='CU_CATHODE',cobalt='CO_HYDROXIDE';
-const roles=['sales_operator','sales_manager','admin'];
-const canConfirm=req=>roles.includes(req.user.role_code)&&req.user.permissions.includes('plan:write');
+const canConfirm=req=>req.user.permissions.includes('plan:write');
 const allowed=(path,method)=>
  ['GET','POST'].includes(method)&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/historical-matches$/i.test(path)||
  method==='POST'&&/^\/api\/v1\/cobalt\/sales-workflow\/plans\/[0-9a-f-]{36}\/confirm-invoice$/i.test(path);
@@ -117,18 +116,9 @@ function register({app,pool,permitted,csrf}){
  const archive=require('./historical-sales.cjs');
  for(const prefix of ['/api/v1','/api/v1/cobalt']){
   const match=prefix+'/sales-workflow/plans/:id/historical-matches';
-  app.get(match,{preHandler:[permitted('plan:read'),permitted('plan:write')]},req=>{
-   if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
-   return C.readTransaction(pool,c=>archive.candidates(c,req));
-  });
-  app.post(match,{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>{
-   if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
-   return B.mutate(pool,req,c=>req.body?.automatic===true?archive.autoLink(c,req):archive.link(c,req));
-  });
-  app.post(prefix+'/sales-workflow/plans/:id/confirm-invoice',{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>{
-   if(!canConfirm(req))throw B.error(403,'SALES_INVOICE_ROLE_REQUIRED');
-   return B.mutate(pool,req,c=>confirm(c,req));
-  });
+  app.get(match,{preHandler:[permitted('plan:read'),permitted('plan:write')]},req=>C.readTransaction(pool,c=>archive.candidates(c,req)));
+  app.post(match,{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>B.mutate(pool,req,c=>req.body?.automatic===true?archive.autoLink(c,req):archive.link(c,req)));
+  app.post(prefix+'/sales-workflow/plans/:id/confirm-invoice',{preHandler:[permitted('plan:read'),permitted('plan:write'),csrf]},req=>B.mutate(pool,req,c=>confirm(c,req)));
  }
 }
 

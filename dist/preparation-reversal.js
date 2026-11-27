@@ -16,7 +16,7 @@ window.PreparationReversal={
    PREPARATION_REVERSAL_ALREADY_LINKED:['该撤销记录已关联新的备货计划。','This reversal already has a replacement preparation plan.'],
    PREPARATION_PLAN_STALE:['备货计划已变化，请返回重新选择。','The preparation plan changed. Go back and select it again.'],
    PREPARATION_REVERSAL_INVALID:['请填写必填资料并确认核对结果。','Complete the required fields and confirm the stock check.'],
-   PREPARATION_REVERSAL_FORBIDDEN:['该操作仅限指定岗位在授权范围内办理。','This action requires the designated role and stock scope.'],
+   PREPARATION_REVERSAL_FORBIDDEN:['该操作需要相应权限及库存数据范围。','This action requires the relevant permission and stock scope.'],
    PREPARATION_REVERSAL_NOT_FOUND:['整批撤销记录不存在或已不可见。','The preparation reversal is unavailable.']
   }[code];
   return text?this.t(...text):code;
@@ -42,7 +42,7 @@ window.PreparationReversal={
     [t('审核人','Reviewed By'),r.reviewer],[t('审核意见','Review Note'),r.review_note]
    ].map(([label,value])=>'<dt>'+esc(label)+'</dt><dd>'+esc(value||'—')+'</dd>').join('')+'</dl>';
    const successor=r.replacement_plan_id?'<a class="button secondary" href="/preparation/work-plans/'+r.replacement_plan_id+'">'+t('查看新备货计划','View Replacement Plan')+' · '+esc(r.replacement_batch)+'</a>':
-    r.state==='APPROVED'&&['export_supervisor','admin'].includes(CurrentUser.role_code)&&CurrentUser.permissions.includes('plan:read')?action('replacement-'+r.id,'新建关联备货计划','Create Related Plan'):'';
+    r.state==='APPROVED'&&CurrentUser.permissions.includes('preparation-plan:write')?action('replacement-'+r.id,'新建关联备货计划','Create Related Plan'):'';
    const dates=[BusinessTime.display(r.requested_at),r.reviewed_at&&BusinessTime.display(r.reviewed_at)].filter(Boolean).join(' · ');
    const records=r.stock?this.stock(r,href):'<a class="button secondary compact" href="'+href+'">'+t('查看库存快照','View Stock Snapshot')+'</a>';
    return '<details class="panel" '+(selected||r===pending||d.items.length===1?'open':'')+'><summary>'+esc(r.batch_no)+' · '+state(r.state)+' · '+esc(dates)+'</summary>'+

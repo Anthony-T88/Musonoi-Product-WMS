@@ -225,7 +225,11 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.equal(batch.source_invoice_no,trip.tag+'-INV');
    assert.equal(Number(batch.net_mt),0.647);
    assert.equal(batch.confirmed_at,null,'Manually linked records still require a sales confirmation');
-   await api('admin',product,sales+plan+'/confirm-invoice',{loading_id:trip.id,batch_id:trip.id,invoice_no:trip.tag+'-INV'});
+   const confirmation={loading_id:trip.id,batch_id:trip.id,invoice_no:trip.tag+'-INV'};
+   assert.equal((await api('logistics_office_operator',product,sales+plan)).can_confirm_invoice,false);
+   await api('logistics_office_operator',product,sales+plan+'/confirm-invoice',confirmation,403);
+   const confirmed=await api('logistics_manager',product,sales+plan+'/confirm-invoice',confirmation);
+   assert.equal(confirmed.confirmed_by,f.accounts.find(a=>a.role==='logistics_manager').id);
    detail=await api('admin',product,sales+plan);
    assert.equal(Number(detail.execution.invoiced),0.647);
    const archived=(await api('admin',product,'/historical-movements?'+new URLSearchParams({batch_no:trip.tag,document_no:trip.tag,business_date:day,from:day,to:day,state:'ACTIVE'}))).items;
@@ -279,8 +283,9 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const earlierDetail=await api('admin',product,sales+oldPlan);
    assert.equal(Number(earlierDetail.execution.invoiced),0.647);
    assert.equal(earlierDetail.posted_batches[0].invoice_no,earlier.tag+'-INV');
-   await api('logistics_manager',product,sales+oldPlan+'/confirm-invoice',
-    {loading_id:earlier.id,batch_id:earlier.id,invoice_no:earlier.tag+'-INV'},403);
+   const repeatedConfirmation=await api('logistics_manager',product,sales+oldPlan+'/confirm-invoice',
+    {loading_id:earlier.id,batch_id:earlier.id,invoice_no:earlier.tag+'-INV'});
+   assert.equal(repeatedConfirmation.confirmed_at,earlierDetail.posted_batches[0].confirmed_at);
    const events=await c.query("SELECT count(*)::int n FROM audit_logs WHERE action='sales_historical_invoice_auto_confirmed' AND entity_id=$1",[oldPlan]);
    assert.equal(events.rows[0].n,1);
 

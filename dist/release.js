@@ -1,5 +1,5 @@
 'use strict';
-globalThis.ClientRelease=Object.freeze({version:'4.9.0',displayVersion:'4.9.0',revision:'4.9.0-ui9'});
+globalThis.ClientRelease=Object.freeze({version:'4.9.0',displayVersion:'4.9.0',revision:'4.9.0-ui10'});
 
 if(typeof document!=='undefined'){
  let language='zh-CN';

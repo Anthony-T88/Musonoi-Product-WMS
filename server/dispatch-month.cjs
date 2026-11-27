@@ -1,11 +1,10 @@
 'use strict';
 const B=require('./business-common.cjs');
-const roles=new Set(['sales_operator','sales_manager','admin']);
 const valid=value=>typeof value==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 const planMonth=plan=>plan.shipment_month||plan.preparation_month||null;
 const forbidden=()=>B.error(403,'当前账号不能调整此车辆的派车月份');
 const invalidTarget=()=>B.error(409,'请选择同一客户其他月份的有效销售计划');
-function canChange(req,plan){return plan.status==='OPEN'&&roles.has(req.user.role_code)&&req.user.permissions.includes('dispatch:month');}
+function canChange(req,plan){return plan.status==='OPEN'&&req.user.permissions.includes('dispatch:month');}
 function settings(req,plan){
  return {month:planMonth(plan),can_change:canChange(req,plan)};
 }

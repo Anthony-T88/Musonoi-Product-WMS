@@ -9,16 +9,16 @@ function select(co){const t=tables(co);return `SELECT p.*,p.${co?'shipment_month
 async function access(c,req,plan){const co=req.productCode==='CO_HYDROXIDE',r=(await c.query(select(co)+` WHERE p.id=$2 AND ${scope(co)}`,[req.user.id,B.uuid(plan)])).rows[0];if(!r)throw B.error(404,'SALES_PLAN_NOT_FOUND');return r;}
 async function submission(c,req,product,plan=null){
  if(!await enabled(c))return;
- if(!plan){if(!['sales_operator','sales_manager','admin'].includes(req.user.role_code))throw B.error(403,'SALES_OPERATOR_REQUIRED');return;}
+ if(!req.user.permissions.includes('plan:write'))throw B.error(403,'当前账号没有此操作权限');
+ if(!plan)return;
  const a=(await c.query('SELECT * FROM sales_plan_approvals WHERE plan_id=$1 AND product_code=$2',[plan,product])).rows[0];
  if(!a){
   await access(c,req,plan);
-  if(!['sales_operator','sales_manager','admin'].includes(req.user.role_code))throw B.error(403,'SALES_OPERATOR_REQUIRED');
   const approval=(await c.query('SELECT * FROM v468_submit_legacy_plan_edit($1,$2,$3,$4)',[product,plan,req.user.id,B.version(req.body?.version)])).rows[0];
   await B.audit(c,req,'sales_plan_edit_submitted','sales_plan_review',plan,null,{...approval,product_code:product});return;
  }
  if(['APPROVED','COMMERCE_PENDING'].includes(a.state))throw B.error(409,'SALES_APPROVED_PLAN_LOCKED');
- if(!['sales_operator','sales_manager','admin'].includes(req.user.role_code)||a.submitted_by!==req.user.id)throw B.error(403,'SALES_PLAN_SUBMITTER_REQUIRED');
+ if(a.submitted_by!==req.user.id)throw B.error(403,'SALES_PLAN_SUBMITTER_REQUIRED');
 }
 async function register({app,pool,permitted,csrf}){
  if(!await enabled(pool))return;
@@ -64,9 +64,14 @@ async function register({app,pool,permitted,csrf}){
    return {customer_options,items:(await Close.enrich(c,req,items)).map(row=>({...row,execution:byId.get(row.id)})),total:byId.size,page,page_size:50,summary,execution};
   }));
   app.get(prefix+'/plans/:id',{preHandler:permitted('plan:read')},req=>C.readTransaction(pool,async c=>{const plan=await access(c,req,req.params.id);const invoices=require('./sales-invoices.cjs');const {summary:execution}=await invoices.execution(c,req,'SELECT p.id,p.customer_id,p.target_weight FROM '+t.plans+' p WHERE $1::uuid IS NOT NULL AND p.id=$2',[req.user.id,plan.id]);return {...await Close.detail(c,req,plan),execution,related:await invoices.related(c,req,plan),posted_batches:await invoices.shipments(c,req,plan.id),can_confirm_invoice:invoices.canConfirm(req),history:(await c.query("SELECT a.action,a.after_data,a.occurred_at,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.entity_id=$1 AND a.entity_type='sales_plan_review' AND a.after_data->>'product_code'=$2 ORDER BY a.id",[plan.id,req.productCode])).rows};}));
-  app.post(prefix+'/plans/:id/review',{preHandler:[permitted('plan:read'),csrf,async req=>{const plan=await access(pool,req,req.params.id);const commerce=plan.approval_state==='COMMERCE_PENDING',role=commerce?'commerce_manager':'sales_manager',permission=commerce?'plan:commerce-approve':'plan:approve';if(!['admin',role].includes(req.user.role_code)||!req.user.permissions.includes(permission))throw B.error(403,commerce?'COMMERCE_MANAGER_REQUIRED':'SALES_MANAGER_REQUIRED');}]},req=>B.mutate(pool,req,async c=>{
+  app.post(prefix+'/plans/:id/review',{preHandler:[permitted('plan:read'),csrf,async req=>{
+   const plan=await access(pool,req,req.params.id);
+   Close.requireReviewPermission(req,plan.approval_state);
+  }]},req=>B.mutate(pool,req,async c=>{
    const b=req.body||{};if(Object.keys(b).some(k=>!['version','decision','reason'].includes(k))||!['APPROVED','REJECTED'].includes(b.decision)||typeof(b.reason??'')!=='string'||(b.reason||'').length>1000||b.decision==='REJECTED'&&!(b.reason||'').trim())throw B.error(400,'SALES_REVIEW_INPUT');
-   const before=await access(c,req,req.params.id),commerce=before.approval_state==='COMMERCE_PENDING';if(!['admin',commerce?'commerce_manager':'sales_manager'].includes(req.user.role_code))throw B.error(403,commerce?'COMMERCE_MANAGER_REQUIRED':'SALES_MANAGER_REQUIRED');const row=(await c.query('SELECT * FROM ux10_review_sales_plan($1,$2,$3,$4,$5,$6)',[req.productCode,req.params.id,req.user.id,B.version(b.version),b.decision,(b.reason||'').trim()])).rows[0];
+   const before=await access(c,req,req.params.id);
+   Close.requireReviewPermission(req,before.approval_state);
+   const row=(await c.query('SELECT * FROM ux10_review_sales_plan($1,$2,$3,$4,$5,$6)',[req.productCode,req.params.id,req.user.id,B.version(b.version),b.decision,(b.reason||'').trim()])).rows[0];
    await B.audit(c,req,'sales_plan_'+b.decision.toLowerCase(),'sales_plan_review',req.params.id,{state:before.approval_state},{...row,product_code:req.productCode});return {id:req.params.id,approval_state:row.state,approval_version:row.version};
   }));
   Close.register({app,pool,permitted,csrf,prefix,access});

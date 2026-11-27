@@ -179,14 +179,14 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal((await scopedMap(crypto.randomUUID())).summary.bags,0);
   review=await api('/cobalt/loading/orders/'+matched.order.id+'/requests','logistics_field_operator',{version:matched.order.version,kind:'CANCEL_MATCH',reason:'Synthetic cancellation proof'});
  });
- await check('administrator with raw historical grant is denied; supervisor needs permission and correct version',async()=>{
+ await check('cobalt matching review follows the active grant and checks the record version',async()=>{
   const body={version:review.version,order_version:matched.order.version,note:'Synthetic review'};
-  await api('/cobalt/loading/reviews/'+review.id+'/approve','admin',body,403);
+  await api('/cobalt/loading/reviews/'+review.id+'/approve','production_manager',body,403);
   await api('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',{...body,version:review.version+1},409);
   const id=f.accounts.find(a=>a.role==='site_supervisor').id;await c.query("DELETE FROM role_permissions WHERE role_code='site_supervisor' AND permission_code='co:loading-review'");
   assert.equal((await request('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body)).statusCode,401);
   await c.query("INSERT INTO role_permissions VALUES('site_supervisor','co:loading-review')");const a=f.accounts.find(a=>a.id===id),r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.94.0.1',headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});sessions.site_supervisor={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};
-  await api('/cobalt/loading/reviews/'+review.id+'/approve','site_supervisor',body);assert.equal((await api('/cobalt/loading/plans/'+plan.id)).plan.status,'DRAFT');
+  await api('/cobalt/loading/reviews/'+review.id+'/approve','admin',body);assert.equal((await api('/cobalt/loading/plans/'+plan.id)).plan.status,'DRAFT');
   assert.equal((await api('/cobalt/stock/map?'+new URLSearchParams({warehouse_id:f.warehouse,preparation_id:prep.id,customer_id:customer.id}))).summary.bags,0);
   matched=await f.rc2match();
   await c.query('BEGIN');try{

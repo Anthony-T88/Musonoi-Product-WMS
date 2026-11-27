@@ -1,11 +1,11 @@
 'use strict';
 const B=require('./business-common.cjs'),I=require('./inventory.cjs');
 const requestPermission='inventory:correct-request',reviewPermission='inventory:correct-review';
-const canRequest=req=>['production_operator','logistics_field_operator'].includes(req.user.role_code)&&req.user.permissions.includes(requestPermission);
-const canReview=req=>req.user.role_code==='production_manager'&&req.user.permissions.includes(reviewPermission);
+const canRequest=req=>req.user.permissions.includes(requestPermission);
+const canReview=req=>req.user.permissions.includes(reviewPermission);
 const errors={
  BUNDLE_CORRECTION_NOT_FOUND:[404,'捆包不存在或超出权限'],
- BUNDLE_CORRECTION_ROLE:[403,'当前岗位无权办理捆包信息更正'],
+ BUNDLE_CORRECTION_ROLE:[403,'当前账号无权办理捆包信息更正'],
  BUNDLE_CORRECTION_STALE_OR_LOCKED:[409,'捆包已锁定或库存资料已变化，请核对后重新申请'],
  BUNDLE_CORRECTION_ALREADY_REVIEWED:[409,'该申请已办理，请刷新页面'],
  BUNDLE_CORRECTION_INVALID:[400,'请填写有效的捆包资料及更正原因'],
@@ -24,7 +24,7 @@ function fields(body,names){
  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(name=>!names.includes(name)))throw B.error(400,'请填写有效的捆包资料及更正原因');
 }
 async function mutate(c,req,authorizer,apply){
- if(!authorizer(req))throw B.error(403,'当前岗位无权办理捆包信息更正');
+ if(!authorizer(req))throw B.error(403,'当前账号无权办理捆包信息更正');
  const bundle=await visible(c,req,B.uuid(req.params.id));
  let row;
  try{row=await apply(bundle);}catch(err){
@@ -42,9 +42,9 @@ async function register({app,pool,permitted,csrf}){
  app.get(base,{preHandler:read},req=>I.transaction(pool,async c=>{
   const bundle=await visible(c,req,B.uuid(req.params.id));
   const {rows}=await c.query(`SELECT q.id,q.bundle_version,q.original,q.changes,q.reason,q.requested_at,q.state,
-   q.reviewed_at,q.review_note,u.display_name requester,v.display_name reviewer
+   q.reviewed_at,q.review_note,u.display_name requester,v.display_name reviewer,q.requester_id<>$2 AS independent_reviewer
    FROM bundle_corrections q JOIN users u ON u.id=q.requester_id LEFT JOIN users v ON v.id=q.reviewer_id
-   WHERE q.bundle_id=$1 ORDER BY (q.state='PENDING') DESC,q.requested_at DESC,q.id LIMIT 20`,[bundle.id]);
+   WHERE q.bundle_id=$1 ORDER BY (q.state='PENDING') DESC,q.requested_at DESC,q.id LIMIT 20`,[bundle.id,req.user.id]);
   return {bundle,items:rows,can_request:canRequest(req)&&bundle.available&&!rows.some(row=>row.state==='PENDING'),can_review:canReview(req)};
  }));
  app.post(base,{preHandler:[read,permitted(requestPermission),csrf]},req=>B.mutate(pool,req,c=>mutate(c,req,canRequest,async bundle=>{
@@ -71,6 +71,6 @@ async function pending(c,req){
   q.requested_at created_at,u.display_name initiator_name,'BUNDLE_CORRECTION' kind,'BUNDLE_CORRECTION' doc_type,
   'PENDING' status
   FROM bundle_corrections q JOIN inventory_view v ON v.uuid=q.bundle_id JOIN users u ON u.id=q.requester_id
-  WHERE q.state='PENDING' AND ${scope.text} ORDER BY q.requested_at,q.id`,scope.values)).rows.map(row=>({...row,href:'/inventory/'+encodeURIComponent(row.document_no)}));
+  WHERE q.state='PENDING' AND q.requester_id<>$1 AND ${scope.text} ORDER BY q.requested_at,q.id`,scope.values)).rows.map(row=>({...row,href:'/inventory/'+encodeURIComponent(row.document_no)}));
 }
 module.exports={register,pending};

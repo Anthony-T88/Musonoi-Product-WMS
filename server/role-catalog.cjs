@@ -3,6 +3,7 @@ const builtins=['admin','export_supervisor','logistics_manager','site_supervisor
 const legacy=['allocation:release','sample:read','sample:write','weigh:read','weigh:write','outbound:approve','outbound:packing','outbound:commerce','outbound:gate','outbound:depart','outbound:supervise'];
 const deps={
  'plan:approve':['plan:read','customer:read','master:read'],'plan:commerce-approve':['plan:read','customer:read','master:read'],
+ 'preparation-plan:write':['plan:read'],'preparation-plan:review':['plan:read'],
  'gate:issue':['gate:read'],'gate:print':['gate:read'],'gate:exit':['gate:read'],
  'co:loading-review':['loading-plan:read'],
  'co:metal-submit':['co:metal-read'],
@@ -14,6 +15,7 @@ const deps={
  'dispatch:month':['dispatch:read'],'dispatch:write':['dispatch:read','plan:read','customer:read','master:read'],'dispatch:read':['plan:read'],
  'allocation:write':['allocation:read','plan:read','customer:read','inventory:read','master:read'],'allocation:review':['allocation:read','plan:read','master:read'],
  'lot:cancel-approve':['allocation:read','master:read'],'lot:revoke':['allocation:read','master:read'],
+ 'lot:reverse-request':['allocation:read','co:read'],'lot:reverse-review':['allocation:read','co:read'],
  'load:write':['load:read','allocation:read','plan:read','customer:read','inventory:read','master:read'],'load:execute':['load:read','master:read'],'load:review':['load:read','master:read'],
  'loading-plan:write':['loading-plan:read','plan:read','customer:read','master:read'],'loading-plan:match':['loading-plan:read','load:write'],
  'vehicle-arrival:write':['vehicle-arrival:read','master:read'],'document:generate':['load:read','inventory:export','master:read'],
@@ -31,8 +33,8 @@ const defaults={
  logistics_field_operator:[...base,'inventory:export','label:print','customer:read','plan:read','allocation:write','lot:revoke','load:execute','vehicle-arrival:write','loading-plan:read','move:write','stocktake:write'],
  logistics_office_operator:[...base,'inventory:export','customer:read','plan:read','allocation:read','load:write','loading-plan:match','vehicle-arrival:read','dispatch:read','document:generate','report:read','stocktake:read','co:metal-submit'],
  site_supervisor:[...base,'inventory:export','customer:read','plan:read','allocation:review','lot:revoke','load:review','vehicle-arrival:read','loading-plan:read','stocktake:write','stocktake:review','adjust:write','exception:write','report:read'],
- logistics_manager:[...base,'inventory:export','customer:write','plan:write','dispatch:write','allocation:review','lot:revoke','lot:cancel-approve','load:review','loading-plan:write','vehicle-arrival:read','outbound:logistics-review','co:metal-submit','document:generate','packing-template:write','stocktake:write','stocktake:review','adjust:approve','exception:review','report:read'],
- export_supervisor:[...base,'customer:read','plan:read','dispatch:write','loading-plan:write','vehicle-arrival:read','document:generate','packing-template:write','report:read']
+ logistics_manager:[...base,'inventory:export','customer:write','plan:write','dispatch:write','allocation:review','preparation-plan:review','lot:revoke','lot:cancel-approve','load:review','loading-plan:write','vehicle-arrival:read','outbound:logistics-review','co:metal-submit','document:generate','packing-template:write','stocktake:write','stocktake:review','adjust:approve','exception:review','report:read'],
+ export_supervisor:[...base,'customer:read','plan:read','preparation-plan:write','dispatch:write','loading-plan:write','vehicle-arrival:read','document:generate','packing-template:write','report:read']
 };for(const r of Object.keys(defaults))defaults[r]=expand(defaults[r]);
 const presets={sales:{name:'销售与派车',name_en:'Sales and Dispatch',permissions:expand([...base,'customer:write','plan:write','dispatch:write','report:read'])},viewer:{name:'库存只读',name_en:'Inventory Viewer',permissions:[...base]}};
 async function valid(c,code){return (await c.query('SELECT * FROM roles WHERE code=$1 AND(code=ANY($2) OR NOT built_in)',[code,builtins])).rows[0]||null;}

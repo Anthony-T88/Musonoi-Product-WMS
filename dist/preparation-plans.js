@@ -7,7 +7,7 @@ window.PreparationPlans={
   const permissions=CurrentUser.permissions,start=ProductContext.isCopper()?'allocation:write':'co:create';
   if(permissions.includes('plan:read'))return 'plan:read';
   if(permissions.includes(start))return start;
-  if(['admin','logistics_manager'].includes(CurrentUser.role_code)&&permissions.includes('allocation:review'))return 'allocation:review';
+  if(permissions.includes('preparation-plan:review'))return 'preparation-plan:review';
   return null;
  },
  backLink(){
@@ -58,8 +58,8 @@ window.PreparationPlans={
  },
  async batch(){
   const t=this.t,state=this.state.bind(this),co=!ProductContext.isCopper(),api=this.api(),base=(co?'/cobalt':'')+'/sales-workflow/plans';
-  if(!['admin','export_supervisor'].includes(CurrentUser.role_code)||!CurrentUser.permissions.includes('plan:read'))
-   throw Object.assign(Error(t('当前岗位无权创建备货计划','This role cannot create preparation plans')),{statusCode:403});
+  if(!CurrentUser.permissions.includes('preparation-plan:write'))
+   throw Object.assign(Error(t('当前账号无权创建备货计划','This account cannot create preparation plans')),{statusCode:403});
   const title=t('新建备货计划','New Preparation Plan'),formId='preparation-plan-batch';
   const heads=[t('备货批次号','Preparation Lot Number'),t('销售计划','Sales Plan'),t('客户','Customer'),
    t('发运月份','Shipment Month'),t('校验结果','Validation'),t('操作','Actions')];

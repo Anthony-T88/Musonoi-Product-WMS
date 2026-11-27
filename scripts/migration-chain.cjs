@@ -21,20 +21,35 @@ async function guard172(client,stage){
  if(!['before','after'].includes(stage))DB.fail('MIGRATION_GUARD_STAGE_INVALID');
  const spec=JSON.parse(fs.readFileSync(path.join(root,'db/migration-guards/172-admin-permissions.json'),'utf8'));
  const actual=(await client.query("SELECT p.oid::regprocedure::text signature,p.prosrc body,p.prosecdef security_definer,p.proconfig configuration FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY($1) ORDER BY p.oid::regprocedure::text",[spec.names])).rows;
- const managerSubmission=stage==='after'&&(await client.query("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version='176_v470_map_and_workflows.sql') applied")).rows[0].applied;
- if(managerSubmission){
+ const revisions=stage==='after'?(await client.query(`SELECT
+  EXISTS(SELECT 1 FROM schema_migrations WHERE version='176_v470_map_and_workflows.sql') manager_submission,
+  EXISTS(SELECT 1 FROM schema_migrations WHERE version='194_v481_dispatch_and_approval.sql') approval_policy,
+  EXISTS(SELECT 1 FROM schema_migrations WHERE version='221_v490_configurable_business_roles.sql') configurable_roles`)).rows[0]:{};
+ if(revisions.manager_submission&&!revisions.configurable_roles){
   for(const r of actual.filter(r=>/^(ux10_plan_submission|v468_submit_legacy_plan_edit)\(/.test(r.signature))){
    const expanded="u.role_code IN('sales_operator','admin','sales_manager')";
    if(!r.body.includes(expanded))DB.fail('MIGRATION_176_SALES_FUNCTION_MISMATCH');
    r.body=r.body.replaceAll(expanded,"u.role_code IN('sales_operator','admin')");
   }
  }
- const approvalPolicy=stage==='after'&&managerSubmission&&(await client.query("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version='194_v481_dispatch_and_approval.sql') applied")).rows[0].applied;
  const approvalHashes={
   'ux10_review_sales_plan(text,uuid,uuid,integer,text,text)':'0e7e9f958c1d5dad47fc48ff9394575d5881cd53939b3e61e4cb4bda040f0f69',
   'v468_review_plan_close(text,uuid,uuid,uuid,integer,text,text)':'076d39dd07f5cfa57f2ecb15f334ce29609224d1fd658225714490abb1315fdc'
  };
- const expected=new Map(spec[stage].map(r=>[r.signature,approvalPolicy&&approvalHashes[r.signature]?{...r,bodySha256:approvalHashes[r.signature]}:r]));
+ const configurableHashes={
+  'co_execution_authorized(uuid,text,uuid,text)':'b2946d0548c0c3c7586c843e68d62083f605b36d7cc26ae1991ffa8c652d9962',
+  'co_work_authorized(uuid,text,uuid,text)':'04067ba780a756c8eab9d787b114f4a80795f41568ed706ffc31b697d155f0df',
+  'gate_exit_guard()':'249e9f5ce60ecb7eaed44cb9c3d71d69b07698c0935366fb057c07dd83f5192a',
+  'ux10_plan_submission()':'02ac59871fc2042c1a2bc0f1f67f7884aee65176a2ead1f9605aa5f0938e7171',
+  'ux10_review_sales_plan(text,uuid,uuid,integer,text,text)':'0d7780b5483e662efd8180ede010ad157460489872213a9cda4b7a92ae826de1',
+  'v468_request_plan_close(text,uuid,uuid,integer,text)':'7434951cbb77d17ae87c8d72dca248e0a6690164989854171f38945640f321af',
+  'v468_review_plan_close(text,uuid,uuid,uuid,integer,text,text)':'6c5fb16104d65667e26242339d1950694ce4bac897f377a22bca8972709178ca',
+  'v468_submit_legacy_plan_edit(text,uuid,uuid,integer)':'b86fd8c66637f7eab30aeb361ce59c6e9d13b9c708bb7fa4f487b10ebed0cec5'
+ };
+ const expected=new Map(spec[stage].map(r=>{
+  const revisionHash=revisions.configurable_roles?configurableHashes[r.signature]:revisions.approval_policy?approvalHashes[r.signature]:null;
+  return [r.signature,{...r,bodySha256:revisionHash||r.bodySha256}];
+ }));
  if(actual.length!==expected.size||actual.some(r=>{const e=expected.get(r.signature);return !e||digest(r.body)!==e.bodySha256||r.security_definer!==e.security_definer||JSON.stringify(r.configuration)!==JSON.stringify(e.configuration);}))DB.fail('MIGRATION_172_FUNCTION_BASELINE_MISMATCH');
 }
 async function execute(client,entry){

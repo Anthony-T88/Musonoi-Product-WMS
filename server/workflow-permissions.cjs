@@ -13,7 +13,7 @@ const definitions={
  'master:write':['项目、仓库及基础资料维护','Maintain Master Data'],
  'customer:read':['客户及合同查看','View Customers and Contracts'],
  'customer:write':['客户及销售合同维护','Maintain Customers and Sales Contracts'],
- 'plan:read':['铜钴销售计划查看；出口主管及管理员建备货计划、存草稿与提交','View Sales Plans; Export Supervisors and Administrators Can Draft, Create and Submit Preparation Plans'],
+ 'plan:read':['铜钴销售计划及备货计划查看','View Copper and Cobalt Sales and Preparation Plans'],
  'plan:write':['销售计划新建、草稿、编辑及关闭申请','Draft, Create, Edit and Request Sales Plan Closure'],
  'plan:approve':['销售计划创建、编辑及关闭初审','Sales Review of Creation, Edit and Closure'],
  'plan:commerce-approve':['销售计划创建、编辑及关闭终审','Commercial Final Review of Sales Plans'],
@@ -25,7 +25,9 @@ const definitions={
  'receipt:review':['铜入库审核','Review Copper Receipts'],
  'allocation:read':['铜备货批次及作业记录查看','View Copper Lots and Work Records'],
  'allocation:write':['按已批计划创建铜备货单、检斤、取样、铅封及提交','Create Copper Preparation from Approved Plans, Weigh, Sample, Seal and Submit'],
- 'allocation:review':['铜备货审核及授权更正；物流经理及管理员审核铜钴备货计划','Review Copper Preparation and Corrections; Logistics Managers and Administrators Review Preparation Plans'],
+ 'allocation:review':['铜备货审核及授权更正','Review Copper Preparation and Corrections'],
+ 'preparation-plan:write':['铜钴备货计划新建、保存草稿与提交','Draft, Create and Submit Copper and Cobalt Preparation Plans'],
+ 'preparation-plan:review':['铜钴备货计划审核','Review Copper and Cobalt Preparation Plans'],
  'lot:revoke':['铜备货撤回及撤销审核','Withdraw Copper Lots or Revoke Review'],
  'lot:reverse-request':['申请整批撤销已审批备货','Request Whole-Batch Preparation Reversal'],
  'lot:reverse-review':['审核整批撤销备货','Review Whole-Batch Preparation Reversal'],
@@ -35,12 +37,12 @@ const definitions={
  'co:submit':['钴入库备货提交审核','Submit Cobalt Intake for Review'],
  'co:withdraw':['钴入库备货撤回','Withdraw Cobalt Intake Submission'],
  'co:site-review':['钴历史入库流程现场审核','Site Review of Legacy Cobalt Intake'],
- 'co:production-review':['钴入库生产经理终审','Production Manager Final Review of Cobalt Intake'],
+ 'co:production-review':['钴入库终审','Final Review of Cobalt Intake'],
  'co:work-edit':['钴备货重量、铅封及取样录入','Record Cobalt Weights, Seals and Samples'],
  'co:work-submit':['钴备货完工提交','Submit Cobalt Preparation Completion'],
- 'co:completion-review':['钴备货完工现场主管审核','Site Supervisor Review of Cobalt Completion'],
+ 'co:completion-review':['钴备货完工审核','Review Cobalt Preparation Completion'],
  'co:amend-request':['钴已完工备货更正申请','Request Cobalt Completed-Work Correction'],
- 'co:amend-review':['钴备货更正现场主管复核','Site Supervisor Review of Cobalt Corrections'],
+ 'co:amend-review':['钴备货更正复核','Review Cobalt Corrections'],
  'co:locate':['钴袋级标记及调整实际货位','Mark and Relocate Cobalt Bags'],
  'co:location-manage':['钴库区、货位及地图配置','Configure Cobalt Zones, Locations and Map'],
  'co:temp-locate':['钴临时存放点标记与移位','Mark and Relocate Temporary Cobalt Stock'],
@@ -60,7 +62,7 @@ const definitions={
  'load:review':['铜装车审核／钴装车完工审核','Review Copper Loads or Cobalt Loading'],
  'load:execute':['装车后出库流程申报（非销售实际出厂确认）','Register the Stock Issue Workflow after Loading'],
  'outbound:read':['铜钴出库进度及正式出库记录查看','View Stock Issue Progress and Posted Records'],
- 'outbound:logistics-review':['装车离场申报的物流经理审核','Logistics Review of the Stock Issue Declaration'],
+ 'outbound:logistics-review':['装车离场申报的物流审核','Logistics Review of the Stock Issue Declaration'],
  'outbound:production-approve':['正式出库终审','Final Stock Issue Approval'],
  'customs:bp':['编制、修订、下载及打印BP表，维护清关代理记录簿','Prepare, Revise, Download and Print BP Sheets and Maintain the Customs Agency Book'],
  'customs:bp-template':['BP表模板维护','Maintain BP Sheet Templates'],
@@ -69,7 +71,7 @@ const definitions={
  'gate:read':['车辆出厂列表、出门证及历史查看','View Vehicle Gate Exit and Permit History'],
  'gate:issue':['最终出库审批后生成及修订出门证','Generate or Revise Permits after Final Stock Issue Approval'],
  'gate:print':['出门证预览、Excel 下载及 9.5 × 5.5 英寸打印','Preview, Download and Print Gate Permits at 9.5 × 5.5 Inches'],
- 'gate:exit':['销售确认车辆实际出厂','Sales Confirmation of Physical Gate Exit'],
+ 'gate:exit':['确认车辆实际出厂','Confirm Physical Gate Exit'],
  'stocktake:read':['铜钴盘点任务及差异查看','View Inventory Counts and Differences'],
  'stocktake:write':['铜钴盘点草稿、建单、实盘及提交','Draft, Create, Count and Submit Inventory Counts'],
  'stocktake:review':['铜钴盘点审核','Review Inventory Counts'],
@@ -82,11 +84,13 @@ const definitions={
  'system:manage':['系统设置及业务预警配置','Manage System and Business Alert Settings'],
  'audit:read':['系统操作及授权变更日志查看','View Operation and Authorization Audit Logs']
 };
-const fixedRoles={
+// These recommendations describe typical duties and do not limit grants.
+const recommendedRoles={
  'customs:bp':['logistics_office_operator'],
  'customs:bp-template':['logistics_manager','export_supervisor'],
  'lot:reverse-request':['site_supervisor'],'lot:reverse-review':['logistics_manager'],
  'inventory:correct-request':['production_operator','logistics_field_operator'],'inventory:correct-review':['production_manager'],
+ 'preparation-plan:write':['export_supervisor'],'preparation-plan:review':['logistics_manager'],
  'dispatch:month':['sales_operator','sales_manager'],
  'plan:write':['sales_operator','sales_manager'],'plan:approve':['sales_manager'],'plan:commerce-approve':['commerce_manager'],
  'co:site-review':['site_supervisor'],'co:production-review':['production_manager'],
@@ -94,10 +98,9 @@ const fixedRoles={
  'gate:exit':['sales_operator','sales_manager']
 };
 const copperOnly=new Set(['inventory:correct-request','inventory:correct-review','receipt:read','receipt:write','receipt:review','allocation:read','allocation:write','allocation:review','lot:revoke','lot:cancel-approve','move:write','adjust:read','adjust:write','adjust:approve']);
-const strictRoles=new Set(['lot:reverse-request','lot:reverse-review','co:loading-review','inventory:correct-request','inventory:correct-review']);
-const catalog=Object.fromEntries(Object.entries(definitions).map(([code,[zh,en]])=>[code,{zh,en,products:code.startsWith('co:')?['CO_HYDROXIDE']:copperOnly.has(code)?['CU_CATHODE']:['CU_CATHODE','CO_HYDROXIDE'],...(fixedRoles[code]?{roles:strictRoles.has(code)?fixedRoles[code]:[...fixedRoles[code],'admin']}:{})}]));
-const modules={customs:["customs","清关单据管理","Customs Document Management"],"dashboard":["overview","信息总览","Overview"],"plan":["sales","销售计划及审批","Sales Plans and Approvals"],"dispatch":["dispatch","客户派车管理","Customer Dispatch"],"customer":["customers","客户与合同","Customers and Contracts"],"receipt":["copper-intake","阴极铜入库","Copper Receipts"],"allocation":["copper-preparation","阴极铜备货","Copper Preparation"],"lot":["copper-preparation","阴极铜备货","Copper Preparation"],"co":["cobalt-preparation","氢氧化钴入库与备货","Cobalt Intake and Preparation"],"vehicle-arrival":["arrivals","车辆到厂登记","Vehicle Arrival"],"export-license":["export-licenses","出口许可证管理","Export License Management"],"loading-plan":["loading-plans","装车计划与匹配","Loading Plans and Matching"],"load":["loading-orders","装车单及装车作业","Loading Orders and Operations"],"outbound":["outbound","出库审批与归档","Stock Issue Approvals and Records"],"gate":["gate","车辆出厂与出门证","Gate Exit and Permits"],"document":["customs","清关单据管理","Customs Document Management"],"packing-template":["customs","清关单据管理","Customs Document Management"],"inventory":["inventory","库存查询与导出","Stock Queries and Export"],"move":["placement","实际货位调整","Physical Stock Placement"],"stocktake":["stocktaking","库存盘点","Inventory Count"],"adjust":["adjustment","库存调整","Stock Adjustments"],"master":["master-data","项目仓库与基础资料","Master Data"],"users":["accounts","账户与注册审批","Accounts and Registration"],"roles":["roles","岗位与权限","Roles and Permissions"],"system":["system","系统设置与预警","System and Alerts"],"audit":["audit","操作日志","Audit Log"],"report":["reports","统计报表","Reports"]};for(const [code,entry]of Object.entries(catalog)){const [module,module_zh,module_en]=code.startsWith('lot:reverse-')?['preparation-reversal','整批撤销备货','Whole-Batch Preparation Reversal']:code.startsWith('co:')&&['co:locate','co:location-manage','co:temp-locate'].includes(code)?['cobalt-placement','氢氧化钴货位与地图','Cobalt Locations and Map']:code.startsWith('co:metal-')?['cobalt-metal','钴金属量管理','Cobalt Metal Management']:modules[code.split(':')[0]];Object.assign(entry,{module,module_zh,module_en,protected_admin:['users:manage','roles:manage'].includes(code)});}
+const catalog=Object.fromEntries(Object.entries(definitions).map(([code,[zh,en]])=>[code,{zh,en,products:code.startsWith('co:')?['CO_HYDROXIDE']:copperOnly.has(code)?['CU_CATHODE']:['CU_CATHODE','CO_HYDROXIDE'],...(recommendedRoles[code]?{roles:recommendedRoles[code]}:{})}]));
+const modules={"preparation-plan":["preparation-plans","备货计划","Preparation Plans"],customs:["customs","清关单据管理","Customs Document Management"],"dashboard":["overview","信息总览","Overview"],"plan":["sales","销售计划及审批","Sales Plans and Approvals"],"dispatch":["dispatch","客户派车管理","Customer Dispatch"],"customer":["customers","客户与合同","Customers and Contracts"],"receipt":["copper-intake","阴极铜入库","Copper Receipts"],"allocation":["copper-preparation","阴极铜备货","Copper Preparation"],"lot":["copper-preparation","阴极铜备货","Copper Preparation"],"co":["cobalt-preparation","氢氧化钴入库与备货","Cobalt Intake and Preparation"],"vehicle-arrival":["arrivals","车辆到厂登记","Vehicle Arrival"],"export-license":["export-licenses","出口许可证管理","Export License Management"],"loading-plan":["loading-plans","装车计划与匹配","Loading Plans and Matching"],"load":["loading-orders","装车单及装车作业","Loading Orders and Operations"],"outbound":["outbound","出库审批与归档","Stock Issue Approvals and Records"],"gate":["gate","车辆出厂与出门证","Gate Exit and Permits"],"document":["customs","清关单据管理","Customs Document Management"],"packing-template":["customs","清关单据管理","Customs Document Management"],"inventory":["inventory","库存查询与导出","Stock Queries and Export"],"move":["placement","实际货位调整","Physical Stock Placement"],"stocktake":["stocktaking","库存盘点","Inventory Count"],"adjust":["adjustment","库存调整","Stock Adjustments"],"master":["master-data","项目仓库与基础资料","Master Data"],"users":["accounts","账户与注册审批","Accounts and Registration"],"roles":["roles","岗位与权限","Roles and Permissions"],"system":["system","系统设置与预警","System and Alerts"],"audit":["audit","操作日志","Audit Log"],"report":["reports","统计报表","Reports"]};for(const [code,entry]of Object.entries(catalog)){const [module,module_zh,module_en]=code.startsWith('lot:reverse-')?['preparation-reversal','整批撤销备货','Whole-Batch Preparation Reversal']:code.startsWith('co:')&&['co:locate','co:location-manage','co:temp-locate'].includes(code)?['cobalt-placement','氢氧化钴货位与地图','Cobalt Locations and Map']:code.startsWith('co:metal-')?['cobalt-metal','钴金属量管理','Cobalt Metal Management']:modules[code.split(':')[0]];Object.assign(entry,{module,module_zh,module_en,protected_admin:['users:manage','roles:manage'].includes(code)});}
 catalog['load:review'].product_roles={CO_HYDROXIDE:['site_supervisor','admin']};catalog['outbound:production-approve'].product_roles={CO_HYDROXIDE:['production_manager','admin']};
-const active=code=>Object.hasOwn(catalog,code),assignable=(role,code)=>active(code)&&(strictRoles.has(code)?fixedRoles[code].includes(role):role==='admin'||!fixedRoles[code]||fixedRoles[code].includes(role));
-function present(role){const applicable=p=>assignable(role.code,p);return {...role,caps:role.caps.filter(applicable),permissions:role.permissions.filter(applicable),recommended_permissions:(role.recommended_permissions||[]).filter(applicable)};}
-module.exports={catalog,retired,active,assignable,present};
+const active=code=>Object.hasOwn(catalog,code);
+function present(role){return {...role,caps:role.caps.filter(active),permissions:role.permissions.filter(active),recommended_permissions:(role.recommended_permissions||[]).filter(active)};}
+module.exports={catalog,retired,active,present};

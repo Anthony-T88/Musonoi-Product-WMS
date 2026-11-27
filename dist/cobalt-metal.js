@@ -2,7 +2,7 @@
 window.CobaltMetal={
  base:'/cobalt/metal',t:(zh,en)=>CobaltUI.t(zh,en),
  outboundPermission(){
-  return ['outbound:read','outbound:logistics-review',...(['admin','production_manager'].includes(CurrentUser.role_code)?['outbound:production-approve']:[])]
+  return ['outbound:read','outbound:logistics-review','outbound:production-approve']
    .find(code=>CobaltUI.can(code));
  },
  navigationPermission(){

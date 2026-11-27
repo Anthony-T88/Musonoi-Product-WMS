@@ -39,12 +39,12 @@ async function documents(c,req,x){const out=[];
 async function tasks(c,req,context=null){const x=context||await M.context(c,req,{}),all=await documents(c,req,x),original=await M.todos(c,x);
  let pending=original.map(t=>{const type=({RECEIPT:'RECEIPT',LOT:'LOT',LOAD:'LOAD',LOGISTICS:'LOAD',FORMAL:'LOAD',COUNT:'COUNT',ADJUST:'ADJUST',PLAN:'LOADING_PLAN',VEHICLE:'VEHICLE',ARRIVAL:'ARRIVAL'})[t.kind.split('_')[0]],d=all.find(d=>d.id===t.id&&d.doc_type===type);return {...d,...t,created_at:t.created_at||d?.created_at||null};});
  for(const d of all.filter(d=>d.doc_type==='SALES')){
-  const sales=d.status==='PENDING'&&['sales_manager','admin'].includes(req.user.role_code)&&can(req,'plan:approve');
-  const commerce=d.status==='COMMERCE_PENDING'&&['commerce_manager','admin'].includes(req.user.role_code)&&can(req,'plan:commerce-approve');
+  const sales=d.status==='PENDING'&&can(req,'plan:approve');
+  const commerce=d.status==='COMMERCE_PENDING'&&can(req,'plan:commerce-approve');
   if(sales||commerce)pending.push({...d,kind:sales?'SALES_REVIEW':'COMMERCE_REVIEW'});
-  if(d.status==='REJECTED'&&['sales_operator','sales_manager','admin'].includes(req.user.role_code)&&d.submitted_by===req.user.id&&can(req,'plan:write'))pending.push({...d,kind:'SALES_EDIT'});
+  if(d.status==='REJECTED'&&d.submitted_by===req.user.id&&can(req,'plan:write'))pending.push({...d,kind:'SALES_EDIT'});
  }
- if(can(req,'gate:read')&&['sales_manager','sales_operator','admin'].includes(req.user.role_code))for(const d of await M.outbound(c,x,false)){
+ if(can(req,'gate:read')&&can(req,'gate:exit'))for(const d of await M.outbound(c,x,false)){
   const g=(await c.query('SELECT id,state,document_no FROM gate_permits WHERE cu_loading_id=$1',[d.id])).rows[0];
   const returned=(await c.query("SELECT 1 FROM outbound_corrections WHERE loading_id=$1 AND kind='RETURN_OUTBOUND' AND status IN('REQUESTED','AUTHORIZED','RETURN_VERIFIED','APPLIED')",[d.id])).rowCount;
   if(!returned&&g?.state!=='EXITED')pending.push({...d,doc_type:'GATE',kind:'GATE_EXIT',document_no:g?.document_no||d.document_no,href:'/outbounds?view=departures'+(g?'&permit='+g.id:''),created_at:d.manager_at,initiator_name:null});

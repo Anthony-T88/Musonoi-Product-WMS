@@ -1,6 +1,7 @@
 'use strict';
 window.Permissions469R2={
  names:{
+ 'preparation-plan:write':['创建、编辑及提交','Create, edit and submit'],'preparation-plan:review':['审核备货计划','Review preparation plans'],
  'co:metal-read':['查看钴金属量','View cobalt metal'],'co:metal-submit':['录入及提交金属量','Enter and submit metal'],
  'dashboard:read':['查看总览','View overview'],'inventory:read':['库存 / 地图','Stock / map'],'inventory:correct-request':['捆包更正申请','Request Bundle Correction'],'inventory:correct-review':['捆包更正审核','Review Bundle Correction'],'inventory:export':['导出库存 / 到厂 / 计划','Export stock / arrivals / plans'],'report:read':['查看报表','View reports'],'master:read':['读取业务选项','Read business options'],'master:write':['维护基础资料','Maintain master data'],'customer:read':['查看客户 / 合同','View customers / contracts'],'customer:write':['维护客户 / 合同','Maintain customers / contracts'],
  'plan:read':['查看计划','View plans'],'plan:write':['新建 / 编辑 / 关闭申请','Create / edit / request closure'],'plan:approve':['初审','Initial review'],'plan:commerce-approve':['终审','Final review'],'dispatch:read':['查看派车单','View dispatches'],'dispatch:write':['导入 / 维护车辆','Import / maintain vehicles'],
@@ -64,9 +65,9 @@ window.Permissions469R2={
    const definition=catalog[input.value],label=input.closest('label'),span=label.querySelector('span'),name=this.names[input.value];if(!definition||!span)continue;
    const full=t(definition.zh,definition.en),short=name?t(...name):full;input.setAttribute('aria-label',full);span.dataset.noI18n='';span.dataset.permissionLanguage=I18n.language;
    const notes=[],fixed=definition.roles,cobalt=definition.product_roles?.CO_HYDROXIDE;
-   if(fixed)notes.push(t('适用角色：','Applicable roles:')+' '+roleNames(fixed));
-   if(cobalt)notes.push(t('钴：','Cobalt: ')+roleNames(cobalt));
-   if(input.dataset.permissionAssignable==='false'&&(!fixed||fixed.includes(Accounts.selectedRole)))notes.push(t('超出当前管理授权','Outside your grant authority'));
+   if(fixed)notes.push(t('建议岗位：','Suggested roles:')+' '+roleNames(fixed));
+   if(cobalt)notes.push(t('钴业务建议岗位：','Suggested roles for cobalt:')+' '+roleNames(cobalt));
+   if(input.dataset.permissionAssignable==='false')notes.push(t('超出当前管理授权','Outside your grant authority'));
    label.title=[full,...notes].join('\n');
    if(notes.length)input.setAttribute('aria-description',notes.join(' · '));
    else input.removeAttribute('aria-description');

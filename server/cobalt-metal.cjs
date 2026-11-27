@@ -7,7 +7,7 @@ const isSubmission=(path,method)=>method==='POST'&&submissionPath.test(path);
 const allowed=(path,method)=>method==='GET'&&new RegExp('^'+base+'(?:|/export|/outbounds/'+idPattern+')$').test(path)
  ||method==='POST'&&new RegExp('^'+base+'/outbounds/'+idPattern+'/(?:submit|confirm|reject)$').test(path);
 const enabled=async c=>(await c.query("SELECT to_regclass('public.co_metal_outbound') IS NOT NULL ok")).rows[0].ok;
-const canDecide=user=>user.permissions.includes('outbound:production-approve')&&['admin','production_manager'].includes(user.role_code);
+const canDecide=user=>user.permissions.includes('outbound:production-approve');
 const canReadInventory=user=>user.permissions.includes(readPermission)||user.permissions.includes('co:read');
 const canReadAll=user=>user.permissions.includes(readPermission)||user.permissions.includes('outbound:read');
 // Generic archived stock issue documents still use their existing permissions.

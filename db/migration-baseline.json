@@ -881,6 +881,10 @@
     {
       "version": "220_v490_cobalt_metal_permissions.sql",
       "checksum": "c6ea6ab771036147799a54b84a68475f598f93e48f481637a9bf5cafc919fc7a"
+    },
+    {
+      "version": "221_v490_configurable_business_roles.sql",
+      "checksum": "5284f502fa33f3c2ae730db31fe8fb36c6c4c137020d95b6189734e052aa923e"
     }
   ]
 }

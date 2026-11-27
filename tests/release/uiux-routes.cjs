@@ -225,7 +225,7 @@ function pages(ids){
  add('report-center-historical-movement','/reports',BOTH,{query:'?kind=movement&tab=detail&source=HISTORICAL',state:'historical document numbers in movement detail'});
  add('workbench','/workbench',BOTH);
  add('accounts','/workbench/accounts',BOTH,{screenshot:true});
- add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});
+ add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator'],state:'all business permissions shown with role recommendations and editable grants for authorized managers'});
  add('diagnostics','/workbench/diagnostics',BOTH);
  add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator plan and SMTP tabs, registered recipients, schedule status and next planned delivery'});
  add('former-design-entry','/workbench/design',BOTH);

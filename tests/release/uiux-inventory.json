@@ -1455,7 +1455,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "all business permissions shown with role recommendations and editable grants for authorized managers",
       "template": "/workbench/permissions"
     },
     {
