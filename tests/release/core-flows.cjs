@@ -13,7 +13,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
  await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id) VALUES($1,$2,$3)',[scoped.id,f.project,f.warehouse]);
  f.accounts.push({id:scoped.id,username,password,role:'warehouse_manager'});
  await c.query("INSERT INTO role_permissions SELECT 'logistics_field_operator',unnest(ARRAY['loading-plan:match','load:write','load:execute']) ON CONFLICT DO NOTHING");app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
- for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.93.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
+ const signIn=async a=>{const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.93.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};};
+ for(const a of f.accounts)await signIn(a);
  const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CO_HYDROXIDE','idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(url,role,body,expected=200)=>{const r=await request(url,role,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),salt=crypto.randomBytes(4).toString('hex'),customer=f.customers.CO_HYDROXIDE;
@@ -300,19 +301,63 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.deepEqual(precision,{thirty:'10.80000',one:'0.23292',combined:'0.46585',rounded_per_bag:'0.46584',difference:'0.12345'});
   const pending='/cobalt/metal?view=outbound&status=PENDING_ARECOMS';
   assert((await api(pending)).items.some(r=>r.order_id===matched.order.id));
-  assert(!(await api(pending,'logistics_manager')).items.some(r=>r.order_id===matched.order.id));
-  await api(base,'logistics_manager',undefined,404);
+  assert((await api(pending,'logistics_manager')).items.some(r=>r.order_id===matched.order.id));
+  assert.equal((await api(base,'logistics_manager')).can_submit,true);
+  const officeRole='logistics_office_operator',office=f.accounts.find(a=>a.role===officeRole);
+  const page='/cobalt-metal?view=outbound&detail='+matched.order.id;
+  const readPage=role=>app.inject({url:page,headers:{cookie:sessions[role].cookie+'; musonoi_product=CO_HYDROXIDE'}});
+  assert.equal((await readPage(officeRole)).statusCode,200);
+  assert.equal((await readPage('limited_viewer')).statusCode,403);
+  assert.equal((await api('/cobalt/metal',officeRole)).view,'inventory');
+  assert((await api(pending,officeRole)).items.some(r=>r.order_id===matched.order.id));
+  const officeDetail=await api(base,officeRole);
+  assert.equal(officeDetail.can_submit,true);
+  assert.equal(officeDetail.can_decide,false);
+  await api('/cobalt/execution/outbounds',officeRole,undefined,403);
+  await api(base,'limited_viewer',undefined,403);
   await api(base,'customer_admin',undefined,404);
   assert.equal((await app.inject({url:'/api/v1'+base,headers:{...sessions.admin,'x-product-code':'CU_CATHODE'}})).statusCode,409);
   const proposal={version:0,amount_mt:'0.35641',reason:'Independent synthetic assay'};
+  try{
+   await c.query('UPDATE user_scopes SET customer_id=$2 WHERE user_id=$1',[office.id,f.customers.CU_CATHODE.id]);
+   await signIn(office);
+   assert(!(await api(pending,officeRole)).items.some(r=>r.order_id===matched.order.id));
+   await api(base,officeRole,undefined,404);
+   await api(base+'/submit',officeRole,proposal,404);
+  }finally{
+   await c.query('UPDATE user_scopes SET customer_id=NULL WHERE user_id=$1',[office.id]);
+   await signIn(office);
+  }
   await api(base+'/submit','site_supervisor',proposal,403);
-  await api(base+'/submit','logistics_manager',{...proposal,amount_mt:'0.00000'},400);
-  await api(base+'/submit','logistics_manager',{...proposal,amount_mt:'0.123456'},400);
-  const key=crypto.randomUUID(),submissions=await Promise.all([request(base+'/submit','logistics_manager',proposal,key),request(base+'/submit','logistics_manager',proposal,key)]);
+  await api(base+'/submit',officeRole,{...proposal,amount_mt:'0.00000'},400);
+  await api(base+'/submit',officeRole,{...proposal,amount_mt:'0.123456'},400);
+  const key=crypto.randomUUID(),submissions=await Promise.all([request(base+'/submit',officeRole,proposal,key),request(base+'/submit',officeRole,proposal,key)]);
   assert(submissions.every(r=>r.statusCode===200),submissions.map(r=>r.body).join(' '));
   assert.deepEqual(submissions[0].json(),submissions[1].json());
+  const status=path=>'/cobalt/operations/status?'+new URLSearchParams({key,path,method:'POST'});
+  const submitStatus=status(base+'/submit');
+  const removed=await c.query("DELETE FROM role_permissions WHERE role_code=$1 AND permission_code='co:read'",[officeRole]);
+  try{
+   await signIn(office);
+   const receipt=await api(submitStatus,officeRole);
+   assert.equal(receipt.state,'CONFIRMED');
+   assert.equal(receipt.entity_id,matched.order.id);
+   assert.equal((await api(submitStatus,'logistics_manager')).state,'UNKNOWN');
+   await api(submitStatus,'site_supervisor',undefined,403);
+   await api(status(base+'/confirm'),officeRole,undefined,403);
+   await api(status('/cobalt/preparations/'+prep.id+'/submit'),officeRole,undefined,403);
+   await c.query('UPDATE user_scopes SET customer_id=$2 WHERE user_id=$1',[office.id,f.customers.CU_CATHODE.id]);
+   await signIn(office);
+   await api(submitStatus,officeRole,undefined,403);
+  }finally{
+   if(removed.rowCount)await c.query("INSERT INTO role_permissions VALUES($1,'co:read')",[officeRole]);
+   await c.query('UPDATE user_scopes SET customer_id=NULL WHERE user_id=$1',[office.id]);
+   await signIn(office);
+  }
   assert.equal((await api(base)).shipment_status,'PENDING_ARECOMS');
   const decision={version:1,reason:'Verified ARECOMS against original'};
+  await api(base+'/confirm',officeRole,decision,403);
+  await api(base+'/reject',officeRole,decision,403);
   const decisions=await Promise.all([request(base+'/confirm','production_manager',decision),request(base+'/confirm','production_manager',decision)]);
   assert.deepEqual(decisions.map(r=>r.statusCode).sort(),[200,409]);
   const complete=await api(base);assert.equal(complete.shipment_status,'COMPLETED');assert.equal(complete.confirmed_mt,'0.35641');

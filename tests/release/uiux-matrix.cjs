@@ -114,6 +114,7 @@ function selectors(key,product,landing){
   'loading-search':['.r9-document-filter input','.r9-document-filter select','.r9-document-filter button'],
   metal:['#co-metal-filter','.co-metal-table, #page-content table'],
   'metal-confirmations':['#co-metal-filter','#page-content table'],
+  'metal-entry':['#co-metal-detail','#co-metal-history'],
   'co-historical-metal':['.wms-historical-detail','#co-metal-detail'],
   'preparation-batch':['#preparation-plan-batch','#preparation-batch-paste','#preparation-occupied-filter'],
   'historical-movements':['#historical-upload','#historical-filter'],

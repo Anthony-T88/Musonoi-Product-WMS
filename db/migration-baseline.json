@@ -877,6 +877,10 @@
     {
       "version": "219_v490_retire_access_change_approval.sql",
       "checksum": "6bea26092015c493b5bb8814eae90b9930b6d700de5476bd18a140dbe216a762"
+    },
+    {
+      "version": "220_v490_cobalt_metal_permissions.sql",
+      "checksum": "c6ea6ab771036147799a54b84a68475f598f93e48f481637a9bf5cafc919fc7a"
     }
   ]
 }

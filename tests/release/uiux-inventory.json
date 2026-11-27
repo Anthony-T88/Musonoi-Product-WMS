@@ -1143,7 +1143,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "scoped cobalt metal access and separate entry permission",
       "template": "/cobalt-metal"
     },
     {
@@ -1160,6 +1160,14 @@
         "CO_HYDROXIDE"
       ],
       "state": "pending online and historical outbounds",
+      "template": "/cobalt-metal"
+    },
+    {
+      "key": "metal-entry",
+      "products": [
+        "CO_HYDROXIDE"
+      ],
+      "state": "scoped ARECOMS entry and return to the queue",
       "template": "/cobalt-metal"
     },
     {

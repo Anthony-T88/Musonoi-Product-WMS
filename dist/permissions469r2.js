@@ -1,6 +1,7 @@
 'use strict';
 window.Permissions469R2={
  names:{
+ 'co:metal-read':['查看钴金属量','View cobalt metal'],'co:metal-submit':['录入及提交金属量','Enter and submit metal'],
  'dashboard:read':['查看总览','View overview'],'inventory:read':['库存 / 地图','Stock / map'],'inventory:correct-request':['捆包更正申请','Request Bundle Correction'],'inventory:correct-review':['捆包更正审核','Review Bundle Correction'],'inventory:export':['导出库存 / 到厂 / 计划','Export stock / arrivals / plans'],'report:read':['查看报表','View reports'],'master:read':['读取业务选项','Read business options'],'master:write':['维护基础资料','Maintain master data'],'customer:read':['查看客户 / 合同','View customers / contracts'],'customer:write':['维护客户 / 合同','Maintain customers / contracts'],
  'plan:read':['查看计划','View plans'],'plan:write':['新建 / 编辑 / 关闭申请','Create / edit / request closure'],'plan:approve':['初审','Initial review'],'plan:commerce-approve':['终审','Final review'],'dispatch:read':['查看派车单','View dispatches'],'dispatch:write':['导入 / 维护车辆','Import / maintain vehicles'],
  'receipt:read':['查看入库单','View receipts'],'receipt:write':['新建 / 编辑 / 提交','Create / edit / submit'],'receipt:review':['入库审核','Review receipt'],'allocation:read':['查看备货 / 作业','View lots / work'],'allocation:write':['建单 / 检斤 / 取样 / 铅封','Create / weigh / sample / seal'],'allocation:review':['备货审核 / 更正','Review / correct preparation'],'lot:revoke':['撤回 / 撤销审核','Withdraw / revoke review'],'lot:cancel-approve':['取消审批','Review cancellation'],
@@ -58,10 +59,19 @@ window.Permissions469R2={
    if(title&&row.cells[0].textContent!==title)row.cells[0].textContent=title;
   }
   for(const details of table.querySelectorAll('.s46-permission-items'))count(details);
+  const roleNames=roles=>roles.map(code=>Accounts.roleName(code)).join(' / ');
   for(const input of table.querySelectorAll('input[value]')){
    const definition=catalog[input.value],label=input.closest('label'),span=label.querySelector('span'),name=this.names[input.value];if(!definition||!span)continue;
-   const full=t(definition.zh,definition.en),short=name?t(...name):full;label.title=full;input.setAttribute('aria-label',full);span.dataset.noI18n='';span.dataset.permissionLanguage=I18n.language;
-   const roles=definition.product_roles?.CO_HYDROXIDE,html=esc(short)+(roles?'<small class="permission-product-limit">'+t('钴：','Cobalt: ')+roles.map(code=>esc(Accounts.roleName(code))).join(' / ')+'</small>':'');if(span.innerHTML!==html)span.innerHTML=html;
+   const full=t(definition.zh,definition.en),short=name?t(...name):full;input.setAttribute('aria-label',full);span.dataset.noI18n='';span.dataset.permissionLanguage=I18n.language;
+   const notes=[],fixed=definition.roles,cobalt=definition.product_roles?.CO_HYDROXIDE;
+   if(fixed)notes.push(t('适用角色：','Applicable roles:')+' '+roleNames(fixed));
+   if(cobalt)notes.push(t('钴：','Cobalt: ')+roleNames(cobalt));
+   if(input.dataset.permissionAssignable==='false'&&(!fixed||fixed.includes(Accounts.selectedRole)))notes.push(t('超出当前管理授权','Outside your grant authority'));
+   label.title=[full,...notes].join('\n');
+   if(notes.length)input.setAttribute('aria-description',notes.join(' · '));
+   else input.removeAttribute('aria-description');
+   const html=esc(short)+notes.map(note=>'<small class="permission-product-limit">'+esc(note)+'</small>').join('');
+   if(span.innerHTML!==html)span.innerHTML=html;
   }
  }
 };

@@ -236,6 +236,106 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(({id,product})=>localStorage.setItem('musonoi-product:'+id,product),{id:admin.id,product:CO});
   await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.locator('[data-task-dismiss]').click());
+  await t.test('every editable role shows the full permission catalog within its grant constraints',async()=>{
+   await page.goto(origin+'/workbench/permissions');
+   const matrix=page.locator('.s46-r2-matrix'),roleButtons=page.locator('.account-role-picker [data-role]');
+   await matrix.waitFor();
+   const permissions=await page.evaluate(()=>Object.keys(Accounts.permissionCatalog.workflow).sort());
+   const roleCodes=await roleButtons.evaluateAll(buttons=>buttons.map(button=>button.dataset.role));
+   const inputs=matrix.locator('input[type=checkbox]');
+   for(const roleCode of roleCodes){
+    await page.locator('.account-role-picker [data-role="'+roleCode+'"]').click();
+    await matrix.waitFor();
+    assert.deepEqual(await inputs.evaluateAll(entries=>entries.map(input=>input.value).sort()),permissions,roleCode);
+   }
+   await page.locator('[data-role=admin]').click();
+   const correction=matrix.locator('input[value="inventory:correct-request"]');
+   await correction.waitFor();
+   assert(await correction.isDisabled());
+   assert.equal(await correction.isChecked(),false);
+   assert.match(await correction.locator('xpath=..').innerText(),/适用角色.*生产管理部操作员.*物流现场操作员/);
+   await page.locator('[data-role=logistics_field_operator]').click();
+   await correction.waitFor();
+   assert(await correction.isEnabled());
+
+   const manager=account('limited_role_manager'),delegated=await browser.newContext();
+   try{
+    const signedIn=await delegated.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:manager.username,password:manager.password}});
+    assert.equal(signedIn.status(),200);
+    const tab=await delegated.newPage();
+    await tab.goto(origin+'/workbench/permissions');
+    const managerMatrix=tab.locator('.s46-r2-matrix');
+    await managerMatrix.waitFor();
+    assert.equal(await tab.locator('.account-role-picker [data-role=admin]').count(),0);
+    assert.deepEqual(await managerMatrix.locator('input[type=checkbox]').evaluateAll(entries=>entries.map(input=>input.value).sort()),permissions);
+    const metal=managerMatrix.locator('input[value="co:metal-read"]');
+    assert(await metal.isDisabled());
+    assert.match(await metal.locator('xpath=..').innerText(),/超出当前管理授权/);
+   }finally{await delegated.close();}
+  });
+  await t.test('logistics office can open cobalt metal details and submit from the confirmation queue',async()=>{
+   const office=account('logistics_office_operator'),name='CO-METAL-OFFICE',file=packing(CO,f.warehouse,name,[['CO-METAL-OFFICE-1','CO-METAL-OFFICE-S1']]);
+   const {csrfToken}=await login.json();
+   const importFile=async(action,data)=>{
+    const response=await context.request.post(origin+'/api/v1'+imports+'/'+action,{
+     headers:{origin,'x-product-code':CO,'x-csrf-token':csrfToken,'idempotency-key':randomUUID()},data:{files:[data]}
+    });
+    assert.equal(response.status(),200,await response.text());
+    return (await response.json()).results[0];
+   };
+   const preview=await importFile('preview',file);
+   const imported=await importFile('confirm',{...file,preview_token:preview.preview_token});
+   assert.equal(imported.status,'IMPORTED');
+   const {rows:[outbound]}=await client.query("SELECT id FROM historical_business_documents WHERE source_id=$1 AND kind='OUTBOUND'",[imported.id]);
+   assert(outbound);
+   await page.goto(origin+'/workbench/permissions');
+   await page.locator('[data-role=logistics_office_operator]').click();
+   const module=page.locator('.s46-r2-matrix [data-permission-module=cobalt-metal]');
+   await module.getByRole('rowheader',{name:'钴金属量管理',exact:true}).waitFor();
+   for(const [permission,column,label] of [['co:metal-read','0','查看钴金属量'],['co:metal-submit','1','录入及提交金属量']]){
+    const input=module.locator('td[data-permission-column="'+column+'"] input[value="'+permission+'"]');
+    assert(await input.isVisible()&&await input.isEnabled()&&await input.isChecked());
+    assert.equal(await input.locator('xpath=..').innerText(),label);
+   }
+
+   const editor=await browser.newContext({viewport:{width:1440,height:900}});
+   try{
+    const signedIn=await editor.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:office.username,password:office.password}});
+    assert.equal(signedIn.status(),200);
+    await editor.addCookies([{name:'musonoi_product',value:CO,url:origin}]);
+    const tab=await editor.newPage();
+    await tab.addInitScript(({id,product})=>localStorage.setItem('musonoi-product:'+id,product),{id:office.id,product:CO});
+    await tab.addLocatorHandler(tab.locator('#task-notice[open]'),()=>tab.locator('[data-task-dismiss]').click());
+    assert.equal((await tab.goto(origin+'/cobalt-metal')).status(),200);
+    await tab.locator('#co-metal-filter').waitFor();
+    assert(await tab.locator('.sidebar [data-primary-route=cobalt-metal]').isVisible());
+    const query=new URLSearchParams({view:'outbound',status:'PENDING_ARECOMS',search:name});
+    const queue='/cobalt-metal?'+query;
+    assert.equal((await tab.goto(origin+queue)).status(),200);
+    const link=tab.locator('#co-metal-list a').filter({hasText:name});
+    const href=await link.getAttribute('href');
+    assert.equal(new URL(href,origin).searchParams.get('detail'),outbound.id);
+    await link.click();
+    const submit=tab.locator('#co-metal-submit');
+    await submit.waitFor();
+    assert.equal((await tab.reload()).status(),200);
+    await submit.waitFor();
+    assert.equal(await tab.locator('#co-metal-decision').count(),0);
+    await submit.locator('[name=amount_mt]').fill('0.24567');
+    await submit.locator('[name=reason]').fill('Synthetic verified office entry');
+    const [result]=await Promise.all([
+     tab.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/api/v1/cobalt/metal/outbounds/'+outbound.id+'/submit'),
+     submit.getByRole('button').click()
+    ]);
+    assert.equal(result.status(),200,await result.text());
+    await submit.waitFor({state:'detached'});
+    assert.equal(await tab.locator('#co-metal-decision').count(),0);
+    assert.match(await tab.locator('#co-metal-history').innerText(),/0\.24567/);
+    await tab.locator('.co-metal-page').getByRole('link',{name:'返回列表',exact:true}).click();
+    await tab.waitForURL(origin+queue);
+    await tab.locator('#co-metal-filter').waitFor();
+   }finally{await editor.close();}
+  });
   await t.test('cobalt scoped map restores stale warehouse, locations, and unrelated stock filters',async()=>{
    for(const query of ['', '?warehouse_id='+randomUUID(), '?zone_id=obsolete', '?location_id='+randomUUID(),
     '?unit=old-stock-archive&page=0&stock_state=obsolete']){

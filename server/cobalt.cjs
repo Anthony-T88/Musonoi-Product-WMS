@@ -20,7 +20,7 @@ async function preparationLocations(c,req){
    SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=l.project_id AND (s.warehouse_id IS NULL OR s.warehouse_id=l.warehouse_id) AND s.customer_id IS NULL)
   ORDER BY z.code,l.code`,[req.user.id])).rows;
 }
-async function register({app,pool,permitted,csrf,workEnabled=false,stockEnabled=false,salesEnabled=false,loadingEnabled=false,executionEnabled=false,packingEnabled=false,metalEnabled=false}){
+async function register({app,pool,auth,permitted,csrf,workEnabled=false,stockEnabled=false,salesEnabled=false,loadingEnabled=false,executionEnabled=false,packingEnabled=false,metalEnabled=false}){
  const read=permitted('co:read'),writes=[csrf];
  app.get(prefix+'/options',{preHandler:read},async req=>({projects:(await pool.query('SELECT p.id,p.name FROM projects p WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.id AND s.customer_id IS NULL) ORDER BY p.name',[req.user.id])).rows,warehouses:(await pool.query('SELECT w.id,w.name,w.project_id FROM warehouses w WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=w.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=w.id) AND s.customer_id IS NULL) ORDER BY w.name',[req.user.id])).rows,locations:await preparationLocations(pool,req),limits:{maxBags:10000,maxLines:100},weightsKg:{gross:650,packaging:3,net:647}}));
  app.get(prefix+'/production-batches',{preHandler:read},async req=>({items:(await pool.query('SELECT b.id,b.code,b.project_id FROM co_production_batches b WHERE EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=b.project_id AND s.customer_id IS NULL) ORDER BY b.created_at DESC LIMIT 500',[req.user.id])).rows}));
@@ -67,6 +67,27 @@ async function register({app,pool,permitted,csrf,workEnabled=false,stockEnabled=
    await event(c,req,p,action==='reject'?'REJECT':action.toUpperCase().replaceAll('-','_'),target,reason);return summary(updated);
   });
  });
- app.get(prefix+'/operations/status',{preHandler:read},async req=>{const {key,path,method}=req.query;if(method!=='POST'||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key)||typeof path!=='string'||!allowed('/api/v1'+path,'POST')&&!require('./dispatch-transport.cjs').allowed('/api/v1'+path,'POST')&&!require('./preparation-reversals.cjs').allowed('/api/v1'+path,'POST')&&!(workEnabled&&require('./cobalt-work.cjs').allowed('/api/v1'+path,'POST'))&&!(stockEnabled&&require('./cobalt-stock.cjs').allowed('/api/v1'+path,'POST'))&&!(salesEnabled&&require('./cobalt-sales.cjs').allowed('/api/v1'+path,'POST'))&&!(loadingEnabled&&require('./cobalt-loading.cjs').allowed('/api/v1'+path,'POST'))&&!(executionEnabled&&require('./cobalt-execution.cjs').allowed('/api/v1'+path,'POST'))&&!(packingEnabled&&require('./cobalt-packing.cjs').allowed('/api/v1'+path,'POST'))&&!(metalEnabled&&require('./cobalt-metal.cjs').allowed('/api/v1'+path,'POST')))throw B.error(400,'CO_INVALID_INPUT');const r=(await pool.query('SELECT response FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,method+' /api/v1'+path,key])).rows[0];return r?{committed:true,state:'CONFIRMED',entity_id:r.response.id,notice:'已确认钴业务操作结果'}:{committed:false,state:'UNKNOWN',notice:'结果尚未确认，请保留原幂等键'};});
+ const Metal=metalEnabled?require('./cobalt-metal.cjs'):null;
+ const metalSubmission=Metal?.authorizeSubmission(auth);
+ app.get(prefix+'/operations/status',async req=>{
+  const {key,path,method}=req.query,route=typeof path==='string'?'/api/v1'+path:'';
+  const submission=Metal?.isSubmission(route,method);
+  await (submission?metalSubmission:read)(req);
+  if(method!=='POST'||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key)||!route||
+   !allowed(route,method)&&!require('./dispatch-transport.cjs').allowed(route,method)&&
+   !require('./preparation-reversals.cjs').allowed(route,method)&&
+   !(workEnabled&&require('./cobalt-work.cjs').allowed(route,method))&&
+   !(stockEnabled&&require('./cobalt-stock.cjs').allowed(route,method))&&
+   !(salesEnabled&&require('./cobalt-sales.cjs').allowed(route,method))&&
+   !(loadingEnabled&&require('./cobalt-loading.cjs').allowed(route,method))&&
+   !(executionEnabled&&require('./cobalt-execution.cjs').allowed(route,method))&&
+   !(packingEnabled&&require('./cobalt-packing.cjs').allowed(route,method))&&!Metal?.allowed(route,method))
+   throw B.error(400,'CO_INVALID_INPUT');
+  const r=(await pool.query('SELECT response FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,method+' '+route,key])).rows[0];
+  if(!r)return {committed:false,state:'UNKNOWN',notice:'结果尚未确认，请保留原幂等键'};
+  const result=r.response;
+  if(submission)await B.scope(pool,req,result.project_id,result.warehouse_id,result.customer_id);
+  return {committed:true,state:'CONFIRMED',entity_id:result.id,notice:'已确认钴业务操作结果'};
+ });
 }
 module.exports={allowed,enabled,register,mutation,document,event,readTransaction};

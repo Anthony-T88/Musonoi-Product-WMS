@@ -5,6 +5,7 @@ const deps={
  'plan:approve':['plan:read','customer:read','master:read'],'plan:commerce-approve':['plan:read','customer:read','master:read'],
  'gate:issue':['gate:read'],'gate:print':['gate:read'],'gate:exit':['gate:read'],
  'co:loading-review':['loading-plan:read'],
+ 'co:metal-submit':['co:metal-read'],
  'co:locate':['co:read'],'co:location-manage':['co:read'],'co:temp-locate':['co:read','inventory:read'],
  'co:work-edit':['co:read'],'co:work-submit':['co:read'],'co:completion-review':['co:read'],'co:amend-request':['co:read'],'co:amend-review':['co:read'],
  'co:create':['co:read'],'co:submit':['co:read'],'co:site-review':['co:read'],'co:production-review':['co:read'],'co:withdraw':['co:read'],
@@ -28,9 +29,9 @@ const defaults={
  production_operator:[...base,'receipt:read','receipt:write'],
  production_manager:[...base,'receipt:read','receipt:review','load:read','outbound:production-approve','report:read'],
  logistics_field_operator:[...base,'inventory:export','label:print','customer:read','plan:read','allocation:write','lot:revoke','load:execute','vehicle-arrival:write','loading-plan:read','move:write','stocktake:write'],
- logistics_office_operator:[...base,'inventory:export','customer:read','plan:read','allocation:read','load:write','loading-plan:match','vehicle-arrival:read','dispatch:read','document:generate','report:read','stocktake:read'],
+ logistics_office_operator:[...base,'inventory:export','customer:read','plan:read','allocation:read','load:write','loading-plan:match','vehicle-arrival:read','dispatch:read','document:generate','report:read','stocktake:read','co:metal-submit'],
  site_supervisor:[...base,'inventory:export','customer:read','plan:read','allocation:review','lot:revoke','load:review','vehicle-arrival:read','loading-plan:read','stocktake:write','stocktake:review','adjust:write','exception:write','report:read'],
- logistics_manager:[...base,'inventory:export','customer:write','plan:write','dispatch:write','allocation:review','lot:revoke','lot:cancel-approve','load:review','loading-plan:write','vehicle-arrival:read','outbound:logistics-review','document:generate','packing-template:write','stocktake:write','stocktake:review','adjust:approve','exception:review','report:read'],
+ logistics_manager:[...base,'inventory:export','customer:write','plan:write','dispatch:write','allocation:review','lot:revoke','lot:cancel-approve','load:review','loading-plan:write','vehicle-arrival:read','outbound:logistics-review','co:metal-submit','document:generate','packing-template:write','stocktake:write','stocktake:review','adjust:approve','exception:review','report:read'],
  export_supervisor:[...base,'customer:read','plan:read','dispatch:write','loading-plan:write','vehicle-arrival:read','document:generate','packing-template:write','report:read']
 };for(const r of Object.keys(defaults))defaults[r]=expand(defaults[r]);
 const presets={sales:{name:'销售与派车',name_en:'Sales and Dispatch',permissions:expand([...base,'customer:write','plan:write','dispatch:write','report:read'])},viewer:{name:'库存只读',name_en:'Inventory Viewer',permissions:[...base]}};

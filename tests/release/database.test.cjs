@@ -137,6 +137,9 @@ test('isolated migration, initialization, business permission and concurrency ac
    // The legacy all-permissions synthetic admin must match a migrated V4.8.7 role.
    if(from>=199)await c.query("DELETE FROM role_permissions WHERE role_code='admin' AND permission_code IN('printer:manage','inventory:correct-request','inventory:correct-review')");
    if(from>=200)await c.query("DELETE FROM role_permissions WHERE role_code='admin' AND permission_code IN('lot:reverse-request','lot:reverse-review')");
+   if(from===209)await c.query("DELETE FROM role_permissions WHERE role_code='admin' AND permission_code='outbound:logistics-review'");
+   const metalEntryRoles=(await c.query(`SELECT role_code FROM role_permissions WHERE permission_code='outbound:logistics-review'
+    UNION SELECT 'logistics_office_operator' ORDER BY 1`)).rows.map(row=>row.role_code);
    const insertPlan=()=>c.query("INSERT INTO sales_plans(project_id,customer_id,target_weight,created_by,contract_id,quantity_tolerance,preparation_month,planned_lot_count) VALUES($1,$2,1,$3,$4,0,to_char(current_date,'YYYY-MM'),1) RETURNING id,code",
     [fixture.project,fixture.customers.CU_CATHODE.id,fixture.accounts[0].id,fixture.customers.CU_CATHODE.contract]);
    if(from===179)assert.equal((await insertPlan()).rows[0].code,'SP-00000001');
@@ -173,7 +176,14 @@ test('isolated migration, initialization, business permission and concurrency ac
     for(const table of tables){
      const qualified='public."'+table.replaceAll('"','""')+'"';
      const projected=['vehicle_arrivals','co_vehicle_arrivals'].includes(table)?"(to_jsonb(t)-'registration_phase')":table==='stocktakes'?"(to_jsonb(t)-'period_month')":table==='co_stocktakes'?"(to_jsonb(t)-'task_type'-'period_month')":table==='sales_dispatch_vehicles'?"(to_jsonb(t)-'transporter'-'destination'-'transport_version')":table==='co_dispatch_vehicles'?"(to_jsonb(t)-'destination')":table==='co_loading_plans'?"(to_jsonb(t)-'transporter'-'cancelled_at'-'cancelled_by'-'cancel_reason')":table==='historical_sales_dispatch_links'?"(to_jsonb(t)-'automatic')":table==='co_preparations'?"(to_jsonb(t)-'planned_location_id')":table==='preparation_plans'?"(to_jsonb(t)-'reversal_id')":table==='preparation_plan_events'?"(to_jsonb(t)-'allocation_id'-'co_preparation_id')":table==='audit_logs'&&from===172?"(to_jsonb(t)-'scope_context')":['users','registration_requests'].includes(table)?"(to_jsonb(t)-'contact_phone'-'contact_email')":table==='sessions'?"(to_jsonb(t)-'replaced_at')":table==='stock_map_regions'?"(to_jsonb(t)-'slot_count')":table==='export_license_record_books'?"(to_jsonb(t)-'archived_at'-'version'-'account_name'-'swift_code')":table==='export_license_actions'?"(to_jsonb(t)-'processing_snapshot')":table==='export_licenses'?"(to_jsonb(t)-'issuing_bank_account'-'offshore_bank'-'offshore_bank_account'-'processing_records'-'issuing_bank_account_name'-'offshore_bank_account_name'-'standard_amount'-'issuing_bank_swift'-'offshore_bank_swift')":"to_jsonb(t)";
-     const rows=(await c.query(`SELECT value FROM (SELECT ${projected}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE permission_code<>'access-change:approve' AND NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager') AND permission_code IN('dispatch:read','dispatch:month'))":table==='roles'?"WHERE code<>'general_manager'":table==='role_permissions'?"WHERE permission_code<>'access-change:approve' AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager','admin') AND permission_code IN('dispatch:read','dispatch:month'))":table==='permissions'?"WHERE code<>'access-change:approve' AND code NOT LIKE 'export-license:%' AND code<>'dispatch:month' AND code NOT IN('inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template')":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ORDER BY value COLLATE "C"`)).rows;
+     const projection=table==='roles'?"(to_jsonb(t)||jsonb_build_object('version',t.version-(EXISTS(SELECT 1 FROM role_permissions p WHERE p.role_code=t.code AND p.permission_code='co:metal-submit'))::int))":projected;
+     const metalPermissionFilter={
+      permissions:"WHERE value::jsonb->>'code' NOT IN('co:metal-read','co:metal-submit')",
+      role_permissions:"WHERE value::jsonb->>'permission_code' NOT IN('co:metal-read','co:metal-submit')",
+      role_permission_caps:"WHERE value::jsonb->>'permission_code' NOT IN('co:metal-read','co:metal-submit')",
+      audit_logs:"WHERE value::jsonb#>>'{after_data,migration}' IS DISTINCT FROM '220_v490_cobalt_metal_permissions'"
+     }[table]||'';
+     const rows=(await c.query(`SELECT value FROM (SELECT ${projection}::text AS value FROM ${qualified} t ${table==='role_permission_caps'?"WHERE permission_code<>'access-change:approve' AND NOT(role_code='sales_manager' AND permission_code='plan:write') AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager') AND permission_code IN('dispatch:read','dispatch:month'))":table==='roles'?"WHERE code<>'general_manager'":table==='role_permissions'?"WHERE permission_code<>'access-change:approve' AND permission_code NOT LIKE 'export-license:%' AND permission_code NOT IN('printer:manage','inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template') AND NOT(role_code IN('sales_operator','sales_manager','admin') AND permission_code IN('dispatch:read','dispatch:month'))":table==='permissions'?"WHERE code<>'access-change:approve' AND code NOT LIKE 'export-license:%' AND code<>'dispatch:month' AND code NOT IN('inventory:correct-request','inventory:correct-review','lot:reverse-request','lot:reverse-review','customs:bp','customs:bp-template')":table==='stock_map_cells'?"WHERE code<>'P3'":''}) snapshot ${metalPermissionFilter} ORDER BY value COLLATE "C"`)).rows;
      result[table]={rows:rows.length,digest:crypto.createHash('sha256').update(JSON.stringify(rows.map(r=>r.value))).digest('hex')};
     }
     return result;
@@ -199,6 +209,9 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const {version,checksum} of chain)assert.equal(checksums.get(version),checksum,version);
    await Chain.guard172(c,'after');
    assert.deepEqual(await snapshot(),before);
+   const metalGrants=(await c.query(`SELECT role_code,array_agg(permission_code ORDER BY permission_code) AS permissions
+    FROM role_permissions WHERE permission_code IN('co:metal-read','co:metal-submit') GROUP BY role_code ORDER BY role_code`)).rows;
+   assert.deepEqual(metalGrants,metalEntryRoles.map(role_code=>({role_code,permissions:['co:metal-read','co:metal-submit']})));
    if(archivedCobalt)assert.deepEqual((await c.query(`SELECT net_kg::text,round(estimated_metal_mt,5)::text estimated_mt,version,
      confirmed_metal_mt,shipment_status FROM co_historical_metal_outbound WHERE order_id=$1`,[archivedCobalt])).rows[0],
     {net_kg:'30000',estimated_mt:'10.80000',version:0,confirmed_metal_mt:null,shipment_status:'PENDING_ARECOMS'});
@@ -591,8 +604,8 @@ test('isolated migration, initialization, business permission and concurrency ac
   const suffix=new URLSearchParams({view:'outbound',status:'PENDING_ARECOMS',search,from:'2020-03-05',to:'2020-03-05'});
   const queue='/cobalt/metal?'+suffix,detail='/cobalt/metal/outbounds/'+id,
    archive='/cobalt/historical-backfill/documents/'+id+'?kind=OUTBOUND';
-  const loginRole='logistics_manager',approveRole='production_manager';
-  const pending=await api(loginRole,product,queue);
+  const loginRole='logistics_manager',entryRole='logistics_office_operator',approveRole='production_manager';
+  const pending=await api(entryRole,product,queue);
   assert.equal(pending.total,1);
   const [line]=pending.items;
   assert.deepEqual([line.order_id,line.historical_source_id,line.historical_import,line.posted_day,line.net_mt,line.estimated_mt,line.confirmed_mt],
@@ -601,6 +614,10 @@ test('isolated migration, initialization, business permission and concurrency ac
   const before=await api(loginRole,product,archive);
   assert.equal(before.metal.can_submit,true);
   assert.equal(before.metal.can_decide,false);
+  assert.equal((await api(entryRole,product,archive)).metal,undefined);
+  const entry=await api(entryRole,product,detail);
+  assert.equal(entry.can_submit,true);
+  assert.equal(entry.can_decide,false);
   assert.equal((await api('customer_admin',product,queue)).total,0);
   await api('customer_admin',product,detail,undefined,404);
   await api('customer_admin',product,archive,undefined,404);
@@ -608,7 +625,7 @@ test('isolated migration, initialization, business permission and concurrency ac
   await api('production_operator',product,detail+'/submit',proposal,403);
   await api('customer_admin',product,detail+'/submit',proposal,404);
   const key=crypto.randomUUID();
-  const requested=await api(loginRole,product,detail+'/submit',proposal);
+  const requested=await api(entryRole,product,detail+'/submit',proposal);
   assert.equal(requested.version,1);
   const submitted=await api(approveRole,product,archive);
   assert.equal(submitted.metal.can_decide,true);
@@ -616,6 +633,8 @@ test('isolated migration, initialization, business permission and concurrency ac
   assert.equal(submitted.metal.confirmed_mt,null);
   assert.equal((await api(approveRole,product,queue)).total,1);
   const decision={version:1,reason:'Synthetic independent ARECOMS verification'};
+  await api(entryRole,product,detail+'/confirm',decision,403);
+  await api(entryRole,product,detail+'/reject',decision,403);
   const replies=await Promise.all([request(approveRole,product,detail+'/confirm',decision,'POST',key),
    request(approveRole,product,detail+'/confirm',decision,'POST',key)]);
   assert(replies.every(r=>r.statusCode===200));

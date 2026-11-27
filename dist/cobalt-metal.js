@@ -5,7 +5,10 @@ window.CobaltMetal={
   return ['outbound:read','outbound:logistics-review',...(['admin','production_manager'].includes(CurrentUser.role_code)?['outbound:production-approve']:[])]
    .find(code=>CobaltUI.can(code));
  },
- navigationPermission(){return CobaltUI.can('co:read')?'co:read':this.outboundPermission()||'outbound:read';},
+ navigationPermission(){
+  if(CobaltUI.can('co:metal-read'))return 'co:metal-read';
+  return CobaltUI.can('co:read')?'co:read':this.outboundPermission()||'outbound:read';
+ },
  format(value,digits=5){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,digits),digits);},
  kg(value){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,1),4);},
  status(value){const states={
@@ -89,11 +92,17 @@ window.CobaltMetal={
    (complete?'':' · '+t('实际检斤','Measured Bags')+' '+m.measured_bags+' / '+m.bags)+'</p></section>';
  },
  async route(){
-  try{await this.list();}
+  try{
+   const q=new URLSearchParams(location.search);
+   if(q.has('detail'))await this.detail(q.get('detail'),q);
+   else await this.list(q);
+  }
   catch(e){CobaltUI.page(this.t('钴金属量管理','Cobalt Metal Management'),'<p class="error" role="alert">'+esc(this.error(e))+'</p>');}
  },
- async list(){
-  const t=this.t,q=new URLSearchParams(location.search),canStock=CobaltUI.can('co:read'),canOutbound=!!this.outboundPermission();
+ async list(q){
+  const t=this.t,canReadMetal=CobaltUI.can('co:metal-read'),canReadReceipts=CobaltUI.can('co:read');
+  const canReadStockIssue=!!this.outboundPermission();
+  const canStock=canReadReceipts||canReadMetal,canOutbound=canReadStockIssue||canReadMetal;
   const outbound=canOutbound&&(q.get('view')==='outbound'||!canStock),view=outbound?'outbound':'inventory';q.set('view',view);
   const d=await API.request(this.base+'?'+q),base='/cobalt-metal';
   const fields=outbound?[['PENDING_ARECOMS',this.status('PENDING_ARECOMS')],['COMPLETED',this.status('COMPLETED')]]:
@@ -111,14 +120,23 @@ window.CobaltMetal={
    [['备货批次 / 入库单','Preparation Batch / Receipt'],['库存状态','Stock Status'],['袋数','Bags'],['实物净重（MT）','Wet Net (MT)'],
    ['预计金属量（MT）','Estimated Metal (MT)'],['重量依据','Weight Basis'],['货位','Locations'],['入库时间','Receipt Time']];
   const val=(v,missing=this.missing())=>esc(v??missing),cells=values=>values.map(v=>'<td>'+v+'</td>').join('');
-  const outboundLink=r=>`<a href="${r.historical_import?'/stock-outbound/historical/':'/outbounds/'}${esc(r.order_id)}#co-metal-detail">${esc(r.order_no)}</a>`+
-   (r.historical_import?' '+HistoricalMovements.badge():'');
+  const outboundLink=r=>{
+   const detailParams=new URLSearchParams(q);
+   detailParams.set('detail',r.order_id);
+   const canOpenDocument=canReadStockIssue&&(r.historical_import||(canReadReceipts&&CobaltUI.can('load:read')));
+   const href=canOpenDocument?(r.historical_import?'/stock-outbound/historical/':'/outbounds/')+r.order_id+'#co-metal-detail':base+'?'+detailParams;
+   return '<a href="'+esc(href)+'">'+esc(r.order_no)+'</a>'+(r.historical_import?' '+HistoricalMovements.badge():'');
+  };
+  const receiptLink=r=>{
+   const batch=esc(r.preparation_batch_no||r.document_no);
+   return (canReadReceipts?'<a href="/receipts/'+esc(r.preparation_id)+'">'+batch+'</a>':batch)+(r.preparation_batch_no?'<br>'+esc(r.document_no):'');
+  };
   const rows=d.items.map(r=>'<tr>'+(outbound?cells([
    val(r.preparation_batch_no,'—'),outboundLink(r),val(r.customer_name,'—')+' / '+val(r.contract_no,'—'),
    val(r.truck_no,'—'),val(r.posted_day),val(r.net_mt),val(r.estimated_mt),val(r.confirmed_mt,this.pending()),
    val(r.difference_mt,r.confirmed_mt==null?this.pending():this.missing()),esc(this.status(r.shipment_status))
   ]):cells([
-   `<a href="/receipts/${r.preparation_id}">${esc(r.preparation_batch_no||r.document_no)}</a>`+(r.preparation_batch_no?'<br>'+esc(r.document_no):''),
+   receiptLink(r),
    esc(this.stockStatus(r.status)),r.bags,val(r.net_mt),val(r.estimated_mt),esc(this.basis(r)),val(r.location_codes,'—'),esc(BusinessTime.display(r.received_at))
   ]))+'</tr>');
   CobaltUI.page(t('钴金属量管理','Cobalt Metal Management'),`<div class="co-metal-page">
@@ -142,6 +160,17 @@ window.CobaltMetal={
     setTimeout(()=>URL.revokeObjectURL(url),1000);
    }catch(e){$('co-metal-list-error').textContent=this.error(e);}
   };
+  ProductContext.dirty=false;
+ },
+ async detail(id,q){
+  const row=await API.request(this.base+'/outbounds/'+encodeURIComponent(id)),t=this.t,back=new URLSearchParams(q);
+  back.delete('detail');
+  back.set('view','outbound');
+  CobaltUI.page(t('钴金属量管理','Cobalt Metal Management'),`<div class="co-metal-page">
+   <div class="business-toolbar"><a class="button secondary" href="/cobalt-metal?${esc(back)}">${t('返回列表','Back to List')}</a></div>
+   <div class="co-document"><strong>${esc(row.order_no)}</strong>${row.historical_import?HistoricalMovements.badge():''}</div>
+   ${this.outbound({metal:row})}</div>`);
+  this.bindOutbound(row,()=>this.detail(id,q));
   ProductContext.dirty=false;
  },
  stockStatus(s){return ['PREPARING','PENDING_COMPLETION_REVIEW','COMPLETED'].includes(s)?CobaltWorkUI.status(s):CobaltExecutionUI.state(s);},

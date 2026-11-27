@@ -194,9 +194,10 @@ function pages(ids){
  add('co-packing','/customs/packing-list/:id',[CO],{example:'coLoad',screenshot:true,state:'cobalt document details, preview and archive history'});
  add('shipping','/export-shipments',BOTH,{screenshot:true});
  add('cu-invoice','/export-shipments/:id',[CU],{example:'cuLoad',screenshot:true,state:'copper document details, preview and archive history'});
- add('metal','/cobalt-metal',[CO],{screenshot:true,roles:['logistics_manager','production_manager']});
+ add('metal','/cobalt-metal',[CO],{screenshot:true,state:'scoped cobalt metal access and separate entry permission',roles:['logistics_office_operator','logistics_manager','production_manager']});
  add('metal-outbound','/cobalt-metal',[CO],{query:'?view=outbound',screenshot:true,state:'confirmed and pending'});
- add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true,state:'pending online and historical outbounds'});
+ add('metal-confirmations','/cobalt-metal',[CO],{query:'?view=outbound&status=PENDING_ARECOMS',screenshot:true,state:'pending online and historical outbounds',roles:['logistics_office_operator']});
+ add('metal-entry','/cobalt-metal',[CO],{example:'coHistoryMetal',query:'?view=outbound&detail=:id',state:'scoped ARECOMS entry and return to the queue',roles:['logistics_office_operator']});
  add('co-historical-metal','/stock-outbound/historical/:id',[CO],{example:'coHistoryMetal',state:'historical ARECOMS entry and review'});
  add('historical-movements','/workbench/historical-movements',BOTH,{screenshot:true,roles:['production_operator'],state:'six archive filters and Excel diagnostics'});
  add('historical-former-entry','/historical-movements',BOTH,{state:'redirected'});

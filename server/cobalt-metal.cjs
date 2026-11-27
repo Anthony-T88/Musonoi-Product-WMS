@@ -1,12 +1,31 @@
 'use strict';
 const B=require('./business-common.cjs'),C=require('./cobalt.cjs'),S=require('./cobalt-sales.cjs');
 const base='/api/v1/cobalt/metal',idPattern='[0-9a-fA-F-]{36}';
+const readPermission='co:metal-read',submitPermission='co:metal-submit';
+const submissionPath=new RegExp('^'+base+'/outbounds/[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}/submit$');
+const isSubmission=(path,method)=>method==='POST'&&submissionPath.test(path);
 const allowed=(path,method)=>method==='GET'&&new RegExp('^'+base+'(?:|/export|/outbounds/'+idPattern+')$').test(path)
  ||method==='POST'&&new RegExp('^'+base+'/outbounds/'+idPattern+'/(?:submit|confirm|reject)$').test(path);
 const enabled=async c=>(await c.query("SELECT to_regclass('public.co_metal_outbound') IS NOT NULL ok")).rows[0].ok;
 const canDecide=user=>user.permissions.includes('outbound:production-approve')&&['admin','production_manager'].includes(user.role_code);
-const canReadAll=user=>user.permissions.includes('outbound:read');
-const canReadHistorical=user=>canReadAll(user)||user.permissions.includes('outbound:logistics-review')||canDecide(user);
+const canReadInventory=user=>user.permissions.includes(readPermission)||user.permissions.includes('co:read');
+const canReadAll=user=>user.permissions.includes(readPermission)||user.permissions.includes('outbound:read');
+// Generic archived stock issue documents still use their existing permissions.
+const canReadHistorical=user=>user.permissions.includes('outbound:read')||user.permissions.includes('outbound:logistics-review')||canDecide(user);
+const canReadOutbound=user=>canReadAll(user)||canReadHistorical(user);
+const canSubmit=user=>user.permissions.includes(readPermission)&&user.permissions.includes(submitPermission);
+function authorized(auth,allows){
+ return async req=>{
+  await auth(req);
+  if(!allows(req.user,req))throw B.error(403,'当前账号没有此操作权限');
+ };
+}
+const authorizeSubmission=auth=>authorized(auth,canSubmit);
+const authorizePage=auth=>authorized(auth,(user,req)=>{
+ if(req.query.detail!==undefined||req.query.view==='outbound')return canReadOutbound(user);
+ if(req.query.view==='inventory')return canReadInventory(user);
+ return canReadInventory(user)||canReadOutbound(user);
+});
 const scope=(p,customer)=>`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=${p}.project_id
  AND(s.warehouse_id IS NULL OR s.warehouse_id=${p}.warehouse_id) AND(s.customer_id IS NULL OR s.customer_id=${customer}))`;
 const outboundFrom=`FROM (
@@ -104,7 +123,7 @@ async function detail(c,req,orderId,{includeHistory=true,historicalOnly=false}={
  if(!row)return null;
  const history=includeHistory?(await c.query(`SELECT e.*,round(e.amount_mt,5)::text display_mt,u.display_name actor_name
   FROM ${eventTable(row)} e JOIN users u ON u.id=e.actor_id WHERE outbound_id=$1 ORDER BY version DESC`,[row.outbound_id])).rows:undefined;
- return {...row,history,can_submit:req.user.permissions.includes('outbound:logistics-review')&&row.latest_action!=='SUBMITTED',
+ return {...row,history,can_submit:canSubmit(req.user)&&row.latest_action!=='SUBMITTED',
   can_decide:canDecide(req.user)&&row.latest_action==='SUBMITTED'&&row.latest_actor_id!==req.user.id};
 }
 const eventTable=row=>row.historical_import?'co_historical_metal_events':'co_metal_events';
@@ -168,7 +187,7 @@ async function exportBook(req,data){
  sheet.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:'1:1'};
  return Buffer.from(await book.xlsx.writeBuffer());
 }
-const writePermissions={submit:'outbound:logistics-review',confirm:'outbound:production-approve',reject:'outbound:production-approve'};
+const writePermissions={submit:submitPermission,confirm:'outbound:production-approve',reject:'outbound:production-approve'};
 async function decide(c,req,action){
  const body=req.body,id=B.uuid(req.params.id);
  if(!body||Object.keys(body).some(k=>!['version','reason',...(action==='submit'?['amount_mt']:[])].includes(k))||
@@ -195,11 +214,8 @@ async function decide(c,req,action){
  return {...event,id:row.order_id,project_id:row.project_id,warehouse_id:row.warehouse_id,customer_id:row.customer_id};
 }
 async function register({app,pool,auth,permitted,csrf}){
- const readOutbound=async req=>{
-  await auth(req);
-  if(!canReadHistorical(req.user))throw B.error(403,'当前账号没有此操作权限');
- };
- const read=req=>req.query.view==='outbound'?readOutbound(req):permitted('co:read')(req);
+ const readOutbound=authorized(auth,canReadOutbound);
+ const read=authorized(auth,(user,req)=>req.query.view==='outbound'?canReadOutbound(user):canReadInventory(user));
  app.get(base,{preHandler:read},req=>C.readTransaction(pool,async c=>{
   const result=await list(c,req,req.query),scope=Object.fromEntries(filters.filter(k=>req.query[k]).map(k=>[k,req.query[k]]));
   const historicalOnly=!canReadAll(req.user),dated=result.view==='outbound'&&(req.query.from||req.query.to);
@@ -215,8 +231,8 @@ async function register({app,pool,auth,permitted,csrf}){
    totals.stock_cards={preparing,prepared,loading,loaded};
    totals.execution=analysis.execution?.map(({planned_physical_mt,invoiced_net_kg})=>({planned_physical_mt,invoiced_net_kg}));
   }
-  if(!req.user.permissions.includes('co:read'))delete totals.inventory;
-  if(!canReadHistorical(req.user)){delete totals.status;delete totals.month;delete totals.period;}
+  if(!canReadInventory(req.user))delete totals.inventory;
+  if(!canReadOutbound(req.user)){delete totals.status;delete totals.month;delete totals.period;}
   return {...result,summary:totals};
  }));
  app.get(base+'/export',{preHandler:[read,permitted('inventory:export')]},async(req,reply)=>{
@@ -230,6 +246,6 @@ async function register({app,pool,auth,permitted,csrf}){
   return row;
  }));
  for(const [action,permission] of Object.entries(writePermissions))
-  app.post(base+'/outbounds/:id/'+action,{preHandler:[permitted(permission),csrf]},req=>S.mutation(pool,req,permission,c=>decide(c,req,action)));
+  app.post(base+'/outbounds/:id/'+action,{preHandler:[action==='submit'?authorizeSubmission(auth):permitted(permission),csrf]},req=>S.mutation(pool,req,permission,c=>decide(c,req,action)));
 }
-module.exports={allowed,enabled,register,summary,detail,preparation,exportBook,canReadHistorical};
+module.exports={allowed,enabled,register,summary,detail,preparation,exportBook,canReadHistorical,authorizePage,authorizeSubmission,isSubmission};
