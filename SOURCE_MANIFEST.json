@@ -2625,7 +2625,7 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "34f6712fd9114e653bbc32a3eefb00318479964b8b347ffed81fc2d51ec23d0a"
+      "sha256": "fd1bd6a6a7a8112cab6dc690bdc875598bc710604e6ab01218e06c328b0ae4af"
     },
     {
       "path": "tests/release/uiux-accessibility.json",

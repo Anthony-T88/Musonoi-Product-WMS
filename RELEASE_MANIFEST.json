@@ -3874,7 +3874,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "ca744f7f3afd90a82dd08ee4bb943256977d4930b39048ad9eb1f1a768ef5662",
+      "sha256": "1a5f40af5698d5404762520692e5032f44e9b59e08fd6e3b83d167f4d7118977",
       "bytes": 108444
     },
     {
@@ -4099,8 +4099,8 @@
     },
     {
       "path": "tests/release/ui.test.cjs",
-      "sha256": "34f6712fd9114e653bbc32a3eefb00318479964b8b347ffed81fc2d51ec23d0a",
-      "bytes": 74021
+      "sha256": "fd1bd6a6a7a8112cab6dc690bdc875598bc710604e6ab01218e06c328b0ae4af",
+      "bytes": 74344
     },
     {
       "path": "tests/release/uiux-accessibility.json",

@@ -575,7 +575,11 @@ test('real browser: current cobalt stock, independent permissions and both langu
    await mark.waitFor();
    const index=Number(await mark.getAttribute('data-oa-period'));
    const row=JSON.parse(await plot.getAttribute('data-rows'))[index];
-   await mark.hover();
+   // Hover the period within the chart area, including dates with a sub-pixel zero bar.
+   await mark.scrollIntoViewIfNeeded();
+   const chart=plot.locator('svg'),bounds=await chart.boundingBox(),marker=await mark.boundingBox();
+   assert(bounds&&marker);
+   await chart.hover({position:{x:marker.x+marker.width/2-bounds.x,y:bounds.height/2}});
    const tooltip=plot.getByRole('tooltip');
    await tooltip.waitFor();
    const [period,value]=(await tooltip.textContent()).split('\n');
