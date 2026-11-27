@@ -369,6 +369,50 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));
    return {ctx,page,errors};
   }
+  await t.test('preparation approval badges honor product, scope and reviewer permissions',async()=>{
+   const pending={};
+   for(const product of products){
+    const co=cobalt(product),path=prefix(product)+'/preparation-plans';
+    pending[product]=[];
+    for(const n of co?[980]:[980,981]){
+     const doc=await P.draft(api,product,fixtures[product].plan,P.batch(product,n));
+     pending[product].push(await api('export_supervisor',product,path+'/'+doc.id+'/submit',{version:doc.version}));
+    }
+    const endpoint=co?'/cobalt/ui461/tasks':'/v34/todos';
+    const response=await api('customer_admin',product,endpoint);
+    const scoped=(co?response.pending:response.items).filter(row=>row.kind==='PREPARATION_PLAN_REVIEW');
+    assert.deepEqual(scoped.map(row=>row.id).sort(),co?[]:pending[product].map(row=>row.id).sort());
+   }
+   const selector='[data-primary-route="preparation/work-plans"]';
+   for(const product of products){
+    const co=cobalt(product),{ctx,page}=await open('logistics_manager',product,co?390:1440);
+    try{
+     const menu=page.locator((co?'.mobile-primary':'.sidebar nav')+' '+selector),badge=menu.locator('.ux-nav-count');
+     if(co){
+      const shell=page.locator('.mobile-nav-shell');
+      if(!await shell.evaluate(node=>node.open))await shell.locator(':scope > summary').click();
+     }
+     await badge.waitFor();
+     assert.equal(await badge.innerText(),String(pending[product].length));
+     assert.match(await menu.getAttribute('aria-label'),/项待审批|pending approvals?/);
+     if(co){
+      await page.goto(origin+'/preparation/work-plans/'+pending[product][0].id);
+      await page.locator('[data-plan-action=approve]').click();
+      await page.locator('#operation-confirm-accept').click();
+      await page.locator('[data-plan-action=approve]').waitFor({state:'detached'});
+      await badge.waitFor({state:'detached'});
+      assert.doesNotMatch(await menu.getAttribute('aria-label'),/项待审批|pending approvals?/);
+     }
+    }finally{await ctx.close();}
+   }
+   const {ctx,page}=await open('export_supervisor','CU_CATHODE',1440);
+   try{
+    await page.locator('#task-notice-entry').waitFor({state:'attached'});
+    const menu=page.locator('.sidebar nav '+selector);
+    assert.equal(await menu.count(),1);
+    assert.equal(await menu.locator('.ux-nav-count').count(),0);
+   }finally{await ctx.close();}
+  });
   for(const product of products)await t.test(product+' preparation management counts eligible plans and colors live status',async()=>{
    const co=cobalt(product),{ctx,page,errors}=await open('admin',product,co?390:1440);
    try{
@@ -393,9 +437,12 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const waiting=badge(fixtures[product].occupied.batch_no),linked=badge(fixtures[product].item(798).batch_no);
     assert.equal(await waiting.innerText(),'待创建备货单');
     assert.equal(await waiting.getAttribute('class'),'status-pill tone-neutral');
+    assert.equal(await waiting.evaluate(node=>node.closest('td').querySelectorAll('a').length),0);
     assert.equal(await linked.innerText(),co?'草稿':'作业中');
     assert.equal(await linked.getAttribute('data-state-code'),co?'DRAFT':'WORKING');
     assert.match(await linked.evaluate(node=>node.parentElement.getAttribute('href')),co?/^\/receipts\//:/^\/preparation\//);
+    await page.goto(origin+'/preparation/work-plans/'+fixtures[product].occupied.id);
+    await page.locator('#page-content a[href="'+(co?'/receipts/new':'/preparation/new')+'?preparation_plan='+fixtures[product].occupied.id+'"]').waitFor();
     assert.deepEqual(errors,[]);
    }finally{await ctx.close();}
   });

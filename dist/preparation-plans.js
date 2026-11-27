@@ -29,8 +29,7 @@ window.PreparationPlans={
    const badge=UI.status(state,'preparation',label);
    return CurrentUser.permissions.includes(co?'co:read':'allocation:read')?'<a href="'+this.orderRoute(p)+'" title="'+t('查看备货单','View Preparation Order')+'">'+badge+'</a>':badge;
   }
-  const badge=UI.status('WAITING_ORDER','preparation',t('待创建备货单','Awaiting Preparation Order'));
-  return badge+(p.actions.start?' <a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'');
+  return UI.status('WAITING_ORDER','preparation',t('待创建备货单','Awaiting Preparation Order'));
  },
  pendingCountCard(count){
   const t=this.t;

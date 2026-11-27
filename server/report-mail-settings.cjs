@@ -90,7 +90,7 @@ function validateTransport(body, host) {
   return body;
 }
 
-function register({ app, pool, cfg, permitted, csrf, env = process.env }) {
+function register({ app, pool, cfg, permitted, csrf, env = process.env, now = () => new Date() }) {
   const preHandler = administrator(permitted);
   app.get(path, { preHandler }, (req, reply) => {
     reply.header('Cache-Control', 'no-store');
@@ -100,10 +100,20 @@ function register({ app, pool, cfg, permitted, csrf, env = process.env }) {
       const key = host ? await transportKey(env) : null;
       if (key) key.fill(0);
       const transport = publicTransport(await Transport.readTransport(c), host, !!key);
-      const recipientAccounts = (await Policy.recipientAccounts(c))
-        .filter(account => eligibleRecipient(host, cfg.environment, account));
-      return { ...await Policy.readPolicy(c), actors: await eligibleActors(c), environment: cfg.environment,
-        recipientAccounts, transport };
+      const configured = await Policy.readPolicy(c);
+      let policy = configured;
+      try { policy = Policy.effectivePolicy(host, configured); }
+      catch { policy = { ...configured, enabled: false, schedules: [] }; }
+      const recipientAccounts = [], unavailableRecipientAccounts = [];
+      for (const account of await Policy.recipientAccounts(c, undefined, { includeMissing: true })) {
+        if (eligibleRecipient(host, cfg.environment, account)) recipientAccounts.push(account);
+        else {
+          const { id, username, displayName, email } = account;
+          unavailableRecipientAccounts.push({ id, username, displayName, reason: email ? 'NOT_APPROVED' : 'MISSING_EMAIL' });
+        }
+      }
+      return { ...policy, actors: await eligibleActors(c), environment: cfg.environment, recipientAccounts,
+        unavailableRecipientAccounts, transport, nextDelivery: Policy.nextDelivery(policy, now()) };
     });
   });
   app.put(path, { preHandler: [preHandler, csrf], bodyLimit: 65_536 }, (req, reply) => {
@@ -114,16 +124,21 @@ function register({ app, pool, cfg, permitted, csrf, env = process.env }) {
       Security.systemAdministrator(actor);
       const { rows: [old] } = await c.query('SELECT version,enabled,schedules FROM report_mail_settings WHERE singleton FOR UPDATE');
       if (!old || old.version !== next.version) throw Business.error(409, '报表邮件设置已更新，请重新打开页面核对');
-      if (next.enabled) {
+      const active = next.enabled ? next.schedules.filter(Policy.scheduleEnabled) : [];
+      if (active.length) {
         const allowed = new Set((await eligibleActors(c)).map(account => account.username));
-        if (next.schedules.some(schedule => !allowed.has(schedule.actor))) {
+        if (active.some(schedule => !allowed.has(schedule.actor))) {
           throw Business.error(400, '请为每项发送计划选择仍拥有报表查看、导出及数据范围的账号');
         }
-        const ids = [...new Set(next.schedules.flatMap(schedule => schedule.recipientAccounts || []))];
+        const ids = [...new Set(active.flatMap(schedule => schedule.recipientAccounts || []))];
+        const fixed = active.flatMap(schedule => schedule.recipients || []);
+        const host = await Transport.readHost(env, cfg.environment).catch(() => {
+          throw Business.error(503, '服务器邮件安全策略无法读取，请联系运维');
+        });
+        if (host && fixed.some(address => !Transport.approvedRecipient(host, address, true))) {
+          throw Business.error(400, '固定收件地址须符合服务器邮件发送规则');
+        }
         if (ids.length) {
-          const host = await Transport.readHost(env, cfg.environment).catch(() => {
-            throw Business.error(503, '服务器邮件安全策略无法读取，请联系运维');
-          });
           const accounts = await Policy.recipientAccounts(c, ids);
           if (accounts.length !== ids.length || accounts.some(account => !eligibleRecipient(host, cfg.environment, account))) {
             throw Business.error(400, '请选择仍启用且注册邮箱符合发送规则的收件账号');
@@ -138,7 +153,7 @@ function register({ app, pool, cfg, permitted, csrf, env = process.env }) {
       );
       await Business.audit(c, req, 'report_mail_settings_updated', 'settings', 'report_mail',
         auditSummary(old), auditSummary({ ...saved, schedules: next.schedules }));
-      return saved;
+      return { ...saved, nextDelivery: Policy.nextDelivery({ ...saved, schedules: next.schedules }, now()) };
     });
   });
   app.put(path + '/transport', { preHandler: [preHandler, csrf], bodyLimit: 4096 }, async (req, reply) => {

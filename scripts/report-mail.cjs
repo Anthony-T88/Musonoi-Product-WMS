@@ -12,7 +12,7 @@ const Management = require('../server/management.cjs');
 const ReportCenter = require('../server/report-center.cjs');
 const Policy = require('../server/report-mail-policy.cjs');
 const Transport = require('../server/report-mail-transport.cjs');
-const { display } = require('../server/business-time.cjs');
+const { duePeriod } = Policy;
 
 const maxAttachmentBytes = 10 * 1024 * 1024;
 const crlf = '\r\n';
@@ -27,23 +27,14 @@ function validate(value, environment) {
 }
 
 function selectedSchedules(config, policy) {
-  const schedules = policy.version === 0 ? (config.schedules ?? []) : policy.enabled ? policy.schedules : [];
-  Policy.validateSchedules(schedules, {
-    environment: config.environment, allowlist: new Set(config.recipientAllowlist.map(Policy.addressKey)),
-    enabled: false, accountsAllowed: policy.version !== 0
-  });
-  return schedules;
-}
-
-function duePeriod(schedule, now) {
-  const [today, time] = display(now).split(' ');
-  const localDay = today.replaceAll('/', '-');
-  if (Number(time.slice(0, 2)) < schedule.hour ||
-      (schedule.frequency === 'monthly' && !localDay.endsWith('-01'))) return null;
-  const yesterday = new Date(Date.parse(localDay + 'T00:00:00Z') - 86_400_000).toISOString().slice(0, 10);
-  return schedule.frequency === 'monthly'
-    ? { key: yesterday.slice(0, 7), from: yesterday.slice(0, 7) + '-01', to: yesterday }
-    : { key: yesterday, from: yesterday, to: yesterday };
+  const effective = Policy.effectivePolicy(config, policy);
+  if (!effective.enabled) return [];
+  if (policy.version !== 0) {
+    Policy.validateSchedules(effective.schedules, {
+      environment: config.environment, allowlist: new Set(config.recipientAllowlist.map(Policy.addressKey)), enabled: false
+    });
+  }
+  return effective.schedules.filter(Policy.scheduleEnabled);
 }
 
 async function settings(env) {

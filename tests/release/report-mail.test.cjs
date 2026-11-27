@@ -10,6 +10,7 @@ const ExcelJS = require('exceljs');
 const Mail = require('../../scripts/report-mail.cjs');
 const Reports = require('../../server/report-center.cjs');
 const Transport = require('../../server/report-mail-transport.cjs');
+const Policy = require('../../server/report-mail-policy.cjs');
 
 function sample() {
   return {
@@ -75,6 +76,10 @@ test('saved delivery plans override the legacy file without bypassing its recipi
   const unapproved = [{ ...schedules[0], recipients: ['outside@musonoi.test'] }];
   assert.throws(() => Mail.selectedSchedules(relay, { version: 2, enabled: true, schedules: unapproved }),
     { code: 'REPORT_MAIL_SCHEDULE_INVALID' });
+  const paused = { ...unapproved[0], enabled: false, id: 'paused-plan' };
+  assert.deepEqual(Mail.selectedSchedules(relay, { version: 3, enabled: true, schedules: [...schedules, paused] }), schedules);
+  assert.deepEqual(Mail.selectedSchedules({ ...legacy, schedules: [{ ...schedules[0], enabled: false }] },
+    { version: 0, enabled: false, schedules: [] }), []);
 });
 
 test('account delivery resolves the latest approved registered email and rejects unavailable accounts', async () => {
@@ -104,8 +109,9 @@ test('report email administration persists plans, respects authorization and avo
   const app = require('fastify')();
   const settings = require('../../server/report-mail-settings.cjs');
   const { digest } = require('../../server/security.cjs');
+  const dir = await isolated(t), env = {};
   t.after(() => app.close());
-  const path = settings.path;
+  const route = settings.path;
   const accountId = '14b5a342-fa7a-4edb-9e47-309c2e9fe5b1';
   let contactEmail = 'reader@musonoi.test';
   const decisions = [];
@@ -144,7 +150,8 @@ test('report email administration persists plans, respects authorization and avo
   };
   const fail = statusCode => { throw Object.assign(Error('denied'), { statusCode }); };
   settings.register({
-    app, cfg: { environment: 'test' }, pool: { connect: async () => c }, env: {},
+    app, cfg: { environment: 'test' }, pool: { connect: async () => c }, env,
+    now: () => new Date('2026-11-27T04:59:00Z'),
     permitted: permission => async req => {
       assert.equal(permission, 'system:manage');
       const role_code = req.headers['x-test-role'];
@@ -155,7 +162,7 @@ test('report email administration persists plans, respects authorization and avo
     csrf: async req => { if (req.headers['x-csrf-token'] !== 'csrf') fail(403); }
   });
   const send = (method, { role = 'admin', csrf = 'csrf', key = 'request-0001', payload } = {}) => app.inject({
-    method, url: path, headers: { 'x-test-role': role, 'x-csrf-token': csrf, 'idempotency-key': key }, payload
+    method, url: route, headers: { 'x-test-role': role, 'x-csrf-token': csrf, 'idempotency-key': key }, payload
   });
   assert.equal((await send('GET', { role: '' })).statusCode, 401);
   assert.equal((await send('GET', { role: 'production_operator' })).statusCode, 403);
@@ -166,16 +173,35 @@ test('report email administration persists plans, respects authorization and avo
   assert.equal(first.json().recipientAccounts[0].email, contactEmail);
   assert.equal(first.json().transport.canConfigure, false);
   assert.doesNotMatch(first.payload, /smtp|recipientAllowlist|netrc/i);
-  const payload = { version: 0, enabled: true, schedules: sample().schedules };
+  assert.equal(first.json().nextDelivery, null);
+  const legacy = { ...sample(), recipientDomains: ['musonoi.test'] };
+  legacy.schedules[0].recipients = ['Reader@musonoi.test'];
+  const at = { at: '2026-11-27T05:00:00.000Z', scheduleIds: [legacy.schedules[0].id] };
+  env.WMS_REPORT_MAIL_CONFIG_FILE = path.join(dir, 'host.json');
+  await fs.writeFile(env.WMS_REPORT_MAIL_CONFIG_FILE, JSON.stringify({
+    ...legacy, schedules: [{ ...legacy.schedules[0], recipients: ['unlisted@musonoi.test'] }]
+  }), { mode: 0o600 });
+  const invalidLegacy = (await send('GET')).json();
+  assert.deepEqual([invalidLegacy.enabled, invalidLegacy.schedules, invalidLegacy.nextDelivery], [false, [], null]);
+  await fs.writeFile(env.WMS_REPORT_MAIL_CONFIG_FILE, JSON.stringify(legacy));
+  const usingLegacy = (await send('GET')).json();
+  assert.equal(usingLegacy.version, 0);
+  assert.equal(usingLegacy.enabled, true);
+  assert.deepEqual(usingLegacy.schedules, legacy.schedules);
+  assert.deepEqual(usingLegacy.nextDelivery, at);
+  const payload = { version: 0, enabled: true, schedules: usingLegacy.schedules };
   assert.equal((await send('PUT', { role: 'limited_role_manager', payload })).statusCode, 403);
   assert.equal((await send('PUT', { csrf: '', payload })).statusCode, 403);
   const malicious = { ...payload, schedules: [{ ...payload.schedules[0], recipients: ['x@example.com'] }] };
   assert.equal((await send('PUT', { payload: malicious })).statusCode, 400);
+  const unapproved = { ...payload, schedules: [{ ...payload.schedules[0], recipients: ['unlisted@musonoi.test'] }] };
+  assert.equal((await send('PUT', { payload: unapproved })).statusCode, 400);
   const invalidActor = { ...payload, schedules: [{ ...payload.schedules[0], actor: 'out-of-scope' }] };
   assert.equal((await send('PUT', { payload: invalidActor })).statusCode, 400);
   const saved = await send('PUT', { payload });
   assert.equal(saved.statusCode, 200);
   assert.equal(saved.json().version, 1);
+  assert.deepEqual(saved.json().nextDelivery, at);
   assert.deepEqual(saved.json(), (await send('PUT', { payload })).json());
   const readBack = await send('GET');
   assert.deepEqual(readBack.json().schedules, payload.schedules);
@@ -185,14 +211,30 @@ test('report email administration persists plans, respects authorization and avo
   const newPayload = { version: 1, enabled: true, schedules: [schedule] };
   contactEmail = 'reader@company.example';
   assert.equal((await send('PUT', { payload: newPayload, key: 'request-0003' })).statusCode, 400);
-  assert.deepEqual((await send('GET')).json().recipientAccounts, []);
+  const restricted = (await send('GET')).json();
+  assert.deepEqual(restricted.recipientAccounts, []);
+  assert.deepEqual(restricted.unavailableRecipientAccounts.map(({ id, reason }) => [id, reason]), [[accountId, 'NOT_APPROVED']]);
+  assert.doesNotMatch(JSON.stringify(restricted.unavailableRecipientAccounts), /@company\.example/);
   contactEmail = 'updated@musonoi.test';
   assert.equal((await send('PUT', { payload: newPayload, key: 'request-0004' })).statusCode, 200);
   assert.deepEqual((await send('GET')).json().schedules, [schedule]);
-  const disabled = await send('PUT', { payload: { version: 2, enabled: false, schedules: [] }, key: 'request-0005' });
+  contactEmail = null;
+  const paused = { ...schedule, actor: 'unavailable-actor', enabled: false };
+  const savePaused = await send('PUT', { payload: { version: 2, enabled: true, schedules: [paused] }, key: 'request-0005' });
+  assert.equal(savePaused.statusCode, 200);
+  assert.equal(savePaused.json().nextDelivery, null);
+  const readPaused = (await send('GET')).json();
+  assert.deepEqual(readPaused.schedules, [paused]);
+  assert.equal(readPaused.unavailableRecipientAccounts[0].reason, 'MISSING_EMAIL');
+  assert.equal((await send('PUT', {
+    payload: { version: 3, enabled: true, schedules: [{ ...paused, actor: schedule.actor, enabled: true }] },
+    key: 'request-0006'
+  })).statusCode, 400);
+  const disabled = await send('PUT', { payload: { version: 3, enabled: false, schedules: [] }, key: 'request-0007' });
   assert.equal(disabled.statusCode, 200);
   assert.equal(disabled.json().enabled, false);
-  assert.equal(decisions.length, 3);
+  assert.equal(disabled.json().nextDelivery, null);
+  assert.equal(decisions.length, 4);
   assert.doesNotMatch(JSON.stringify(decisions), /@musonoi\.test|report-user/);
 });
 
@@ -275,6 +317,23 @@ test('dispatched date ranges use completed Lubumbashi days and months', () => {
   assert.deepEqual(Mail.duePeriod(schedule, new Date('2028-03-01T07:00:00Z')),
     { key: '2028-02', from: '2028-02-01', to: '2028-02-29' });
   assert.equal(Mail.duePeriod(schedule, new Date('2028-03-02T07:00:00Z')), null);
+  assert.equal(Mail.duePeriod({ ...schedule, enabled: false }, new Date('2028-03-01T07:00:00Z')), null);
+});
+
+test('next nominal delivery uses the Lubumbashi calendar, includes ties and excludes paused plans', () => {
+  const delivery = (schedule, now, enabled = true) => Policy.nextDelivery({ enabled, schedules: schedule }, new Date(now));
+  const daily = { ...sample().schedules[0], id: 'daily', hour: 0 };
+  const monthly = { ...daily, id: 'monthly', frequency: 'monthly' };
+  const leapNight = '2028-02-29T22:00:00.000Z';
+  assert.deepEqual(delivery([daily, monthly], '2028-02-29T21:59:59Z'),
+    { at: leapNight, scheduleIds: ['daily', 'monthly'] });
+  assert.deepEqual(delivery([daily, monthly], leapNight), { at: leapNight, scheduleIds: ['daily', 'monthly'] });
+  assert.deepEqual(delivery([daily, monthly], '2028-02-29T22:00:00.001Z'),
+    { at: '2028-03-01T22:00:00.000Z', scheduleIds: ['daily'] });
+  assert.deepEqual(delivery([{ ...daily, enabled: false }, monthly], '2028-02-29T22:00:00.001Z'),
+    { at: '2028-03-31T22:00:00.000Z', scheduleIds: ['monthly'] });
+  assert.equal(delivery([{ ...daily, enabled: false }], leapNight), null);
+  assert.equal(delivery([monthly], leapNight, false), null);
 });
 
 test('only a summary worksheet is attached while interactive exports keep both sheets', async () => {
@@ -320,7 +379,7 @@ test('report jobs enforce permissions and send once per recipient with durable p
   assert.equal(sent.length, 0);
   const pool = fakePool(['report:read', 'inventory:export']);
   assert.equal(await Mail.dueJobs(config, due, pool, now, overrides), 0);
-  assert.equal(await Mail.dueJobs(config, due, pool, now, overrides), 0);
+  assert.equal(await Mail.dueJobs(config, [{ schedule: { ...schedule, enabled: true }, period }], pool, now, overrides), 0);
   assert.equal(rendered.length, 1);
   assert.deepEqual(rendered[0], ['actor-id', 'movement', 'CU_CATHODE', '2026-11-26']);
   assert.deepEqual(sent.map(([address]) => address), config.recipientAllowlist);

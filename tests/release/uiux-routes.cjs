@@ -137,7 +137,7 @@ function pages(ids){
  add('co-prep-alias','/receipts/:id/work',[CO],{example:'coPrepEditable'});
  add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor'],state:'scoped pending-plan and all-order counts'});
  add('preparation-new','/preparation/new',BOTH,{state:'select approved preparation plan'});
- add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator'],state:'approval status, uncreated order and live preparation status'});
+ add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator'],state:'scoped approval badge, status-only waiting orders and live preparation status'});
  add('preparation-batch','/preparation/work-plans/new',BOTH,{screenshot:true,roles:['export_supervisor','production_operator'],state:'batch draft entry'});
  add('cu-work-plan-detail','/preparation/work-plans/:id',[CU],{example:'cuApprovedWork',screenshot:true,state:'approved with approval history'});
  add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved with approval history'});
@@ -227,7 +227,7 @@ function pages(ids){
  add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});
  add('access-approvals','/workbench/access-approvals',BOTH,{state:'approval inbox for an account manager',screenshot:true});
  add('diagnostics','/workbench/diagnostics',BOTH);
- add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator SMTP setup and delivery schedules with registered recipient accounts'});
+ add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator plan and SMTP tabs, registered recipients, schedule status and next planned delivery'});
  add('former-design-entry','/workbench/design',BOTH);
  add('audit','/audit',BOTH,{screenshot:true,roles:['production_operator']});
  return cases;
