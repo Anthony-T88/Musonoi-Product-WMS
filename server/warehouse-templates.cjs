@@ -9,6 +9,8 @@ function printLanguage(wb,language,title){for(const ws of wb.worksheets){const e
 async function receipt(language){const wb=await base('receipts'),ws=wb.worksheets[0];dataTable(ws,Array.from({length:30},()=>Array(5).fill(null)));const notes=wb.worksheets[1],lines=[
  '生产入库不录重量；客户和新生产捆包堆存区由系统指定。 / Production receipts do not record weight. The system assigns the customer and the New Production Bundles Stock Area.',
  '捆包号如 MUS-2026-370-28 或 MUS-2026-370-28A。重号可在数字序号后加字母，生产批次由捆包号自动识别。 / Example bundles: MUS-2026-370-28 and MUS-2026-370-28A. Add a letter suffix to distinguish repeated numbers. The system detects the production batch.',
+ language==='fr'?'La date de production doit correspondre au numéro du paquet. Ajoutez le numéro du jour de production à trois chiffres au 1er janvier de l’année indiquée. MUS-2026-325-34 correspond au 2026-11-22.':
+ '生产日期须与捆包号一致，从年份的1月1日起加上三位生产日序号。例如 MUS-2026-325-34 对应 2026-11-22。 / The production date must match the bundle number. Add the three-digit production day to January 1 of the stated year. MUS-2026-325-34 corresponds to 2026-11-22.',
  '日期可填Excel日期或YYYY/MM/DD。入库时间未注明时区时按卢本巴希UTC+2解释。 / Use Excel dates or YYYY/MM/DD. Inbound times without a zone use Lubumbashi UTC+2.',
  '最多500捆；支持中英文表头及调整列顺序。禁止公式和链接。预览不写库存，保存草稿后按权限审核。 / Maximum 500 bundles. Chinese/English headings and reordered columns are supported. No formulas or links. Preview does not post stock; save a draft for authorized approval.'
  ];lines.forEach((v,i)=>notes.getCell(i+1,1).value=v);notes.getColumn(1).width=105;notes.eachRow(r=>{r.height=60;r.alignment={wrapText:true,vertical:'middle'};});printLanguage(wb,language,'Production Receipt');return Buffer.from(await wb.xlsx.writeBuffer());}

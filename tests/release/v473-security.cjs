@@ -36,8 +36,14 @@ test('single active session, shared tab CSRF, restart and registration field err
   assert(!/token|hash|password/.test(JSON.stringify(audit)));
   await app.close();app=await build({config:f.appCfg});
   assert.equal((await get(first)).statusCode,401);assert.equal((await get(current)).statusCode,200);
+  const language=await app.inject({method:'POST',url:'/api/v1/me/language',
+   headers:{...current,'idempotency-key':randomUUID()},payload:{language:'fr'}});
+  assert.equal(language.statusCode,200,language.body);
+  assert.equal((await get(current)).json().language_code,'fr');
   assert.equal((await app.inject({method:'POST',url:'/api/v1/auth/logout',headers:current,payload:{}})).statusCode,200);
   assert.equal((await get(current)).statusCode,401);
+  const resumed=await login(admin,6);
+  assert.equal((await get(resumed)).json().language_code,'fr');
 
   const prefix='/api/v1/auth/',remoteAddress='127.82.4.1';
   const token=await app.inject({url:prefix+'registration-token',remoteAddress});

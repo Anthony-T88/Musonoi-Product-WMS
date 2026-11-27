@@ -75,7 +75,7 @@ test('WMS exception states preserve recovery, access and write semantics in the 
   await page.evaluate(()=>{
    window.AppSignedIn=true;
    window.AppConfig={version:'4.9.0'};
-   window.I18n={language:'en',apply(){}};
+   window.I18n={language:'en',usesEnglish:true,label:(_,english)=>english,apply(){}};
    window.ProductContext={cobaltPage:()=>false,isCopper:()=>true,globalPage:()=>false};
    window.CurrentUser={permissions:['dashboard:read','inventory:read']};
    window.SinglePlan={form(){},detail(){}};

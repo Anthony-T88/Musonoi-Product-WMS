@@ -6,7 +6,7 @@ window.OverviewDesigner={
   stock:'.oa-state-list',customers:'.oa-customer,.oa-three .oa-panel:nth-child(2)',
   attention:'.oa-attention-counts',execution:'.oa-execution',flow:'.oa-flow',balance:'.oa-balance-panel'
  },
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  active(){return !!window.AppSignedIn;},
  isOverview(){return location.pathname==='/overview'&&!new URLSearchParams(location.search).has('management');},
  editing(){return this.dialog?.open&&this.draft?.scope===PageLayout.scope()&&this.draft.language===I18n.language;},

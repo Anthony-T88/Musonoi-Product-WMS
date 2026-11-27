@@ -9,7 +9,7 @@ const arrivalExists=(co,dispatch)=>`EXISTS(SELECT 1 FROM historical_sales_arriva
 async function assertNotArrived(c,req,id){
  const {rows:[row]}=await c.query('SELECT '+arrivalExists(req.productCode===cobalt,'$1')+' arrived',[id]);
  if(row.arrived)throw B.error(409,req.user.language_code==='en'?
-  'This vehicle has already arrived according to the linked historical shipment.':
+  'The linked historical stock issue already records this vehicle’s arrival.':
   '该车辆已依据关联历史出库单登记到场');
 }
 

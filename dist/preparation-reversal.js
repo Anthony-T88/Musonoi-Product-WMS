@@ -1,12 +1,12 @@
 'use strict';
 
 window.PreparationReversal={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  base(id){return (ProductContext.isCopper()?'/v261/lots/':'/cobalt/preparations/')+id+'/reversal';},
  message(code){
   const text={
    PREPARATION_REVERSAL_NOT_FINAL:['只有终审通过的备货批次可办理整批撤销。','Whole-batch reversal is available after final preparation approval.'],
-   PREPARATION_REVERSAL_LOADED:['该批次已有实际装车或出库记录，请办理对应的卸车或出库更正。','This batch has loading or outbound records. Use the unloading or outbound correction workflow.'],
+   PREPARATION_REVERSAL_LOADED:['该批次已有实际装车或出库记录，请办理对应的卸车或出库更正。','This batch has loading or stock issue records. Use the unloading or stock issue correction workflow.'],
    PREPARATION_REVERSAL_MATCHED:['请先取消占用该批次的装车计划或解除车辆匹配。','Cancel the loading plan or release its vehicle match first.'],
    PREPARATION_REVERSAL_STOCK_CONFLICT:['请核对整批货位、库存状态及未完成的取样或更正。','Verify every stock location, stock status and outstanding sampling or correction.'],
    PREPARATION_REVERSAL_STALE:['备货或库存资料已变更，请退回申请并重新核实。','Preparation or stock details changed. Return the request and verify again.'],

@@ -1,9 +1,10 @@
 'use strict';
+const {supported}=require('../server/languages.cjs');
 const fs=require('fs'),crypto=require('crypto'),DB=require('../server/database-connection.cjs'),M=require('./maintenance-connection.cjs'),Chain=require('./migration-chain.cjs'),{hashPassword}=require('../server/security.cjs');
 function fields(o,keys){if(!o||typeof o!=='object'||Array.isArray(o)||Object.keys(o).some(k=>!keys.includes(k)))DB.fail('BOOTSTRAP_INVALID_MANIFEST');}
 function text(v,max=120){if(typeof v!=='string'||!v.trim()||v.length>max||/[\x00-\x1f]/.test(v))DB.fail('BOOTSTRAP_INVALID_MANIFEST');return v.trim();}
 function validate(input){fields(input,['admin','project','warehouse','formalCells','mapSourceSha256']);fields(input.admin,['username','displayName','language']);fields(input.project,['code','name']);fields(input.warehouse,['code','name']);const a=input.admin;
- if(!/^[a-z][a-z0-9_]{2,79}$/.test(a.username)||!['zh-CN','en'].includes(a.language))DB.fail('BOOTSTRAP_INVALID_MANIFEST');
+ if(!/^[a-z][a-z0-9_]{2,79}$/.test(a.username)||!supported.includes(a.language))DB.fail('BOOTSTRAP_INVALID_MANIFEST');
  if(!Array.isArray(input.formalCells)||input.formalCells.length<1||input.formalCells.length>131||new Set(input.formalCells).size!==input.formalCells.length||input.formalCells.some(v=>!/^P[1-4]-\d{2}$/.test(v))||!/^[a-f0-9]{64}$/.test(input.mapSourceSha256))DB.fail('BOOTSTRAP_INVALID_MAP');
  return {admin:{username:a.username,displayName:text(a.displayName),language:a.language},project:{code:text(input.project.code,40),name:text(input.project.name)},warehouse:{code:text(input.warehouse.code,40),name:text(input.warehouse.name)},formalCells:[...input.formalCells].sort(),mapSourceSha256:input.mapSourceSha256};
 }

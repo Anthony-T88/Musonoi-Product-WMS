@@ -2,7 +2,7 @@
 ((root)=>{
  const blocks={
   intro:['库存与发运','Inventory & Shipping',12],metrics:['库存与履约指标','Inventory & Fulfilment Metrics',12],
-  net:['出入库净重统计','Inbound & Outbound Net Weight',6],vehicles:['出库车辆统计','Outbound Vehicles',6],
+  net:['出入库净重统计','Inbound & Stock Issue Net Weight',6],vehicles:['出库车辆统计','Stock Issue Vehicles',6],
   stock:['库存状态结构','Inventory State',4],customers:['客户库存结构','Customer Inventory',4],
   attention:['本班关注与待办','Tasks & Exceptions',4],execution:['销售计划执行明细','Sales Plan Execution',12],
   flow:['车辆与装车计划流转','Vehicle & Loading Plan Flow',12],balance:['收发存与月度预检','Stock Balance & Monthly Precheck',12]

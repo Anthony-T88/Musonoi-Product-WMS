@@ -1,7 +1,7 @@
 'use strict';
 
 window.ExportLicenses={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  route:'/export-licenses',
  api(){return (ProductContext.isCopper()?'':'/cobalt')+'/export-permits';},
  can:key=>CurrentUser.permissions.includes('export-license:'+key),
@@ -296,7 +296,7 @@ window.ExportLicenses={
    return '<tr><td>'+link+'</td><td>'+this.value(a.invoice_no)+'</td><td>'+qty(a.reserved_quantity)+'</td><td>'+qty(a.used_quantity)+'</td><td>'+
     UI.status(state==='PENDING_RECONCILIATION'?'PENDING':state,'permit',label)+'</td><td>'+esc(a.posted_at?BusinessTime.display(a.posted_at):'—')+'</td></tr>';
   });
-  const headings=[['装车计划','Loading Plan'],['发票号','Invoice'],['预占数量','Reserved'],['正式核销量','Reconciled'],['状态','Status'],['正式出库','Formal Outbound']];
+  const headings=[['装车计划','Loading Plan'],['发票号','Invoice'],['预占数量','Reserved'],['正式核销量','Reconciled'],['状态','Status'],['正式出库','Stock Issue Posted']];
   const table=rows.length?this.detailTable(headings,rows,'permit-allocations'):'<p role="status">'+t('暂无关联装车','No linked loading plans')+'</p>';
   const history=d.historical_usage||[],historical=headings.slice(0,2);
   historical[0]=['历史装箱单','Historical Packing List'];

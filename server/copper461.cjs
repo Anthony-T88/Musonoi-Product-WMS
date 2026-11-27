@@ -14,7 +14,7 @@ async function settings(c,req){return(await c.query(`SELECT p.id project_id,p.na
 async function documents(c,req,x){const out=[];
  for(const [permission,table,type,path]of [['receipt:read','receipts','RECEIPT','/receipts/'],['allocation:read','allocations','LOT','/preparation/'],['load:read','loading_orders','LOAD','/outbounds/loads/'],['adjust:read','stock_adjustments','ADJUST','/stocktaking/adjustments/']]){
   if(!can(req,permission))continue;const rows=table==='loading_orders'?await M.loads(c,x):await M.docs(c,x,table);
-  for(const d of rows)out.push({...d,doc_type:type,href:path+d.id,entity_type:table,document_no:d.lot_no||d.document_no||d.code,status:d.phase||d.workflow_state||d.status});
+  for(const d of rows)out.push({...d,doc_type:type,href:path+d.id,entity_type:table,document_no:d.lot_no||d.document_no||d.code,business_batch_no:type==='LOT'?d.lot_no:type==='LOAD'?d.preparation_batch_no:null,status:d.phase||d.workflow_state||d.status});
  }
  if(can(req,'stocktake:read'))for(const d of await M.counts(c,x))out.push({...d,doc_type:'COUNT',entity_type:'stocktakes',document_no:d.code,status:d.phase||d.status,href:'/stocktaking/'+d.id});
  if(can(req,'loading-plan:read'))for(const d of await M.loadingPlans(c,x))out.push({...d,doc_type:'LOADING_PLAN',entity_type:'loading_plan_documents',document_no:d.packing_list_no,href:'/loading-plans/'+d.id});

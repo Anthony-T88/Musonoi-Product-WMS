@@ -1,6 +1,6 @@
 'use strict';
 // One SVG viewport for fit, wheel, buttons, pan and fullscreen. Never move site cells.
-const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null,selected:null,
+const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,selectedCustomer:null,view:null,drag:null,selected:null,
  occupied(l){return l.current.bundle_count>0;},
  fields(l){return {customer:[...new Set(l.current.customers.map(c=>c.name).filter(Boolean))].join(' / ')||I18n.translate('未分配',true),lot:(l.current.lots?.length?l.current.lots:(l.current.batches||[])).join(' / ')||'—'};},
  displaySize(){const canvas=$('stock-map-canvas');return {w:canvas?.clientWidth||800,h:canvas?.clientHeight||500};},
@@ -9,12 +9,50 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
  apply(){const svg=$('stock-map-svg');if(!svg||!this.view)return;const b=this.bounds(),v=this.view;v.x=this.zoom===1?0:Math.max(-b.w*.08,Math.min(b.w-v.w+b.w*.08,v.x));v.y=this.zoom===1?0:Math.max(-b.h*.08,Math.min(b.h-v.h+b.h*.08,v.y));svg.style.transform='';const size=this.displaySize();svg.style.width=size.w+'px';svg.style.height=size.h+'px';svg.setAttribute('width',size.w);svg.setAttribute('height',size.h);svg.setAttribute('preserveAspectRatio','xMidYMid meet');svg.setAttribute('viewBox',[v.x,v.y,v.w,v.h].join(' '));if($('v27-map-scale'))$('v27-map-scale').value=this.zoom;if($('v31-map-percent')){$('v31-map-percent').value=Math.round(this.zoom*100);$('v31-map-percent').removeAttribute('aria-invalid');}if($('v31-map-zoom-error'))$('v31-map-zoom-error').textContent='';if($('v271-map-in'))$('v271-map-in').disabled=this.zoom>=this.maxZoom;if($('v271-map-out'))$('v271-map-out').disabled=this.zoom<=this.minZoom;StockMap.zoom=this.zoom;this.positionTemporary();},
  point(x,y){const svg=$('stock-map-svg'),m=svg?.getScreenCTM();return m?new DOMPoint(x,y).matrixTransform(m.inverse()):null;},
  scale(value,x,y){if(!this.view)this.fit();const z=Math.max(this.minZoom,Math.min(this.maxZoom,Math.round(Number(value)*100)/100));if(!Number.isFinite(z))return;const old=this.view,b=this.bounds(),anchor=x==null?{x:old.x+old.w/2,y:old.y+old.h/2}:this.point(x,y);if(!anchor)return;const w=b.w/z,h=b.h/z;this.view={x:anchor.x-(anchor.x-old.x)*w/old.w,y:anchor.y-(anchor.y-old.y)*h/old.h,w,h};this.zoom=z;this.apply();this.readable();},
- labels(){const rail=$('v271-map-labels');if(!rail)return;const rows=StockMap.data.locations.filter(l=>l.active&&(this.occupied(l)||['TEMPORARY','LEFTOVER'].includes(l.map_usage)));let index=0;rail.innerHTML='<h3>占用货位明细</h3><div class="v271-label-grid">'+rows.map(l=>{if(['TEMPORARY','LEFTOVER'].includes(l.map_usage))return `<article id="v271-label-${l.id}" class="v271-location-label v31-temporary-summary" data-location-id="${l.id}" data-cell-code="${esc(l.cell_code||l.code)}"><button type="button" class="v271-label-code" data-no-i18n>${esc(StockMap.areaName(l))}</button><span class="v271-label-customer" data-no-i18n>${esc(this.fields(l).customer)}</span><span class="v271-label-count"><strong>${l.current.bundle_count}</strong> <span>捆</span></span></article>`;const groups=l.current.batch_groups||[{batch_no:this.fields(l).lot,bundle_count:l.current.bundle_count,customers:l.current.customers}];return groups.map(group=>`<article id="v271-label-${l.id}-${index++}" class="v271-location-label v31-batch-card" data-location-id="${l.id}" data-cell-code="${esc(l.cell_code||l.code)}" data-batch-group="${esc(group.batch_no||'')}"><button type="button" class="v31-card-open"><span class="v31-card-location"><span>货位</span><strong data-no-i18n>${esc(StockMap.displayCode(l.code))}</strong></span><span class="v31-card-batch-label">${group.prepared?'备货批次':'生产批次'}</span><strong class="v31-card-batch" data-no-i18n>${esc(group.batch_no||'—')}</strong><span class="v31-card-customer" data-no-i18n>${esc([...new Set((group.customers||[]).map(c=>c.name).filter(Boolean))].join(' / ')||I18n.translate('未分配',true))}</span><span class="v31-card-month"><span data-no-i18n data-preparation-month-label>${I18n.language==='en'?'Preparation Month':'备货月份'}</span><strong data-no-i18n>${esc(group.preparation_month?String(group.preparation_month).slice(0,7):I18n.language==='en'?'Unknown':'未知')}</strong></span><span class="v31-card-footer"><span class="v31-card-quantity"><strong>${group.bundle_count}</strong> <span>捆</span></span><span class="v31-card-hint">查看捆包 →</span></span></button></article>`).join('');}).join('')+(rows.length?'':'<p>暂无占用货位</p>')+'</div>';
- const temporary=document.createElement('section');temporary.className='v47-map-temporary';temporary.setAttribute('aria-label',ProductContext.text('共享堆存区','Shared Storage Areas'));
- for(const card of rail.querySelectorAll('.v31-temporary-summary'))temporary.append(card);
- if(temporary.children.length){const heading=document.createElement('h3');heading.textContent=ProductContext.text('共享堆存区','Shared Storage Areas');heading.dataset.noI18n='';temporary.prepend(heading);rail.prepend(temporary);}
- const directory=rail.querySelector('.v271-label-grid');if(!directory.children.length)directory.innerHTML='<p>暂无占用货位</p>';
- for(const card of rail.querySelectorAll('[data-location-id]')){const g=document.querySelector(`[data-map-cell="${CSS.escape(card.dataset.cellCode)}"]`);if(g){const ids=[...rail.querySelectorAll('[data-location-id="'+card.dataset.locationId+'"]')].map(e=>e.id);g.setAttribute('aria-describedby',ids.join(' '));}card.onclick=()=>StockMap.select(card.dataset.locationId,1,card.dataset.batchGroup||null);card.onpointerenter=()=>g?.classList.add('v271-linked');card.onpointerleave=()=>g?.classList.remove('v271-linked');}this.temporary();I18n.apply();},
+ labels(){
+  const rail=$('v271-map-labels');if(!rail)return;
+  const t=(zh,en)=>I18n.label(zh,en),customers=new Map();
+  const shared=StockMap.data.locations.filter(l=>l.active&&['TEMPORARY','LEFTOVER'].includes(l.map_usage));
+  for(const location of StockMap.data.locations.filter(l=>l.active)){
+   for(const group of location.matched?.customer_batch_groups??location.current.customer_batch_groups??[]){
+    const key=group.customer_id||'unassigned';
+    if(!customers.has(key))customers.set(key,{name:group.customer_name||t('未分配','Unassigned'),batches:[]});
+    customers.get(key).batches.push({location,group});
+   }
+  }
+  const sharedSummary=shared.length?'<section class="v47-map-temporary" aria-label="'+esc(t('共享堆存区','Shared Storage Areas'))+'"><h3>'+
+   esc(t('共享堆存区','Shared Storage Areas'))+'</h3>'+shared.map(l=>'<article id="v271-label-'+l.id+'" class="v271-location-label v31-temporary-summary" data-location-id="'+
+    l.id+'" data-cell-code="'+esc(l.cell_code||l.code)+'"><button type="button" class="v271-label-code" data-no-i18n>'+esc(StockMap.areaName(l))+
+    '</button><span class="v271-label-customer" data-no-i18n>'+esc(this.fields(l).customer)+'</span><span class="v271-label-count"><strong>'+
+    l.current.bundle_count+'</strong> <span>'+esc(t('捆','bundles'))+'</span></span></article>').join('')+'</section>':'';
+  let index=0;
+  const card=({location:l,group})=>'<article id="v271-label-'+l.id+'-'+index+++'" class="v271-location-label v31-batch-card" data-location-id="'+
+   l.id+'" data-cell-code="'+esc(l.cell_code||l.code)+'" data-batch-group="'+esc(group.batch_no||'')+'" data-customer-group="'+esc(group.customer_id||'unassigned')+'">'+
+   '<button type="button" class="v31-card-open"><span class="v31-card-location"><span>'+esc(t('货位','Location'))+'</span><strong data-no-i18n>'+
+   esc(StockMap.areaName(l))+'</strong></span><span class="v31-card-batch-label">'+esc(group.prepared?t('备货批次','Preparation Batch'):t('生产批次','Production Batch'))+
+   '</span><strong class="v31-card-batch" data-no-i18n>'+esc(group.batch_no||'—')+'</strong>'+
+   '<span class="v31-card-month"><span data-no-i18n data-preparation-month-label>'+esc(t('备货月份','Preparation Month'))+'</span><strong data-no-i18n>'+
+   esc(group.preparation_month?String(group.preparation_month).slice(0,7):t('未知','Unknown'))+'</strong></span>'+
+   '<span class="v31-card-footer"><strong class="v31-card-quantity" data-no-i18n>'+esc(StockMap.batchAmount(group))+'</strong>'+
+   '<span class="v31-card-hint">'+esc(t('查看捆包','View Bundles'))+' →</span></span></button></article>';
+  rail.innerHTML=sharedSummary+'<h3>'+esc(t('占用货位明细','Occupied Location Details'))+'</h3>'+
+   ([...customers.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(({name,batches})=>
+    '<section class="v271-customer-group"><h4 class="v31-card-customer" data-no-i18n>'+esc(name)+'</h4><div class="v271-label-grid">'+batches.map(card).join('')+'</div></section>'
+   ).join('')||'<p>'+esc(t('暂无占用货位','No Occupied Locations'))+'</p>');
+  const cardIds=new Map();
+  for(const item of rail.querySelectorAll('[data-location-id]')){
+   const {locationId,cellCode,batchGroup,customerGroup}=item.dataset;
+   const cell=document.querySelector('[data-map-cell="'+CSS.escape(cellCode)+'"]');
+   if(cell){
+    if(!cardIds.has(cell))cardIds.set(cell,[]);
+    cardIds.get(cell).push(item.id);
+   }
+   item.onclick=()=>StockMap.select(locationId,1,batchGroup||null,customerGroup||null);
+   item.onpointerenter=()=>cell?.classList.add('v271-linked');item.onpointerleave=()=>cell?.classList.remove('v271-linked');
+  }
+  for(const [cell,ids] of cardIds)cell.setAttribute('aria-describedby',ids.join(' '));
+  this.temporary();I18n.apply();
+ },
  temporary(){
   const svg=$('stock-map-svg');if(!svg)return;
   for(const l of StockMap.data.locations.filter(l=>['TEMPORARY','LEFTOVER'].includes(l.map_usage))){
@@ -42,7 +80,7 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
     label.innerHTML='<span></span><strong></strong>';canvas.append(label);
    }
    const title=StockMap.areaName(location);
-   label.firstElementChild.textContent=I18n.language==='en'&&rect.width<175?
+   label.firstElementChild.textContent=I18n.usesEnglish&&rect.width<175?
     (code==='P3'?'Leftover Bundle Storage':'New Bundle Storage'):title;
    label.title=title;
    const font=Math.min(24,Math.max(9,Math.min(13*this.zoom,rect.width/8,rect.height/5)));
@@ -74,7 +112,7 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,view:null,drag:null
 };
 const v271Draw=StockMap.draw.bind(StockMap);StockMap.draw=function(){v271Draw();if(MapView.stage?.isConnected){MapView.apply();MapView.labels();MapView.readable();}};
 StockMap.region=code=>MapView.region(code);
-const v271Select=StockMap.select.bind(StockMap);StockMap.select=async function(id,page=1,batchGroup=null){MapView.selectedBatch=batchGroup;await v271Select(id,page);const detail=$('stock-map-detail');if(!detail)return;detail.hidden=false;MapView.selected=id;let close=detail.querySelector('.v271-detail-close');if(!close){close=document.createElement('button');close.className='v271-detail-close button secondary';close.textContent='关闭详情';close.onclick=()=>{detail.hidden=true;document.querySelector('.stock-map-layout')?.classList.remove('v27-has-detail');};detail.prepend(close);}MapView.apply();};
+const v271Select=StockMap.select.bind(StockMap);StockMap.select=async function(id,page=1,batchGroup=null,customerGroup=null){MapView.selectedBatch=batchGroup;MapView.selectedCustomer=customerGroup;await v271Select(id,page);const detail=$('stock-map-detail');if(!detail)return;detail.hidden=false;MapView.selected=id;let close=detail.querySelector('.v271-detail-close');if(!close){close=document.createElement('button');close.className='v271-detail-close button secondary';close.textContent='关闭详情';close.onclick=()=>{detail.hidden=true;document.querySelector('.stock-map-layout')?.classList.remove('v27-has-detail');};detail.prepend(close);}MapView.apply();};
 
 const setStockMapLanguage=I18n.set.bind(I18n);
 I18n.set=function(language){

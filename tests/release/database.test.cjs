@@ -133,6 +133,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    for(const entry of chain.slice(0,from))await Chain.execute(c,entry);
    await c.query("INSERT INTO system_info VALUES(true,'test')");
    const fixture=await E.seed(c,name);
+   await c.query("UPDATE users SET language_code='en' WHERE id=$1",[fixture.accounts[0].id]);
    // The legacy all-permissions synthetic admin must match a migrated V4.8.7 role.
    if(from>=199)await c.query("DELETE FROM role_permissions WHERE role_code='admin' AND permission_code IN('printer:manage','inventory:correct-request','inventory:correct-review')");
    if(from>=200)await c.query("DELETE FROM role_permissions WHERE role_code='admin' AND permission_code IN('lot:reverse-request','lot:reverse-review')");
@@ -222,6 +223,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    const normalizeType=row=>{
     let definition=row.definition;
     if(row.name==='co_loading_plans_status_check')definition=definition.replace(", 'CANCELLED'::text",'');
+    if(row.name==='users_language_code_check')definition=definition.replace(", 'fr'::text",'');
     if(row.name==='co_loading_plans_check')
      definition=definition.replace("status = ANY (ARRAY['DRAFT'::text, 'CANCELLED'::text])","status = 'DRAFT'::text");
     if(from<187&&row.name==='stocktakes_task_type_check')definition=definition.replace("'SEMIANNUAL'::text, ",'');
@@ -236,6 +238,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert(afterCatalog.some(row=>row.name==='co_loading_plans_status_check'&&row.definition.includes("'CANCELLED'")));
    assert(afterCatalog.some(row=>row.name==='co_loading_plans_check'&&row.definition.includes("'DRAFT'::text, 'CANCELLED'::text])")&&row.definition.includes('current_load_id IS NULL')));
    assert(afterCatalog.some(row=>row.name==='co_loading_cancel_details'&&row.definition.includes('cancel_reason IS NOT NULL')));
+   assert(afterCatalog.some(row=>row.name==='users_language_code_check'&&row.definition.includes("'fr'::text")));
    assert.equal((await c.query('SELECT count(*)::int n FROM co_loading_plans WHERE cancelled_at IS NOT NULL OR cancelled_by IS NOT NULL OR cancel_reason IS NOT NULL')).rows[0].n,0);
    assert(afterCatalog.some(t=>t.relation==='audit_logs'&&t.name==='aa_security_r3_audit_scope'));
    const rights=(await c.query("SELECT has_table_privilege('musonoi_app','security_schema_status','SELECT') can_read, has_function_privilege('musonoi_app','security_r3_entity_scopes(text,text)','EXECUTE') can_forge")).rows[0];
@@ -436,6 +439,7 @@ test('isolated migration, initialization, business permission and concurrency ac
  });
  await check('BP Excel downloads use the exact archived revision and document permissions',async()=>{
   const Excel=require('exceljs');
+  const BPPrint=require('../../server/customs-bp-print.cjs');
   for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
    const co=product==='CO_HYDROXIDE',number='EXCEL-AUDIT/2026/'+(co?'CO':'CU'),customer=f.customers[product].id;
    const order=crypto.randomUUID(),rows=[{order_id:order,batch:'AUDIT-BATCH',truck:'AUDIT1234',trailer_two:'N/A',transporter:'Example International Logistics',
@@ -460,24 +464,38 @@ test('isolated migration, initialization, business permission and concurrency ac
     const book=new Excel.Workbook();await book.xlsx.load(response.rawPayload);
     assert.equal(book.worksheets.length,1);
     const sheet=book.worksheets[0];
+    const cells=row=>{
+     const result=[];
+     sheet.getRow(row).eachCell(cell=>{if(cell.type!==Excel.ValueType.Merge)result.push(cell);});
+     return result;
+    };
+    const headings=cells(15);
+    assert.deepEqual(headings.map(cell=>cell.text),BPPrint.columns.map(([label])=>label));
+    const vehicle=(row,label)=>sheet.getCell(row,headings.find(cell=>cell.text===label).col);
     assert.match(sheet.getCell('A1').text,/EXCEL-AUDIT/);
     assert.deepEqual(['A4','A5','A6','A7'].map(cell=>sheet.getCell(cell).text),
      ['RCCM: AUDIT-RCCM','ID-NAT: AUDIT-IDNAT','NIF: AUDIT-NIF','Contact: Audit Contact']);
-    assert.equal(sheet.getCell('C11').text,mode);
-    assert.equal(sheet.getCell('E16').value,'N/A');
-    assert.equal(sheet.getCell('G16').value,'Example International Logistics');
-    assert.equal(sheet.getCell('G16').alignment.shrinkToFit,true);
-    assert.notEqual(sheet.getCell('G16').alignment.wrapText,true);
-    assert.equal(sheet.getCell('I16').value,'001234');
-    assert.equal(sheet.getCell('J16').value,15);
-    assert.equal(sheet.getCell('K16').value,31.4539);
-    assert.equal(sheet.getCell('L17').value,32.7828);
-    assert.equal(sheet.getCell('K16').numFmt,'#,##0.000');
-    assert.equal(sheet.getCell('I12').value.toISOString(),'2026-11-23T00:00:00.000Z');
-    assert.equal(sheet.getCell('I12').numFmt,'[$-809]d mmmm yyyy');
-    assert.equal(sheet.getCell('H20').text,'KOLWEZI, le 24 November 2026');
+    assert.deepEqual(cells(11).slice(0,2).map(cell=>cell.text),['Transport mode:',mode]);
+    assert.equal(vehicle(16,'TRAILER 2').value,'N/A');
+    const transporter=vehicle(16,'TRANSPORTER');
+    assert.equal(transporter.value,'Example International Logistics');
+    assert.equal(transporter.alignment.shrinkToFit,true);
+    assert.notEqual(transporter.alignment.wrapText,true);
+    assert.equal(transporter.alignment.horizontal,'center');
+    assert.equal(transporter.font.name,'Times New Roman');
+    assert.equal(vehicle(16,'PASSPORT NO.').value,'001234');
+    assert.equal(vehicle(16,'PACKAGE N°').value,15);
+    assert.equal(vehicle(16,'Net Weight (MT)').value,31.4539);
+    assert.equal(vehicle(17,'Gross Weight (MT)').value,32.7828);
+    assert.equal(vehicle(16,'Net Weight (MT)').numFmt,'#,##0.000');
+    const loadingDate=cells(12).at(-1);
+    assert.equal(loadingDate.value.toISOString(),'2026-11-23T00:00:00.000Z');
+    assert.equal(loadingDate.numFmt,'[$-809]d mmmm yyyy');
+    assert.deepEqual(cells(19).map(cell=>cell.text),['SIGNATURE','KOLWEZI, le 24 November 2026']);
+    assert.deepEqual(cells(19).map(cell=>cell.alignment.horizontal),['left','right']);
     assert.equal(sheet.getImages().length,1);
-    assert.equal(sheet.rowCount,20);
+    assert.equal(sheet.rowCount,19);
+    assert.equal(sheet.pageSetup.paperSize,9);
     assert.equal(sheet.pageSetup.orientation,'landscape');
     assert.equal(sheet.pageSetup.horizontalCentered,true);
     assert.equal(sheet.pageSetup.fitToHeight,1);

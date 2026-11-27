@@ -1,6 +1,6 @@
 'use strict';
 window.InventoryArchives={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  text:value=>value==null||value===''?'—':esc(value),
  time(value){return !value?'—':/^\d{4}-\d{2}-\d{2}$/.test(value)?esc(value):esc(BusinessTime.display(value));},
  location(value){
@@ -19,7 +19,7 @@ window.InventoryArchives={
  },
  section(zh,en,html){return '<section class="panel wms-section"><h2>'+this.t(zh,en)+'</h2>'+html+'</section>';},
  documentState(state){
-  const labels={CONFIRMED:['已确认','Confirmed'],OUTBOUND:['已正式出库','Formally Outbound'],FULFILLED:['已完成','Fulfilled'],
+  const labels={CONFIRMED:['已确认','Confirmed'],OUTBOUND:['已正式出库','Stock Issue Posted'],FULFILLED:['已完成','Fulfilled'],
    PREPARED:['已备货','Prepared'],ARCHIVED:['已归档','Archived'],DRAFT:['草稿','Draft'],OPEN:['执行中','Open'],
    APPROVED:['已通过','Approved'],MATCHED:['已匹配','Matched'],CANCELLED:['已取消','Cancelled'],RECEIVED:['已入库','Received']};
   return labels[state]?this.t(...labels[state]):I18n.translate(state||'—',true);
@@ -135,7 +135,7 @@ window.InventoryArchives={
   ]);
   const status=Copper461.state(b.business_status==='备货作业中'?'PREPARING':b.inventory_state_code||b.business_status||b.status);
   const state=events.map(event=>({...event,href:this.link(event.href)?event.href:null}));
-  const kinds={receipt:['入库','Receipt'],preparation:['备货','Preparation'],loading:['装车','Loading'],outbound:['正式出库','Formal Outbound']};
+  const kinds={receipt:['入库','Receipt'],preparation:['备货','Preparation'],loading:['装车','Loading'],outbound:['正式出库','Stock Issue Posted']};
   const docs=history.documents||[],known=new Set(docs.map(row=>row.href));
   const loading=docs.findLast(row=>row.kind==='loading'),dispatch=docs.findLast(row=>row.kind==='outbound');
   const linkRows=docs.map(row=>({...row,label:t(...kinds[row.kind]),state:this.documentState(row.state)}));
@@ -148,7 +148,7 @@ window.InventoryArchives={
    ['包装重量（MT）','Packaging (MT)',weight(b.packaging_weight)],['重量规则','Weight Rule',b.weight_rule_version],
    ['原始净重（MT）','Original Net (MT)',weight(b.original_weight)],['入库单号','Receipt No.',b.receipt_code],
    ['入库确认时间','Receipt Confirmation',b.confirmed_at?BusinessTime.display(b.confirmed_at):null],
-   ['装车单号','Loading Order',b.loading_document_no||loading?.code],['出库时间','Outbound Time',dispatch?.at?BusinessTime.display(dispatch.at):null]
+   ['装车单号','Loading Order',b.loading_document_no||loading?.code],['出库时间','Stock Issue Time',dispatch?.at?BusinessTime.display(dispatch.at):null]
   ]);
   const filters=new URLSearchParams(location.search);filters.delete('archive');
   const actions='<a class="button secondary" href="/inventory'+(filters.size?'?'+esc(filters):'')+'">'+t('返回库存明细','Back to Inventory')+'</a>'+
@@ -186,8 +186,8 @@ window.InventoryArchives={
   const labels={CREATE:['创建','Created'],SUBMIT:['提交','Submitted'],PRODUCTION_APPROVE:['确认正式入库','Receipt Confirmed'],
    BAG_UPDATE:['更新袋级资料','Bag Updated'],REVIEW_PENDING:['提交装车审核','Submitted for Loading Review'],
    LOADED:['完成装车','Loading Completed'],DEPARTED:['登记离场','Departure Recorded'],
-   OUTBOUND_PENDING:['提交出库审批','Submitted for Outbound Review'],LOGISTICS_APPROVED:['物流审核通过','Logistics Review Approved'],
-   OUTBOUND:['正式出库','Formally Outbound']};
+   OUTBOUND_PENDING:['提交出库审批','Submitted for Stock Issue Review'],LOGISTICS_APPROVED:['物流审核通过','Logistics Review Approved'],
+   OUTBOUND:['正式出库','Stock Issue Posted']};
   return labels[action]?this.t(...labels[action]):CobaltWorkUI.actionName(action);
  },
  async cobalt(id){

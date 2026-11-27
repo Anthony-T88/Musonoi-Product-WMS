@@ -1,6 +1,6 @@
 'use strict';
 window.LoadingFiltersR9={
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  fields(form,customers,co,query){const t=this.t,q=new URLSearchParams(location.search),state=form.elements[co&&!query?'arrival_state':'status']?.closest('label');if(!state)return;const current=state.querySelector('select').name;
   let grid=form.querySelector('.form-grid');if(!grid){grid=document.createElement('div');grid.className='form-grid';form.prepend(grid);}const oldMonth=form.elements.shipment_month?.closest('label'),oldCustomer=form.elements.customer_id?.closest('label');
   const month=oldMonth||document.createElement('label');if(!oldMonth)month.innerHTML=t('发运月份','Shipment Month')+'<input name="shipment_month" type="month" value="'+esc(q.get('shipment_month')||'')+'">';

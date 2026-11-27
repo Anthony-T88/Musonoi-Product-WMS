@@ -25,4 +25,11 @@ async function seed(client,name){
  for(const [label,permission] of [['limited_account_manager','users:manage'],['limited_role_manager','roles:manage'],['limited_viewer','inventory:read']]){const code='custom_'+crypto.randomBytes(8).toString('hex');await client.query('INSERT INTO roles(code,name,name_en,built_in,created_by) VALUES($1,$2,$2,false,$3)',[code,'Synthetic '+label,admin]);for(const p of new Set([permission,'inventory:read','master:read']))await client.query('INSERT INTO role_permissions VALUES($1,$2)',[code,p]);const password=crypto.randomBytes(18).toString('base64url'),username='audit_'+label,id=(await client.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Synthetic '+label,hashPassword(password),code])).rows[0].id;await client.query('INSERT INTO user_scopes(user_id,project_id) VALUES($1,$2)',[id,project]);accounts.push({id,role:label,username,password});}
  return {database:name,appCfg:appConfig(name),project,warehouse,location,accounts,customers};
 }
-module.exports={root,runtime,configuration,options,database,appConfig,save,fixture,seed};
+function receiptBundle(day,serial,daysEarlier=0){
+ const date=new Date(day+'T00:00:00Z');
+ date.setUTCDate(date.getUTCDate()-daysEarlier);
+ const year=date.getUTCFullYear()-(date.getUTCMonth()===0&&date.getUTCDate()===1?1:0);
+ const ordinal=(date.getTime()-Date.UTC(year,0,1))/86400000;
+ return {bundle_no:'MUS-'+year+'-'+String(ordinal).padStart(3,'0')+'-'+String(serial).padStart(2,'0'),production_date:date.toISOString().slice(0,10)};
+}
+module.exports={root,runtime,configuration,options,database,appConfig,save,fixture,seed,receiptBundle};

@@ -1,6 +1,6 @@
 'use strict';
 window.HistoricalMovements={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  path:'/workbench/historical-movements',
  kinds:{receipts:'RECEIPT','loading-plans':'LOADING_PLAN',outbounds:'LOADING_ORDER','stock-outbound':'OUTBOUND'},
  queue:[],
@@ -87,7 +87,7 @@ window.HistoricalMovements={
  },
  kind(code){
   const labels={RECEIPT:['历史入库单','Historical Receipt'],LOADING_PLAN:['历史装车计划','Historical Loading Plan'],
-   LOADING_ORDER:['历史装车单','Historical Loading Order'],OUTBOUND:['历史出库单','Historical Outbound Order']};
+   LOADING_ORDER:['历史装车单','Historical Loading Order'],OUTBOUND:['历史出库单','Historical Stock Issue Order']};
   return this.t(...labels[code]);
  },
  documentRoute(path){return /^\/(receipts|loading-plans|outbounds|stock-outbound|inventory)\/historical(?:\/[0-9a-f-]{36})?$/.test(path);},
@@ -304,7 +304,7 @@ window.HistoricalMovements={
    const review=[...details.map(issue=>this.issueText(issue)),...(validation?.issues||[]).filter(code=>!shown.has(code)).map(code=>this.message(code))];
    const code=result?.code||p?.code;
    if(code&&!shown.has(code))review.push(this.message(code));
-   if(['INVALID_WORKBOOK','WORKBOOK_ARCHIVE_INVALID'].includes(code)&&I18n.language!=='en'&&p?.error)review.push(p.error);
+   if(['INVALID_WORKBOOK','WORKBOOK_ARCHIVE_INVALID'].includes(code)&&!I18n.usesEnglish&&p?.error)review.push(p.error);
    const lines=result?.rows?.length?result.rows:p?.rows;
    const flagged=(lines||[]).filter(line=>line.flags?.length);
    if(flagged.length){
@@ -323,7 +323,7 @@ window.HistoricalMovements={
     (lines?.length?this.lines(lines,product):'')+
     (canReview(row)?'<div class="business-toolbar"><button type="button" class="button secondary" data-history-review="'+index+'" '+(this.busy?'disabled':'')+'>'+t('复核并导入','Review and Import')+'</button></div>':'')+
    (id?'<div class="business-toolbar">'+this.recordLink(id,product,t('查看导入记录','View Import Record'))+
-    (product===ProductContext.code&&this.canArea('inventory')&&p?.accepted_quantity?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Outbound Stock')+'</a>':'')+'</div>':
+    (product===ProductContext.code&&this.canArea('inventory')&&p?.accepted_quantity?'<a class="button secondary compact" href="'+esc(this.stockPath({packing_list_no:p.document_no,batch_no:p.batch_no}))+'">'+t('查看已出库库存','View Issued Stock')+'</a>':'')+'</div>':
      '<label class="wms-field">'+t('单独重传此文件','Replace This File')+'<input type="file" accept=".xls,.xlsx" data-historical-replace="'+index+'"></label>')+
     '</details>';
   }).join('')+'<div class="wms-filter-actions"><button type="button" class="button primary" id="historical-confirm">'+t('确认导入合格文件','Import Valid Files')+' ('+pending.length+')'+
@@ -433,7 +433,7 @@ window.HistoricalMovements={
    this.section('导入资料','Import Information',this.facts(r))+
     (!r.voided_at&&r.documents?.length?this.section('关联单据','Related Documents',r.product_code!==ProductContext.code?
     '<p>'+t('请切换到对应产品后打开业务单据。','Switch to the matching product to open its business documents.')+'</p>':this.links(r.documents,{
-    stock:!r.voided_at&&r.quantity?{label:t('查看已出库库存','View Outbound Stock'),code:r.source_facts?.batch_no,
+    stock:!r.voided_at&&r.quantity?{label:t('查看已出库库存','View Issued Stock'),code:r.source_facts?.batch_no,
      href:this.stockPath({packing_list_no:r.document_no,batch_no:r.source_facts?.batch_no})}:null
    })):'')+
    (r.exception_review?this.section('管理员复核','Administrator Review',UI46Pages.factList([
@@ -469,12 +469,12 @@ window.HistoricalMovements={
   const code=stock?(cu?row.rows[0]?.unit_id:row.source_facts?.batch_no):row.document_no;
   const back=stock?this.stockPath():this.listPath(area),outbound=stock||area==='stock-outbound';
   const summaries={receipts:['入库资料','Receipt Information'],'loading-plans':['计划资料','Plan Information'],
-   outbounds:['车辆与装载','Vehicle and Load'],'stock-outbound':['出库资料','Outbound Information'],inventory:['库存资料','Stock Information']};
+   outbounds:['车辆与装载','Vehicle and Load'],'stock-outbound':['出库资料','Stock Issue Information'],inventory:['库存资料','Stock Information']};
   const related=this.links(row.documents,{current:stock?null:row.id,stock:stock?null:this.archiveLink(row),
    source:{label:t('装箱单来源','Packing List Source'),code:row.source_name,
     href:this.path+'/'+row.source_id+'?'+new URLSearchParams({product:row.product_code})}});
   this.page(title,title,'<div class="inventory-archive wms-historical-detail">'+
-   UI46Pages.identity(code||'—',this.badge()+(outbound?UI.status('OUTBOUND','stock',t('已出库','Outbound')):''),this.back(back),'')+
+   UI46Pages.identity(code||'—',this.badge()+(outbound?UI.status('OUTBOUND','stock',t('已出库','Issued')):''),this.back(back),'')+
    this.section(...summaries[area],UI46Pages.factList(this.summary(row,area)))+
    (related?this.section('关联单据','Related Documents',related):'')+
    (row.metal?CobaltMetal.outbound(row):'')+

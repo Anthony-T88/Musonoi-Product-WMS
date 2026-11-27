@@ -38,5 +38,6 @@ a.button{display:inline-flex;align-items:center;justify-content:center;text-deco
 
 /* V2.7.0 continuous weighing */
 .v262-save-bar{position:sticky;bottom:0;z-index:3;display:flex;gap:16px;align-items:center;background:#f6f9fa;border:1px solid #d9e1e5;padding:12px;margin-top:12px}.v261-summary p{margin:8px 0}.v261-summary{min-height:180px}#v261-detail-items input[inputmode=decimal]{width:110px}#v261-detail-items input[data-v262-seal]{min-width:150px;max-width:220px}#v262-save-status{min-height:24px}#v261-detail-error{min-height:24px}
-html[lang="en"] [data-copy-zh],
-html:not([lang="en"]) [data-copy-en] { display: none; }
+html:not([lang="zh-CN"]) [data-copy-zh],
+html:not([lang="en"]) [data-copy-en],
+html:not([lang="fr"]) [data-copy-fr] { display: none; }

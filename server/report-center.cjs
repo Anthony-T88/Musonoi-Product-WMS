@@ -1,6 +1,7 @@
 'use strict';
 const D=require('./report-center-data.cjs'),M=require('./management.cjs'),C=require('./control-common.cjs');
 const W=require('./professional-workbook.cjs');
+const {englishBase}=require('./languages.cjs');
 const kindNames={shipping:['发运及单证','Shipments & Documents'],movement:['出入库流水','Inventory Movements'],
  balance:['收发存与对账','Stock Balance & Reconciliation'],stocktake:['盘点与差异','Inventory Count & Variances'],sales:['销售与履约','Sales & Fulfilment']};
 const names={
@@ -14,7 +15,7 @@ const names={
  pending:['待处理','Pending','number'],status:['状态','Status','enum'],source:['数据来源','Source','enum'],
  kind:['业务类型','Movement','enum'],piece:['捆包号 / 袋号','Bundle / Bag No.'],warehouse:['仓库','Warehouse'],position:['货位','Location'],
  change:['净变动（MT）','Net Change (MT)','weight'],included:['计入在线库存账','Included in Live Ledger','enum'],period:['账期','Period'],
- opening_net_mt:['期初净重','Opening Net','weight'],inbound_net_mt:['入库净重','Receipt Net','weight'],outbound_net_mt:['出库净重','Outbound Net','weight'],
+ opening_net_mt:['期初净重','Opening Net','weight'],inbound_net_mt:['入库净重','Receipt Net','weight'],outbound_net_mt:['出库净重','Stock Issue Net','weight'],
  weight_correction_mt:['重量确认 / 更正','Weight Confirmation / Correction','weight'],other_net_mt:['返场 / 调整 / 流转','Return / Adjustment / Transfer','weight'],
  baseline_net_mt:['追溯基准','History Baseline','weight'],closing_net_mt:['期末净重','Closing Net','weight'],
  reconciliation_net_mt:['已知净重勾稽差额','Known Net Reconciliation Difference','weight'],coverage:['历史覆盖','History Coverage','enum'],
@@ -23,7 +24,7 @@ const names={
  variance:['已核净重差（MT）','Verified Net Variance (MT)','weight'],finding:['差异类型','Finding','enum'],
  unknown:['待核重量行','Rows Awaiting Weight','number'],snapshot:['冻结快照','Frozen Snapshot'],
  plan:['销售计划号','Sales Plan No.'],month:['发运月','Shipment Month'],target:['计划净重','Planned Net','weight'],
- prepared:['备货净重','Prepared Net','weight'],loaded:['装车净重','Loaded Net','weight'],outbound:['出库净重','Outbound Net','weight'],
+ prepared:['备货净重','Prepared Net','weight'],loaded:['装车净重','Loaded Net','weight'],outbound:['出库净重','Stock Issue Net','weight'],
  invoiced:['确认开票净重','Invoice-confirmed Net','weight'],rate:['履约率','Fulfilment','percent'],
  confirmed:['开票确认日期','Invoice Confirmation Date','date']
 };
@@ -32,7 +33,7 @@ Object.assign(names,{
  metalPending:['待确认金属量车次','Unconfirmed Metal Vehicles','number']
 });
 const enums={
- ONLINE:['在线单据','Online'],HISTORICAL:['历史导入','Historical Import'],INBOUND:['入库','Receipt'],OUTBOUND:['出库','Outbound'],
+ ONLINE:['在线单据','Online'],HISTORICAL:['历史导入','Historical Import'],INBOUND:['入库','Receipt'],OUTBOUND:['出库','Stock Issue'],
  RETURN:['返场','Return'],ADJUSTMENT:['调整','Adjustment'],WEIGHT:['重量确认 / 更正','Weight Confirmation / Correction'],
  PREPARATION_TRANSFER:['备货流转','Preparation Transfer'],TRANSFER:['范围流转','Scope Transfer'],
  BASELINE:['追溯基准','History Baseline'],YES:['是','Yes'],NO:['否','No'],
@@ -135,7 +136,7 @@ async function parameters(c,input){
  return q;
 }
 async function report(c,req,input){
- const q=await parameters(c,input),kind=q.kind,en=req.user.language_code==='en';
+ const q=await parameters(c,input),kind=q.kind,en=englishBase(req.user.language_code);
  if(required[kind]&&!req.user.permissions.includes(required[kind]))throw C.error(403,'当前账号没有此报表的查询权限');
  let detail,summary,metric,warehouses=[],traceableFrom=null;
  if(kind==='shipping'){

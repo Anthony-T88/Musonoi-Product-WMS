@@ -3,19 +3,25 @@ const B=require('./business-common.cjs'),I=require('./inventory.cjs'),A=require(
 const BundleNumber=require('../dist/bundle-number.js');
 async function enabled(c){return !!(await c.query("SELECT to_regprocedure('v26_submit(uuid,uuid,text,jsonb)') IS NOT NULL AS enabled")).rows[0].enabled;}
 async function context(c,req,pid){return (await c.query('SELECT v26_production_context($1,$2) AS data',[req.user.id,B.uuid(pid)])).rows[0].data;}
-async function productionLines(c,req,pid,lines,legacyNumbers=false,requireSheets=false){
+async function productionLines(c,req,pid,lines,legacyNumbers=false,requireSheets=false,sourceRows=null){
  if(!Array.isArray(lines)||!lines.length||lines.length>500)throw B.error(400,'每单必须包含1–500捆');
  const newNumbers=!legacyNumbers&&await require('./v261.cjs').enabled(c);
  lines=lines.map(input=>({...input,bundle_no:BundleNumber.normalize(input?.bundle_no,newNumbers)}));
  const ctx=await context(c,req,pid),out=[],seen=new Set();
  await require('./v265.cjs').bundleLines(c,req,lines);
- for(const input of lines){if(input.location_id!==undefined&&input.location_id!==ctx.location_id||input.customer_id!==undefined&&input.customer_id!==ctx.customer_id)throw B.error(400,'生产入库客户及P5新生产捆包堆存区由服务端固定，不可修改');
+ for(const [index,input] of lines.entries()){if(input.location_id!==undefined&&input.location_id!==ctx.location_id||input.customer_id!==undefined&&input.customer_id!==ctx.customer_id)throw B.error(400,'生产入库客户及P5新生产捆包堆存区由服务端固定，不可修改');
  const no=B.text(input.bundle_no,'捆包编号',newNumbers?512:80),batch=BundleNumber.batch(no,newNumbers);
  if(!batch)throw B.error(400,'捆包编号须以非零数字序号结尾，序号后可加字母，例如 MUS-2026-370-28A');
+ const production=B.date(String(input.production_date).slice(0,10)),expected=BundleNumber.productionDate(no,newNumbers);
+ if(!expected||production!==expected){
+  const language=req.user.language_code,row=sourceRows?.[index]??index+1;
+  const label=language==='en'?(sourceRows?'Excel row ':'Row ')+row:language==='fr'?(sourceRows?'Ligne Excel ':'Ligne ')+row:(sourceRows?'Excel 第 ':'第 ')+row+' 行';
+  throw B.error(400,label+' · '+no+' · '+BundleNumber.productionDateMessage(expected,production,language));
+ }
  if(seen.has(no)||(await c.query('SELECT 1 FROM bundles WHERE bundle_no=$1',[no])).rowCount)throw B.error(409,'捆包编号重复');seen.add(no);
  if([input.gross_weight,input.net_weight,input.packaging_weight].some(x=>x!==undefined&&x!==null&&x!==''))throw B.error(400,'生产入库不录重量，请在备货检斤环节填写');
  let t=(await c.query('SELECT * FROM batches WHERE project_id=$1 AND code=$2 FOR SHARE',[pid,batch])).rows[0];if(!t)t=(await c.query('INSERT INTO batches(project_id,code) VALUES($1,$2) ON CONFLICT(project_id,code) DO UPDATE SET code=excluded.code RETURNING *',[pid,batch])).rows[0];if(!t.active)throw B.error(409,'生产批次已停用');
- const production=B.date(String(input.production_date).slice(0,10));const inbound=input.inbound_at instanceof Date?input.inbound_at.toISOString():input.inbound_at;
+ const inbound=input.inbound_at instanceof Date?input.inbound_at.toISOString():input.inbound_at;
  if(typeof inbound!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(inbound)||Number.isNaN(Date.parse(inbound))||production>new Date(inbound).toLocaleDateString('en-CA',{timeZone:'Africa/Lubumbashi'}))throw B.error(400,'入库时间需有效时区且不早于生产日期');
  out.push({sheets_per_bundle:requireSheets||input.sheets_per_bundle!=null?require('./v262.cjs').sheets(input.sheets_per_bundle,requireSheets):null,bundle_no:no,batch_id:t.id,production_date:production,inbound_at:new Date(inbound).toISOString(),location_id:ctx.location_id,gross_weight:null,net_weight:null,packaging_weight:null,weight_rule_version:null,remark:input.remark?B.text(input.remark,'备注',500):''});
  }return {customer:ctx.customer_id,lines:out};
@@ -25,7 +31,7 @@ async function stats(c,req){const w=I.where(req.user.id);return (await c.query(`
 module.exports={enabled,context,productionLines,stats,register:async function({app,pool,permitted,csrf}){
  const ExcelJS=require('exceljs'),headers=['捆包编号','捆包片数','生产日期','入库时间（含时区）','备注'];
  app.get('/api/v1/v26/receipts/template',{preHandler:permitted('receipt:write')},async(req,reply)=>reply.header('Content-Disposition','attachment; filename="production-receipt.xlsx"').type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(await require('./warehouse-templates.cjs').receipt(req.user.language_code)));
- app.post('/api/v1/v26/receipts/import-preview',{preHandler:[permitted('receipt:write'),csrf]},async req=>{const b=req.body||{};if(typeof b.file_base64!=='string'||b.file_base64.length>710000||!/^[-A-Za-z0-9+/=\r\n]+$/.test(b.file_base64))throw B.error(400,'文件无效或过大');const parsed=await require('./production-receipt-reader.cjs').parse(Buffer.from(b.file_base64,'base64'));const c=await pool.connect();try{await c.query('BEGIN');await productionLines(c,req,B.uuid(b.project_id),parsed.lines,false,true);await c.query('ROLLBACK');return {valid:true,...parsed,notice:'预览未写入，提交时将重新校验全部捆包。'};}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}});
+ app.post('/api/v1/v26/receipts/import-preview',{preHandler:[permitted('receipt:write'),csrf]},async req=>{const b=req.body||{};if(typeof b.file_base64!=='string'||b.file_base64.length>710000||!/^[-A-Za-z0-9+/=\r\n]+$/.test(b.file_base64))throw B.error(400,'文件无效或过大');const {sourceRows,...parsed}=await require('./production-receipt-reader.cjs').parse(Buffer.from(b.file_base64,'base64'));const c=await pool.connect();try{await c.query('BEGIN');await productionLines(c,req,B.uuid(b.project_id),parsed.lines,false,true,sourceRows);await c.query('ROLLBACK');return {valid:true,...parsed,notice:'预览未写入，提交时将重新校验全部捆包。'};}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}});
  app.get('/api/v1/v26/summary',{preHandler:permitted('inventory:read')},req=>I.transaction(pool,c=>stats(c,req)));
  app.get('/api/v1/v26/legacy-number-exceptions',{preHandler:permitted('inventory:read')},async req=>{const w=I.where(req.user.id);return {notice:'只报告历史编号，不修改编号、批次或历史数据。',items:(await pool.query(`SELECT v.id,v.batch,v.customer,v.location FROM inventory_view v WHERE ${w.text} AND v.id !~ '^MUS-[0-9]{4}-[0-9]{3}-([1-9][0-9]*|0*[1-9][0-9]*[A-Z]+)$' ORDER BY v.id LIMIT 10000`,w.values)).rows};});
  app.post('/api/v1/v26/production-context',{preHandler:[permitted('receipt:write'),csrf]},req=>B.mutate(pool,req,c=>context(c,req,req.body.project_id)));

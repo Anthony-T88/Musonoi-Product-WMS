@@ -23,7 +23,8 @@ test('historical gaps are explained on screen and in Excel without replacing mea
   assert.equal(saved.pending_fields.net,undefined);
   assert.equal(saved.net,0);
   assert.equal(data.metrics.find(metric=>metric.key==='inbound_net_mt').value,0);
-  const view={window:{},I18n:{language:en?'en':'zh-CN'},esc:value=>String(value)};
+  const view={window:{},I18n:{language:en?'en':'zh-CN',locale:en?'en-US':'zh-CN',usesEnglish:en,
+   label:(chinese,english)=>en?english:chinese},esc:value=>String(value)};
   vm.runInNewContext(readFileSync(resolve(__dirname,'../../dist/reports463.js'),'utf8'),view);
   const doc=data.detail.columns.find(col=>col.key==='document');
   const reason=data.pendingLabels.HISTORICAL_NOT_LINKED;
@@ -36,4 +37,25 @@ test('historical gaps are explained on screen and in Excel without replacing mea
   assert.equal(detail.getRow(7).getCell(column('document')).value,reason);
   assert.equal(detail.getRow(7).getCell(column('net')).value,0);
  }
+});
+
+test('stock issue reports localize the display without changing historical movement codes or workbook aliases',async t=>{
+ const row={date:'2026-01-02',kind:'OUTBOUND',document:'QA-PL',piece:'QA-42',qty:1,net:2,change:-2,source:'HISTORICAL'};
+ t.mock.method(Data,'movements',async()=>[row]);
+ const client={query:async()=>({rows:[{d:'2026-01-20'}]})};
+ const req={productCode:'CU_CATHODE',user:{language_code:'en',permissions:['inventory:export']}};
+ const data=await Reports.report(client,req,{kind:'movement'});
+ assert.equal(data.detail.rows[0].kind,'OUTBOUND');
+ assert.equal(data.labels.OUTBOUND,'Stock Issue');
+ const workbook=new Excel.Workbook();
+ await workbook.xlsx.load(await Reports.workbook(data,req));
+ const col=data.detail.columns.findIndex(c=>c.key==='kind')+2;
+ assert.equal(workbook.getWorksheet('Detail').getRow(7).getCell(col).value,'Stock Issue');
+
+ const Language=require('../../server/export-language.cjs');
+ assert(Language.headerEqual('Outbound Date','出库日期'));
+ assert(Language.headerEqual('Stock Issue Date','出库日期'));
+ assert.equal(Language.text('Formally Dispatched','zh-CN'),'OUTBOUND');
+ assert.equal(Language.text('Formally Dispatched','en'),'Stock Issue Posted');
+ assert.equal(Language.text('Outbound Date','en'),'Stock Issue Date');
 });

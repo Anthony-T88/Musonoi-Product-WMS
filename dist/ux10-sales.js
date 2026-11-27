@@ -1,6 +1,6 @@
 'use strict';
 window.SalesReviewUI={
- t:(z,e)=>I18n.language==='en'?e:z,co:()=>ProductContext.code==='CO_HYDROXIDE',base(){return (this.co()?'/cobalt':'')+'/sales-workflow';},
+ t:(z,e)=>I18n.label(z,e),co:()=>ProductContext.code==='CO_HYDROXIDE',base(){return (this.co()?'/cobalt':'')+'/sales-workflow';},
  state(p){if(p.status==='CLOSED'&&p.approval_state==='APPROVED')return this.t('已关闭（已审批）','Closed (Approved)');return this.t(...({PENDING:['待销售经理审批','Pending Sales Approval'],COMMERCE_PENDING:['待商务部经理审批','Pending Commercial Manager Approval'],REJECTED:['已驳回待修改','Returned for Changes'],APPROVED:['已审批通过','Approved'],LEGACY:[p.status==='CLOSED'?'历史计划 · 已关闭':'历史计划 · 执行中',p.status==='CLOSED'?'Legacy · Closed':'Legacy · Open']}[p.approval_state]||[p.status,p.status]));},
  error(e){const messages={SALES_OPERATOR_REQUIRED:['由销售业务员发起销售计划','Sales Operators submit sales plans'],SALES_MANAGER_REQUIRED:['当前节点由销售经理审批','The Sales Manager reviews this step'],COMMERCE_MANAGER_REQUIRED:['当前节点由商务部经理终审','The Commercial Department Manager reviews this step'],SALES_PLAN_SUBMITTER_REQUIRED:['仅原销售业务员可以修改待审批计划','Only the submitting Sales Operator can edit'],SALES_APPROVED_PLAN_LOCKED:['已审批计划的内容不可直接修改','Approved plan content cannot be edited directly'],SALES_PLAN_APPROVAL_REQUIRED:['销售计划须经销售经理和商务部经理审批后才能进入后续业务','Sales and Commercial Manager approval is required before downstream operations'],SALES_REVIEW_STALE:['审批状态已变化，请刷新后核对','Review changed. Refresh and verify'],SALES_REVIEW_INPUT:['请核对审批信息，驳回时必须填写原因','Check review inputs; a rejection reason is required']};const key=Object.keys(messages).find(k=>e.message.includes(k));return key?this.t(...messages[key]):e.message;},
  canReview(p){return p.approval_state==='PENDING'&&['sales_manager','admin'].includes(CurrentUser.role_code)&&CurrentUser.permissions.includes('plan:approve')||p.approval_state==='COMMERCE_PENDING'&&['commerce_manager','admin'].includes(CurrentUser.role_code)&&CurrentUser.permissions.includes('plan:commerce-approve');},
@@ -46,11 +46,11 @@ window.SalesReviewUI={
  },
  invoicePanel(plan){
   if(!Array.isArray(plan.posted_batches))return '';
-  const t=this.t,rows=plan.posted_batches,title=t('正式出库与开票确认','Formal Outbound and Invoice Confirmation');
+  const t=this.t,rows=plan.posted_batches,title=t('正式出库与开票确认','Formal Stock Issue and Invoice Confirmation');
   const search=plan.can_confirm_invoice?'<div class="business-toolbar"><button type="button" class="button secondary" id="sales-history-find">'+
    t('核对历史装箱单','Review Historical Packing Lists')+'</button><button type="button" class="button secondary" id="sales-history-auto">'+
    t('自动关联历史装箱单','Auto-Link Historical Packing Lists')+'</button></div>':'';
-  const headings=[['装车单','Loading Order'],['备货批次','Preparation Batch'],['车辆','Truck'],['出库净重','Outbound Net Weight'],['装车发票号','Shipment Invoice No.'],['开票状态','Invoice Status'],['操作','Actions']];
+  const headings=[['装车单','Loading Order'],['备货批次','Preparation Batch'],['车辆','Truck'],['出库净重','Stock Issue Net Weight'],['装车发票号','Shipment Invoice No.'],['开票状态','Invoice Status'],['操作','Actions']];
   const cells=rows.map((row,index)=>{
    const invoice=row.invoice_no||row.source_invoice_no||'',edit=plan.can_confirm_invoice&&!row.confirmed_at&&!invoice;
    const number=edit?'<input id="sales-invoice-'+index+'" maxlength="160" aria-label="'+esc(t('发票号','Invoice Number')+' · '+row.batch_no)+'">':esc(invoice||'—');

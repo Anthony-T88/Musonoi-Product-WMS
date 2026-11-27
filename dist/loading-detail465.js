@@ -1,6 +1,6 @@
 'use strict';
 window.LoadingDetails465={
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  matches(root){return ProductContext.isCopper()?/^\/outbounds\/loads\/[0-9a-f-]{36}$/.test(location.pathname):/^\/outbounds\/[0-9a-f-]{36}$/.test(location.pathname)&&!!root.querySelector('.co-execution-page');},
  compose(root,s){const P=UI46Pages,t=this.t,co=!ProductContext.isCopper(),id=location.pathname.split('/').pop(),d=co?CobaltExecutionUI.data:P.response(new RegExp('^/loads/'+id+'(?:\\?|$)'));if(!d||co&&d.order?.id!==id||!co&&d.id!==id)return false;
   s.composition.family='managed-document';root.dataset.pageFamily='managed-document';P.cls(root,'r5-document',s);P.cls(root,'loading465',s);const host=co?root.querySelector('.co-execution-page'):P.host(root),nodes=[...host.children],order=co?d.order:d,plan=co?d.outbound?.snapshot?.plan||d.plan:d.loading_plan||{},transport=co?{...order.transport_snapshot,...d.outbound?.snapshot?.order?.transport_snapshot}:{...plan,...plan.arrival_transport},batch=co?d.plan.preparation_batch_no:d.lot_nos?.join(' / ')||d.lot_no||'—',customer=co?d.outbound?.snapshot?.customer?.name||d.plan.customer_name:d.customer_name,state=co?d.execution?.state||'WAITING':d.workflow_state||d.status;

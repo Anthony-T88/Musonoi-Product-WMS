@@ -66,7 +66,7 @@ test('cobalt shipment reconciliation through report API, workbook and page prese
   }
  });
  await check('active report page distinguishes subtotal, unknown and confirmed zero',async()=>{
-  const context={window:{},I18n:{language:'en',translate:x=>x},ManagementLabels:{columns:{}},CobaltReportsUI:{labels:{}},esc:String,Tonnes:require('../../dist/tonnes.js'),CountValues:require('../../dist/count-values.js')};
+  const context={window:{},I18n:{language:'en',locale:'en-US',usesEnglish:true,label:(_,english)=>english,translate:x=>x},ManagementLabels:{columns:{}},CobaltReportsUI:{labels:{}},esc:String,Tonnes:require('../../dist/tonnes.js'),CountValues:require('../../dist/count-values.js')};
   vm.runInNewContext(fs.readFileSync(path.join(E.root,'dist/reports463.js'),'utf8'),context);const ui=context.window.Reports463,d=await get({month:'2025-01',customer_id:a});
   const metrics=ui.metrics({metrics:[{key:'metal',label:'Confirmed ARECOMS Metal (MT)',type:'metal',value:d.shippingSummary.arecoms_mt},
    {key:'metalPending',label:'Unconfirmed Metal Vehicles',type:'number',value:d.shippingSummary.arecoms_unconfirmed_vehicles}]});

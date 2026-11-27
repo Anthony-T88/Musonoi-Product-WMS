@@ -197,7 +197,7 @@ async function main(){
   const testApp=await require('../../server/app.cjs').build({config:f.appCfg});
   try{
    const now=new Date(),day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-   const bundleNo='MUS-'+day.slice(0,4)+'-078-'+String(now.getTime());
+   const bundle=E.receiptBundle(day,now.getTime()),bundleNo=bundle.bundle_no;
    const {rows:[site]}=await db.query("INSERT INTO projects(code,name) VALUES($1,'Synthetic history conflict project') RETURNING id",['TEST-HIST-'+tag]);
    await db.query("INSERT INTO warehouses(project_id,code,name) VALUES($1,'TEST-HIST','Synthetic history conflict warehouse')",[site.id]);
    for(const account of f.accounts.filter(item=>['production_operator','production_manager'].includes(item.role))){
@@ -215,7 +215,7 @@ async function main(){
     };
    };
    const produce=await requestAs('production_operator','127.73.0.21'),confirm=await requestAs('production_manager','127.73.0.22');
-   const receipt=await produce('/receipts',{project_id:site.id,lines:[{bundle_no:bundleNo,sheets_per_bundle:48,production_date:day,inbound_at:now.toISOString()}]});
+   const receipt=await produce('/receipts',{project_id:site.id,lines:[{...bundle,sheets_per_bundle:48,inbound_at:now.toISOString()}]});
    const pending=await produce('/receipts/'+receipt.id+'/submit',{version:receipt.version});
    await confirm('/receipts/'+receipt.id+'/confirm',{version:pending.version});
    const {rows:[live]}=await db.query('SELECT physical_status FROM bundles WHERE receipt_id=$1',[receipt.id]);

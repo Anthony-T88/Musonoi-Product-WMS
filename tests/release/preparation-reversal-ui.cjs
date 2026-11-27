@@ -34,7 +34,7 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
   }
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const receipt=await api('production_operator',copper,'/receipts',{project_id:f.project,lines:[1,2,3,4].map(n=>({
-   bundle_no:'MUS-'+day.slice(0,4)+'-065-00'+n,sheets_per_bundle:48,production_date:day,inbound_at:new Date().toISOString()
+   ...E.receiptBundle(day,'00'+n),sheets_per_bundle:48,inbound_at:new Date().toISOString()
   }))});
   const submit=await api('production_operator',copper,'/receipts/'+receipt.id+'/submit',{version:receipt.version});
   await api('production_manager',copper,'/receipts/'+receipt.id+'/confirm',{version:submit.version});
@@ -185,7 +185,7 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
     await page.locator('#lot-revoke').waitFor();
     const language=page.locator('.top-actions select[data-language]');
     assert.equal(await language.getAttribute('aria-label'),'语言/Language');
-    assert.deepEqual(await language.locator('option').allTextContents(),['中文','English']);
+    assert.deepEqual(await language.locator('option').allTextContents(),['中文','English','Français']);
     await language.selectOption('en');
     const englishReselect=page.getByRole('button',{name:'Reselect Bundles',exact:true});
     await englishReselect.waitFor();
@@ -197,7 +197,7 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
     assert.doesNotMatch(await dialog.innerText(),/\p{Script=Han}/u);
     await dialog.locator('#lot-preapproval-back').click();
     await language.selectOption('zh-CN');
-    assert.deepEqual(await language.locator('option').allTextContents(),['中文','English']);
+    assert.deepEqual(await language.locator('option').allTextContents(),['中文','English','Français']);
     const reselect=page.getByRole('button',{name:'重选捆包',exact:true});
     await reselect.waitFor();
     for(const width of [1280,390,1440]){

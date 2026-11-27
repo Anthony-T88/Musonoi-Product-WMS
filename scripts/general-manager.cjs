@@ -4,10 +4,11 @@ const fs=require('node:fs');
 const DB=require('../server/database-connection.cjs');
 const Maintenance=require('./maintenance-connection.cjs');
 const {hashPassword}=require('../server/security.cjs');
+const {supported}=require('../server/languages.cjs');
 
 async function configure(client,{username,displayName,language='zh-CN',password},{apply=false,rotate=false,backupVerified=false,environment='production'}={}){
  if(!/^[a-z][a-z0-9_]{2,39}$/.test(username||'')||typeof displayName!=='string'||!displayName.trim()||displayName.length>80||
-  /[\x00-\x1f]/.test(displayName)||!['zh-CN','en'].includes(language)||typeof password!=='string'||password.length<20||password.length>128){
+  /[\x00-\x1f]/.test(displayName)||!supported.includes(language)||typeof password!=='string'||password.length<20||password.length>128){
   DB.fail('GENERAL_MANAGER_CONFIGURATION_INVALID');
  }
  if(apply&&!backupVerified)DB.fail('MIGRATION_VERIFIED_BACKUP_REQUIRED');

@@ -1,10 +1,12 @@
 'use strict';
-globalThis.ClientRelease=Object.freeze({version:'4.9.0',displayVersion:'4.9.0',revision:'4.9.0-ui6'});
+globalThis.ClientRelease=Object.freeze({version:'4.9.0',displayVersion:'4.9.0',revision:'4.9.0-ui7'});
 
 if(typeof document!=='undefined'){
- let english=false;
- try{english=localStorage.getItem('musonoi-language')==='en';}catch{}
- document.documentElement.lang=english?'en':'zh-CN';
+ let language='zh-CN';
+ try{const saved=localStorage.getItem('musonoi-language');if(saved==='en'||saved==='fr')language=saved;}catch{}
+ document.documentElement.lang=language;
  const title=document.querySelector('title');
- if(english&&title?.dataset.titleEn)document.title=title.dataset.titleEn;
+ if(title)title.dataset.titleZh=title.textContent;
+ const translated=language==='fr'?title?.dataset.titleFr:language==='en'?title?.dataset.titleEn:null;
+ if(translated)document.title=translated;
 }

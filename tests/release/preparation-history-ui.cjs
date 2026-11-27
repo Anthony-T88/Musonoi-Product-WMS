@@ -105,7 +105,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    }else{
     const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
     const draft=await api('production_operator',product,'/receipts',{project_id:f.project,
-     lines:[{bundle_no:'MUS-'+day.slice(0,4)+'-035-798',sheets_per_bundle:48,production_date:day,inbound_at:new Date().toISOString()}]});
+     lines:[{...E.receiptBundle(day,798),sheets_per_bundle:48,inbound_at:new Date().toISOString()}]});
     const submitted=await api('production_operator',product,'/receipts/'+draft.id+'/submit',{version:draft.version});
     await api('production_manager',product,'/receipts/'+draft.id+'/confirm',{version:submitted.version});
     const {rows:[bundle]}=await c.query('SELECT id FROM bundles WHERE receipt_id=$1',[draft.id]);
@@ -343,11 +343,11 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     respond();
     await page.locator('#login-panel').waitFor();
     const languages=page.locator('.login46-languages');
-    for(const language of ['en','zh-CN','en']){
+    for(const language of ['en','zh-CN','fr','en']){
      await languages.locator('[data-login-language="'+language+'"]').click();
      await page.waitForFunction(code=>document.documentElement.lang===code,language);
      assert.equal(await languages.locator('.login46-language-label').innerText(),'语言/Language');
-     assert.deepEqual(await languages.locator('[data-login-language]').allTextContents(),['中文','English']);
+     assert.deepEqual(await languages.locator('[data-login-language]').allTextContents(),['中文','English','Français']);
     }
     await page.goto(origin+'/offline.html');
     assert.match(await page.title(),/Product WMS · Offline/);
@@ -456,7 +456,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const languagePicker=page.locator('.top-actions .system-language');
     const assertPicker=async language=>{
      assert.equal(await languagePicker.locator('span').textContent(),'语言/Language');
-     assert.deepEqual(await languagePicker.locator('option').allTextContents(),['中文','English']);
+     assert.deepEqual(await languagePicker.locator('option').allTextContents(),['中文','English','Français']);
      assert.equal(await languagePicker.locator('select').inputValue(),language);
     };
     await approvals.getByRole('heading',{name:'Approval History'}).waitFor();
@@ -1030,6 +1030,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     ['ADJUST_APPROVE','ADJUST','SUBMITTED','待库存调整审批','Pending Stock Adjustment Approval']
    ]);
    const pending=cases.map(([kind,doc_type,status],index)=>({kind,doc_type,status,id:crypto.randomUUID(),document_no:'QA-TASK-'+(index+1),href:'/overview',
+    ...(['LOT','LOAD'].includes(doc_type)&&kind!=='CO_EXCEPTION'&&kind!=='LOAD_REVIEW'?{business_batch_no:'QA-BATCH-'+(index+1)}:{}),
     ...(kind==='EXPORT_LICENSE_REVIEW'?{review_action:'EXTEND'}:{})}));
    const history={doc_type:'LOT',status:'PENDING',document_no:'QA-INITIATED-LOT',href:'/overview'};
    const taskPath=co?'/api/v1/cobalt/ui461/tasks':'/api/v1/v34/ui461/tasks';
@@ -1042,8 +1043,10 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      await page.goto(todo);
      await page.locator('.c461-state').first().waitFor();
      for(const [index,expected] of cases.entries()){
-      const row=page.getByRole('row').filter({has:page.getByRole('link',{name:pending[index].document_no,exact:true})});
+      const task=pending[index],link=page.getByRole('link',{name:task.business_batch_no||task.document_no,exact:true});
+      const row=page.getByRole('row').filter({has:link});
       assert.equal(await row.locator('.c461-state').innerText(),expected[expectedIndex]);
+      assert.equal(await link.getAttribute('href'),task.href);
      }
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'The task list must fit the viewport');
      for(const tab of ['initiated','completed']){

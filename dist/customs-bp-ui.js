@@ -2,7 +2,7 @@
 
 window.CustomsBP={
  selected:new Set(),selectedCustomer:null,product:null,preview:null,proof:null,editing:null,
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  base(){return CustomsWorkspace.base()+'/bp';},
  feedback(error){
   const labels={

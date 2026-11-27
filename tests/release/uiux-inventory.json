@@ -76,7 +76,6 @@
       "^\\/stocktaking\\/adjustments\\/([0-9a-f-]{36})$",
       "^\\/stocktaking\\/new$",
       "^\\/workbench$",
-      "^\\/workbench\\/access-approvals$",
       "^\\/workbench\\/accounts$",
       "^\\/workbench\\/historical-movements$",
       "^\\/workbench\\/historical-movements\\/([0-9a-f-]{36})$",
@@ -158,7 +157,6 @@
       "^\\/stocktaking\\/adjustments\\/([0-9a-f-]{36})$",
       "^\\/stocktaking\\/new$",
       "^\\/workbench$",
-      "^\\/workbench\\/access-approvals$",
       "^\\/workbench\\/accounts$",
       "^\\/workbench\\/historical-movements$",
       "^\\/workbench\\/historical-movements\\/([0-9a-f-]{36})$",
@@ -202,7 +200,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "document-specific review stages",
+      "state": "document-specific review stages and preparation or stock issue batch identifiers",
       "template": "/overview"
     },
     {
@@ -277,7 +275,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "copper batch net weights grouped by customer and cobalt site map",
       "template": "/stock-map"
     },
     {
@@ -614,7 +612,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "copper production date validation and cobalt plan selection",
       "template": "/receipts/new"
     },
     {
@@ -630,7 +628,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "draft",
+      "state": "draft with production date validation",
       "template": "/receipts/:id/edit"
     },
     {
@@ -638,7 +636,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "single Excel drop, bundle number with letter suffix",
+      "state": "single Excel drop with letter suffix and production date validation",
       "template": "/receipts/import"
     },
     {
@@ -1451,15 +1449,6 @@
       ],
       "state": "standard",
       "template": "/workbench/permissions"
-    },
-    {
-      "key": "access-approvals",
-      "template": "/workbench/access-approvals",
-      "products": [
-        "CU_CATHODE",
-        "CO_HYDROXIDE"
-      ],
-      "state": "approval inbox for an account manager"
     },
     {
       "key": "diagnostics",

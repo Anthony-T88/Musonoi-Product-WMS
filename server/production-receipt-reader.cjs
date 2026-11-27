@@ -31,7 +31,7 @@ async function parse(buffer){
  if(candidates.length!==1)throw B.error(400,candidates.length?'识别到多个入库明细表，请仅保留一个待导入明细表':'未识别到入库表头，须包含捆包编号、捆包片数、生产日期、入库时间');
  const {ws,row,map,duplicates}=candidates[0];if(duplicates.length)throw B.error(400,'入库表头存在重复字段，请核对');
  if(ws.rowCount>10000||ws.columnCount>100)throw B.error(400,'Excel有效范围过大，请删除多余行列');
- const lines=[];
+ const lines=[],sourceRows=[];
  for(let n=row+1;n<=ws.rowCount;n++){
   const cells=ws.getRow(n);if(!cells.hasValues)continue;
   const input=Object.fromEntries(Object.entries(map).map(([k,col])=>[k,cells.getCell(col).value]));
@@ -41,10 +41,11 @@ async function parse(buffer){
    cells.eachCell(c=>{if(c.value&&typeof c.value==='object'&&!(c.value instanceof Date))throw Error('禁止公式、超链接或复杂单元格，请粘贴纯值');if(!map.remark||c.col!==map.remark){if(!Object.values(map).includes(c.col)&&!blank(c.value))throw Error('存在未识别的非空数据列，请核对表头');}});
    for(const k of required)if(blank(input[k]))throw Error(aliases[k][0]+'不能为空');
    lines.push({bundle_no:require('../dist/bundle-number.js').normalize(input.bundle_no),sheets_per_bundle:require('./v262.cjs').sheets(typeof input.sheets_per_bundle==='string'?input.sheets_per_bundle.trim():input.sheets_per_bundle),production_date:dateValue(input.production_date,false,wb.properties.date1904),inbound_at:dateValue(input.inbound_at,true,wb.properties.date1904),remark:String(input.remark??'').trim()});
+   sourceRows.push(n);
    if(lines.length>500)throw Error('每批最多500捆，请拆分文件');
   }catch(e){throw B.error(400,`Excel第${n}行：${e.message}`);}
  }
  if(!lines.length)throw B.error(400,'没有可导入的捆包记录');
- return {lines,mapping:{sheet:ws.name,header_row:row,columns:map},total_rows:lines.length};
+ return {lines,sourceRows,mapping:{sheet:ws.name,header_row:row,columns:map},total_rows:lines.length};
 }
 module.exports={parse,dateValue};

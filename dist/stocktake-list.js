@@ -1,6 +1,6 @@
 'use strict';
 window.StocktakeList={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  kinds:{MONTHLY:['月度盘点','Monthly'],SEMIANNUAL:['半年度盘点','Half-year'],ANNUAL:['年度盘点','Annual'],SPECIAL:['临时专项盘点','Special']},
  type(value){return this.kinds[value]?this.t(...this.kinds[value]):'—';},
  period(type,value){

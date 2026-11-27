@@ -145,7 +145,7 @@ async function exportBook(req,data){
   ['location_codes','货位','Locations'],['received_at','入库时间','Receipt Time']
  ]:[
   ['preparation_batch_no','备货批次','Preparation Batch'],['order_no','装车单','Loading Order'],['customer_name','客户','Customer'],
-  ['contract_no','合同','Contract'],['truck_no','车牌','Truck'],['posted_day','出库日期','Formal Outbound Date'],['bags','袋数','Bags'],
+  ['contract_no','合同','Contract'],['truck_no','车牌','Truck'],['posted_day','出库日期','Formal Stock Issue Date'],['bags','袋数','Bags'],
   ['net_mt','净重（MT）','Net Weight (MT)',4],['estimated_mt','预计金属量（MT）','Estimated Metal (MT)',5],
   ['confirmed_mt','ARECOMS确认（MT）','Confirmed ARECOMS (MT)',5],['difference_mt','差异（MT）','Difference (MT)',5],
   ['difference_pct','差异率（%）','Difference (%)',2],['shipment_status','发运状态','Shipment Status'],

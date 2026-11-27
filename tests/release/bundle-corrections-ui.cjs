@@ -22,7 +22,7 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
    assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,300));return r.json();
   }
   const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  const lines=[1,2].map(n=>({bundle_no:'MUS-'+day.slice(0,4)+'-043-0'+n,sheets_per_bundle:48,production_date:day,inbound_at:new Date().toISOString()}));
+  const lines=[1,2].map(n=>({...E.receiptBundle(day,n),sheets_per_bundle:48,inbound_at:new Date().toISOString()}));
   const receipt=await api(requester,'/receipts',{project_id:f.project,lines});
   const submitted=await api(requester,'/receipts/'+receipt.id+'/submit',{version:receipt.version});
   await api(reviewer,'/receipts/'+receipt.id+'/confirm',{version:submitted.version});

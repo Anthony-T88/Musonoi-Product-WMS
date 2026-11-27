@@ -2,7 +2,7 @@
 // Recompose the existing arrival form, retaining its actual inputs, validation,
 // versions, confirmation dialog and submit handler.
 window.Operations468R3={
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  arrival(host,nodes,shell,s){const form=host.querySelector('#yard-arrival-form,#co-arrival-form');if(!form)return false;const P=UI46Pages,t=this.t,panel=P.el('section','o468r3-arrival',shell,s);s.composition.host=host;s.form=form;s.summary=null;
   const context=nodes.find(n=>n.nodeType===1&&n.matches('.lot-context-grid,.lp-context'));if(context){P.move(context,panel,s);P.cls(context,'o468r3-context',s);P.cls(context,'u468-arrival-context',s);const entries=[...context.querySelectorAll('article')],order=form.id==='co-arrival-form'?[0,3,1]:[0,1,2],chosen=order.map(i=>entries[i]).filter(Boolean);for(const n of entries)if(!chosen.includes(n))P.hide(n,s);for(const n of chosen)P.move(n,context,s);}
   P.move(form,panel,s);P.cls(form,'o468r3-form',s);form.dataset.b461Arranged='true';(s.composition.businessForms||=[]).push(form);

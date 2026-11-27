@@ -2,7 +2,7 @@
 // Authoritative product navigation. Layout helpers and older business adapters
 // delegate here; they do not decide product menu names or visibility.
 window.UnifiedNavigation={
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  taskCounts:new Map(),
  setTasks(items){
   this.taskCounts.clear();

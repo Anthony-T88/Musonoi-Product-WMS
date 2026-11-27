@@ -1,7 +1,7 @@
 'use strict';
 
 window.DispatchTransport={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  // Cobalt pages translate their own markup and opt out of the global DOM translator.
  label:value=>ProductContext.isCopper()?value:I18n.translate(value,true),
  state:new WeakMap(),

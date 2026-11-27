@@ -48,7 +48,7 @@ const DialogDismiss={
   if(guard&&JSON.stringify([...new FormData(guard.form)])!==guard.initial){
    guard.pending=true;
    try{
-    if(!await OperationConfirm.ask({title:I18n.language==='en'?'Discard unsaved changes?':'放弃未保存的输入？'}))return;
+    if(!await OperationConfirm.ask({title:(I18n.label('放弃未保存的输入？','Discard unsaved changes?'))}))return;
    }finally{guard.pending=false;}
    if(this.guard!==guard||!box.open)return;
   }

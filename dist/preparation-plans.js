@@ -1,7 +1,7 @@
 'use strict';
 window.PreparationPlans={
  route:'/preparation/work-plans',
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  api(){return (ProductContext.isCopper()?'':'/cobalt')+'/preparation-plans';},
  readPermission(){
   const permissions=CurrentUser.permissions,start=ProductContext.isCopper()?'allocation:write':'co:create';

@@ -1,6 +1,6 @@
 'use strict';
 const StockMapReview={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  copperLabel(code){
   const t=this.t;
   return ({P1:t('P1库区','P1 Zone'),P2:t('P2库区','P2 Zone'),P4:t('P3库区','P3 Zone'),
@@ -131,9 +131,9 @@ const StockMapReview={
 const reviewedCopperMap=StockMap.open.bind(StockMap);
 StockMap.open=async function(){await reviewedCopperMap();if(location.pathname==='/stock-map'&&ProductContext.isCopper())StockMapReview.bind(document.querySelector('.map-app'),false);};
 const reviewedCopperSelection=StockMap.select.bind(StockMap);
-StockMap.select=async function(id,page,batch){
+StockMap.select=async function(id,page,batch,customer){
  const trigger=document.activeElement;
- await reviewedCopperSelection(id,page,batch);
+ await reviewedCopperSelection(id,page,batch,customer);
  const detail=$('stock-map-detail'),row=this.data?.locations.find(location=>location.id===id);
  if(!detail||!row||MapView.selected!==id)return;
  for(const cell of document.querySelectorAll('[data-map-cell]'))cell.toggleAttribute('data-map-focused',cell.dataset.mapCell===row.cell_code);

@@ -84,7 +84,7 @@ function pages(ids){
  add('register-dialog','/',[],{state:'registration dialog with 10–48 character password validation'});
  add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles,state:'current and pre-inventory-history period layout'});
  add('password-dialog','/overview',BOTH,{state:'self-service dialog with 10–48 character new password validation',screenshot:true,roles:['production_operator']});
- add('todo','/overview',BOTH,{query:'?management=todos',roles:['sales_operator','logistics_manager'],state:'document-specific review stages'});
+ add('todo','/overview',BOTH,{query:'?management=todos',roles:['sales_operator','logistics_manager'],state:'document-specific review stages and preparation or stock issue batch identifiers'});
  add('overview-detail','/overview/details',BOTH,{query:'?metric=physical'});
  add('warnings','/overview/warning-settings',[CU]);
  add('inventory','/inventory',BOTH,{screenshot:true,roles:['production_operator','customer_admin']});
@@ -93,7 +93,7 @@ function pages(ids){
  add('co-stock-detail','/inventory/:id',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-archive','/inventory/:id/archive',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-history-alias','/inventory/:id/history',[CO],{example:'coPrep'});
- add('map','/stock-map',BOTH,{screenshot:true});
+ add('map','/stock-map',BOTH,{screenshot:true,state:'copper batch net weights grouped by customer and cobalt site map'});
  add('co-map-expired-filter','/stock-map',[CO],{query:'?zone_id=obsolete&unit=old-stock-archive&page=0',state:'recovers expired map filter'});
  add('map-move','/stock-map/relocate',[CU]);
  add('customers','/customers',BOTH,{screenshot:true,roles:['sales_operator','customer_admin']});
@@ -127,10 +127,10 @@ function pages(ids){
  add('legacy-sales-edit','/preparation/plans/:id/edit',[CU],{example:'cuPlan'});
  add('legacy-sales-shipping','/preparation/plans/:id/shipping',[CU],{example:'cuPlan'});
  add('receipts','/receipts',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor','production_manager']});
- add('receipt-new','/receipts/new',BOTH,{screenshot:true,roles:['logistics_field_operator']});
+ add('receipt-new','/receipts/new',BOTH,{screenshot:true,roles:['logistics_field_operator'],state:'copper production date validation and cobalt plan selection'});
  add('cu-receipt','/receipts/:id',[CU],{example:'cuReceipt'});
- add('cu-receipt-edit','/receipts/:id/edit',[CU],{example:'cuReceiptDraft',state:'draft'});
- add('cu-receipt-import','/receipts/import',[CU],{state:'single Excel drop, bundle number with letter suffix'});
+ add('cu-receipt-edit','/receipts/:id/edit',[CU],{example:'cuReceiptDraft',state:'draft with production date validation'});
+ add('cu-receipt-import','/receipts/import',[CU],{state:'single Excel drop with letter suffix and production date validation'});
  add('co-prep','/receipts/:id',[CO],{example:'coPrep',screenshot:true,state:'completed or whole-batch reversal',roles:['site_supervisor','logistics_manager']});
  add('co-prep-work','/receipts/:id',[CO],{example:'coPrepEditable',screenshot:true,state:'editable',roles:['logistics_field_operator','site_supervisor']});
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
@@ -225,7 +225,6 @@ function pages(ids){
  add('workbench','/workbench',BOTH);
  add('accounts','/workbench/accounts',BOTH,{screenshot:true});
  add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});
- add('access-approvals','/workbench/access-approvals',BOTH,{state:'approval inbox for an account manager',screenshot:true});
  add('diagnostics','/workbench/diagnostics',BOTH);
  add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator plan and SMTP tabs, registered recipients, schedule status and next planned delivery'});
  add('former-design-entry','/workbench/design',BOTH);

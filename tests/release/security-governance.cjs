@@ -3,20 +3,35 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {randomBytes,createHash}=require('node:crypto'),{Client}=require('pg');
 const E=require('./environment.cjs'),{migrate}=require('../../scripts/production-db.cjs');
+const Chain=require('../../scripts/migration-chain.cjs');
 const {configure}=require('../../scripts/general-manager.cjs');
 
-test('General Manager approval gates effective account access and leaves reviewable evidence',async t=>{
+test('access approval retirement preserves evidence and secured account administration',async t=>{
  const db=await E.database(),c=db.client;
  let app,appClient;
  try{
-  await migrate(c,{environment:'test',apply:true,appPassword:process.env.WMS_TEST_APP_PASSWORD});
+  const chain=Chain.load(),target=chain.findIndex(entry=>entry.version.startsWith('219_'));
+  assert(target>0);
+  await c.query('CREATE TABLE schema_migrations(version text PRIMARY KEY,checksum text NOT NULL,applied_at timestamptz NOT NULL DEFAULT now())');
+  for(const entry of chain.slice(0,target))await Chain.execute(c,entry);
+  await c.query("INSERT INTO system_info(singleton,environment) VALUES(true,'test')");
   const fixture=await E.seed(c,db.name),reports=[];
+  const adminAccount=fixture.accounts.find(a=>a.role==='admin'),operatorAccount=fixture.accounts.find(a=>a.role==='production_operator');
   const manager={username:'audit_general_manager',displayName:'Synthetic General Manager',password:randomBytes(24).toString('hex')};
   assert.equal((await configure(c,manager,{environment:'test'})).status,'DRY_RUN_ROLLED_BACK');
   assert.equal((await c.query('SELECT 1 FROM users WHERE username=$1',[manager.username])).rowCount,0);
   await assert.rejects(()=>configure(c,manager,{environment:'test',apply:true}),{code:'MIGRATION_VERIFIED_BACKUP_REQUIRED'});
   assert.equal((await configure(c,manager,{environment:'test',apply:true,backupVerified:true})).status,'PROVISIONED');
   await assert.rejects(()=>configure(c,{...manager,username:'other_gm'},{environment:'test'}),{code:'GENERAL_MANAGER_ACTIVE_ACCOUNT_CONFLICT'});
+  const managerId=(await c.query('SELECT id FROM users WHERE username=$1',[manager.username])).rows[0].id;
+  const queue=async(kind,key,after,passwordHash=null)=>(await c.query(`INSERT INTO access_change_requests
+   (kind,target_key,target_label,requested_by,requester_role,after_data,payload,pending_password_hash,fingerprint)
+   VALUES($1,$2,'Synthetic historical request',$3,'admin',$4,$4,$5,$6) RETURNING id`,
+   [kind,key,adminAccount.id,after,passwordHash,'0'.repeat(64)])).rows[0];
+  const queued=await queue('USER_UPDATE',operatorAccount.id,{role_code:'admin'},require('../../server/security.cjs').hashPassword('Synthetic queue fixture only'));
+  const decided=await queue('USER_UPDATE',adminAccount.id,{display_name:'Historical decision'});
+  const past=(await c.query("UPDATE access_change_requests SET state='APPROVED',reviewed_by=$2,reviewed_at=now(),decision_note='Historical decision' WHERE id=$1 RETURNING *",[decided.id,managerId])).rows[0];
+  assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true,appPassword:process.env.WMS_TEST_APP_PASSWORD})).added,chain.length-target);
   const cfg={...fixture.appCfg,port:4492,origin:'http://127.0.0.1:4492'};
   app=await require('../../server/app.cjs').build({config:cfg,requestAuditReporter:record=>reports.push(record)});
   const login=async(account,remoteAddress)=>{
@@ -26,7 +41,6 @@ test('General Manager approval gates effective account access and leaves reviewa
    return {user:response.json().user,origin:cfg.origin,cookie:response.cookies.map(x=>x.name+'='+x.value).join('; '),
     'x-csrf-token':response.json().csrfToken};
   };
-  const adminAccount=fixture.accounts.find(a=>a.role==='admin'),operatorAccount=fixture.accounts.find(a=>a.role==='production_operator');
   const admin=await login(adminAccount,'192.0.2.11'),gm=await login(manager,'198.51.100.12'),operator=await login(operatorAccount,'203.0.113.13');
   const api=(session,method,url,payload,product='CU_CATHODE')=>app.inject({method,url:'/api/v1'+url,headers:{
    origin:session.origin,cookie:session.cookie,'x-csrf-token':session['x-csrf-token'],'x-product-code':product
@@ -36,63 +50,59 @@ test('General Manager approval gates effective account access and leaves reviewa
    assert.equal(response.statusCode,status,response.body);
    return response.json();
   };
-  const review=(id,decision='APPROVED',extra={})=>expect(gm,'POST','/security/access-requests/'+id+'/decision',{decision,password:manager.password,...extra});
-  const users=()=>expect(admin,'GET','/users?status=all');
   const readRole=async()=> (await c.query('SELECT role_code FROM users WHERE id=$1',[operatorAccount.id])).rows[0].role_code;
 
-  await t.test('only the independent approver sees the queue and the warehouse is outside this role',async()=>{
-   assert.deepEqual(gm.user.permissions,['access-change:approve']);
+  await t.test('pending access requests are archived without applying them and prior decisions remain unchanged',async()=>{
+   const saved=(await c.query('SELECT state,reviewed_by,reviewed_at,pending_password_hash,decision_note FROM access_change_requests WHERE id=$1',[queued.id])).rows[0];
+   assert.equal(saved.state,'RETIRED');
+   assert.equal(saved.reviewed_by,null);
+   assert(saved.reviewed_at);
+   assert.equal(saved.pending_password_hash,null);
+   assert.match(saved.decision_note,/未执行/);
+   assert.equal(await readRole(),'production_operator');
+   assert.deepEqual((await c.query('SELECT * FROM access_change_requests WHERE id=$1',[past.id])).rows[0],past);
+   const retirement=(await c.query("SELECT * FROM audit_logs WHERE action='access_change_retired' AND entity_id=$1",[queued.id])).rows[0];
+   assert.equal(retirement.after_data.state,'RETIRED');
+   assert.equal(retirement.after_data.requested_by,adminAccount.id);
+   assert((await expect(admin,'GET','/v27/audit?entity='+queued.id+'&category=ACCESS')).items.length);
+   assert.doesNotMatch(JSON.stringify(retirement),/pending_password_hash|password_hash/);
+   await assert.rejects(()=>c.query('DELETE FROM access_change_requests WHERE id=$1',[queued.id]),{code:'55000'});
+  });
+  await t.test('obsolete approval routes are gone and the retained General Manager account gains no authority',async()=>{
+   assert.equal(gm.user.role_code,'general_manager');
+   assert.deepEqual(gm.user.permissions,[]);
+   await expect(gm,'GET','/me');
    await expect(gm,'GET','/inventory',null,403);
-   await expect(operator,'GET','/security/access-requests',null,403);
+   await expect(gm,'GET','/users',null,403);
+   await expect(admin,'GET','/security/access-requests',null,404);
+   await expect(gm,'POST','/security/access-requests/'+queued.id+'/decision',{decision:'APPROVED'},404);
    await expect(admin,'PATCH','/users/'+gm.user.id,{active:false},403);
    await expect(admin,'POST','/users/'+gm.user.id+'/reset-password',{password:manager.password},403);
    appClient=new Client({connectionString:cfg.databaseUrl});await appClient.connect();
    await assert.rejects(()=>appClient.query("UPDATE users SET active=false WHERE id=$1",[gm.user.id]),{code:'42501'});
-   await assert.rejects(()=>appClient.query("INSERT INTO role_permissions VALUES('admin','access-change:approve')"),{code:'42501'});
+   await assert.rejects(()=>appClient.query("UPDATE access_change_requests SET decision_note='synthetic edit' WHERE id=$1",[queued.id]),{code:'42501'});
   });
-  await t.test('proposal, independent decision and session revocation apply exactly once',async()=>{
-   const path='/users/'+operatorAccount.id,body={role_code:'logistics_field_operator',scopes:[{project_id:fixture.project,warehouse_id:fixture.warehouse}]};
-   const staged=await expect(admin,'PATCH',path,body);
-   assert.equal(staged.approval_pending,true);
-   assert.equal(await readRole(),'production_operator');
-   await expect(admin,'PATCH',path,body,409);
-   await expect(admin,'POST','/security/access-requests/'+staged.id+'/decision',{decision:'APPROVED',password:manager.password},403);
-   await expect(gm,'POST','/security/access-requests/'+staged.id+'/decision',{decision:'APPROVED',password:'wrong secret'},403);
-   const inbox=await expect(gm,'GET','/security/access-requests');
-   assert.equal(inbox.items.find(r=>r.id===staged.id).after_data.scopes[0].warehouse_id,fixture.warehouse);
-   assert(!JSON.stringify(inbox).includes('fingerprint'));
-   const cobaltInbox=await api(gm,'GET','/security/access-requests',null,'CO_HYDROXIDE');
-   assert.equal(cobaltInbox.statusCode,200,cobaltInbox.body);
-   assert.deepEqual(cobaltInbox.json(),inbox);
-   const results=await Promise.all(['CU_CATHODE','CO_HYDROXIDE'].map(product=>api(gm,'POST','/security/access-requests/'+staged.id+'/decision',
-    {decision:'APPROVED',password:manager.password},product)));
-   assert.deepEqual(results.map(r=>r.statusCode).sort(),[200,409]);
+  await t.test('authorized user and role updates take effect immediately with matching audit and session revocation',async()=>{
+   const path='/users/'+operatorAccount.id;
+   const change={role_code:'logistics_field_operator',scopes:[{project_id:fixture.project,warehouse_id:fixture.warehouse}]};
+   await expect(operator,'PATCH',path,change,403);
+   await expect(gm,'PATCH',path,change,403);
+   assert.deepEqual(await expect(admin,'PATCH',path,change),{ok:true});
    assert.equal(await readRole(),'logistics_field_operator');
    await expect(operator,'GET','/me',null,401);
-   const audit=(await c.query("SELECT action,actor_id,request_id FROM audit_logs WHERE (action='access_change_decided' AND entity_id=$1) OR (action='user_updated' AND entity_id=$2)",[staged.id,operatorAccount.id])).rows;
-   assert.equal(audit.length,2);
-   assert.equal(audit[0].request_id,audit[1].request_id);
-   assert.deepEqual(new Set(audit.map(r=>r.actor_id)),new Set([admin.user.id,gm.user.id]));
-  });
-  await t.test('role rights, account creation, rejection, withdrawal and stale proposals',async()=>{
-   const role=await expect(admin,'POST','/security/roles',{name:'Synthetic Approved Role',permissions:['inventory:read']});
+   const audit=(await c.query("SELECT action,actor_id,request_id FROM audit_logs WHERE action='user_updated' AND entity_id=$1",[operatorAccount.id])).rows;
+   assert.equal(audit.length,1);
+   assert.equal(audit[0].actor_id,admin.user.id);
+   assert(audit[0].request_id);
+   const role=await expect(admin,'POST','/security/roles',{name:'Synthetic Managed Role',permissions:['inventory:read']});
    const matrix=await expect(admin,'PUT','/security/roles/'+role.code,{version:role.version,permissions:['inventory:read','inventory:export']});
-   assert.equal((await c.query("SELECT 1 FROM role_permissions WHERE role_code=$1 AND permission_code='inventory:export'",[role.code])).rowCount,0);
-   assert.equal((await review(matrix.id)).state,'APPROVED');
-   const password=randomBytes(20).toString('hex'),name='audit_new_governed';
-   const body={username:name,display_name:'Synthetic gated account',role_code:role.code,scopes:[{project_id:fixture.project}],password};
-   const staged=await expect(admin,'POST','/users',body);
-   assert(!(await users()).items.some(u=>u.username===name));
-   assert.equal((await review(staged.id,'REJECTED',{note:'Synthetic rejected request'})).state,'REJECTED');
-   const next=await expect(admin,'POST','/users',body);
-   assert.equal((await expect(admin,'POST','/security/access-requests/'+next.id+'/decision',{decision:'WITHDRAWN'})).state,'WITHDRAWN');
-   const stale=await expect(admin,'POST','/users',body);
-   await c.query('UPDATE roles SET version=version+1 WHERE code=$1',[role.code]);
-   assert.equal((await review(stale.id)).state,'STALE');
-   const fresh=await expect(admin,'POST','/users',body);
-   assert.equal((await review(fresh.id)).state,'APPROVED');
-   assert((await users()).items.some(u=>u.username===name));
-   assert.equal((await c.query('SELECT count(*)::int n FROM access_change_requests WHERE pending_password_hash IS NOT NULL')).rows[0].n,0);
+   assert.equal(matrix.version,role.version+1);
+   assert(matrix.permissions.includes('inventory:export'));
+   await expect(admin,'PUT','/security/roles/'+role.code,{version:role.version,permissions:['inventory:read']},409);
+   const account=await expect(admin,'POST','/users',{username:'audit_new_managed',display_name:'Synthetic Managed Account',
+    role_code:role.code,scopes:[{project_id:fixture.project}],password:randomBytes(20).toString('hex')});
+   assert.equal(account.role_code,role.code);
+   assert.equal((await c.query("SELECT count(*)::int n FROM access_change_requests WHERE state='PENDING'")).rows[0].n,0);
   });
   await t.test('audit filters, redaction, export fingerprint and request logging without client allowlists',async()=>{
    const marker='synthetic-audit-request',hidden='SYNTHETIC-REMOVED';
@@ -122,39 +132,40 @@ test('General Manager approval gates effective account access and leaves reviewa
    assert(!JSON.stringify(reports).includes(hidden));
   });
   if(process.env.CHROME_EXECUTABLE){
-   await t.test('real browser opens the General Manager inbox and approves the submitted account change',async()=>{
+   await t.test('browser persists French through sign-in, refresh and language changes',async()=>{
     const {chromium}=require('playwright');
-    const staged=await expect(admin,'PATCH','/users/'+operatorAccount.id,{role_code:'production_operator'});
-    assert.equal(staged.approval_pending,true);
     await app.listen({port:cfg.port,host:'127.0.0.1'});
     const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
     try{
      const page=await browser.newPage({viewport:{width:390,height:844}});
+     const consoleErrors=[];
+     page.on('pageerror',error=>consoleErrors.push(error.message));
      await page.goto(cfg.origin);
-     await page.locator('#login-username').fill(manager.username);
-     await page.locator('#login-password').fill(manager.password);
+     await page.locator('[data-login-language="fr"]').click();
+     assert.deepEqual(await page.locator('[data-login-language]').allTextContents(),['中文','English','Français']);
+     assert.equal(await page.locator('#login-form button[type="submit"]').innerText(),'Se connecter');
+     await page.locator('#login-username').fill(adminAccount.username);
+     await page.locator('#login-password').fill(adminAccount.password);
      await page.locator('#login-form button[type="submit"]').click();
-     await page.waitForURL('**/workbench/access-approvals');
-     await page.locator('#access-approval-filter').waitFor();
-     const form=page.locator('form[data-request-id="'+staged.id+'"]');
-     await form.locator('xpath=ancestor::details').locator('summary').click();
-     for(const width of [1440,390]){
-      await page.setViewportSize({width,height:844});
-      const actions=form.locator('.wms-access-decision-actions');
-      const bounds=await actions.boundingBox();
-      const approve=await actions.locator('[value="APPROVED"]').boundingBox();
-      const reject=await actions.locator('[value="REJECTED"]').boundingBox();
-      assert(bounds&&approve&&reject,'approval decision buttons must remain visible');
-      assert(Math.abs(approve.y-reject.y)<1,'approval decision buttons must share a row');
-      assert(Math.abs(approve.x-bounds.x)<1,'approval button must align with the left edge');
-      assert(Math.abs(reject.x+reject.width-bounds.x-bounds.width)<1,'rejection button must align with the right edge');
-      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-     }
-     await form.locator('[name="password"]').fill(manager.password);
-     await form.locator('[value="APPROVED"]').click();
-     await form.waitFor({state:'detached'});
-     assert.equal(await readRole(),'production_operator');
+     const selector=page.locator('.top-actions select[data-language]');
+     await selector.waitFor();
+     assert.equal(await selector.inputValue(),'fr');
+     assert.deepEqual(await selector.locator('option').allTextContents(),['中文','English','Français']);
+     assert.equal((await c.query('SELECT language_code FROM users WHERE id=$1',[adminAccount.id])).rows[0].language_code,'fr');
+     await page.reload();
+     await selector.waitFor();
+     assert.equal(await selector.inputValue(),'fr');
+     await selector.selectOption('en');
+     await page.waitForFunction(()=>document.documentElement.lang==='en');
+     await selector.selectOption('fr');
+     await page.waitForFunction(()=>document.documentElement.lang==='fr');
+     await page.goto(cfg.origin+'/workbench');
+     await selector.waitFor();
+     assert.equal(await page.locator('a[href="/workbench/access-approvals"]').count(),0);
+     await page.goto(cfg.origin+'/workbench/access-approvals');
+     assert.equal(await page.locator('#access-approval-filter').count(),0);
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+     assert.deepEqual(consoleErrors,[]);
     }finally{await browser.close();}
    });
   }

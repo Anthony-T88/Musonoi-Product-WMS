@@ -2,7 +2,7 @@
 // A denied HTML route remains HTTP 403. Only the application shell is sent,
 // allowing SYS-14 to render; expired sessions receive the login shell.
 // Every business/API permission remains enforced.
-const systemPermissions=['users:manage','roles:manage','access-change:approve','audit:read','master:write','system:manage'];
+const systemPermissions=['users:manage','roles:manage','audit:read','master:write','system:manage'];
 async function serve(req,reply,{auth,permitted,permission,systemHub,authenticatedView}){
  try{
   if(req.cookies.musonoi_session){

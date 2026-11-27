@@ -60,7 +60,7 @@ async function seed(){
     await c.query('INSERT INTO user_scopes(user_id,project_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[a.id,project]);
    const found=(await c.query("SELECT id FROM receipts WHERE project_id=$1 AND status='DRAFT'",[project])).rowCount;
    if(!found)await request('production_operator',CU,'/receipts',{project_id:project,lines:[
-    {bundle_no:'MUS-'+day.slice(0,4)+'-098-'+unique,sheets_per_bundle:48,production_date:day,inbound_at:new Date().toISOString()}
+    {...E.receiptBundle(day,unique),sheets_per_bundle:48,inbound_at:new Date().toISOString()}
    ]});
   });
   await check('cu-historical-details',async()=>{

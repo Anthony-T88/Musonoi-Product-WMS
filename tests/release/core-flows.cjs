@@ -165,6 +165,10 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
    planned_load_date:today,destination:'Synthetic destination',invoice_no:'DUPLICATE-'+salt,export_license_no:'RC2-LICENSE',remark:'',...preview.versions},409);
   const match=async()=>{const d=await api('/cobalt/loading/plans/'+plan.id),p=await api('/cobalt/loading/preview?plan_id='+plan.id+'&sales_plan_id='+sales.id+'&preparation_id='+prep.id+'&arrival_id='+a.id);await api('/cobalt/loading/plans/'+plan.id+'/match','logistics_field_operator',{version:d.plan.version,preview_hash:p.preview_hash});return api('/cobalt/loading/plans/'+plan.id);};
   f.rc2match=match;matched=await match();
+  const loadTask=(await api('/cobalt/ui461/tasks','logistics_field_operator')).pending.find(row=>row.kind==='CO_LOAD_START'&&row.id===matched.order.id);
+  assert.equal(loadTask.business_batch_no,prep.preparation_batch_no);
+  assert.equal(loadTask.document_no,matched.order.code);
+  assert.equal(loadTask.href,'/outbounds/'+matched.order.id);
   const blocked=await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor');
   assert.equal(blocked.block,'MATCHED');
   await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor',
@@ -237,7 +241,9 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const workbook=new(require('exceljs').Workbook)();
   await workbook.xlsx.load(exportResponse.rawPayload);
   const sheet=workbook.worksheets[0];
-  assert.equal(sheet.getCell('E16').value,'N/A');
+  const trailerTwo=sheet.getRow(15).values.indexOf('TRAILER 2');
+  assert(trailerTwo>0);
+  assert.equal(sheet.getCell(16,trailerTwo).value,'N/A');
   for(const [cell,label,field] of [['A4','RCCM','rccm'],['A5','ID-NAT','id_nat'],['A6','NIF','nif'],['A7','Contact','contact']])
    assert(sheet.getCell(cell).text===label+': '+template.fields[field],label);
   await api(bp+'/'+bpDoc.id+'/print','customer_admin',undefined,404);

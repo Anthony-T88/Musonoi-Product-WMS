@@ -9,7 +9,7 @@ window.Reports463={
   ['sales','销售与履约','Sales & Fulfilment']
  ],
  groups:[['date','按日','By Day'],['customer','按客户','By Customer'],['contract','按合同','By Contract'],['vehicle','按车辆','By Vehicle'],['lot','按批次号','By Lot Number']],
- t(zh,en){return I18n.language==='en'?en:zh;},
+ t(zh,en){return I18n.label(zh,en);},
  captureDraft(){
   const form=document.querySelector('#r481-filter');
   return location.pathname==='/reports'&&form?{values:Object.fromEntries(new FormData(form)),advanced:!!form.querySelector('details[open]')}:null;
@@ -127,7 +127,7 @@ window.Reports463={
  number(v,type){
   if(v==null||v==='')return '—';
   if(type==='number')return CountValues.display(v);
-  if(type==='percent')return Number(v).toLocaleString(I18n.language==='en'?'en':'zh-CN',{style:'percent',minimumFractionDigits:1,maximumFractionDigits:1});
+  if(type==='percent')return Number(v).toLocaleString(I18n.locale,{style:'percent',minimumFractionDigits:1,maximumFractionDigits:1});
   if(type==='weight')return Tonnes.format(String(v));
   if(type==='metal')return Tonnes.fixed(Tonnes.scaled(String(v),5),5);
   return v;

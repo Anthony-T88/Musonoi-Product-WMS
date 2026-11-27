@@ -35,7 +35,7 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
   await fs.mkdir(output,{recursive:true});
   await page.goto(origin);
   await page.evaluate(()=>{
-   window.$=id=>document.getElementById(id);window.I18n={language:'en'};
+   window.$=id=>document.getElementById(id);window.I18n={language:'en',locale:'en-US',usesEnglish:true,label:(_,english)=>english};
    window.Flow={loads(){},load(){}};window.Business={allocations(){}};window.Router={names:{},permission(){},init(){}};
   });
   for(const script of ['release.js','packing-print.js','v30-ui.js'])await page.addScriptTag({url:origin+'/'+script});
@@ -68,6 +68,7 @@ test('commercial invoice prints on one page and long packing lists paginate',asy
 });
 test('BP sheets fit ordinary fields on one line and keep full long text on landscape A4',async()=>{
  const fs=require('node:fs/promises'),BP=require('../../server/customs-bp-print.cjs'),http=require('node:http');
+ const Excel=require('exceljs'),BPExcel=require('../../server/customs-bp-excel.cjs'),Zip=require('jszip');
  const output=path.join(E.runtime,'bp-print');
  const assets={
   '/customs-bp-print.css':'text/css',
@@ -83,12 +84,13 @@ test('BP sheets fit ordinary fields on one line and keep full long text on lands
    ...(count===6&&i===5?{container:'SYNTHETIC-CONTAINER-1234',transporter:'Synthetic International Transport and Logistics Company',
     driver:'Synthetic Example Driver With Five Given Names',passport:'SYNTHETIC-PASSPORT-2901'}:{}),
    quantity:16,net_mt:'30.123451',gross_mt:'31.123456'}));
-  documents.set('/'+count,BP.html({number:'001/2026/CU',header:{issuer:'RUASHI MINING SAS',address:'Musonoi Project site, Kolwezi, Lualaba Province',
+  const snapshot={number:'001/2026/CU',header:{issuer:'RUASHI MINING SAS',address:'Musonoi Project site, Kolwezi, Lualaba Province',
    rccm:'Example RCCM',id_nat:'Example identifier',nif:'Example NIF',contact:'Example office contact',
    customer:'Example Warehouse Customer',product:'CATHODE DE CUIVRE',mode:'ROAD',destination:'Port of Lobito, Angola',
    border:'Example crossing',agency:'Example Customs Agent',license:'SYNTH-EB-001',loading_point:'RUASHI MINING MUSONOI PLANT',
    loading_date:'2026-11-23',signature_date:'2026-11-24'},rows,total:require('../../server/customs-bp.cjs').totals(
-    rows.map(r=>({...r,quantity:String(r.quantity)})),true)}));
+    rows.map(r=>({...r,quantity:String(r.quantity)})),true)};
+  documents.set('/'+count,{snapshot,html:BP.html(snapshot)});
  }
  const site=http.createServer(async(req,res)=>{
   const name=new URL(req.url,'http://localhost').pathname;
@@ -96,7 +98,7 @@ test('BP sheets fit ordinary fields on one line and keep full long text on lands
    res.setHeader('Content-Type',assets[name]);return res.end(await fs.readFile(path.resolve('dist',name.slice(1))));
   }
   if(!documents.has(name)){res.writeHead(404);return res.end();}
-  res.setHeader('Content-Type','text/html; charset=utf-8');res.end(documents.get(name));
+  res.setHeader('Content-Type','text/html; charset=utf-8');res.end(documents.get(name).html);
  });
  await new Promise(resolve=>site.listen(0,'127.0.0.1',resolve));
  let browser;
@@ -104,7 +106,7 @@ test('BP sheets fit ordinary fields on one line and keep full long text on lands
   await fs.mkdir(output,{recursive:true});
   browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
   const page=await browser.newPage({viewport:{width:Math.round(285*96/25.4),height:900}}),origin='http://127.0.0.1:'+site.address().port;
-  for(const [pathname]of documents){
+  for(const [pathname,{snapshot}]of documents){
    const count=Number(pathname.slice(1));await page.goto(origin+pathname);
    await page.locator('.bp-issuer img').evaluate(image=>image.decode());
    assert.equal(await page.locator('.bp-vehicle').count(),count);
@@ -143,6 +145,29 @@ test('BP sheets fit ordinary fields on one line and keep full long text on lands
    const size=bytes.match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/);
    assert(size);assert(Math.abs(Number(size[1])-841.89)<1&&Math.abs(Number(size[2])-595.28)<1);
    if(count<=10)assert.equal(pages,1,count+' vehicles');else assert(pages>1,count+' vehicles');
+   const bytesExcel=await BPExcel.workbook(snapshot),book=new Excel.Workbook();
+   await book.xlsx.load(bytesExcel);
+   const sheet=book.worksheets[0],heads=[];
+   sheet.getRow(15).eachCell(cell=>{if(cell.type!==Excel.ValueType.Merge)heads.push(cell);});
+   assert.deepEqual(heads.map(cell=>cell.text),await page.locator('.bp-table thead th').allTextContents());
+   for(const [i,cell] of heads.entries()){
+    const end=(heads[i+1]?.col||sheet.columnCount+1)-1;
+    let width=0;for(let x=cell.col;x<=end;x++)width+=sheet.getColumn(x).width;
+    const totalWidth=sheet.columns.reduce((sum,column)=>sum+column.width,0);
+    assert(Math.abs(width/totalWidth*100-BP.columns[i][2])<0.2,'Matching printed column proportions');
+   }
+   assert.equal(sheet.pageSetup.orientation,'landscape');
+   assert.equal(sheet.pageSetup.paperSize,9);
+   assert.equal(sheet.pageSetup.fitToHeight,count<=10?1:0);
+   assert.match(sheet.pageSetup.printTitlesRow,/(?:15:15|\$15:\$15)/);
+   const row=sheet.getRow(15+count),driverCol=heads[7].col,driver=row.getCell(driverCol);
+   assert.equal(driver.value,snapshot.rows.at(-1).driver);
+   if(count===6){assert(driver.alignment.wrapText);assert(row.height>sheet.getRow(16).height);}
+   else assert(driver.alignment.shrinkToFit);
+   if(count>10){
+    const zip=await Zip.loadAsync(bytesExcel);
+    assert.match(await zip.file('xl/worksheets/sheet1.xml').async('string'),/<rowBreaks count="[1-9]/);
+   }
    if(count===2||count===6){
     const nativeDefault=await page.pdf({format:'Letter',preferCSSPageSize:false});
     assert.equal(nativeDefault.toString('latin1').match(/\/Type\s*\/Page\b/g)?.length,1);
@@ -581,7 +606,9 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await page.locator('#stock-map-canvas [data-map-cell="P1-01"]').press('Enter');
  await page.locator('.stock-map-layout.v27-has-detail #stock-map-detail h2').first().waitFor();
  assert(await page.locator('#stock-map-detail').evaluate(el=>{const map=document.getElementById('stock-map-canvas').getBoundingClientRect(),detail=el.getBoundingClientRect();return detail.right<=map.right&&detail.left>map.left&&getComputedStyle(el).position==='sticky';}));
- assert(await page.locator('#v271-map-labels .v271-label-grid').isVisible());
+ const customerGrids=await page.locator('#v271-map-labels .v271-customer-group .v271-label-grid').all();
+ assert(customerGrids.length>1,'occupied locations are separated by customer');
+ for(const grid of customerGrids)assert(await grid.isVisible());
  await go(page,'/stock-map?project_id='+f.project+'&warehouse_id='+f.warehouse);
  await page.locator('#co-map-canvas').waitFor();
  assert.equal(await page.locator('.wms-map-advanced').count(),0);

@@ -30,7 +30,7 @@ window.DocumentDrafts={
   'ux10-plan-form':['销售计划','Sales Plan','sales-plans',/^\/(?:sales-workflow\/)?plans(?:\/[0-9a-f-]+)?$/],
   'co-sales-plan-form':['销售计划','Sales Plan','sales-plans',/^\/cobalt\/(?:sales|sales-workflow)\/plans(?:\/[0-9a-f-]+)?$/]
  },
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  api(){return (ProductContext.isCopper()?'':'/cobalt')+'/document-drafts';},
  route(){
   const url=new URL(location.href);

@@ -869,6 +869,14 @@
     {
       "version": "217_v490_loading_completed_preparation.sql",
       "checksum": "199f72468c827b9b60b422308e15966b047de9cfac49662ea4cbf1716ff15017"
+    },
+    {
+      "version": "218_v490_french_language.sql",
+      "checksum": "bc9641dca510c98325a6942a7bdc32956a7a4cf35eb79dd0ac909eae9863c45d"
+    },
+    {
+      "version": "219_v490_retire_access_change_approval.sql",
+      "checksum": "6bea26092015c493b5bb8814eae90b9930b6d700de5476bd18a140dbe216a762"
     }
   ]
 }

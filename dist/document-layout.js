@@ -1,7 +1,7 @@
 'use strict';
 // Group the original document controls without replacing their handlers.
 window.DocumentLayouts={
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  matches(root){return location.pathname==='/outbounds'&&new URLSearchParams(location.search).has('permit')&&root.querySelector('.gate-meta')||/^\/(?:export-shipments|outbounds\/packing-list)\/[0-9a-f-]{36}$/.test(location.pathname)&&root.querySelector('#packing-list-preview')||root.querySelector('.co-packing-page');},
  compose(root,s){const P=UI46Pages,t=this.t,gate=!!root.querySelector('.gate-meta'),co=!!root.querySelector('.co-packing-page'),host=co?root.querySelector('.co-packing-page'):P.host(root),original=[...host.children];s.composition.family='managed-document';root.dataset.pageFamily='managed-document';s.composition.host=host;P.cls(root,'r5-document',s);
   const shell=P.el('div','p46-composition r5-document-shell',host,s);s.composition.anchor=shell;

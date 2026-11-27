@@ -3,7 +3,7 @@ Object.assign(TRANSLATIONS.en,{
   "库存盘点": "Inventory Count",
   "异常与一致性": "Exceptions and Consistency",
   "操作审计": "Operation Audit",
-  "当前在库按未正式出库账面范围查询；已离场待审批单独标识，现场实物口径见信息总览。": "Current inventory uses the ledger scope before final outbound; departed goods awaiting approval are marked separately. See Overview for on-site physical inventory.",
+  "当前在库按未正式出库账面范围查询；已离场待审批单独标识，现场实物口径见信息总览。": "Current inventory uses the ledger scope before final stock issue; departed goods awaiting approval are marked separately. See Overview for on-site physical inventory.",
   "备货批号": "Lot Number",
   "盘点任务": "Inventory Count Task",
   "任务状态": "Task Status",
@@ -78,7 +78,7 @@ Object.assign(TRANSLATIONS.en,{
   "状态差异": "State Difference",
   "重复登记": "Duplicate Observation",
   "正常业务流转移出": "Removed by Normal Business Flow",
-  "已离场待正式出库": "Departed / Awaiting Final Outbound",
+  "已离场待正式出库": "Departed / Awaiting Final Stock Issue",
   "盘亏": "Inventory Loss",
   "盘盈": "Inventory Gain",
   "重量差异": "Weight Difference",
@@ -87,7 +87,7 @@ Object.assign(TRANSLATIONS.en,{
   "更正申请必须由其他授权人员审批核查。": "The correction requires independent authorized review.",
   "请提供车辆更正或实物退回核验依据。": "Provide vehicle correction or physical return evidence.",
   "退回货物须明确进入本项目启用的临时堆存区。": "Returned goods require an active temporary storage area in this project.",
-  "请核对正式出库状态，并先由授权人员重新开放已关闭的销售计划。": "Check the posted outbound state and have an authorized user reopen a closed sales plan.",
+  "请核对正式出库状态，并先由授权人员重新开放已关闭的销售计划。": "Check the posted stock issue state and have an authorized user reopen a closed sales plan.",
   "盘点阶段或版本已变化，请重新核对。": "The stocktaking phase or version has changed; please check again.",
   "盘点范围、负责人或截止时间无效。": "Invalid stocktaking scope, assignee or cutoff time.",
   "盘点编号重复或录入无效；更正请关联原观察记录。": "Duplicate or invalid count entry; corrections must reference the original observation.",
@@ -112,7 +112,7 @@ Object.assign(TRANSLATIONS.en,{
   "累计有效净重超过销售计划允许上限。": "Effective net weight exceeds the sales plan maximum.",
   "销售计划无效或已关闭。": "The sales plan is invalid or closed.",
   "请补齐溢短装比例、备货月份及计划备货批次数。": "Complete quantity tolerance, preparation month and planned Lot count.",
-  "计划尚不符合最终完成条件，请核对有效占用和出库净重。": "The plan is not ready to close; check assigned and outbound net weights."
+  "计划尚不符合最终完成条件，请核对有效占用和出库净重。": "The plan is not ready to close; check assigned and stock issue net weights."
 });
 TRANSLATIONS.errorKeys={
   "V27_CORRECTION_STATE_CONFLICT": "更正单或关联装车业务状态已变化，请重新核对。",
@@ -162,12 +162,12 @@ Object.assign(TRANSLATIONS.en,{
   "备份文件": "Backup File",
   "恢复验证": "Restore Verification",
   "错误码": "Error Code",
-  "装车与正式出库更正": "Loading and Posted Outbound Corrections",
-  "新建装车或出库更正": "New Loading or Outbound Correction",
+  "装车与正式出库更正": "Loading and Posted Stock Issue Corrections",
+  "新建装车或出库更正": "New Loading or Stock Issue Correction",
   "原装车单": "Original Loading Order",
   "处理类型": "Correction Type",
   "授权装车撤销": "Authorized Load Cancellation",
-  "正式出库返场冲销": "Posted Outbound Physical Return",
+  "正式出库返场冲销": "Posted Stock Issue Physical Return",
   "车辆信息关联更正": "Linked Vehicle Information Correction",
   "待授权": "Pending Authorization",
   "已授权待核验": "Authorized / Pending Verification",
@@ -188,7 +188,7 @@ Object.assign(TRANSLATIONS.en,{
   "确认实物退回，待独立现场核验": "Physical return declared; independent on-site verification required",
   "实物核查依据": "Physical Verification Evidence",
   "更正依据": "Correction Reason",
-  "正式出库原单不删除。返场冲销必须经授权、实物核验及最终记账。": "The original posted outbound is retained. Reversal requires authorization, physical return verification and final posting.",
+  "正式出库原单不删除。返场冲销必须经授权、实物核验及最终记账。": "The original posted stock issue is retained. Reversal requires authorization, physical return verification and final posting.",
   "提交更正申请": "Submit Correction Request",
   "原异常处理入口": "Original Exception Workflow",
   "问题总数": "Total Findings",
@@ -224,7 +224,7 @@ Object.assign(TRANSLATIONS.en,{
   "角色权限修改": "Role Permission Change",
   "库存导出": "Inventory Export",
   "库存调整": "Inventory Adjustment",
-  "出库更正": "Outbound Correction",
+  "出库更正": "Stock Issue Correction",
   "装车与出库": "Loading & Stock Issue",
   "角色权限": "Role Permissions",
   "捆包档案": "Bundle Record",
@@ -247,22 +247,22 @@ Object.assign(TRANSLATIONS.en,{'批次编号':'Lot Number','系统日志':'Syste
 
 Object.assign(TRANSLATIONS.en,{'年度盘点':'Annual Inventory Count','客户 / 月份 / 批次':'Customer / Month / Lot','批次数':'Lot Count','客户数量':'Customers'});
 
-Object.assign(TRANSLATIONS.en,{'出口发运记录':'Export Shipments','计划数量（吨）':'Planned Quantity (MT)','已备货数量（吨）':'Prepared Quantity (MT)','已正式出库数量（吨）':'Shipped Quantity (MT)','剩余待发数量（吨）':'Remaining to Ship (MT)','发运进度':'Shipping Progress','销售计划发运进度':'Sales Plan Shipping Progress','合同号':'Contract No.','客户名称':'Customer Name','出库单号':'Outbound No.','正式出库单号':'Posted Outbound No.','车牌号':'Truck Registration','尚未生成':'Not Generated','已生成':'Generated','生成 Packing List':'Generate Packing List','重新生成 Packing List':'Regenerate Packing List','查看 Packing List':'View Packing List','下载 Excel':'Download Excel','运输与收货信息':'Transport and Delivery Information','总捆包数':'Total Bundles','总毛重（吨）':'Total Gross Weight (MT)','总净重（吨）':'Total Net Weight (MT)','单证版本':'Document Revision','生成说明':'Generation Reason','保存运输信息':'Save Transport Information','修改原因':'Reason for Change','客户联系信息':'Customer Contact Information','收货地址':'Delivery Address','货运代理':'Forwarder','司机姓名':'Driver Name','护照号':'Passport No.','出口许可证号':'Export License No.','集装箱号':'Container No.','集装箱封签号':'Container Seal No.','挂车一':'Trailer 1','挂车二':'Trailer 2','单证生成与修改记录':'Document Revision History','查看原装车单':'Original Loading Order','查看全部关联发运记录':'View All Related Shipments','关联备货批次':'Related Preparation Lots','正式出库车辆':'Posted Vehicles','计划数量':'Planned Quantity','已备货数量':'Prepared Quantity','已正式出库数量':'Shipped Quantity','剩余待发数量':'Remaining to Ship','出库开始日期':'Outbound From','出库结束日期':'Outbound To','装车 / 出库单号':'Loading / Outbound No.','当前范围无正式出库车辆':'No posted vehicles in the authorized scope','无匹配装车记录':'No matching loading records','生成后可在此预览Packing List。':'Generate a Packing List to preview it here.','运输信息已更新，请重新生成Packing List。下方预览仍为上次生成的版本。':'Transport information has changed. Regenerate the Packing List. The preview shows the last generated revision.','暂无正式出库车辆':'No posted vehicles yet','已知备货净重':'Known Prepared Net Weight'});
+Object.assign(TRANSLATIONS.en,{'出口发运记录':'Export Shipments','计划数量（吨）':'Planned Quantity (MT)','已备货数量（吨）':'Prepared Quantity (MT)','已正式出库数量（吨）':'Issued Quantity (MT)','剩余待发数量（吨）':'Remaining to Ship (MT)','发运进度':'Shipping Progress','销售计划发运进度':'Sales Plan Shipping Progress','合同号':'Contract No.','客户名称':'Customer Name','出库单号':'Stock Issue No.','正式出库单号':'Posted Stock Issue No.','车牌号':'Truck Registration','尚未生成':'Not Generated','已生成':'Generated','生成 Packing List':'Generate Packing List','重新生成 Packing List':'Regenerate Packing List','查看 Packing List':'View Packing List','下载 Excel':'Download Excel','运输与收货信息':'Transport and Delivery Information','总捆包数':'Total Bundles','总毛重（吨）':'Total Gross Weight (MT)','总净重（吨）':'Total Net Weight (MT)','单证版本':'Document Revision','生成说明':'Generation Reason','保存运输信息':'Save Transport Information','修改原因':'Reason for Change','客户联系信息':'Customer Contact Information','收货地址':'Delivery Address','货运代理':'Forwarder','司机姓名':'Driver Name','护照号':'Passport No.','出口许可证号':'Export License No.','集装箱号':'Container No.','集装箱封签号':'Container Seal No.','挂车一':'Trailer 1','挂车二':'Trailer 2','单证生成与修改记录':'Document Revision History','查看原装车单':'Original Loading Order','查看全部关联发运记录':'View All Related Shipments','关联备货批次':'Related Preparation Lots','正式出库车辆':'Posted Vehicles','计划数量':'Planned Quantity','已备货数量':'Prepared Quantity','已正式出库数量':'Issued Quantity','剩余待发数量':'Remaining to Ship','出库开始日期':'Stock Issue Date From','出库结束日期':'Stock Issue Date To','装车 / 出库单号':'Loading / Stock Issue No.','当前范围无正式出库车辆':'No posted vehicles in the authorized scope','无匹配装车记录':'No matching loading records','生成后可在此预览Packing List。':'Generate a Packing List to preview it here.','运输信息已更新，请重新生成Packing List。下方预览仍为上次生成的版本。':'Transport information has changed. Regenerate the Packing List. The preview shows the last generated revision.','暂无正式出库车辆':'No posted vehicles yet','已知备货净重':'Known Prepared Net Weight'});
 
 Object.assign(TRANSLATIONS.en,{'运输资料修改':'Transport Information Updated','生成Packing List':'Generate Packing List','出口运输资料修改':'Export Transport Updated','正在载入预览…':'Loading preview…','尚无生成记录':'No generated revisions yet','客户 / 合同':'Customer / Contract','捆数 / 净重（吨）':'Bundles / Net Weight (MT)','Packing List预览':'Packing List Preview'});
 
-Object.assign(TRANSLATIONS.en,{'Packing List只能基于已正式出库且未冲销的装车单生成或下载':'Packing Lists require a posted shipment with no applied return reversal.','运输资料版本已变化，请刷新':'Transport information has changed. Refresh the record.','单证或运输资料版本已变化，请刷新后重新生成':'The document or transport information has changed. Refresh before regenerating.','请先生成Packing List':'Generate the Packing List first.','单证文件校验失败':'Document file verification failed.','修改原因至少5个字':'Enter a change reason of at least five characters.','生成原因至少5个字':'Enter a generation reason of at least five characters.','装车记录不存在或超出授权范围':'Loading record not found or outside your authorized scope.','正式出库日期缺失，请核查原始记录':'The posted outbound date is missing. Check the original record.','正式出库明细或原始重量缺失，不能生成Packing List：':'Posted outbound details or original weights are missing. Cannot generate Packing List: ','原出库净重与每捆扣2.5kg规则不一致，请先核查原记录：':'The posted net weight does not match the 2.5 kg per-bundle deduction. Check the original record: '});
+Object.assign(TRANSLATIONS.en,{'Packing List只能基于已正式出库且未冲销的装车单生成或下载':'Packing Lists require a posted stock issue with no applied return reversal.','运输资料版本已变化，请刷新':'Transport information has changed. Refresh the record.','单证或运输资料版本已变化，请刷新后重新生成':'The document or transport information has changed. Refresh before regenerating.','请先生成Packing List':'Generate the Packing List first.','单证文件校验失败':'Document file verification failed.','修改原因至少5个字':'Enter a change reason of at least five characters.','生成原因至少5个字':'Enter a generation reason of at least five characters.','装车记录不存在或超出授权范围':'Loading record not found or outside your authorized scope.','正式出库日期缺失，请核查原始记录':'The posted stock issue date is missing. Check the original record.','正式出库明细或原始重量缺失，不能生成Packing List：':'Posted stock issue details or original weights are missing. Cannot generate Packing List: ','原出库净重与每捆扣2.5kg规则不一致，请先核查原记录：':'The posted net weight does not match the 2.5 kg per-bundle deduction. Check the original record: '});
 
 Object.assign(TRANSLATIONS.en,{'运输信息尚未保存，请先保存运输信息。':'Save the transport information before generating the Packing List.'});
 
-Object.assign(TRANSLATIONS.en,{'总捆包数':'Total Bundles','未取样':'Not sampled','无需取样':'No sampling required','取样/待取样':'Sampling / Awaiting sampling','完成取样':'Sampling completed','物流经理审核离场':'Logistics Manager Departure Review','生产部经理批准正式出库':'Production Manager Final Outbound Approval','待生产部经理审批出库':'Pending Production Manager Approval','待物流经理审核离场':'Pending Logistics Manager Departure Review'});
+Object.assign(TRANSLATIONS.en,{'总捆包数':'Total Bundles','未取样':'Not sampled','无需取样':'No sampling required','取样/待取样':'Sampling / Awaiting sampling','完成取样':'Sampling completed','物流经理审核离场':'Logistics Manager Departure Review','生产部经理批准正式出库':'Production Manager Final Stock Issue Approval','待生产部经理审批出库':'Pending Production Manager Approval','待物流经理审核离场':'Pending Logistics Manager Departure Review'});
 
-Object.assign(TRANSLATIONS.en,{'已从现场地图移除，正式出库仍须完成物流审核及生产部经理审批。':'Removed from the site map; final outbound still requires logistics review and production manager approval.','物流经理审核':'Logistics Manager Review','生产部经理审批':'Production Manager Approval','原流程经理审批':'Original Workflow Manager Approval'});
+Object.assign(TRANSLATIONS.en,{'已从现场地图移除，正式出库仍须完成物流审核及生产部经理审批。':'Removed from the site map; final stock issue still requires logistics review and production manager approval.','物流经理审核':'Logistics Manager Review','生产部经理审批':'Production Manager Approval','原流程经理审批':'Original Workflow Manager Approval'});
 
 Object.assign(TRANSLATIONS.en,{'拖动缩放':'Drag to Zoom','缩放比例':'Zoom Level','缩放百分比':'Zoom Percentage','应用缩放':'Apply Zoom','点击查看捆包':'Click to View Bundles','查看捆包 →':'View Bundles →','请输入100至800之间的缩放百分比':'Enter a zoom percentage between 100 and 800'});
 
-Object.assign(TRANSLATIONS.en,{'备货单批次号':'Preparation Order Lot Number','在库捆包':'In-stock Bundles','当前筛选范围 · 不含已出库':'Current filters · excludes outbound stock','合同号可修正，关联客户与历史单据保持可追溯。':'Contract numbers may be corrected; customer links and business history remain traceable.','删除合同档案':'Delete Contract Record','删除说明（选填）':'Deletion Note (Optional)','合同已删除，历史关联保留。':'Contract deleted; historical links are retained.','合同已删除，业务历史已保留':'Contract deleted; business history retained','删除后从合同档案列表移除，不再用于新销售计划。关联单据和历史记录保留。':'Removed from the contract list and unavailable to new sales plans. Linked documents and history are retained.'});
+Object.assign(TRANSLATIONS.en,{'备货单批次号':'Preparation Order Lot Number','在库捆包':'In-stock Bundles','当前筛选范围 · 不含已出库':'Current filters · excludes stock issue stock','合同号可修正，关联客户与历史单据保持可追溯。':'Contract numbers may be corrected; customer links and business history remain traceable.','删除合同档案':'Delete Contract Record','删除说明（选填）':'Deletion Note (Optional)','合同已删除，历史关联保留。':'Contract deleted; historical links are retained.','合同已删除，业务历史已保留':'Contract deleted; business history retained','删除后从合同档案列表移除，不再用于新销售计划。关联单据和历史记录保留。':'Removed from the contract list and unavailable to new sales plans. Linked documents and history are retained.'});
 
 Object.assign(TRANSLATIONS.en,{'库存明细':'Inventory Details','当前筛选结果 · 库存明细 · 净重单位：吨':'Current filters · Inventory details · Net weight in MT','分配客户':'Assigned Customer','批次号':'Lot Number','数据库库存明细，点击列标题排序':'Database inventory details; click column headings to sort'});
 
-Object.assign(TRANSLATIONS.en,{'统计仅计在库；明细与导出按当前筛选条件显示，可包含已出库记录。':'Statistics include in-stock inventory only; details and exports follow the current filters and may include outbound records.'});
+Object.assign(TRANSLATIONS.en,{'统计仅计在库；明细与导出按当前筛选条件显示，可包含已出库记录。':'Statistics include in-stock inventory only; details and exports follow the current filters and may include stock issue records.'});

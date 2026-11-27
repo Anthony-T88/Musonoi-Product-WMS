@@ -2,7 +2,7 @@
 // V4.6 presents the existing authorized forms and records. It never submits a
 // business request, clones a business form, or substitutes demonstration data.
 window.UI46={
- t:(z,e)=>window.I18n?.language==='en'?e:z,state:null,ready:false,queued:false,
+ t:(z,e)=>window.I18n?.label(z,e)??z,state:null,ready:false,queued:false,
  enabled(){return window.UIAppearance?.value==='modern';},
  copperMap(){return window.ProductContext?.isCopper()&&location.pathname==='/stock-map';},
  prepare(){
@@ -54,7 +54,7 @@ window.UI46={
  
  customerSections(root,s){const host=root.querySelector('.co-sales-page')||root,heads=[...host.children].filter(n=>n.matches('h2,h3')&&/客户|合同|Customer|Contract/i.test(n.textContent));if(heads.length<2){this.cards(root,s);return;}this.reportSections(host,s);},
  overviewLayout(root,s){const nodes=[...root.children],sections=nodes.filter(n=>n.matches('.v34-overview-section')),charts=nodes.find(n=>n.matches('.ui452-charts')),tasks=nodes.find(n=>n.matches('.v34-overview-split'));if(sections.length<2)return;
-  const nav=this.generated('nav','ui46-report-tabs ui46-overview-tabs',root,s);root.prepend(nav);const titles=[this.t('库存概览','Stock Overview'),this.t('出库与装车','Outbound & Loading'),this.t('待办与预警','Tasks & Warnings')],panels=titles.map(()=>this.generated('section','ui46-overview-group',root,s));
+  const nav=this.generated('nav','ui46-report-tabs ui46-overview-tabs',root,s);root.prepend(nav);const titles=[this.t('库存概览','Stock Overview'),this.t('出库与装车','Stock Issue & Loading'),this.t('待办与预警','Tasks & Warnings')],panels=titles.map(()=>this.generated('section','ui46-overview-group',root,s));
   this.move(sections[0],panels[0],s);if(charts)this.move(charts,panels[0],s);for(const n of sections.slice(1))this.move(n,n.querySelector('table')?panels[0]:panels[1],s);if(tasks)this.move(tasks,panels[2],s);
   const choose=i=>{this.overviewSelection=i;panels.forEach((p,n)=>{p.hidden=n!==i;buttons[n].setAttribute('aria-selected',String(n===i));});},buttons=titles.map((title,i)=>{const b=document.createElement('button');b.type='button';b.textContent=title;b.onclick=()=>choose(i);nav.append(b);return b;});nav.setAttribute('role','tablist');buttons.forEach(b=>b.setAttribute('role','tab'));choose(Math.min(this.overviewSelection||0,2));
  },

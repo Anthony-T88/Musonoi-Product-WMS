@@ -4,7 +4,7 @@ window.PageTextDesigner={
  roots:'#inventory,#dashboard,#field,#business-page,#dialog[open]',
  editable:'h1,h2,h3,h4,button,a.button,label,legend,th,dt,p,summary,caption,[role=tab],.oa-kpi>span',
  protected:'script,style,pre,code,textarea,option,svg,[contenteditable],.packing-sheet,.print-page,.shipping-preview,.oa-design-handle,#overview-designer,#operation-designer-open',
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  context(){return PageLayout.scope()+'|'+I18n.language;},
  original(node){
   const edit=this.overrides.get(node);

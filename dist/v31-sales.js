@@ -6,7 +6,7 @@ Business.masterForm=async function(type,row={}){
  $('customer-form').onsubmit=async e=>{e.preventDefault();e.submitter.disabled=true;try{const body=Object.fromEntries(new FormData(e.target));body.active=body.active==='true';if(row.id)body.version=row.version;await API.request('/masters/customers'+(row.id?'/'+row.id:''),{method:row.id?'PATCH':'POST',body});await Router.go('/customers');notify('客户已保存');}catch(err){$('customer-error').textContent=err.message;e.submitter.disabled=false;}};
 };
 const Dispatch={
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  vehicleMonthButton(vehicle,allowed){
   if(!allowed)return '';
   return '<button type="button" class="button secondary" data-dispatch-vehicle-month="'+esc(vehicle.id)+'">'+

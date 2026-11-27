@@ -1,7 +1,7 @@
 'use strict';
 const PackingPrint={
  mount(host,sheet,settings){
-  const t=(zh,en)=>I18n.language==='en'?en:zh;
+  const t=(zh,en)=>I18n.label(zh,en);
   const bar=document.createElement('div'),button=document.createElement('button');
   bar.className='business-toolbar';button.type='button';button.className='button secondary';
   button.textContent=t('打印当前单证','Print Current Document');

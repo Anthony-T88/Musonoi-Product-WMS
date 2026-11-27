@@ -1,5 +1,6 @@
 'use strict';
 const B=require('./business-common.cjs'),{digest}=require('./security.cjs');
+const accountTransaction=require('./account-transaction.cjs');
 const isAdmin=a=>a.role_code==='admin';
 const builtIn=r=>r.built_in||require('./role-catalog.cjs').builtins.includes(r.code);
 async function actor(c,req,permission){
@@ -12,6 +13,9 @@ async function actor(c,req,permission){
  req.user={...req.user,...a};return a;
 }
 async function read(pool,req,permission,fn){const c=await pool.connect();try{await c.query('BEGIN READ ONLY');await c.query('SELECT pg_advisory_xact_lock_shared(21002)');const a=await actor(c,req,permission),result=await fn(c,a);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
+function mutate(pool,permission,run){
+ return req=>accountTransaction(pool,async c=>run(c,req,await actor(c,req,permission)));
+}
 // Whole-target containment: overlap with one scope is insufficient for an account with several scopes.
 function userVisible(parameter='$1',alias='u'){
  return `(${alias}.role_code<>'admin' AND coalesce(${alias}.deleted_role_code,'')<>'admin'
@@ -35,4 +39,4 @@ async function manageRole(c,a,role){
 }
 function systemAdministrator(a){if(!isAdmin(a))throw B.error(403,'此操作仅限系统管理员');}
 async function visibleRoles(c,a,rows){if(isAdmin(a))return rows;const result=[];for(const r of rows){try{await manageRole(c,a,r);result.push(r);}catch(e){if(e.statusCode!==403)throw e;}}return result;}
-module.exports={actor,read,isAdmin,builtIn,userVisible,target,grantRole,grantPermissions,manageRole,systemAdministrator,visibleRoles};
+module.exports={actor,read,mutate,isAdmin,builtIn,userVisible,target,grantRole,grantPermissions,manageRole,systemAdministrator,visibleRoles};

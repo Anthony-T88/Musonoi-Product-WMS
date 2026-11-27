@@ -1,4 +1,4 @@
-/* Display-only catalog. Persisted business codes, input values and master data are never translated. French is reserved for field review. */
+/* Display-only catalog. Persisted business codes, input values and master data are never translated. */
 'use strict';
 window.TRANSLATIONS={en:Object.fromEntries(`
 穆松尼项目阴极铜库存管理系统=Musonoi Copper Cathode Inventory Management System
@@ -29,7 +29,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 取样中捆包=Bundles being sampled
 已备货可用库存=Prepared stock available
 已匹配装车库存=Matched for loading
-完成装车待出库库存=Loaded, awaiting outbound
+完成装车待出库库存=Loaded, awaiting stock issue
 其他锁定库存（如待处理库存调整）=Other locked stock (e.g. pending stock adjustments)
 匹配捆包=Matching bundles
 待完成取样=Pending sampling
@@ -56,8 +56,8 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 迁移时点非原业务时点=Migration time, not the original business time
 期初快照=Opening snapshot
 期初历史不完整=Incomplete opening history
-正式出库单=Confirmed outbound order
-出库客户=Dispatch customer
+正式出库单=Posted Stock Issue Order
+出库客户=Stock Issue Customer
 客户锁定与解除历史=Reservation and release history
 原始声明净重=Original declared net weight
 取样原重快照=Sampling weight snapshot
@@ -74,7 +74,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 整捆锁定=Whole-bundle reservation
 不减少实物=Does not reduce physical stock
 不计入可用=Excluded from available stock
-其中已出库=Of which dispatched
+其中已出库=Of Which Issued
 入库日期=Inbound date
 入库确认时间=Inbound confirmation time
 生产日期=Production date
@@ -116,7 +116,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 捆包明细=Bundle details
 当前全部筛选结果=All current filtered results
 包含所有分页=Includes all pages
-包含已出库记录=Includes dispatched records
+包含已出库记录=Includes Issued Stock Records
 实物净重仅含在库和已预留=Physical weight includes only in-stock and reserved bundles
 筛选条件实时生效=Filters apply immediately
 日期按入库日期=Dates use the inbound date
@@ -199,7 +199,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 仓储管理=Warehouse Management
 库存查询=Inventory Search
 入库管理=Stock Entry
-出库管理=Outbound Management
+出库管理=Stock Issue Management
 取样管理=Sampling Management
 用户管理=User Management
 操作日志=Audit Log
@@ -278,7 +278,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 未分配=Unallocated
 在库=In stock
 已预留=Reserved
-已出库=Dispatched
+已出库=Issued
 已调整移出=Adjusted out
 未取样=Not sampled
 取样中=Sampling
@@ -463,11 +463,11 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 范围流转=Scope transfer
 开账余额=Opening balance
 入库=Inbound
-出库=Outbound
+出库=Stock Issue
 阴极铜库存日报=Copper inventory daily report
 阴极铜库存月报=Copper inventory monthly report
 客户库存分配统计=Customer allocation report
-生产入库及正式出库统计=Production inbound and formal dispatch report
+生产入库及正式出库统计=Production Receipts and Stock Issue Report
 取样检验统计=Sampling and inspection report
 车辆装车及离场统计=Vehicle loading and departure report
 货位库存分布=Inventory by position
@@ -480,7 +480,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 当前截止时间与授权筛选范围内暂无记录=No records within this cutoff and authorized scope
 期初实物=Opening physical stock
 期末实物=Closing physical stock
-正式离场出库=Formal dispatch
+正式离场出库=Posted Stock Issue
 返场冲销=Return reversal
 调整净额=Net adjustment
 范围流转净额=Net scope transfer
@@ -514,7 +514,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 刷新驾驶舱=Refresh dashboard
 查看授权明细=View authorized details
 当月生产入库=Production inbound this month
-当月正式出库=Formal dispatch this month
+当月正式出库=Stock Issues Posted This Month
 已装车未离场=Loaded, not departed
 未关闭异常=Open exceptions
 本月库存趋势=Monthly inventory trend
@@ -579,10 +579,10 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 运输商=Carrier
 捆包=Bundle
 装车=Loading
-出库审批与离场=Outbound Approval and Departure
-新建出库单=New outbound order
-出库单=Outbound order
-出库审批=Outbound approval
+出库审批与离场=Stock Issue Approval and Departure
+新建出库单=New stock issue order
+出库单=Stock Issue order
+出库审批=Stock Issue approval
 离场时间=Departure time
 生产确认装箱单=Production packing-list confirmation
 商务复核=Commercial review
@@ -594,7 +594,7 @@ window.TRANSLATIONS={en:Object.fromEntries(`
 审批记录=Approval history
 节点记录=Workflow steps
 节点驳回=Reject workflow step
-取消出库申请=Cancel outbound request
+取消出库申请=Cancel stock issue request
 申请实物退回冲销=Request physical-return reversal
 独立批准冲销=Independently approve reversal
 安保核验实物返场=Security physical-return verification
@@ -1279,18 +1279,18 @@ Object.assign(TRANSLATIONS.en,Object.fromEntries(`
 `.trim().split('\n').map(x=>{const i=x.indexOf('=');return [x.slice(0,i),x.slice(i+1)];})));
 Object.assign(TRANSLATIONS.en,{
  '所选期间早于V2.4历史起点，当前为部分期间报表；期初采用升级基线。':'The selected period starts before the V2.4 history boundary. This is a partial-period report using the upgrade opening balance.',
- '按数据库记账版本统计，正式出库按生产最终确认时点。':'Statistics use database posting revisions. Formal dispatch uses the final production confirmation time.',
+ '按数据库记账版本统计，正式出库按生产最终确认时点。':'Statistics use database posting revisions. Stock issues use the final production confirmation time.',
  '单据报表采用整单授权和全部捆包匹配筛选口径；盘点报告按授权捆包汇总，不泄露整仓结果。':'Document reports require whole-document authorization and all bundles to match. Inventory Count totals include authorized bundles only.',
  '异常指标为已登记且未关闭的异常；阈值由服务端管理员配置，规则扫描由授权人员发起，非后台自动监控。':'Exception counts include registered open cases. Administrators configure thresholds; authorized staff initiate scans. No automatic background monitoring.',
  '原始入库明细和历史流水不修改，当前余额更正由独立审批事务生效。':'Original inbound details and historical movements remain unchanged. Current balances change only through independently approved transactions.',
  '原始入库单、流水和档案原始净重保留；这里只更正当前库存余额投影。':'Original inbound orders, ledger entries and declared weights are preserved. Only the current balance projection is corrected.',
  '连接失败将显示错误，不会切换至模拟库存。':'Connection failures are shown explicitly. Simulated stock is never substituted.',
  '记录持久化于独立测试库，均为虚构数据；没有接入真实库存。':'Records persist in an isolated test database. All records are fictitious; no production inventory is connected.',
- '按厂区时区 Africa/Lubumbashi 截日；正式出库以生产最终确认时点记账。早于可靠历史起点的部分会明确标注。':'Dates use Africa/Lubumbashi. Formal dispatch is posted at final production confirmation. Coverage before the reliable history boundary is explicitly marked.',
+ '按厂区时区 Africa/Lubumbashi 截日；正式出库以生产最终确认时点记账。早于可靠历史起点的部分会明确标注。':'Dates use Africa/Lubumbashi. Stock issues are posted at final production confirmation. Coverage before the reliable history boundary is explicitly marked.',
  '扫码成功仅表示识别。所有业务变化必须得到服务器确认；二维码不授予权限。':'A scan only identifies a bundle. Every business change requires server confirmation. QR codes grant no permissions.',
  '正式写入必须收到服务器确认。没有相机权限时可手动输入编号，或识别本地二维码图片。':'Official writes require server confirmation. If camera access is unavailable, enter a bundle number or read a local QR image.',
  '原始值由数据库读取，未审批不改库存；已锁定/装车捆包须先解锁/退装。':'Original values are read from the database. Pending adjustments do not change stock. Reserved/loaded bundles must be released/unloaded first.',
- '净重 = 毛重 − 皮重。差异只提示，不改原捆包重量；车辆关联装车单后用于出库审批。':'Net weight = gross − tare. Variances generate notices without changing bundle weights. Vehicle weigh tickets linked to loading orders support dispatch approval.',
+ '净重 = 毛重 − 皮重。差异只提示，不改原捆包重量；车辆关联装车单后用于出库审批。':'Net weight = gross − tare. Variances generate notices without changing bundle weights. Vehicle weigh tickets linked to loading orders support stock issue approval.',
  '已确认单据不得删除或改写；纠错请走授权调整或冲销流程。':'Confirmed documents cannot be deleted or rewritten. Use an authorized adjustment or reversal.',
  '最多200捆':'Maximum 200 bundles',
  '最多500行':'Maximum 500 rows'
@@ -1328,7 +1328,7 @@ Object.assign(TRANSLATIONS.en,{'捆包编号（每行一捆，最多500捆）':'
 
 Object.assign(TRANSLATIONS.en,{'信息总览':'Information overview','客户管理':'Customer Profile','备货管理':'Lot Preparation','合同号':'Contract number','合同生效日期':'Contract effective date','合同截止日期':'Contract end date','有效期状态':'Contract validity','有效期内':'Valid','尚未生效':'Not yet effective','已到期':'Expired','毛重（吨）':'Gross weight (t)','包装（吨）':'Packaging (t)','历史未知':'Historical value unknown','历史未记录':'Not recorded historically','历史未关联':'No historical contract link','重量依据':'Weight basis','重量规则':'Weight rule','新增合同':'New contract','新增客户':'New customer','查看':'View','返回上一页':'Back','启停状态':'Active status','编辑 / 启停':'Edit / Activate','原始净重（吨）':'Original net weight (t)','当前净重（吨）':'Current net weight (t)'});
 
-Object.assign(TRANSLATIONS.en,{'合同':'Contract','客户档案':'Customer records','合同档案（一客户多合同）':'Customer contracts (one to many)','新增客户合同':'New customer contract','编辑合同':'Edit contract','保存合同':'Save contract','合同已保存':'Contract saved','返回客户管理':'Back to Customer Profile','毛重扣包':'Gross less packaging','历史毛重未知':'Historical gross weight unknown','已授权净重调整':'Authorized net weight adjustment','授权调整后的净重':'Net after approved adjustment','包装重量（吨）':'Packaging weight (t)','当前净重（吨）':'Current net weight (t)','原始毛重（吨）':'Original gross weight (t)','原始档案净重（吨）':'Original recorded net weight (t)','生产批次、仓库与货位资料':'Batch warehouse and location records','启用':'Active','停用':'Inactive','已停用':'Inactive','当日生产入库':'Inbound today','当日正式出库':'Formal outbound today','合同截止日期不能早于生效日期':'Contract end date must not precede effective date','待输入有效毛重':'Enter a valid gross weight','毛重须大于包装重量':'Gross weight must exceed packaging weight','全部':'All','暂无匹配合同；历史计划未自动关联合同。':'No matching contracts. Historical plans were not assigned contracts automatically.'});
+Object.assign(TRANSLATIONS.en,{'合同':'Contract','客户档案':'Customer records','合同档案（一客户多合同）':'Customer contracts (one to many)','新增客户合同':'New customer contract','编辑合同':'Edit contract','保存合同':'Save contract','合同已保存':'Contract saved','返回客户管理':'Back to Customer Profile','毛重扣包':'Gross less packaging','历史毛重未知':'Historical gross weight unknown','已授权净重调整':'Authorized net weight adjustment','授权调整后的净重':'Net after approved adjustment','包装重量（吨）':'Packaging weight (t)','当前净重（吨）':'Current net weight (t)','原始毛重（吨）':'Original gross weight (t)','原始档案净重（吨）':'Original recorded net weight (t)','生产批次、仓库与货位资料':'Batch warehouse and location records','启用':'Active','停用':'Inactive','已停用':'Inactive','当日生产入库':'Inbound today','当日正式出库':'Formal stock issue today','合同截止日期不能早于生效日期':'Contract end date must not precede effective date','待输入有效毛重':'Enter a valid gross weight','毛重须大于包装重量':'Gross weight must exceed packaging weight','全部':'All','暂无匹配合同；历史计划未自动关联合同。':'No matching contracts. Historical plans were not assigned contracts automatically.'});
 
 TRANSLATIONS.en['统计范围与截止日期（展开筛选）']='Scope and cutoff date (expand filters)';
 
@@ -1354,7 +1354,7 @@ Object.assign(TRANSLATIONS.en,{
  '按图数字化，待现场校核':'Digitized from source; site verification pending',
  '仅显示有授权库存货位':'Show locations with authorized stock only',
  '取样中 / 已装车（普通货位已排除）':'Sampling / loaded (excluded from yard)',
- '未安排装车':'No loading order','待装车':'Awaiting loading','已创建出库单':'Outbound created',
+ '未安排装车':'No loading order','待装车':'Awaiting loading','已创建出库单':'Stock Issue created',
  '装箱单已确认':'Packing confirmed','商务已复核':'Commercial reviewed','已核验待正式扣减':'Gate verified; posting pending',
  '已正式离场（不属当前库存）':'Departed (excluded from current stock)',
  '地图只读':'Read-only map','按当前数据库货位定位':'Located using the current database position',
@@ -1407,4 +1407,15 @@ Object.assign(TRANSLATIONS.en,{
  "当前筛选无实物库存": "No Physical Stock Matches the Filters",
  "已离场待出库审批 / 待纠正": "Departed, Awaiting Stock Issue Approval or Correction",
  "当前授权范围无待审批离场货物": "No Authorized Departed Cargo Awaits Approval"
+});
+
+// Display aliases for unchanged legacy database errors.
+Object.assign(TRANSLATIONS.en,{
+ 'Cancel outbound approval before changing weighing; departed tickets immutable':'Cancel stock issue approval before changing the weigh ticket. Departed tickets are locked.',
+ 'Cancel outbound approval before unloading':'Cancel stock issue approval before unloading',
+ 'Outbound requires completed matching loading and vehicle weighing':'Stock issue requires completed loading and a matching vehicle weigh ticket',
+ 'Outbound version conflict':'The stock issue was updated. Refresh and try again.',
+ 'Return location inactive or bundle no longer outbound':'The return location is inactive or the bundle is no longer issued from stock.',
+ 'Unknown outbound action':'Unknown stock issue action',
+ 'Bundle unavailable; formal outbound must use V2.3 physical return':'This bundle is unavailable. Use physical return for a posted stock issue.',
 });

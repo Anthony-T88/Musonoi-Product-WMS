@@ -9,7 +9,7 @@ window.CobaltMetal={
  format(value,digits=5){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,digits),digits);},
  kg(value){return value==null||value===''?'—':Tonnes.fixed(Tonnes.scaled(value,1),4);},
  status(value){const states={
-  PENDING_OUTBOUND:['待正式出库','Awaiting Formal Outbound'],PENDING_ARECOMS:['待ARECOMS确认','Awaiting ARECOMS Confirmation'],
+  PENDING_OUTBOUND:['待正式出库','Awaiting Stock Issue'],PENDING_ARECOMS:['待ARECOMS确认','Awaiting ARECOMS Confirmation'],
   COMPLETED:['已完结','Completed'],SUBMITTED:['待审批','Awaiting Approval'],
   CONFIRMED:['已确认','Confirmed'],REJECTED:['已退回','Returned']
  };return this.t(...(states[value]||[value,value]));},
@@ -24,7 +24,7 @@ window.CobaltMetal={
    CO_METAL_PENDING:['已有一笔申请待审核','A request is already awaiting approval'],
    CO_METAL_EXPORT_LIMIT:['请缩小筛选范围后再导出','Narrow the filters before exporting'],
    CO_METAL_FILTER:['筛选条件无效','Invalid filter criteria'],
-   CO_METAL_NOT_POSTED:['找不到已正式出库的记录','No formal outbound record was found']};
+   CO_METAL_NOT_POSTED:['找不到已正式出库的记录','No formal stock issue record was found']};
   return errors[e.message]?this.t(...errors[e.message]):CobaltUI.error(e);
  },
  basis(r){
@@ -45,11 +45,11 @@ window.CobaltMetal={
   const a=OverviewAnalysis,t=this.t,metal=this.format(inventory.estimated_mt);
   return '<div class="oa-kpis oa-kpis-cobalt">'+
    a.batchCard(t('备货作业中吨包','Bags in Preparation'),cards.preparing)+
-   a.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Outbound'),cards.prepared,true)+
+   a.batchCard(t('已备货待出库库存','Prepared Stock Awaiting Stock Issue'),cards.prepared,true)+
    a.batchCard(t('装车中库存','Stock in Loading'),cards.loading,true)+
    a.card(t('在库库存预估金属量','Estimated In-Stock Cobalt Metal'),metal,metal==='—'?'':t('金属吨','MT of cobalt'),t('按在库预计钴金属量汇总','Estimated cobalt metal in stock'))+
    a.card(t('ARECOMS确认车数与钴金属量','ARECOMS Confirmed Vehicles and Cobalt'),CountValues.display(period?.completed??0)+' '+t('车','vehicles')+' / '+this.format(period?.confirmed_mt??'0'),t('金属吨','MT of cobalt'),'')+
-   a.batchCard(t('已出库重量','Outbound Weight'),cards.outbound,true)+
+   a.batchCard(t('已出库重量','Stock Issue Weight'),cards.outbound,true)+
    '</div>';
  },
  confirmationCards(period,withTitle=true,shipmentVehicles=period.vehicles){
@@ -65,11 +65,11 @@ window.CobaltMetal={
   const t=this.t,max=Math.max(0,...rows.flatMap(r=>[Number(r.estimated_mt),Number(r.confirmed_mt)]))||1;
   const bar=(value,kind,label)=>value==null?'<span>—</span>':
    `<span title="${esc(value)} MT"><meter class="${kind}" aria-label="${esc(label)}" min="0" max="${max}" value="${Number(value)}">${esc(value)} MT</meter> <strong>${esc(value)}</strong></span>`;
-  const table=CobaltSalesUI.table([['正式出库月份','Formal Outbound Month'],['预计钴金属量（MT）','Estimated Cobalt (MT)'],
+  const table=CobaltSalesUI.table([['正式出库月份','Formal Stock Issue Month'],['预计钴金属量（MT）','Estimated Cobalt (MT)'],
    ['ARECOMS已确认（MT）','Confirmed ARECOMS (MT)'],['待确认车辆','Vehicles Awaiting Confirmation']],
   rows.map(r=>`<tr><th scope="row">${esc(r.period)}</th><td>${bar(r.estimated_mt,'co-metal-estimate',t('预计钴金属量','Estimated Cobalt'))}</td>
    <td>${bar(r.confirmed_mt,'co-metal-confirmed',t('ARECOMS确认钴金属量','Confirmed ARECOMS Cobalt'))}</td><td>${r.pending} / ${r.vehicles}</td></tr>`),'co-metal-months');
-  return rows.length?table.replace('<table id="co-metal-months"','<table id="co-metal-months" data-v34-enhanced="true"'):OverviewAnalysis.empty('所选期间暂无正式出库记录','No formal outbound records in the selected period');
+  return rows.length?table.replace('<table id="co-metal-months"','<table id="co-metal-months" data-v34-enhanced="true"'):OverviewAnalysis.empty('所选期间暂无正式出库记录','No formal stock issue records in the selected period');
  },
  receipt(m){
   if(!m?.inventory.bags)return '';
@@ -101,12 +101,12 @@ window.CobaltMetal={
   const sorts=[['date',t('日期','Date')],['batch',t('备货批次','Preparation Batch')],['net',t('实物净重','Wet Net Weight')],...(outbound?[['metal',t('确认金属量','Confirmed Metal')]]:[])];
   const options=(values,key)=>values.map(([v,label])=>`<option value="${v}" ${v===q.get(key)?'selected':''}>${esc(label)}</option>`).join('');
   const tabs='<div class="business-toolbar">'+(canStock?'<a class="button '+(outbound?'secondary':'primary')+'" href="'+base+'">'+t('库存金属量明细','Inventory Metal')+'</a>':'')+
-   (canOutbound?'<a class="button '+(outbound&&!q.get('status')?'primary':'secondary')+'" href="'+base+'?view=outbound">'+t('正式出库金属量明细','Formal Outbound Metal')+'</a>'+
+   (canOutbound?'<a class="button '+(outbound&&!q.get('status')?'primary':'secondary')+'" href="'+base+'?view=outbound">'+t('正式出库金属量明细','Formal Stock Issue Metal')+'</a>'+
    '<a class="button '+(q.get('status')==='PENDING_ARECOMS'?'primary':'secondary')+'" href="'+base+'?view=outbound&status=PENDING_ARECOMS">'+t('ARECOMS待确认清单','ARECOMS Confirmation Queue')+'</a>':'')+'</div>';
   const exportLink=CobaltUI.can('inventory:export')?'<button id="co-metal-export" class="button secondary" type="button">'+t('导出 Excel','Export Excel')+'</button>':'';
   const dateField=(key,zh,en)=>`<label>${t(zh,en)}<input type="date" name="${key}" value="${esc(q.get(key)||'')}"></label>`;
   const headers=outbound?[['备货批次','Preparation Batch'],['装车单','Loading Order'],['客户 / 合同','Customer / Contract'],['车牌','Truck'],
-   ['正式出库日期','Formal Outbound Date'],['实物净重（MT）','Wet Net (MT)'],['预计金属量（MT）','Estimated Metal (MT)'],
+   ['正式出库日期','Formal Stock Issue Date'],['实物净重（MT）','Wet Net (MT)'],['预计金属量（MT）','Estimated Metal (MT)'],
    ['ARECOMS确认（MT）','Confirmed ARECOMS (MT)'],['差异（MT）','Difference (MT)'],['发运状态','Shipment Status']]:
    [['备货批次 / 入库单','Preparation Batch / Receipt'],['库存状态','Stock Status'],['袋数','Bags'],['实物净重（MT）','Wet Net (MT)'],
    ['预计金属量（MT）','Estimated Metal (MT)'],['重量依据','Weight Basis'],['货位','Locations'],['入库时间','Receipt Time']];
@@ -127,7 +127,7 @@ window.CobaltMetal={
    <label>${t('搜索','Search')}<input type="search" name="search" maxlength="160" value="${esc(q.get('search')||'')}"
     placeholder="${t(outbound?'批次、装车单、客户、合同或车牌':'入库单、批次、袋号、铅封或货位',outbound?'Batch, order, customer, contract or truck':'Receipt, batch, bag, seal or location')}"></label>
    <label>${t('状态','Status')}<select name="status"><option value="">${t('全部','All')}</option>${options(fields,'status')}</select></label>
-   ${outbound?dateField('from','出库开始日期','Outbound From')+dateField('to','出库截止日期','Outbound To'):''}
+   ${outbound?dateField('from','出库开始日期','Stock Issue Date From')+dateField('to','出库截止日期','Stock Issue Date To'):''}
    <label>${t('排序','Sort By')}<select name="sort">${options(sorts,'sort')}</select></label>
    <label>${t('顺序','Direction')}<select name="direction">${options([['desc',t('降序','Descending')],['asc',t('升序','Ascending')]],'direction')}</select></label>
    <div class="business-toolbar"><button class="button primary">${t('查询','Search')}</button><a class="button secondary" href="${base}?view=${view}">${t('重置','Reset')}</a>${exportLink}</div></form>
@@ -150,8 +150,8 @@ window.CobaltMetal={
   if(!r)return '<p>'+t('发运业务状态','Shipment Status')+' · '+this.status(d.shipment_status)+'</p>';
   const amount=r.confirmed_mt==null?this.pending():this.amount(r.confirmed_mt);
   const fields=[
-   [t('出库实物净重','Outbound Wet Net'),this.amount(r.net_mt,4)],
-   [t('出库预计钴金属量','Estimated Cobalt at Outbound'),this.amount(r.estimated_mt)],
+   [t('出库实物净重','Stock Issue Wet Net'),this.amount(r.net_mt,4)],
+   [t('出库预计钴金属量','Estimated Cobalt at Stock Issue'),this.amount(r.estimated_mt)],
    [t('ARECOMS确认金属量','Confirmed ARECOMS Metal'),amount],
    [t('金属量差异 / 差异率','Metal Difference / Rate'),r.confirmed_mt==null?this.pending():
     this.amount(r.difference_mt)+(r.difference_pct==null?'':' / '+r.difference_pct+'%')],

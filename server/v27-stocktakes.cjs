@@ -1,5 +1,5 @@
 'use strict';
-const findingLabels={MATCH:['一致','Match'],UNCOUNTED:['尚未清点','Not Counted'],GAIN:['盘盈','Gain'],LOSS:['盘亏','Loss'],LOCATION:['货位差异','Location Difference'],WEIGHT:['重量差异','Weight Difference'],STATUS:['状态差异','State Difference'],DUPLICATE:['重复登记','Duplicate Entry'],UNVERIFIED_MOVEMENT:['流转待核验','Movement Verification Required'],RECONCILED_MOVEMENT:['流转已核验','Movement Reconciled'],REMOVED_BY_FLOW:['正常业务流转移出','Removed by Normal Flow'],OFFSITE_PENDING:['已离场待正式出库','Departed / Pending Outbound']};
+const findingLabels={MATCH:['一致','Match'],UNCOUNTED:['尚未清点','Not Counted'],GAIN:['盘盈','Gain'],LOSS:['盘亏','Loss'],LOCATION:['货位差异','Location Difference'],WEIGHT:['重量差异','Weight Difference'],STATUS:['状态差异','State Difference'],DUPLICATE:['重复登记','Duplicate Entry'],UNVERIFIED_MOVEMENT:['流转待核验','Movement Verification Required'],RECONCILED_MOVEMENT:['流转已核验','Movement Reconciled'],REMOVED_BY_FLOW:['正常业务流转移出','Removed by Normal Flow'],OFFSITE_PENDING:['已离场待正式出库','Departed / Pending Stock Issue']};
 const C=require('./control-common.cjs'),{access}=require('./stocktakes.cjs');
 module.exports=async({app,pool,permitted,csrf})=>{
  app.get('/api/v1/v27/stocktakes',{preHandler:permitted('stocktake:read')},req=>C.read(pool,c=>require('./stocktake-periods.cjs').list(c,req)));

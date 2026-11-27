@@ -1,6 +1,6 @@
 'use strict';
 window.Sound467={enabled:true,volume:.35,muted:false,context:null,seen:new Set(),lastAt:0,ready:false,
- t:(z,e)=>I18n.language==='en'?e:z,
+ t:(z,e)=>I18n.label(z,e),
  init(){if(this.ready)return;this.ready=true;this.enabled=true;this.storageKey='musonoi-sound:'+CurrentUser.id+':'+ProductContext.code;try{const saved=JSON.parse(localStorage.getItem(this.storageKey));if(saved){this.enabled=saved.enabled===true;this.volume=Number.isFinite(Number(saved.volume))?Math.max(0,Math.min(1,Number(saved.volume))):.35;}}catch{}this.gestureAbort?.abort();this.gestureAbort=new AbortController();const activate=()=>{if(this.enabled&&!this.muted&&window.AppSignedIn&&!document.hidden)this.unlock().then(()=>this.refresh()).catch(()=>this.refresh());};// Refresh the sound label after click dispatch so a mobile header wrap cannot move the pressed control.
   for(const type of ['click','keydown'])document.addEventListener(type,activate,{signal:this.gestureAbort.signal,passive:true});this.refresh();},
  save(){try{localStorage.setItem(this.storageKey,JSON.stringify({enabled:this.enabled,volume:this.volume}));}catch{}this.refresh();},

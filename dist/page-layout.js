@@ -1,7 +1,7 @@
 'use strict';
 window.PageLayout={
  rows:new Map(),draft:null,requestId:0,saving:false,
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  scope(){const route=location.pathname.toLowerCase().replace(/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/g,':id').replace(/^\/inventory\/.+/,'/inventory/:id');return (ProductContext.isCopper()?'cu:':'co:')+(route==='/'?'/overview':route);},
  apply(){
   const page=this.scope(),global=this.rows.get('global')?.settings,pageSettings=this.rows.get(page)?.settings;

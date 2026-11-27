@@ -64,7 +64,7 @@ Object.assign(TRANSLATIONS.en,Object.fromEntries(`
 规划货位数量或已知净重超过容量=Planned bundle count or known net weight exceeds location capacity
 Lot锁定状态冲突=Lot reservation state conflict
 锁定历史不可覆盖=Reservation history cannot be overwritten
-只有经理正式出库或专门取消可释放Lot=A Lot may only be released by final outbound approval or an authorized cancellation
+只有经理正式出库或专门取消可释放Lot=A Lot may only be released by final stock issue approval or an authorized cancellation
 该捆包取样须在所属Lot作业内登记=Record sampling within the bundle's Lot workflow
 规划货位不属于该项目=The planned location does not belong to this project
 捆包已占用或存在业务冲突=The bundle is reserved or has a business conflict
@@ -200,7 +200,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 请确认用户名并填写删除原因=Confirm the username and enter a deletion reason
 账号仍有关联待办，请核查并明确确认；审批历史不会转移=The account has pending work. Check and explicitly acknowledge it; approval history will not be reassigned
 账号未删除=Account is not deleted
-按入库、在库、出库流程查看当前授权范围。=View inbound, on-hand and outbound operations within your authorized scope.
+按入库、在库、出库流程查看当前授权范围。=View inbound, on-hand and stock issue operations within your authorized scope.
 进入库存查询=Open Inventory
 统计期间与数据范围=Period and data scope
 统计开始日期=Period start date
@@ -216,25 +216,25 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 备货作业中或已备货=In Preparation or Prepared
 包含已装车待离场，排除已离场待审批。未知重量不按零计入。=Includes loaded goods awaiting departure; excludes departed goods awaiting approval. Unknown weights are not treated as zero.
 按审核通过并完成入库记账时间统计，待审核及驳回单不计入。=Counted by approved and posted inbound time. Pending and rejected receipts are excluded.
-本期正式出库=Outbound This Period
-本期正式出库净重=Outbound Net Weight This Period
-已离场待正式出库审批=Departed / Pending Outbound Approval
-仅最终审批并完成出库记账计入本期出库，车辆离场不提前记账。=Only final approval and posting count as outbound. Vehicle departure alone does not post outbound stock.
-当前状态按捆唯一分类；待审核入库使用单据数，已出库另列历史范围。=Current states classify each bundle once. Pending inbound counts receipts; completed outbound history is shown separately.
+本期正式出库=Stock Issue This Period
+本期正式出库净重=Stock Issue Net Weight This Period
+已离场待正式出库审批=Departed / Pending Stock Issue Approval
+仅最终审批并完成出库记账计入本期出库，车辆离场不提前记账。=Only final approval and posting count as stock issue. Vehicle departure alone does not post stock issue stock.
+当前状态按捆唯一分类；待审核入库使用单据数，已出库另列历史范围。=Current states classify each bundle once. Pending inbound counts receipts; completed stock issue history is shown separately.
 入库阶段=Inbound Stage
 备货阶段=Preparation Stage
 装车及出库阶段=Loading & Stock Issue Stage
 已入库、可备货=Received / Available for Preparation
 其他有效锁定=Other Active Reservations
 已审核待离场=Approved / Awaiting Departure
-已离场待出库审批=Departed / Pending Outbound Approval
+已离场待出库审批=Departed / Pending Stock Issue Approval
 已离场待纠正=Departed / Correction Required
 历史装车待核查=Historical Loading / Verification Required
 账面口径、历史状态与趋势=Ledger Scope, Historical States and Trends
 截至时点账面库存=Ledger Inventory at Snapshot
-历史累计已出库=Cumulative Historical Outbound
+历史累计已出库=Cumulative Historical Stock Issue
 其他历史状态=Other Historical States
-本期入库和本期出库是期间发生量，现场库存是时点存量，不直接加减。历史重量不完整时仅显示已知合计。=Inbound and outbound are period flows; on-site inventory is a point-in-time balance. They are not directly reconciled by addition and subtraction. Only known historical weights are totalled.
+本期入库和本期出库是期间发生量，现场库存是时点存量，不直接加减。历史重量不完整时仅显示已知合计。=Inbound and stock issue are period flows; on-site inventory is a point-in-time balance. They are not directly reconciled by addition and subtraction. Only known historical weights are totalled.
 下列为既有正式库存账趋势，包含已离场待审批差异；不作为现场实物重量。=The following existing ledger trend includes departed goods pending approval. It does not represent on-site physical weight.
 捆包业务状态=Bundle Workflow Status
 备货作业中=Preparation in Progress
@@ -271,7 +271,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 待纠正=Correction Required
 待完整填写=Complete All Fields
 净重须大于=Net weight must exceed
-物流经理批准正式出库=Outbound approved by the logistics manager
+物流经理批准正式出库=Stock Issue approved by the logistics manager
 更正说明=Correction Note
 待取样=Awaiting Sampling
 请选择统一规划货位=Select a shared planned location
@@ -329,9 +329,9 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 未定位到现场图的货位=Locations Not Mapped to the Site Drawing
 历史混放异常=Historical Mixed-storage Exception
 无未定位货位=No Unmapped Locations
-已从现场地图移除，正式出库仍等待物流经理审批。=Removed from the on-site map; final outbound approval by the logistics manager is still pending.
+已从现场地图移除，正式出库仍等待物流经理审批。=Removed from the on-site map; final stock issue approval by the logistics manager is still pending.
 当前授权范围无待审批离场货物。=No departed goods awaiting approval in the authorized scope.
-这里不会确认装车、出库或离场。=This view does not confirm loading, outbound or departure.
+这里不会确认装车、出库或离场。=This view does not confirm loading, stock issue or departure.
 图纸目录=Drawing Catalog
 仅汇总当前筛选的普通货位库存，车辆区单列。=Totals cover ordinary locations matching the filters. Vehicle areas are listed separately.
 尚未关联现场区域=Not Linked to a Site Region
@@ -346,7 +346,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 毛重须大于=Gross weight must exceed
 位小数=Decimal Places
 已审核/待离场=Approved / Awaiting Departure
-已离场/待出库审批=Departed / Pending Outbound Approval
+已离场/待出库审批=Departed / Pending Stock Issue Approval
 已离场/待纠正=Departed / Correction Required
 入库不录重量，审核确认后按捆数入账；毛重和净重将在备货时检斤。=Inbound does not record weight. Approval posts the bundle quantity; gross and net weights are recorded during preparation.
 历史未录入=Not Recorded Historically
@@ -362,7 +362,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 确认现场已实际移动=Confirm Goods Have Physically Moved
 请选择已审核且有剩余捆包的=Select an approved lot with remaining bundles
 含缺失片数=Includes Missing Sheet Counts
-已占用/出库=Occupied / Outbound
+已占用/出库=Occupied / Stock Issue
 剩余可装=Remaining Loadable
 请选择本车实际装载的捆包=Select the bundles actually loaded on this vehicle
 已离场待审批货物单独隔离=Departed Goods Awaiting Approval Are Isolated
@@ -467,7 +467,7 @@ Lot状态/版本已变化，请刷新核对；不覆盖已有审批=Lot state or
 单=Documents
 捆=Bundles
 入库=Inbound
-出库=Outbound
+出库=Stock Issue
 返回=Back
 编辑=Edit
 区=Region
@@ -479,8 +479,8 @@ Object.assign(TRANSLATIONS.en,{
   "新建备货单": "New Lot Preparation",
   "新建入库单": "New Stock Entry",
   "已知库存净重": "Known Inventory Net Weight",
-  "本期正式出库批次数": "Outbound Batches This Period",
-  "本期正式出库捆包数": "Outbound Bundles This Period",
+  "本期正式出库批次数": "Stock Issue Batches This Period",
+  "本期正式出库捆包数": "Stock Issue Bundles This Period",
   "批": "batches",
   "溢短装（%）": "Quantity Tolerance (%)",
   "备货月份": "Preparation Month",
@@ -488,15 +488,15 @@ Object.assign(TRANSLATIONS.en,{
   "允许最大净重": "Maximum Allowed Net Weight",
   "最低允许净重": "Minimum Allowed Net Weight",
   "当前累计有效净重": "Effective Net Weight",
-  "尚未出库的有效分配净重": "Assigned Net Weight Awaiting Outbound",
-  "已正式出库净重": "Posted Outbound Net Weight",
+  "尚未出库的有效分配净重": "Assigned Net Weight Awaiting Stock Issue",
+  "已正式出库净重": "Posted Stock Issue Net Weight",
   "剩余可用净重额度": "Remaining Net Weight Allowance",
   "已使用Lot数量": "Used Lot Count",
   "剩余可创建Lot数量": "Remaining Lot Count",
   "重量尚未完全确定": "Weight Is Not Yet Fully Known",
   "请补齐计划控制字段": "Complete the Plan Control Fields",
   "装车待审核": "Loading Pending Review",
-  "正式出库待审批": "Pending Final Outbound Approval",
+  "正式出库待审批": "Pending Final Stock Issue Approval",
   "已驳回/待整改": "Rejected / Rectification Required",
   "编号冲突，请核对以下记录": "Number conflict; check the following records",
   "编号验证暂不可用，请重新检查": "Number validation unavailable; please check again",
@@ -506,9 +506,9 @@ Object.assign(TRANSLATIONS.en,{
   "当前筛选": "Current Filter"
 });
 
-Object.assign(TRANSLATIONS.en,{'已释放净重':'Released Net Weight','修改入库草稿':'Edit Inbound Draft','装车':'Loading','出库':'Outbound','待主管审核':'Pending Supervisor Review','计划净重':'Planned Net Weight'});
+Object.assign(TRANSLATIONS.en,{'已释放净重':'Released Net Weight','修改入库草稿':'Edit Inbound Draft','装车':'Loading','出库':'Stock Issue','待主管审核':'Pending Supervisor Review','计划净重':'Planned Net Weight'});
 Object.assign(TRANSLATIONS.en,{'计划目标净重（吨，最多四位小数）':'Planned Net Weight (MT, up to 4 decimal places)'});
 
 Object.assign(TRANSLATIONS.en,{'未完成检斤为交叉指标，不参与阶段状态合计。':'Weighing incomplete is a cross-cutting measure, excluded from stage totals.'});
 
-Object.assign(TRANSLATIONS.en,{"库存视图":"Inventory View","当前在库":"Current Inventory","全部历史":"All History","Lot编号":"Lot Number","正式货位总数":"Total Formal Locations","已占用正式货位数":"Occupied Formal Locations","空闲正式货位数":"Free Formal Locations","临时堆存区":"Temporary Storage Area","全屏查看":"Full Screen","完整地图":"Fit Complete Map","客户高亮":"Highlight Customer","货位状态":"Location Status","Lot编号定位":"Find Lot","客户备货统计":"Customer Preparation Summary","活跃备货单数量":"Active Lots","备货锁定净重（吨）":"Locked Net Weight (MT)","已装车待出库净重（吨）":"Loaded / Pending Outbound Net Weight (MT)","当前备货合计净重（吨）":"Current Prepared Net Weight (MT)","捆未完成检斤":"bundles awaiting weighing","当前授权范围无活跃备货":"No active preparation in the authorized scope","仅当前有效分配及已装车待正式出库；未知重量单独提示，历史已出库不计入。":"Current active assignment and loaded goods awaiting final outbound only; unknown weights are flagged; historical outbound is excluded.","当前有效Lot":"Current Active Lot","规划锁定不等于本货位实物；已装车货物不重复计入原货位。":"Planned assignment differs from physical storage; loaded goods are excluded from their previous location."});
+Object.assign(TRANSLATIONS.en,{"库存视图":"Inventory View","当前在库":"Current Inventory","全部历史":"All History","Lot编号":"Lot Number","正式货位总数":"Total Formal Locations","已占用正式货位数":"Occupied Formal Locations","空闲正式货位数":"Free Formal Locations","临时堆存区":"Temporary Storage Area","全屏查看":"Full Screen","完整地图":"Fit Complete Map","客户高亮":"Highlight Customer","货位状态":"Location Status","Lot编号定位":"Find Lot","客户备货统计":"Customer Preparation Summary","活跃备货单数量":"Active Lots","备货锁定净重（吨）":"Locked Net Weight (MT)","已装车待出库净重（吨）":"Loaded / Pending Stock Issue Net Weight (MT)","当前备货合计净重（吨）":"Current Prepared Net Weight (MT)","捆未完成检斤":"bundles awaiting weighing","当前授权范围无活跃备货":"No active preparation in the authorized scope","仅当前有效分配及已装车待正式出库；未知重量单独提示，历史已出库不计入。":"Current active assignment and loaded goods awaiting final stock issue only; unknown weights are flagged; historical stock issue is excluded.","当前有效Lot":"Current Active Lot","规划锁定不等于本货位实物；已装车货物不重复计入原货位。":"Planned assignment differs from physical storage; loaded goods are excluded from their previous location."});

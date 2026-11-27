@@ -18,8 +18,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const plan=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:contract.id,target_weight:'100',quantity_tolerance:'5',preparation_month:today.slice(0,7),remark:'Synthetic rc2 copper'});
  for(const role of ['sales_manager','commerce_manager']){const p=await api('/sales-workflow/plans/'+plan.id);await api('/sales-workflow/plans/'+plan.id+'/review',role,{version:p.approval_version,decision:'APPROVED'});}steps.push('sales plan two independent approvals');
  const P=require('./preparation-fixture.cjs'),cu='CU_CATHODE',planApi=(role,product,url,body)=>api(url,role,body);
- const number='MUS-'+today.slice(0,4)+'-020-'+seq,otherNumber='MUS-'+today.slice(0,4)+'-021-'+seq;
- const lines=[number,otherNumber].map(bundle_no=>({bundle_no,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}));
+ const primary=E.receiptBundle(today,seq),secondary=E.receiptBundle(today,seq,1),number=primary.bundle_no,otherNumber=secondary.bundle_no;
+ const lines=[primary,secondary].map(bundle=>({...bundle,sheets_per_bundle:48,inbound_at:new Date().toISOString()}));
  let receipt=await api('/receipts','production_operator',{project_id:f.project,lines});
  await api('/receipts','production_operator',{project_id:f.project,lines:[{bundle_no:number,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}]},409);
  receipt=await api('/receipts/'+receipt.id+'/submit','production_operator',{version:receipt.version});await api('/receipts/'+receipt.id+'/confirm','production_manager',{version:receipt.version});const {rows:received}=await c.query('SELECT id,bundle_no FROM bundles WHERE receipt_id=$1',[receipt.id]);
@@ -34,11 +34,11 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal((await c.query('SELECT count(*)::int n FROM lot_location_claims WHERE location_id=$1 AND released_at IS NULL',[location.id])).rows[0].n,1);
  lot=await api('/v261/lots/'+lot.id,'logistics_field_operator');
  const samplePath='/v261/lots/'+lot.id+'/items/'+bundle.id+'/sample-stage';
- assert.equal(lot.items[0].sample_stage,'WAITING');
+ assert.equal(lot.items.find(item=>item.id===bundle.id).sample_stage,'WAITING');
  for(const stage of ['IN_PROGRESS','RETURNED']){
   await api(samplePath,'logistics_field_operator',{version:lot.version,stage,...(stage==='RETURNED'?{repacked:true}:{})});
   lot=await api('/v261/lots/'+lot.id,'logistics_field_operator');
-  assert.equal(lot.items[0].sample_stage,stage);
+  assert.equal(lot.items.find(item=>item.id===bundle.id).sample_stage,stage);
  }
  lot=(await api('/v262/lots/'+lot.id+'/weigh','logistics_field_operator',{version:lot.version,items:lot.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'RC2-CU-'+seq+'-'+b.id.slice(0,8)}))})).lot;
  assert.equal((await c.query('SELECT (net_weight=2.0325::numeric) v FROM bundles WHERE id=$1',[bundle.id])).rows[0].v,true);
@@ -71,6 +71,9 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal((await c.query('SELECT weight,gross_weight FROM inventory_view WHERE uuid=$1',[bundle.id])).rows[0].weight,null);
  lot=await api('/v261/lots/'+lot.id+'/submit','logistics_field_operator',{version:lot.version});
  assert(!(await api(choices)).items.some(x=>x.id===lot.id),'Pending completion review cannot be selected');
+ const lotTask=(await api('/v34/todos','site_supervisor')).items.find(row=>row.kind==='LOT_REVIEW'&&row.id===lot.id);
+ assert.equal(lotTask.business_batch_no,approvedWork.batch_no);
+ assert.equal(lotTask.href,'/preparation/'+lot.id);
  assert.equal((await api('/stock-map?'+mapQuery)).summary.net_weight,null);
  await api('/v261/lots/'+lot.id+'/approve','site_supervisor',{version:lot.version,all_weighed_and_stored:true});
  assert.equal((await api(choices)).items.find(x=>x.id===lot.id)?.bundle_count,2);
@@ -277,6 +280,10 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert(!(await api('/v34/lists/loading?planned_load_date=2000-01-01')).items.some(r=>r.id===document.id));
  await api('/loading-plans/unified','admin',{...planBody,arrival_id:arrivals[1].id,invoice_no:'RC3-ALT-'+seq},409);
  let load=await api('/v31/loads','admin',{document_id:document.id,document_version:document.version,bundle_ids:[bundle.id]});
+ const loadTask=(await api('/v34/todos','site_supervisor')).items.find(row=>row.kind==='LOAD_REVIEW'&&row.id===load.id);
+ assert.equal(loadTask.business_batch_no,approvedWork.batch_no);
+ assert.equal(loadTask.document_no,load.code);
+ assert.equal(loadTask.href,'/outbounds/loads/'+load.id);
  const closePath='/sales-workflow/plans/'+plan.id,closing=await api(closePath,'sales_operator');
  assert.equal(closing.close_eligibility,'AVAILABLE');
  assert.equal(closing.close_readiness.ready,false);
@@ -543,7 +550,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal((await api(query(plan.id),'logistics_field_operator')).total,1);
  steps.push('P3 supervised release, repeat approval, scoped map, cross-customer refusal, same-customer reuse and cancellation');
  steps.push('independent approvals, idempotent final inventory deduction, outbound report and Excel agreement');
- await api('/receipts','production_operator',{project_id:f.project,lines:[{bundle_no:'MUS-'+today.slice(0,4)+'-022-'+seq,sheets_per_bundle:48,production_date:today,inbound_at:new Date().toISOString()}]});
+ await api('/receipts','production_operator',{project_id:f.project,lines:[{...E.receiptBundle(today,seq,2),sheets_per_bundle:48,inbound_at:new Date().toISOString()}]});
  const uiWorkPlan=await P.approved(planApi,cu,plan.id,P.batch(cu,99));
  const previewInvoice='/export-permits/options?'+new URLSearchParams({sales_plan_id:plan.id,invoice_preview_id:sameDay.id,planned_load_date:today});
  assert.equal((await api(previewInvoice)).invoice_preview,sameDay.proforma_no+'-01');
@@ -556,8 +563,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  for(const [i,code] of ['P1-02','P1-03'].entries()){
   const {rows:[slot]}=await c.query(`INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage)
    VALUES($1,$2,$3,$3,'FORMAL') ON CONFLICT(project_id,code) DO UPDATE SET map_cell_code=EXCLUDED.map_cell_code,map_usage='FORMAL' RETURNING id`,[f.project,f.warehouse,code]);
-  const freshNo='MUS-'+today.slice(0,4)+'-0'+(23+i)+'-'+seq;
-  const inbound=await api('/receipts','production_operator',{project_id:f.project,lines:[{...lines[0],bundle_no:freshNo}]});
+  const fresh=E.receiptBundle(today,seq,3+i),freshNo=fresh.bundle_no;
+  const inbound=await api('/receipts','production_operator',{project_id:f.project,lines:[{...lines[0],...fresh}]});
   const sent=await api('/receipts/'+inbound.id+'/submit','production_operator',{version:inbound.version});
   await api('/receipts/'+inbound.id+'/confirm','production_manager',{version:sent.version});
   const {rows:[unit]}=await c.query('SELECT id FROM bundles WHERE bundle_no=$1',[freshNo]);

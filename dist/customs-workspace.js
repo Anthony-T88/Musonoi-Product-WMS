@@ -1,7 +1,7 @@
 'use strict';
 
 window.CustomsWorkspace={
- t:(zh,en)=>I18n.language==='en'?en:zh,
+ t:(zh,en)=>I18n.label(zh,en),
  can:p=>CurrentUser.permissions.includes(p),
  bpPermission(){return ['customs:bp','customs:bp-template'].find(p=>this.can(p));},
  permission(){return ['load:read',this.bpPermission(),'packing-template:write'].find(p=>p&&this.can(p));},
@@ -116,7 +116,7 @@ window.CustomsWorkspace={
    this.packingStatus(row.revision)+'</div>'+
    facts([[t('客户','Customer'),text(row.customer)],[t('车头号','Truck Plate'),text(row.truck)],
     [t('净重（吨）','Net Weight (MT)'),text(row.weight)],[t('业务节点','Workflow Stage'),row.posted?
-     t('已正式出库','Outbound Posted'):t('物流经理已审批','Logistics Manager Approved')]])+
+     t('已正式出库','Stock Issue Posted'):t('物流经理已审批','Logistics Manager Approved')]])+
    '<section><h3>'+t('关联单据','Related Documents')+'</h3>'+facts([
     [t('装车单号','Loading Order No.'),link((co?'/outbounds/':'/outbounds/loads/')+row.id,row.code)],[t('装车计划号','Loading Plan No.'),plan]])+'</section>'+
    '<section><h3>'+t('运输资料','Transport Details')+'</h3>'+facts([
