@@ -1129,8 +1129,8 @@
     },
     {
       "path": "deploy/Dockerfile",
-      "sha256": "eea206b54be34e54180a08b7610da16ab142343d9049d08f56c8649ce6da5bc3",
-      "bytes": 1669
+      "sha256": "2982baba64fcd509d3e40d0a0ad8c259be4de0a8be7be34a65d8e89e0085df21",
+      "bytes": 1687
     },
     {
       "path": "deploy/environment.example",
@@ -3884,7 +3884,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "b741817fd650fb4e85639195680bf2bfe9cc8c965eb6793ba9ed9167ace8bef3",
+      "sha256": "9ce56d7029e1a7cc0114088ad2404d7eb15ffc57e0b9a4da1a1dc35a1a55613f",
       "bytes": 105344
     },
     {
