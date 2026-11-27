@@ -331,7 +331,8 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      assert.deepEqual(await languages.locator('[data-login-language]').allTextContents(),['中文','English']);
     }
     await page.goto(origin+'/offline.html');
-    assert.match(await page.locator('main:visible').innerText(),/Product WMS · Offline/);
+    assert.match(await page.title(),/Product WMS · Offline/);
+    await page.getByRole('heading',{name:'Your device is offline'}).waitFor();
     assert.doesNotMatch(await page.locator('main:visible').innerText(),/\p{Script=Han}/u);
    }finally{respond();await page.close();}
   });

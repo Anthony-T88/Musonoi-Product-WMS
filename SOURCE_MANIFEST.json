@@ -2825,7 +2825,7 @@
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "6233751b729f47e99485a83bce439137865fa6eb4ba521a2237c14af16d17b56"
+      "sha256": "2b4a9cf9fca861585b95a1b9bea75ee80b76db901f40cc2ae936bd4bb2e818df"
     },
     {
       "path": "deploy/remove-unposted-test-receipt.sql",

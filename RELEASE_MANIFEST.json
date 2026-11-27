@@ -3884,7 +3884,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "ac104420c4216336ebb0707bb8d228e7e4e6fcd8edba5753d25972d58444246c",
+      "sha256": "eab550652c0a975894670c90f27ea3abb5d2807dfce786e68d9ae6a78f960f80",
       "bytes": 106404
     },
     {
@@ -4359,8 +4359,8 @@
     },
     {
       "path": "tests/release/preparation-history-ui.cjs",
-      "sha256": "6233751b729f47e99485a83bce439137865fa6eb4ba521a2237c14af16d17b56",
-      "bytes": 66943
+      "sha256": "2b4a9cf9fca861585b95a1b9bea75ee80b76db901f40cc2ae936bd4bb2e818df",
+      "bytes": 66994
     },
     {
       "path": "docs/v4.8.3-release.md",
