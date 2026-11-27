@@ -235,3 +235,10 @@ html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content
 #report-mail-form :is(.report-mail-switch,.report-mail-reports label){display:inline-flex;align-items:center;gap:var(--uix-gap-xs)}
 #report-mail-form input[type="checkbox"]{inline-size:1rem;min-inline-size:0;margin:0}
 #report-mail-form .wms-feedback:empty{display:none}
+#report-mail-transport-form .wms-feedback:empty{display:none}
+#report-mail-form .report-mail-accounts{min-inline-size:0;margin-block:var(--uix-gap);padding:0;border:0}
+#report-mail-form .report-mail-accounts legend{font-weight:var(--uix-weight-emphasis)}
+#report-mail-form .report-mail-account-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:var(--uix-gap-xs);max-block-size:14rem;overflow:auto;margin-block-start:var(--uix-gap-xs);padding:var(--uix-gap-xs);border:1px solid var(--uix-border);border-radius:var(--uix-radius)}
+#report-mail-form .report-mail-account-options label{display:flex;align-items:center;gap:var(--uix-gap-xs);min-block-size:2.5rem}
+#report-mail-form .report-mail-account-options span,#report-mail-form .report-mail-legacy-addresses{min-inline-size:0;overflow-wrap:anywhere}
+#report-mail-form .report-mail-account-options small{display:block}

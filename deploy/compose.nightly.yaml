@@ -47,6 +47,7 @@ services:
     environment:
       WMS_REPORT_MAIL_CONFIG_FILE: /run/wms-mail/reports.json
       WMS_REPORT_MAIL_NETRC_FILE: /run/wms-mail/smtp.netrc
+      WMS_REPORT_MAIL_KEY_FILE: /run/wms-mail/mail.key
       WMS_REPORT_MAIL_STATE_DIR: /var/lib/wms-mail
     command: [node, scripts/report-mail.cjs]
     volumes:

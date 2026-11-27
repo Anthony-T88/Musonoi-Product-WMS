@@ -243,7 +243,10 @@ test('real browser: current cobalt stock, independent permissions and both langu
  await registration.locator('input[name=display_name]').fill('Synthetic applicant');
  await registration.locator('input[name=username]').fill('synthetic_applicant');
  await registration.locator('input[name=contact_email]').fill('synthetic@example.invalid');
- const examplePassword='Synthetic only 26';
+ await registration.locator('input[name=password]').fill('123456789');
+ await registration.locator('input[name=confirm]').fill('123456789');
+ assert.equal(await registration.locator('#reg-field-password').innerText(),'Password must contain 10–48 characters');
+ const examplePassword='\u{1F512}'.repeat(48);
  await registration.locator('input[name=password]').fill(examplePassword);
  await registration.locator('input[name=confirm]').fill(examplePassword);
  assert.equal(await registration.locator('[aria-invalid=true]').count(),0);

@@ -5,6 +5,7 @@ const reportKinds = new Set(['shipping', 'movement', 'balance', 'stocktake', 'sa
 const products = new Set(['CU_CATHODE', 'CO_HYDROXIDE']);
 const addressKey = value => typeof value === 'string' ? value.toLowerCase() : value;
 const testMailbox = value => mailbox(value) && value.toLowerCase().endsWith('.test');
+const accountId = value => typeof value === 'string' && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
 
 function hasKeys(object, expected) {
   return object && typeof object === 'object' && !Array.isArray(object) &&
@@ -24,21 +25,29 @@ function mailbox(value) {
     /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(domain);
 }
 
-function validateSchedules(schedules, { allowlist, environment, enabled = true } = {}) {
+function validateSchedules(schedules, { allowlist, environment, enabled = true, accountsAllowed = true } = {}) {
   if (!uniqueArray(schedules, 20, schedule => schedule?.id, enabled ? 1 : 0)) DB.fail('REPORT_MAIL_CONFIG_INVALID');
   for (const schedule of schedules) {
-    if (!hasKeys(schedule, ['id', 'hour', 'frequency', 'actor', 'recipients', 'reports']) ||
+    const accounts = schedule && Object.hasOwn(schedule, 'recipientAccounts');
+    if (!hasKeys(schedule, ['id', 'hour', 'frequency', 'actor', accounts ? 'recipientAccounts' : 'recipients', 'reports']) ||
         typeof schedule.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(schedule.id) ||
         !Number.isInteger(schedule.hour) || schedule.hour < 0 || schedule.hour > 23 ||
         !['daily', 'monthly'].includes(schedule.frequency) ||
         typeof schedule.actor !== 'string' || !schedule.actor.trim() || schedule.actor.length > 160 ||
         schedule.actor.trim() !== schedule.actor || /[\u0000-\u001f\u007f]/.test(schedule.actor) ||
-        !uniqueArray(schedule.recipients, 8, addressKey) || !schedule.recipients.every(mailbox) ||
-        (allowlist && !schedule.recipients.every(address => allowlist.has(address))) ||
         !uniqueArray(schedule.reports, 6, report => [report?.kind,report?.product].join(':'))) {
       DB.fail('REPORT_MAIL_SCHEDULE_INVALID');
     }
-    if (environment === 'test' && !schedule.recipients.every(testMailbox)) DB.fail('REPORT_MAIL_TEST_DESTINATION_FORBIDDEN');
+    if (accounts) {
+      if (!accountsAllowed || !uniqueArray(schedule.recipientAccounts, 8) ||
+          !schedule.recipientAccounts.every(accountId)) DB.fail('REPORT_MAIL_SCHEDULE_INVALID');
+    } else {
+      if (!uniqueArray(schedule.recipients, 8, addressKey) || !schedule.recipients.every(mailbox) ||
+          (allowlist && !schedule.recipients.every(address => allowlist.has(addressKey(address))))) {
+        DB.fail('REPORT_MAIL_SCHEDULE_INVALID');
+      }
+      if (environment === 'test' && !schedule.recipients.every(testMailbox)) DB.fail('REPORT_MAIL_TEST_DESTINATION_FORBIDDEN');
+    }
     for (const report of schedule.reports) {
       if (!hasKeys(report, ['kind', 'product']) || !reportKinds.has(report.kind) || !products.has(report.product) ||
           (schedule.frequency === 'daily' && ['balance', 'sales'].includes(report.kind))) {
@@ -46,6 +55,16 @@ function validateSchedules(schedules, { allowlist, environment, enabled = true }
       }
     }
   }
+}
+
+async function recipientAccounts(c, ids) {
+  const { rows } = await c.query(
+    'SELECT id,username,display_name AS "displayName",contact_email AS email FROM users ' +
+    'WHERE active AND deleted_at IS NULL AND contact_email IS NOT NULL ' +
+    (ids ? 'AND id=ANY($1::uuid[]) ' : '') + 'ORDER BY username',
+    ids ? [ids] : []
+  );
+  return rows;
 }
 
 async function readPolicy(c) {
@@ -56,4 +75,4 @@ async function readPolicy(c) {
   return row;
 }
 
-module.exports = { addressKey, testMailbox, hasKeys, uniqueArray, mailbox, validateSchedules, readPolicy };
+module.exports = { addressKey, testMailbox, hasKeys, uniqueArray, mailbox, validateSchedules, recipientAccounts, readPolicy };

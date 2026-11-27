@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs/promises');
+const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { spawn } = require('node:child_process');
@@ -10,42 +11,26 @@ const Lease = require('../server/authorization-lease.cjs');
 const Management = require('../server/management.cjs');
 const ReportCenter = require('../server/report-center.cjs');
 const Policy = require('../server/report-mail-policy.cjs');
+const Transport = require('../server/report-mail-transport.cjs');
 const { display } = require('../server/business-time.cjs');
 
 const maxAttachmentBytes = 10 * 1024 * 1024;
 const crlf = '\r\n';
 const writeStatus = record => console.log(JSON.stringify(record));
 const sha256 = value => createHash('sha256').update(value).digest('hex');
-function validateTransport(value, environment) {
-  if (!['test', 'production'].includes(environment)) DB.fail('REPORT_MAIL_INVALID_ENVIRONMENT');
-  if (!(Policy.hasKeys(value, ['smtp', 'recipientAllowlist']) ||
-        Policy.hasKeys(value, ['smtp', 'recipientAllowlist', 'schedules'])) ||
-      !Policy.hasKeys(value.smtp, ['url', 'from']) || !Policy.mailbox(value.smtp.from) ||
-      !Policy.uniqueArray(value.recipientAllowlist, 100, Policy.addressKey) ||
-      !value.recipientAllowlist.every(Policy.mailbox)) DB.fail('REPORT_MAIL_CONFIG_INVALID');
-  if (typeof value.smtp.url !== 'string' || /[\s\u0000-\u001f\u007f]/.test(value.smtp.url)) DB.fail('REPORT_MAIL_SMTP_INVALID');
-  let url;
-  try { url = new URL(value.smtp.url); } catch { DB.fail('REPORT_MAIL_SMTP_INVALID'); }
-  if (!['smtp:', 'smtps:'].includes(url.protocol) || !url.hostname || !url.port ||
-      url.username || url.password || url.search || url.hash || !['', '/'].includes(url.pathname) ||
-      !/^[a-zA-Z0-9.-]+$/.test(url.hostname)) DB.fail('REPORT_MAIL_SMTP_INVALID');
-  if (environment === 'test' && (url.hostname !== '127.0.0.1' ||
-      ![value.smtp.from, ...value.recipientAllowlist].every(Policy.testMailbox))) {
-    DB.fail('REPORT_MAIL_TEST_DESTINATION_FORBIDDEN');
-  }
-  return { ...value, smtp: { from: value.smtp.from, url: `${url.protocol}//${url.host}` } };
-}
-
 function validate(value, environment) {
-  const config = validateTransport(value, environment);
-  Policy.validateSchedules(config.schedules, { environment, allowlist: new Set(config.recipientAllowlist) });
+  const config = Transport.validateHost(value, environment);
+  Policy.validateSchedules(config.schedules, {
+    environment, allowlist: new Set(config.recipientAllowlist.map(Policy.addressKey)), accountsAllowed: false
+  });
   return config;
 }
 
 function selectedSchedules(config, policy) {
   const schedules = policy.version === 0 ? (config.schedules ?? []) : policy.enabled ? policy.schedules : [];
   Policy.validateSchedules(schedules, {
-    environment: config.environment, allowlist: new Set(config.recipientAllowlist), enabled: false
+    environment: config.environment, allowlist: new Set(config.recipientAllowlist.map(Policy.addressKey)),
+    enabled: false, accountsAllowed: policy.version !== 0
   });
   return schedules;
 }
@@ -61,30 +46,15 @@ function duePeriod(schedule, now) {
     : { key: yesterday, from: yesterday, to: yesterday };
 }
 
-async function checkedPath(file, directory, mask) {
-  if (typeof file !== 'string' || !path.isAbsolute(file)) DB.fail('REPORT_MAIL_PRIVATE_PATH_REQUIRED');
-  const stat = await fs.lstat(file);
-  if ((directory ? !stat.isDirectory() : !stat.isFile()) ||
-      (process.platform !== 'win32' && (stat.mode & mask) !== 0)) DB.fail('REPORT_MAIL_PRIVATE_PATH_INVALID');
-  return stat;
-}
-
 async function settings(env) {
-  const configFile = env.WMS_REPORT_MAIL_CONFIG_FILE;
-  if (!configFile) return null;
-  const stat = await checkedPath(configFile, false, 0o022);
-  if (stat.size > 65_536) DB.fail('REPORT_MAIL_CONFIG_INVALID');
-  let input;
-  try { input = JSON.parse(await fs.readFile(configFile, 'utf8')); } catch { DB.fail('REPORT_MAIL_CONFIG_INVALID'); }
   const environment = env.APP_ENV || 'test';
-  const config = validateTransport(input, environment);
+  const config = await Transport.readHost(env, environment);
+  if (!config) return null;
   const stateDir = env.WMS_REPORT_MAIL_STATE_DIR;
-  await checkedPath(stateDir, true, 0o077);
-  const netrcFile = env.WMS_REPORT_MAIL_NETRC_FILE;
-  if (environment === 'production' || netrcFile) await checkedPath(netrcFile, false, 0o077);
+  await Transport.checkedPath(stateDir, true, 0o077);
   const caFile = env.WMS_REPORT_MAIL_CA_FILE;
-  if (caFile) await checkedPath(caFile, false, 0o022);
-  return { ...config, environment, stateDir, netrcFile, caFile };
+  if (caFile) await Transport.checkedPath(caFile, false, 0o022);
+  return { ...config, stateDir, netrcFile: env.WMS_REPORT_MAIL_NETRC_FILE, caFile };
 }
 
 function encoded(value) {
@@ -113,16 +83,16 @@ function message({ from, to, jobId, period, attachments, language, now }) {
   return Buffer.from(headers.concat('--' + boundary + '--', '').join(crlf), 'ascii');
 }
 
-async function send(config, recipient, payload) {
+function curlSend(config, recipient, payload, netrcFile) {
   const options = [
     '-q', '--silent', '--globoff', '--proto', '=smtp,smtps', '--noproxy', '*',
     '--ssl-reqd', '--tlsv1.2', '--connect-timeout', '8', '--max-time', '25',
     '--url', config.smtp.url, '--mail-from', config.smtp.from, '--mail-rcpt', recipient, '--upload-file', '-'
   ];
-  if (config.netrcFile) options.push('--netrc-file', config.netrcFile);
+  if (netrcFile) options.push('--netrc', '--netrc-file', netrcFile);
   if (config.caFile) options.push('--cacert', config.caFile);
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => /^(path|systemroot|windir|systemdrive|tmp|temp)$/i.test(name)));
-  await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const child = spawn(process.platform === 'win32' ? 'curl.exe' : 'curl', options,
       { env, windowsHide: true, stdio: ['pipe', 'ignore', 'ignore'] });
     const failed = code => reject(Object.assign(Error(code), { code }));
@@ -132,6 +102,28 @@ async function send(config, recipient, payload) {
     child.stdin.on('error', () => {});
     child.stdin.end(payload);
   });
+}
+
+async function send(config, recipient, payload) {
+  if (!config.transport?.version) return curlSend(config, recipient, payload, config.netrcFile);
+  const key = await Transport.readKey(config.keyEnvironment);
+  try {
+    const password = Transport.open(config.transport.sealedPassword, config.transport, key);
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'wms-mail-'));
+    const netrc = path.join(dir, 'smtp.netrc');
+    const quoted = value => '"' + value.replace(/["\\]/g, '\\$&') + '"';
+    try {
+      const host = Transport.smtpUrl(config.smtp.url).host;
+      await fs.writeFile(netrc, 'machine ' + host + ' login ' + quoted(config.transport.username) +
+        ' password ' + quoted(password) + '\n', { mode: 0o600, flag: 'wx' });
+      return await curlSend(config, recipient, payload, netrc);
+    } finally {
+      await fs.unlink(netrc).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      await fs.rmdir(dir);
+    }
+  } finally {
+    key.fill(0);
+  }
 }
 
 async function readReport(c, user, selected, period) {
@@ -213,6 +205,17 @@ async function deliverOnce(config, schedule, period, recipient, dispatch) {
   }
 }
 
+async function scheduledRecipients(c, schedule, config) {
+  if (!schedule.recipientAccounts) return schedule.recipients;
+  const accounts = await Policy.recipientAccounts(c, schedule.recipientAccounts);
+  if (accounts.length !== schedule.recipientAccounts.length || accounts.some(account =>
+    !Transport.approvedRecipient(config, account.email) ||
+      (config.environment === 'test' && !Policy.testMailbox(account.email)))) {
+    DB.fail('REPORT_MAIL_RECIPIENT_UNAVAILABLE');
+  }
+  return [...new Map(accounts.map(account => [Policy.addressKey(account.email), account.email])).values()];
+}
+
 async function dueJobs(config, due, pool, now, {
   render = readReport, transport = send, report = writeStatus
 } = {}) {
@@ -220,8 +223,9 @@ async function dueJobs(config, due, pool, now, {
   for (const { schedule, period } of due) {
     const req = {};
     try {
+      const c = await Lease.acquire(req, pool);
       const pending = [];
-      for (const recipient of schedule.recipients) {
+      for (const recipient of await scheduledRecipients(c, schedule, config)) {
         try {
           const status = await deliveryState(deliveryRecord(config, schedule, period, recipient));
           if (status) report({ status, schedule: schedule.id, period: period.key });
@@ -232,7 +236,6 @@ async function dueJobs(config, due, pool, now, {
         }
       }
       if (!pending.length) continue;
-      const c = await Lease.acquire(req, pool);
       const user = await actor(c, schedule.actor);
       const attachments = await Management.read(pool, async reader => {
         await reader.query("SET LOCAL statement_timeout='30s'");
@@ -253,6 +256,13 @@ async function dueJobs(config, due, pool, now, {
             const { rows: [current] } = await c.query('SELECT version FROM report_mail_settings WHERE singleton');
             if (current?.version !== config.policyVersion) DB.fail('REPORT_MAIL_POLICY_CHANGED');
           } else await c.query('SELECT 1');
+          if (config.transport) {
+            const { rows: [current] } = await c.query('SELECT version FROM report_mail_transport WHERE singleton');
+            if (current?.version !== config.transport.version) DB.fail('REPORT_MAIL_TRANSPORT_CHANGED');
+          }
+          if (schedule.recipientAccounts && !(await scheduledRecipients(c, schedule, config)).includes(recipient)) {
+            DB.fail('REPORT_MAIL_RECIPIENT_UNAVAILABLE');
+          }
           const status = await deliverOnce(config, schedule, period, recipient, jobId =>
             transport(config, recipient, message({
               from: config.smtp.from, to: recipient, jobId, period, attachments,
@@ -284,25 +294,35 @@ async function main(env = process.env, now = new Date()) {
   await DB.network(cfg, options);
   const pool = new Pool({ ...options, max: 2, application_name: 'musonoi-report-mail' });
   try {
-    let policy;
+    let policy, transport;
     const client = await pool.connect();
     try {
       await DB.verify(client, cfg, 'app');
       const { rows: [system] } = await client.query('SELECT environment FROM system_info WHERE singleton');
       if (system?.environment !== config.environment) DB.fail('REPORT_MAIL_DATABASE_MISMATCH');
       policy = await Policy.readPolicy(client);
+      transport = await Transport.readTransport(client);
     } finally { client.release(); }
     const schedules = selectedSchedules(config, policy);
     if (!schedules.length) { writeStatus({ status: 'DISABLED' }); return 0; }
     const due = schedules.map(schedule => ({ schedule, period: duePeriod(schedule, now) })).filter(job => job.period);
     if (!due.length) { writeStatus({ status: 'NO_REPORT_DUE' }); return 0; }
-    return await dueJobs({ ...config, policyVersion: policy.version }, due, pool, now) ? 1 : 0;
+    if (transport.version) {
+      if (!Transport.approvedSender(config, transport.url, transport.from) || !Transport.credential(transport.username, 254)) {
+        DB.fail('REPORT_MAIL_TRANSPORT_NOT_APPROVED');
+      }
+      config.smtp = { url: transport.url, from: transport.from };
+    } else if (config.environment === 'production' || config.netrcFile) {
+      await Transport.checkedPath(config.netrcFile, false, 0o077);
+    }
+    const keyEnvironment = { WMS_REPORT_MAIL_KEY_FILE: env.WMS_REPORT_MAIL_KEY_FILE };
+    return await dueJobs({ ...config, policyVersion: policy.version, transport, keyEnvironment }, due, pool, now) ? 1 : 0;
   } finally {
     await pool.end();
   }
 }
 
-module.exports = { validate, selectedSchedules, duePeriod, settings, message, send, deliverOnce, dueJobs, readReport, main };
+module.exports = { validate, selectedSchedules, scheduledRecipients, duePeriod, settings, message, send, deliverOnce, dueJobs, readReport, main };
 if (require.main === module) main().then(code => { process.exitCode = code; }).catch(error => {
   console.error(JSON.stringify(DB.safeError(error)));
   process.exitCode = 1;

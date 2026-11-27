@@ -22,6 +22,20 @@ window.PreparationPlans={
  salesPlanLabel(plan){return [plan.code,this.t('发运月份','Shipment Month')+' '+(plan.shipment_month||'—'),plan.customer_name].join(' · ');},
  orderRoute(p){return (ProductContext.isCopper()?'/preparation/':'/receipts/')+(p.allocation_id||p.co_preparation_id);},
  startRoute(p){return (ProductContext.isCopper()?'/preparation/new':'/receipts/new')+'?preparation_plan='+p.id;},
+ planStatus(p){
+  const t=this.t,co=!ProductContext.isCopper();
+  if(p.allocation_id||p.co_preparation_id){
+   const state=p.work_state,label=!state?t('待核查','To Be Verified'):co?CobaltUI.status(state):OperationWorkspace.state({kind:'cu-preparation'},state);
+   const badge=UI.status(state,'preparation',label);
+   return CurrentUser.permissions.includes(co?'co:read':'allocation:read')?'<a href="'+this.orderRoute(p)+'" title="'+t('查看备货单','View Preparation Order')+'">'+badge+'</a>':badge;
+  }
+  const badge=UI.status('WAITING_ORDER','preparation',t('待创建备货单','Awaiting Preparation Order'));
+  return badge+(p.actions.start?' <a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'');
+ },
+ pendingCountCard(count){
+  const t=this.t;
+  return '<div class="v34-kpi" data-pending-preparation-plans title="'+t('已批准、尚无备货单，且对应销售计划仍在执行','Approved plans with no preparation order and an active sales plan')+'"><span>'+t('待创建备货单计划数','Plans Awaiting Preparation Order')+'</span><strong>'+esc(count)+'</strong></div>';
+ },
  async selected(){
   const id=new URLSearchParams(location.search).get('preparation_plan');
   if(!id){await this.selectPlan();return null;}
@@ -249,13 +263,12 @@ window.PreparationPlans={
  async list(){
   const t=this.t,q=new URLSearchParams(location.search),d=await API.request(this.api()+'?'+q);
   const status=['DRAFT','PENDING','APPROVED','REJECTED','CANCELLED'].map(s=>'<option value="'+s+'" '+(s===q.get('state')?'selected':'')+'>'+this.state(s)+'</option>').join('');
-  const headings=[['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['作业','Work Order']];
+  const headings=[['备货批次号','Preparation Lot Number'],['销售计划','Sales Plan'],['发运月','Shipment Month'],['客户','Customer'],['审批状态','Review Status'],['计划状态','Plan Status']];
   const operations=[['submit','submit',t('一键提交审核','Submit Selected')],['approve','review',t('一键审批','Approve Selected')]];
   const available=operations.filter(([,action])=>d.items.some(p=>p.actions[action]));
   if(available.length)headings.unshift(['选择','Select']);
   const selection=p=>available.length?'<td>'+(p.actions.submit||p.actions.review?'<input type="checkbox" data-preparation-select value="'+esc(p.id)+'" aria-label="'+esc(t('选择 ','Select ')+p.batch_no)+'">':'')+'</td>':'';
-  const recent=this.recent?.product===ProductContext.code?this.recent.ids:[],rows=d.items.map(p=>'<tr'+(recent.includes(p.id)?' class="wms-batch-created"':'')+'>'+selection(p)+'<td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+
-   (p.allocation_id||p.co_preparation_id?'<a href="'+this.orderRoute(p)+'">'+t('查看备货单','View Preparation Order')+'</a>':p.actions.start?'<a href="'+this.startRoute(p)+'">'+t('创建备货单','Create Preparation Order')+'</a>':'—')+'</td></tr>');
+  const recent=this.recent?.product===ProductContext.code?this.recent.ids:[],rows=d.items.map(p=>'<tr'+(recent.includes(p.id)?' class="wms-batch-created"':'')+'>'+selection(p)+'<td><a href="'+this.route+'/'+p.id+'">'+esc(p.batch_no)+'</a></td><td>'+esc(p.sales_plan_no)+'</td><td>'+esc(p.shipment_month)+'</td><td>'+esc(p.customer_name)+'</td><td>'+UI.status(p.state,'approval',this.state(p.state))+'</td><td>'+this.planStatus(p)+'</td></tr>');
   Router.page(t('备货计划','Preparation Plans'),'<section class="wms-page" data-page-composed data-no-i18n>'+
    '<div class="business-toolbar">'+(d.can_create?'<button type="button" id="preparation-plan-create" class="button primary">'+t('新建备货计划','New Preparation Plan')+'</button>':'')+
    available.map(([operation,,label])=>'<button type="button" class="button secondary" data-preparation-operation="'+operation+'" disabled>'+label+'</button>').join('')+

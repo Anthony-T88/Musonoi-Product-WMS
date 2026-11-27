@@ -19,7 +19,7 @@ function contacts(b){
  return result;
 }
 function body(b,keys){if(!b||typeof b!=='object'||Array.isArray(b)||Object.keys(b).some(k=>!keys.includes(k)))throw B.error(400,'账号参数无效');}
-function password(p){if(!validPassword(p))throw B.error(400,'密码须为12—128字符');return hashPassword(p);}
+function password(p){if(!validPassword(p))throw B.error(400,'密码须为10–48个字符');return hashPassword(p);}
 async function role(c,r){if(!await require('./role-catalog.cjs').valid(c,r))throw B.error(400,'请选择有效角色');return r;}
 function name(v){if(typeof v!=='string'||!v.trim()||v.trim().length>80)throw B.error(400,'请输入有效显示名称');return v.trim();}
 async function pending(c,id){return (await c.query(`SELECT

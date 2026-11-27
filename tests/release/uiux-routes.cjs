@@ -81,9 +81,9 @@ function pages(ids){
  };
  const keyRoles=['sales_operator','logistics_manager','logistics_field_operator','site_supervisor','production_manager','production_operator','customer_admin'];
  add('login','/',[],{screenshot:true});
- add('register-dialog','/',[],{state:'registration dialog'});
+ add('register-dialog','/',[],{state:'registration dialog with 10–48 character password validation'});
  add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles,state:'current and pre-inventory-history period layout'});
- add('password-dialog','/overview',BOTH,{state:'self-service password dialog',screenshot:true,roles:['production_operator']});
+ add('password-dialog','/overview',BOTH,{state:'self-service dialog with 10–48 character new password validation',screenshot:true,roles:['production_operator']});
  add('todo','/overview',BOTH,{query:'?management=todos',roles:['sales_operator','logistics_manager'],state:'document-specific review stages'});
  add('overview-detail','/overview/details',BOTH,{query:'?metric=physical'});
  add('warnings','/overview/warning-settings',[CU]);
@@ -135,9 +135,9 @@ function pages(ids){
  add('co-prep-work','/receipts/:id',[CO],{example:'coPrepEditable',screenshot:true,state:'editable',roles:['logistics_field_operator','site_supervisor']});
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
  add('co-prep-alias','/receipts/:id/work',[CO],{example:'coPrepEditable'});
- add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor']});
+ add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor'],state:'scoped pending-plan and all-order counts'});
  add('preparation-new','/preparation/new',BOTH,{state:'select approved preparation plan'});
- add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator']});
+ add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator'],state:'approval status, uncreated order and live preparation status'});
  add('preparation-batch','/preparation/work-plans/new',BOTH,{screenshot:true,roles:['export_supervisor','production_operator'],state:'batch draft entry'});
  add('cu-work-plan-detail','/preparation/work-plans/:id',[CU],{example:'cuApprovedWork',screenshot:true,state:'approved with approval history'});
  add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved with approval history'});
@@ -227,7 +227,7 @@ function pages(ids){
  add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});
  add('access-approvals','/workbench/access-approvals',BOTH,{state:'approval inbox for an account manager',screenshot:true});
  add('diagnostics','/workbench/diagnostics',BOTH);
- add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator report delivery settings'});
+ add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator SMTP setup and delivery schedules with registered recipient accounts'});
  add('former-design-entry','/workbench/design',BOTH);
  add('audit','/audit',BOTH,{screenshot:true,roles:['production_operator']});
  return cases;

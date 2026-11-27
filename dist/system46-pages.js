@@ -19,13 +19,42 @@ Object.assign(System46,{
    const inputLabel=(zh,en,input)=>'<label class="wms-field">'+this.L(zh,en)+input+'</label>';
    const updateTime=at=>at?BusinessTime.display(at):this.t('系统管理尚未保存计划','No plan saved in System Administration');
    const option=(value,text,current)=>'<option value="'+esc(value)+'"'+(current===value?' selected':'')+'>'+esc(text)+'</option>';
+   const recipientChoices=s=>{
+    const selected=new Set(s.recipientAccounts||[]);
+    const accounts=[...setting.recipientAccounts,...[...selected]
+     .filter(id=>!setting.recipientAccounts.some(account=>account.id===id))
+     .map(id=>({id,username:this.t('原收件账号已不可用','Previously selected account unavailable')}))];
+    const choices=accounts.map(a=>'<label><input type="checkbox" name="recipientAccount" value="'+esc(a.id)+'"'+
+     (selected.has(a.id)?' checked':'')+'><span><b data-no-i18n>'+esc(a.displayName||a.username)+'</b>'+
+     (a.email?'<small data-no-i18n>'+esc(a.email)+'</small>':'')+'</span></label>').join('');
+    const legacy=s.recipients?.length?'<div data-legacy-recipients="'+esc(JSON.stringify(s.recipients))+'">'+
+     '<p class="s46-muted">'+this.L('此计划使用原收件邮箱。选择收件账号并保存后，将改用账号注册邮箱。',
+      'This schedule uses saved addresses. Selecting accounts and saving will switch it to registered addresses.')+'</p>'+
+     '<p class="report-mail-legacy-addresses" data-no-i18n>'+esc(s.recipients.join(' · '))+'</p></div>':'';
+    return '<fieldset class="report-mail-accounts"><legend>'+this.L('收件账号（最多 8 个）','Recipient Accounts (up to 8)')+'</legend>'+
+     legacy+(choices?'<div class="report-mail-account-options">'+choices+'</div>':'<p class="s46-muted">'+
+      this.L('没有符合发送规则的注册邮箱。','No registered email addresses meet the delivery rules.')+'</p>')+'</fieldset>';
+   };
+   const transport=setting.transport;
+   const transportForm=transport.canConfigure?'<form id="report-mail-transport-form" class="user-form" data-wms-validation>'+
+    '<div class="form-grid wms-field-grid">'+
+    inputLabel('邮件服务器（SMTP）','Mail Server (SMTP)','<select name="url" required>'+
+     option('',this.t('请选择','Select'),transport.url)+transport.relays.map(url=>option(url,url,transport.url)).join('')+'</select>')+
+    inputLabel('发件邮箱','Sender Email','<select name="from" required>'+
+     option('',this.t('请选择','Select'),transport.from)+transport.senders.map(from=>option(from,from,transport.from)).join('')+'</select>')+
+    inputLabel('SMTP 登录账号','SMTP Login','<input name="username" type="text" required maxlength="254" spellcheck="false" autocomplete="off" value="'+esc(transport.username)+'">')+
+    inputLabel('邮箱凭据','Email Credential','<input name="password" type="password" maxlength="512" autocomplete="new-password" aria-describedby="report-mail-credential-help">')+
+    '</div><p class="s46-muted" id="report-mail-credential-help"></p>'+
+    '<div class="s46-form-footer"><button type="submit" class="button primary">'+this.L('保存邮件服务器','Save Mail Server')+'</button></div>'+
+    '<p class="wms-feedback" role="status"></p><p class="wms-feedback error" role="alert"></p></form>':
+    '<p class="s46-muted">'+this.L('请联系运维配置邮件服务器地址、发件与收件规则，以及加密密钥。',
+     'Ask your server administrator to provision the relay, sender and recipient policy, and encryption key.')+'</p>';
    const plan=s=>{
     const actors=setting.actors.map(a=>option(a.username,(a.displayName?a.displayName+' · ':'')+a.username,s.actor)).join('');
     const unavailable=s.actor&&!setting.actors.some(a=>a.username===s.actor)
      ?option(s.actor,s.actor+' · '+this.t('已失效','Unavailable'),s.actor):'';
     const actor='<select name="actor" required>'+option('',this.t('请选择','Select'),s.actor)+unavailable+actors+'</select>';
     const frequency='<select name="frequency">'+option('daily',this.t('每天','Daily'),s.frequency)+option('monthly',this.t('每月 1 日','First day of each month'),s.frequency)+'</select>';
-    const recipients='<textarea name="recipients" rows="3" maxlength="2048" required>'+esc(s.recipients.join('\n'))+'</textarea>';
     const products=productLabels.map(([product,zh,en])=>
      '<fieldset class="report-mail-reports"><legend>'+this.L(zh,en)+'</legend>'+reportLabels.map(([kind,label,english])=>
       '<label><input type="checkbox" name="report" value="'+kind+':'+product+'"'+
@@ -39,13 +68,12 @@ Object.assign(System46,{
       inputLabel('发送频率','Frequency',frequency)+
       inputLabel('发送整点（卢本巴希）','Hour (Lubumbashi)','<input name="hour" type="number" required min="0" max="23" step="1" value="'+esc(String(s.hour))+'">')+
       inputLabel('报表授权账号','Report Account',actor)+
-      inputLabel('收件邮箱（每行一个，最多 8 个）','Recipients (one per line, up to 8)',recipients)+
-     '</div>'+products+'</section>';
+     '</div>'+recipientChoices(s)+products+'</section>';
    };
    const intro=this.block('发送设置','Delivery Settings',
-    '<p class="s46-muted">'+this.L('邮件按授权账号的数据范围生成。运维须在服务器配置邮件中继及收件白名单。','Reports use the selected account’s data scope. The server administrator configures the mail relay and approved recipients.')+'</p>'+
+    '<p class="s46-muted">'+this.L('报表按授权账号的数据范围生成。发送时自动读取收件账号当前的注册邮箱。','Reports use the data scope of the report account. Delivery uses each recipient account’s current registered email.')+'</p>'+
     (setting.environment==='test'?'<p>'+this.L('测试环境仅允许 .test 邮箱。','TEST allows .test addresses only.')+'</p>':''));
-   this.page('报表邮件','Report Email','SYS-18',intro+
+   this.page('报表邮件','Report Email','SYS-18',this.block('邮件服务器','Mail Server',transportForm,'report-mail-transport-card')+intro+
     '<form id="report-mail-form" class="user-form s46-card" data-wms-validation>'+
     '<label class="report-mail-switch"><input type="checkbox" name="enabled"'+(setting.enabled?' checked':'')+'>'+this.L('启用定时报表邮件','Enable scheduled report email')+'</label>'+
     '<p class="s46-muted" id="report-mail-updated" data-no-i18n>'+esc(updateTime(setting.updatedAt))+'</p>'+
@@ -56,16 +84,49 @@ Object.assign(System46,{
     '<p class="wms-feedback" id="report-mail-status" role="status"></p><p class="wms-feedback error" role="alert"></p></form>');
    const form=document.getElementById('report-mail-form'),plans=document.getElementById('report-mail-plans');
    const add=document.getElementById('report-mail-add'),status=document.getElementById('report-mail-status');
+   const smtpForm=document.getElementById('report-mail-transport-form');
+   if(smtpForm){
+    const fields=smtpForm.elements,feedback=smtpForm.querySelector('[role=status]');
+    const reflectPassword=()=>{
+     const needed=!transport.hasPassword||fields.url.value!==transport.url||
+      fields.from.value!==transport.from||fields.username.value!==transport.username;
+     fields.password.required=needed;
+     document.getElementById('report-mail-credential-help').textContent=needed?
+      this.t('请输入该 SMTP 账号的密码或应用专用密码。','Enter this SMTP account’s password or app password.'):
+      this.t('邮箱凭据已加密保存，留空时沿用。','The saved credential is encrypted. Leave blank to keep it.');
+    };
+    reflectPassword();
+    smtpForm.oninput=reflectPassword;
+    smtpForm.onsubmit=event=>UI46Pages.submit(event,async()=>{
+     feedback.textContent='';
+     const body={version:transport.version,url:fields.url.value,from:fields.from.value,username:fields.username.value};
+     if(fields.password.value)body.password=fields.password.value;
+     try{
+      Object.assign(transport,await API.request('/system/report-mail/transport',{method:'PUT',body}));
+      fields.password.value='';
+      reflectPassword();
+      feedback.textContent=this.t('邮件服务器已保存','Mail server settings saved');
+     }catch(error){
+      if(error.statusCode===409)throw Error(this.t('邮件服务器设置已更新，请重新打开页面核对。','Mail server settings were updated. Reopen this page to review them.'));
+      if(I18n.language==='en'&&error.statusCode===400)throw Error('Check the SMTP login, credential, and approved servers and senders.');
+      if(I18n.language==='en'&&error.statusCode===503)throw Error('The server’s mail policy or encryption key is unavailable.');
+      throw error;
+     }
+    });
+   }
    const reflect=()=>{
     add.disabled=plans.children.length>=20;
     for(const card of plans.children){
      const daily=card.querySelector('[name=frequency]').value==='daily';
      for(const field of card.querySelectorAll('[data-monthly-report]'))field.disabled=daily;
+     const choices=[...card.querySelectorAll('[name=recipientAccount]')];
+     const limit=choices.filter(field=>field.checked).length>=8;
+     for(const field of choices)field.disabled=limit&&!field.checked;
     }
    };
    add.onclick=()=>{
     if(form.getAttribute('aria-busy')==='true'||plans.children.length>=20)return;
-    plans.insertAdjacentHTML('beforeend',plan({id:crypto.randomUUID(),hour:7,frequency:'daily',actor:'',recipients:[],reports:[]}));
+    plans.insertAdjacentHTML('beforeend',plan({id:crypto.randomUUID(),hour:7,frequency:'daily',actor:'',recipientAccounts:[],reports:[]}));
     reflect();
     plans.lastElementChild.querySelector('h3').focus();
    };
@@ -82,7 +143,11 @@ Object.assign(System46,{
      hour:Number(card.querySelector('[name=hour]').value),
      frequency:card.querySelector('[name=frequency]').value,
      actor:card.querySelector('[name=actor]').value,
-     recipients:card.querySelector('[name=recipients]').value.split(/[\r\n,;，；]+/).map(x=>x.trim()).filter(Boolean),
+     ...(()=>{
+      const recipientAccounts=[...card.querySelectorAll('[name=recipientAccount]:checked')].map(field=>field.value);
+      const legacy=card.querySelector('[data-legacy-recipients]');
+      return legacy&&!recipientAccounts.length?{recipients:JSON.parse(legacy.dataset.legacyRecipients)}:{recipientAccounts};
+     })(),
      reports:[...card.querySelectorAll('[name=report]:checked:not(:disabled)')].map(field=>{
       const [kind,product]=field.value.split(':');
       return {kind,product};
@@ -93,6 +158,9 @@ Object.assign(System46,{
     try{
      const saved=await API.request('/system/report-mail',{method:'PUT',body,idempotencyKey:lastRequest.key});
      setting.version=saved.version;lastRequest=null;
+     [...plans.children].forEach((card,i)=>{
+      if(schedules[i].recipientAccounts)card.querySelector('[data-legacy-recipients]')?.remove();
+     });
      document.getElementById('report-mail-legacy')?.remove();
      document.getElementById('report-mail-updated').textContent=updateTime(saved.updatedAt);
      status.textContent=this.t('报表邮件设置已保存','Report email settings saved');

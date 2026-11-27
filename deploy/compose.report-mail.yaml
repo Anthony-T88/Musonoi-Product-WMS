@@ -1,0 +1,17 @@
+# Opt-in overlay for editing SMTP settings from System Administration.
+services:
+  app:
+    environment:
+      WMS_REPORT_MAIL_CONFIG_FILE: /run/wms-mail/reports.json
+      WMS_REPORT_MAIL_KEY_FILE: /run/wms-mail/mail.key
+    volumes:
+      - type: bind
+        source: "${WMS_REPORT_SECRET_DIR:-/etc/musonoi/report-mail}/reports.json"
+        target: /run/wms-mail/reports.json
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: "${WMS_REPORT_SECRET_DIR:-/etc/musonoi/report-mail}/mail.key"
+        target: /run/wms-mail/mail.key
+        read_only: true
+        bind: {create_host_path: false}

@@ -12,10 +12,16 @@
   PHONE_FORMAT:['请输入有效联系号码，含5–20位数字','Enter a valid phone number containing 5–20 digits'],
   EMAIL_FORMAT:['请输入有效联系邮箱','Enter a valid email address'],
   PASSWORD_REQUIRED:['请输入密码','Enter a password'],
-  PASSWORD_LENGTH:['密码须为12–128个字符','Password must contain 12–128 characters'],
+  PASSWORD_LENGTH:['密码须为10–48个字符','Password must contain 10–48 characters'],
   CONFIRM_REQUIRED:['请再次输入密码','Confirm the password'],
   PASSWORD_MISMATCH:['两次密码不一致','Passwords do not match']
  };
+ const passwordMin=10,passwordMax=48;
+ function validPassword(value){
+  if(typeof value!=='string'||value.length<passwordMin||value.length>passwordMax*2)return false;
+  const count=[...value].length;
+  return count>=passwordMin&&count<=passwordMax;
+ }
  const text=value=>typeof value==='string'?value.trim():'';
  function validate(input,{requireConfirmation=true}={}){
   const out={},fail=(field,code)=>{out[field]=code;};
@@ -29,13 +35,13 @@
   const useLegacy=!Object.hasOwn(input,'contact_phone')&&!Object.hasOwn(input,'contact_email')&&legacy.length<=160;
   const contact=contact_phone||contact_email||(useLegacy?legacy:'');
   if(!contact&&!out.contact_phone&&!out.contact_email)fail('contact_phone','CONTACT_REQUIRED');
-  if(!password)fail('password','PASSWORD_REQUIRED');else if(password.length<12||password.length>128)fail('password','PASSWORD_LENGTH');
+  if(!password)fail('password','PASSWORD_REQUIRED');else if(!validPassword(password))fail('password','PASSWORD_LENGTH');
   if(requireConfirmation||Object.hasOwn(input,'confirm')){
    if(typeof input.confirm!=='string'||!input.confirm)fail('confirm','CONFIRM_REQUIRED');
    else if(input.confirm!==password)fail('confirm','PASSWORD_MISMATCH');
   }
   return {errors:out,values:{username,display_name,password,contact,contact_phone:contact_phone||null,contact_email:contact_email||null}};
  }
- const policy={validate,errors};
+ const policy={validate,errors,validPassword};
  if(typeof module==='object'&&module.exports)module.exports=policy;else root.RegistrationPolicy=policy;
 })(globalThis);

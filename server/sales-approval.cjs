@@ -79,6 +79,7 @@ async function register({app,pool,permitted,csrf}){
   const archive=require('./historical-backfill.cjs').listSql('RECEIPT')+" AND m.product_code='CO_HYDROXIDE'";
   const {rows:[historical]}=await c.query(`SELECT count(*)::int receipts,coalesce(sum(quantity),0)::int bags FROM (${archive}) h`,[req.user.id]);
   summary.total+=historical.receipts;summary.received+=historical.receipts;summary.bags+=historical.bags;
+  summary.pending_preparation_plan_count=await require('./preparation-plans.cjs').pendingWorkCount(c,req);
   const showHistory=!work&&(!status||status==='RECEIVED');
   const offset=(page-1)*50,liveTotal=Number((await c.query('SELECT count(*)'+filtered,v)).rows[0].count);
   const combined=`SELECT p.id,p.created_at,to_jsonb(p)||jsonb_build_object('work_status',w.status,'amendment_status',w.amendment_status,'expected_net_kg',p.bag_count*647) data${filtered}`+

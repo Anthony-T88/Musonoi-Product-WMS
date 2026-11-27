@@ -33,10 +33,10 @@ async function open(pool,req,user,allowed,denied,userInfo){
 async function changePassword(pool,req,allowed){
  const {body}=req,fields=['current_password','new_password','confirm_password'];
  if(!body||Object.keys(body).length!==fields.length||fields.some(key=>!Object.hasOwn(body,key)||
-  typeof body[key]!=='string'||!body[key].length||body[key].length>128)){
+  typeof body[key]!=='string'||!body[key].length)||body.current_password.length>128){
   return {status:400,code:'PASSWORD_FIELDS_INVALID',error:'请输入当前密码、新密码和确认密码。'};
  }
- if(!validPassword(body.new_password))return {status:400,code:'NEW_PASSWORD_LENGTH',error:'新密码须为12—128字符。'};
+ if(!validPassword(body.new_password))return {status:400,code:'NEW_PASSWORD_LENGTH',error:'新密码须为10–48个字符。'};
  if(body.new_password!==body.confirm_password)return {status:400,code:'PASSWORD_CONFIRMATION_MISMATCH',error:'两次输入的新密码不一致。'};
  return accountTransaction(pool,async c=>{
   const {rows:[user]}=await c.query(

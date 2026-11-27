@@ -46,7 +46,7 @@ window.AccessApprovals={
    return '<form class="user-form wms-access-decision" data-request-id="'+esc(row.id)+'">'+
     (data.can_review?'<div class="form-grid wms-field-grid"><label>'+s.L('总经理当前密码','General Manager’s current password')+
      '<input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>'+note+'</div>':'')+
-    '<div class="s46-actions">'+(data.can_review?
+    '<div class="wms-access-decision-actions">'+(data.can_review?
      '<button name="decision" value="APPROVED" class="button primary">'+s.L('审批通过','Approve')+'</button>'+
      '<button name="decision" value="REJECTED" class="button danger-outline">'+s.L('驳回申请','Reject')+'</button>':
      '<button name="decision" value="WITHDRAWN" class="button secondary">'+s.L('撤回申请','Withdraw')+'</button>')+

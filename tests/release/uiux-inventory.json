@@ -175,7 +175,7 @@
     {
       "key": "register-dialog",
       "products": [],
-      "state": "registration dialog",
+      "state": "registration dialog with 10–48 character password validation",
       "template": "/"
     },
     {
@@ -193,7 +193,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "self-service password dialog",
+      "state": "self-service dialog with 10–48 character new password validation",
       "template": "/overview"
     },
     {
@@ -679,7 +679,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "scoped pending-plan and all-order counts",
       "template": "/preparation"
     },
     {
@@ -697,7 +697,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "approval status, uncreated order and live preparation status",
       "template": "/preparation/work-plans"
     },
     {
@@ -1476,7 +1476,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "administrator report delivery settings",
+      "state": "administrator SMTP setup and delivery schedules with registered recipient accounts",
       "template": "/workbench/report-mail"
     },
     {

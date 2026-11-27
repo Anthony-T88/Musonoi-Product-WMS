@@ -9,6 +9,7 @@ const { EventEmitter } = require('node:events');
 const ExcelJS = require('exceljs');
 const Mail = require('../../scripts/report-mail.cjs');
 const Reports = require('../../server/report-center.cjs');
+const Transport = require('../../server/report-mail-transport.cjs');
 
 function sample() {
   return {
@@ -76,12 +77,37 @@ test('saved delivery plans override the legacy file without bypassing its recipi
     { code: 'REPORT_MAIL_SCHEDULE_INVALID' });
 });
 
+test('account delivery resolves the latest approved registered email and rejects unavailable accounts', async () => {
+  const id = '14b5a342-fa7a-4edb-9e47-309c2e9fe5b1';
+  const { recipients, ...fields } = sample().schedules[0];
+  const schedule = { ...fields, recipientAccounts: [id] };
+  const config = Transport.validateHost({ ...sample(), recipientDomains: ['musonoi.test'] }, 'test');
+  let email = 'reader@musonoi.test';
+  const c = { async query(sql, args) {
+    assert.match(sql, /active AND deleted_at IS NULL/);
+    assert.match(sql, /contact_email AS email/);
+    assert.deepEqual(args, [[id]]);
+    return { rows: email ? [{ id, email }] : [] };
+  } };
+  assert.deepEqual(Mail.selectedSchedules(config, { version: 1, enabled: true, schedules: [schedule] }), [schedule]);
+  assert.deepEqual(await Mail.scheduledRecipients(c, schedule, config), ['reader@musonoi.test']);
+  email = 'updated@musonoi.test';
+  assert.deepEqual(await Mail.scheduledRecipients(c, schedule, config), ['updated@musonoi.test']);
+  assert.equal(Transport.approvedRecipient(config, email, true), false);
+  email = 'outside@sub.musonoi.test';
+  await assert.rejects(Mail.scheduledRecipients(c, schedule, config), { code: 'REPORT_MAIL_RECIPIENT_UNAVAILABLE' });
+  email = null;
+  await assert.rejects(Mail.scheduledRecipients(c, schedule, config), { code: 'REPORT_MAIL_RECIPIENT_UNAVAILABLE' });
+});
+
 test('report email administration persists plans, respects authorization and avoids writing addresses to audit', async t => {
   const app = require('fastify')();
   const settings = require('../../server/report-mail-settings.cjs');
   const { digest } = require('../../server/security.cjs');
   t.after(() => app.close());
   const path = settings.path;
+  const accountId = '14b5a342-fa7a-4edb-9e47-309c2e9fe5b1';
+  let contactEmail = 'reader@musonoi.test';
   const decisions = [];
   const records = new Map();
   let policy = { version: 0, enabled: false, schedules: [], updatedAt: null };
@@ -97,6 +123,11 @@ test('report email administration persists plans, respects authorization and avo
       if (sql.includes('ORDER BY u.username')) {
         return { rows: [{ username: 'report-user', displayName: 'Test Account' }] };
       }
+      if (sql.includes('contact_email AS email')) {
+        assert.match(sql, /active AND deleted_at IS NULL/);
+        return { rows: [{ id: accountId, username: 'report-reader', email: contactEmail }] };
+      }
+      if (sql.includes('FROM report_mail_transport')) return { rows: [{ version: 0 }] };
       if (sql.includes('FROM report_mail_settings')) return { rows: [{ ...policy }] };
       if (sql.startsWith('UPDATE report_mail_settings')) {
         policy = { enabled: args[0], schedules: JSON.parse(args[1]), version: policy.version + 1, updatedAt: '2026-11-27T07:30:00Z' };
@@ -113,7 +144,7 @@ test('report email administration persists plans, respects authorization and avo
   };
   const fail = statusCode => { throw Object.assign(Error('denied'), { statusCode }); };
   settings.register({
-    app, cfg: { environment: 'test' }, pool: { connect: async () => c },
+    app, cfg: { environment: 'test' }, pool: { connect: async () => c }, env: {},
     permitted: permission => async req => {
       assert.equal(permission, 'system:manage');
       const role_code = req.headers['x-test-role'];
@@ -132,6 +163,8 @@ test('report email administration persists plans, respects authorization and avo
   assert.equal(first.statusCode, 200);
   assert.equal(first.headers['cache-control'], 'no-store');
   assert.deepEqual(first.json().schedules, []);
+  assert.equal(first.json().recipientAccounts[0].email, contactEmail);
+  assert.equal(first.json().transport.canConfigure, false);
   assert.doesNotMatch(first.payload, /smtp|recipientAllowlist|netrc/i);
   const payload = { version: 0, enabled: true, schedules: sample().schedules };
   assert.equal((await send('PUT', { role: 'limited_role_manager', payload })).statusCode, 403);
@@ -147,11 +180,90 @@ test('report email administration persists plans, respects authorization and avo
   const readBack = await send('GET');
   assert.deepEqual(readBack.json().schedules, payload.schedules);
   assert.equal((await send('PUT', { payload, key: 'request-0002' })).statusCode, 409);
-  const disabled = await send('PUT', { payload: { version: 1, enabled: false, schedules: [] }, key: 'request-0003' });
+  const { recipients, ...scheduleFields } = payload.schedules[0];
+  const schedule = { ...scheduleFields, recipientAccounts: [accountId] };
+  const newPayload = { version: 1, enabled: true, schedules: [schedule] };
+  contactEmail = 'reader@company.example';
+  assert.equal((await send('PUT', { payload: newPayload, key: 'request-0003' })).statusCode, 400);
+  assert.deepEqual((await send('GET')).json().recipientAccounts, []);
+  contactEmail = 'updated@musonoi.test';
+  assert.equal((await send('PUT', { payload: newPayload, key: 'request-0004' })).statusCode, 200);
+  assert.deepEqual((await send('GET')).json().schedules, [schedule]);
+  const disabled = await send('PUT', { payload: { version: 2, enabled: false, schedules: [] }, key: 'request-0005' });
   assert.equal(disabled.statusCode, 200);
   assert.equal(disabled.json().enabled, false);
-  assert.equal(decisions.length, 2);
+  assert.equal(decisions.length, 3);
   assert.doesNotMatch(JSON.stringify(decisions), /@musonoi\.test|report-user/);
+});
+
+test('only administrators with valid CSRF can configure mail and the credential stays encrypted and out of audit', async t => {
+  const app = require('fastify')();
+  const settings = require('../../server/report-mail-settings.cjs');
+  const { digest } = require('../../server/security.cjs');
+  const dir = await isolated(t);
+  const env = { WMS_REPORT_MAIL_CONFIG_FILE: path.join(dir, 'host.json'), WMS_REPORT_MAIL_KEY_FILE: path.join(dir, 'mail.key') };
+  const host = sample();
+  await fs.writeFile(env.WMS_REPORT_MAIL_CONFIG_FILE, JSON.stringify({
+    ...host, allowedSmtpUrls: [host.smtp.url, 'smtp://127.0.0.1:2587']
+  }), { mode: 0o600 });
+  await fs.writeFile(env.WMS_REPORT_MAIL_KEY_FILE, 'a7'.repeat(32), { mode: 0o600 });
+  t.after(() => app.close());
+  const writes = [];
+  let row = { version: 0 };
+  const c = {
+    release() {},
+    async query(sql, args = []) {
+      if (sql.includes('FROM sessions s JOIN users u')) {
+        return { rows: [{ id: 'operator-admin', role_code: 'admin', csrf_hash: digest('csrf') }] };
+      }
+      if (sql.includes('FROM role_permissions')) return { rows: [{ permission_code: 'system:manage' }] };
+      if (sql.includes('FROM report_mail_transport')) return { rows: [row] };
+      if (sql.startsWith('UPDATE report_mail_transport')) {
+        const [url, from, username, sealedPassword] = args;
+        row = { version: row.version + 1, url, from, username, sealedPassword };
+        writes.push(args);
+        return { rows: [row] };
+      }
+      if (sql.startsWith('INSERT INTO audit_logs')) writes.push(args);
+      if (sql.includes('idempotency_requests')) assert.fail('credentials must bypass request persistence');
+      return { rows: [] };
+    }
+  };
+  const deny = () => { throw Object.assign(Error('denied'), { statusCode: 403 }); };
+  settings.register({
+    app, cfg: { environment: 'test' }, pool: { connect: async () => c }, env,
+    permitted: () => async req => {
+      req.user = { id: 'operator-admin', role_code: req.headers['x-test-role'] };
+      req.cookies = { musonoi_session: 'test-session' };
+    },
+    csrf: async req => { if (req.headers['x-csrf-token'] !== 'csrf') deny(); }
+  });
+  const configure = (payload, role = 'admin', csrf = 'csrf') => app.inject({
+    method: 'PUT', url: settings.path + '/transport', headers: { 'x-test-role': role, 'x-csrf-token': csrf }, payload
+  });
+  const fields = { version: 0, ...host.smtp, username: 'system-mail' };
+  const password = 'Synthetic transport credential "A\\B"';
+  const body = { ...fields, password };
+  assert.equal((await configure(body, 'limited_role_manager')).statusCode, 403);
+  assert.equal((await configure(body, 'admin', '')).statusCode, 403);
+  assert.equal((await configure({ ...body, url: 'smtp://smtp.example:2587' })).statusCode, 400);
+  assert.equal((await configure(fields)).statusCode, 400);
+  const response = await configure(body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(response.json().hasPassword, true);
+  assert.equal(response.json().version, 1);
+  assert.doesNotMatch(response.payload, /sealedPassword|Synthetic/);
+  assert.equal(writes.length, 2);
+  assert.doesNotMatch(JSON.stringify(writes), /Synthetic transport credential/);
+  assert.doesNotMatch(JSON.stringify(writes[1]), /wms@|system-mail|sealedPassword/);
+  const key = await Transport.readKey(env);
+  assert.equal(Transport.open(row.sealedPassword, row, key), password);
+  assert.throws(() => Transport.open(row.sealedPassword, { ...row, from: 'other@musonoi.test' }, key),
+    { code: 'REPORT_MAIL_CREDENTIAL_INVALID' });
+  assert.equal((await configure(body)).statusCode, 409);
+  assert.equal((await configure({ ...fields, url: 'smtp://127.0.0.1:2587', version: 1 })).statusCode, 400);
+  assert.equal((await configure({ ...fields, version: 1 })).json().version, 1);
 });
 test('dispatched date ranges use completed Lubumbashi days and months', () => {
   const schedule = sample().schedules[0];

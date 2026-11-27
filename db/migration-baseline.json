@@ -857,6 +857,10 @@
     {
       "version": "214_v490_report_mail_settings.sql",
       "checksum": "f57cae61308796b3390c4e1a5855a0e46d0dd36cc30473bcd6269958dc9ef974"
+    },
+    {
+      "version": "215_v490_report_mail_transport.sql",
+      "checksum": "9667653c3761011be4b4299fe8188b123c0de76deb8f2e74f506fc611e97a627"
     }
   ]
 }

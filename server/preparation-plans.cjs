@@ -19,8 +19,25 @@ const allowed=(path,method)=>method==='GET'&&['/operations/status','/occupied'].
  /^\/api\/v1\/cobalt\/preparation-plans(?:\/[0-9a-f-]{36}(?:\/(?:submit|approve|reject))?)?$/i.test(path)&&['GET','POST','PATCH'].includes(method);
 
 const visibility="p.product_code=$2 AND EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=p.project_id AND (s.customer_id IS NULL OR s.customer_id=p.customer_id) AND (p.warehouse_id IS NULL OR s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id))";
-const projection="SELECT p.*,coalesce(cu.code,co.code) sales_plan_no,coalesce(ck.contract_no,ok.contract_no) contract_no,coalesce(cu.preparation_month,co.shipment_month) sales_shipment_month,customer.name customer_name,r.batch_no reversal_batch_no FROM preparation_plans p LEFT JOIN preparation_reversals r ON r.id=p.reversal_id JOIN customers customer ON customer.id=p.customer_id LEFT JOIN sales_plans cu ON cu.id=p.cu_sales_plan_id LEFT JOIN co_sales_plans co ON co.id=p.co_sales_plan_id LEFT JOIN customer_contracts ck ON ck.id=cu.contract_id LEFT JOIN co_sales_contracts ok ON ok.id=co.contract_id";
+const planSales='FROM preparation_plans p LEFT JOIN sales_plans cu ON cu.id=p.cu_sales_plan_id LEFT JOIN co_sales_plans co ON co.id=p.co_sales_plan_id';
+const ready=`p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL
+ AND coalesce(cu.status,co.status)='OPEN' AND NOT EXISTS(SELECT 1 FROM sales_plan_approvals a
+ WHERE a.plan_id=p.sales_plan_id AND a.product_code=p.product_code AND a.state<>'APPROVED')`;
+const projection=`SELECT p.*,coalesce(cu.code,co.code) sales_plan_no,coalesce(ck.contract_no,ok.contract_no) contract_no,
+ coalesce(cu.preparation_month,co.shipment_month) sales_shipment_month,customer.name customer_name,r.batch_no reversal_batch_no,
+ coalesce(allocation.workflow_state,allocation.status,CASE WHEN receipt.status='RECEIVED' THEN coalesce(work.status,receipt.status) ELSE receipt.status END) work_state
+ ${planSales} LEFT JOIN preparation_reversals r ON r.id=p.reversal_id JOIN customers customer ON customer.id=p.customer_id
+ LEFT JOIN customer_contracts ck ON ck.id=cu.contract_id LEFT JOIN co_sales_contracts ok ON ok.id=co.contract_id
+ LEFT JOIN allocations allocation ON allocation.id=p.allocation_id LEFT JOIN co_preparations receipt ON receipt.id=p.co_preparation_id
+ LEFT JOIN co_work_batches work ON work.preparation_id=receipt.id`;
 const params=req=>[req.user.id,req.productCode];
+async function pendingWorkCount(c,req,{project_id=null,warehouse_id=null,customer_id=null,created_date=null,search=''}={}){
+ const {rows:[count]}=await c.query(`SELECT count(*)::int n ${planSales} WHERE ${visibility} AND ${ready}
+  AND ($3::uuid IS NULL OR p.project_id=$3) AND ($4::uuid IS NULL OR p.warehouse_id IS NULL OR p.warehouse_id=$4)
+  AND ($5::uuid IS NULL OR p.customer_id=$5) AND ($6::date IS NULL OR (p.created_at AT TIME ZONE 'Africa/Lubumbashi')::date=$6)
+  AND ($7='' OR strpos(lower(p.batch_no),lower($7))>0)`,[...params(req),project_id,warehouse_id,customer_id,created_date,search]);
+ return count.n;
+}
 async function access(c,req,id,lock=false){
  const {rows:[plan]}=await c.query(projection+' WHERE '+visibility+' AND p.id=$3'+(lock?' FOR UPDATE OF p':''),[...params(req),B.uuid(id)]);
  if(!plan)throw B.error(404,'备货计划不存在或超出授权范围');
@@ -55,14 +72,13 @@ async function list(c,req){
  if((state&&!stateLabels.includes(state))||!Number.isInteger(page)||page<1||page>100000)throw B.error(400,'备货计划筛选条件无效');
  const executable=query.executable==='1';
  if(executable&&!canStart(req))throw B.error(403,'当前岗位无权创建备货单');
- const ready=executable?" AND p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL AND coalesce(cu.status,co.status)='OPEN' AND NOT EXISTS(SELECT 1 FROM sales_plan_approvals a WHERE a.plan_id=coalesce(cu.id,co.id) AND a.product_code=p.product_code AND a.state<>'APPROVED')":'';
  const batch=query.batch_no?B.text(query.batch_no,'批次号',160):'',salesNo=query.sales_plan_no?B.text(query.sales_plan_no,'销售计划号',160):'';
  const month=query.shipment_month||'',customer=query.customer_id?B.uuid(query.customer_id):null;
  if(month&&!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw B.error(400,'发运月无效');
  const where=' WHERE '+visibility+
   " AND ($3::text='' OR p.state=$3) AND ($4::text='' OR strpos(lower(concat_ws(' ',p.batch_no,cu.code,co.code,customer.name)),lower($4))>0)"+
   " AND ($5='' OR strpos(lower(p.batch_no),lower($5))>0) AND ($6='' OR strpos(lower(coalesce(cu.code,co.code)),lower($6))>0)"+
-  " AND ($7='' OR p.shipment_month=$7) AND ($8::uuid IS NULL OR p.customer_id=$8)"+ready;
+  " AND ($7='' OR p.shipment_month=$7) AND ($8::uuid IS NULL OR p.customer_id=$8)"+(executable?' AND '+ready:'');
  const values=[...params(req),state,search,batch,salesNo,month,customer];
  const {rows}=await c.query(projection+where+' ORDER BY '+B.documentOrder({pending:"p.state='PENDING' OR (p.state='APPROVED' AND p.allocation_id IS NULL AND p.co_preparation_id IS NULL)",created:'p.created_at',id:'p.id'})+' LIMIT 50 OFFSET $9',[...values,(page-1)*50]);
  const {rows:[total]}=await c.query('SELECT count(*)::int n FROM ('+projection+where+') results',values);
@@ -270,4 +286,4 @@ async function pending(c,req){
  return (await c.query(sql,params(req))).rows;
 }
 
-module.exports={allowed,register,claim,bind,pending,assertRead,assertCreate};
+module.exports={allowed,register,claim,bind,pending,pendingWorkCount,assertRead,assertCreate};

@@ -87,21 +87,28 @@ window.UI46Pages={
  changePassword(){
   const t=this.t;
   if(CurrentUser.role_code==='general_manager'){notify(t('总经理账号密码由维护人员轮换。','Maintenance rotates the General Manager password.'));return;}
-  const field=(name,zh,en,autocomplete,min=1)=>'<label class="wms-field">'+t(zh,en)+
-   '<input name="'+name+'" type="password" autocomplete="'+autocomplete+'" required minlength="'+min+'" maxlength="128"></label>';
+  const field=(name,zh,en,autocomplete)=>'<label class="wms-field">'+t(zh,en)+
+   '<input name="'+name+'" type="password" autocomplete="'+autocomplete+'" required'+
+   (autocomplete==='current-password'?' maxlength="128"':'')+'></label>';
   dialog(t('修改密码','Change Password'),'<form id="change-password-form" class="user-form" data-no-i18n data-wms-validation>'+
    field('current_password','当前密码','Current Password','current-password')+
-   field('new_password','新密码（12–128 字符）','New Password (12–128 characters)','new-password',12)+
-   field('confirm_password','确认新密码','Confirm New Password','new-password',12)+
+   field('new_password','新密码（10–48 个字符）','New Password (10–48 characters)','new-password')+
+   field('confirm_password','确认新密码','Confirm New Password','new-password')+
    '<p class="error" role="alert"></p><div class="business-toolbar">'+
    '<button type="button" id="change-password-cancel" class="button secondary">'+t('取消','Cancel')+'</button>'+
    '<button type="submit" class="button primary">'+t('保存新密码','Save New Password')+'</button></div></form>');
-  const form=$('change-password-form'),box=$('dialog'),confirmation=form.elements.confirm_password;
+  const form=$('change-password-form'),box=$('dialog'),newPassword=form.elements.new_password,confirmation=form.elements.confirm_password;
+  const lengthError=t(...RegistrationPolicy.errors.PASSWORD_LENGTH);
   box.addEventListener('close',()=>{form.reset();form.remove();},{once:true});
   $('change-password-cancel').onclick=()=>box.close();
-  form.oninput=()=>confirmation.setCustomValidity('');
+  form.oninput=()=>{newPassword.setCustomValidity('');confirmation.setCustomValidity('');};
   form.onsubmit=event=>this.submit(event,async()=>{
    const body=Object.fromEntries(new FormData(form));
+   if(!RegistrationPolicy.validPassword(body.new_password)){
+    newPassword.setCustomValidity(lengthError);
+    newPassword.reportValidity();
+    return;
+   }
    if(body.new_password!==body.confirm_password){
     confirmation.setCustomValidity(t('两次输入的新密码不一致。','The new passwords do not match.'));
     confirmation.reportValidity();
@@ -110,6 +117,7 @@ window.UI46Pages={
    try{await API.request('/auth/change-password',{method:'POST',body});}
    catch(error){
     const messages={
+     NEW_PASSWORD_LENGTH:lengthError,
      CURRENT_PASSWORD_INCORRECT:t('当前密码不正确。','The current password is incorrect.'),
      PASSWORD_CHANGE_THROTTLED:t('尝试次数过多，请稍后再试。','Too many attempts. Try again later.'),
      PASSWORD_UNCHANGED:t('新密码须与当前密码不同。','Choose a password different from your current password.')

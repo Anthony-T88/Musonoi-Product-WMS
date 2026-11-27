@@ -46,6 +46,11 @@ test('copper and cobalt preparation batches and historical navigation on indepen
   async function api(role,product,url,body,expected=200){
    const r=await request(role,product,url,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,350));return r.json();
   }
+  async function pendingWork(product,query=''){
+   const co=cobalt(product),path=co?'/cobalt/sales-workflow/preparations':'/v34/lists/lots';
+   const data=await api('admin',product,path+query);
+   return (co?data.summary:data).pending_preparation_plan_count;
+  }
   const fixtures={};
   for(const product of products)await t.test(product+' scoped lookup, validation, atomic save and replay',async()=>{
    const plan=await P.salesPlan(api,f,product),base=prefix(product)+'/preparation-plans';
@@ -86,6 +91,13 @@ test('copper and cobalt preparation batches and historical navigation on indepen
   for(const product of products)await t.test(product+' reopens the same approved plan after formal work cancellation',async()=>{
    const co=cobalt(product),fx=fixtures[product],base=prefix(product)+'/preparation-plans';
    const item=fx.item(798),work=await P.approved(api,product,fx.plan,item.batch_no);
+   const waiting=await pendingWork(product);
+   assert.equal(waiting,2,'Only the two approved and unlinked plans are counted');
+   assert.equal(waiting,(await api('admin',product,base+'?executable=1')).total);
+   if(!co){
+    assert.equal(await pendingWork(product,'?search='+item.batch_no),1);
+    assert.equal(await pendingWork(product,'?search='+fx.item(783).batch_no),0,'Draft plan is not counted');
+   }
    let url,payload;
    if(co){
     url='/cobalt/preparations';
@@ -106,6 +118,9 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    }
    const create=plan=>api('admin',product,url,{...payload,preparation_plan_id:plan});
    const first=await create(work.id),lookup=base+'/occupied?'+new URLSearchParams({search:item.batch_no});
+   assert.equal(await pendingWork(product),waiting-1);
+   const created=(await api('admin',product,base+'?search='+item.batch_no)).items[0];
+   assert.equal(created.work_state,co?'DRAFT':'WORKING');
    const batch=body=>api('export_supervisor',product,base+'/batch/preview',{items:[body]});
    assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
    assert((await api('export_supervisor',product,lookup)).items.some(row=>row.batch_no===item.batch_no));
@@ -117,6 +132,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const weighed=(await api('admin',product,'/v262/lots/'+first.id+'/weigh',{version:first.version,
      items:(await api('admin',product,url+'/'+first.id)).items.map(row=>({bundle_id:row.id,item_version:row.item_version,gross_weight:'2.0350',seal_no:'REUSE-798'}))})).lot;
     const pending=await api('admin',product,url+'/'+first.id+'/submit',{version:weighed.version});
+    assert.equal((await api('admin',product,base+'/'+work.id)).work_state,'PENDING');
     const withdrawn=await api('admin',product,'/v262/lots/'+first.id+'/withdraw',{version:pending.version});
     assert.equal((await batch(item)).items[0].error,'备货批次号已占用');
     const cancelled=await api('admin',product,'/v262/lots/'+first.id+'/revoke',
@@ -126,6 +142,8 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const old=await api('export_supervisor',product,base+'/'+work.id);
    assert.equal(old.state,'APPROVED');
    assert.equal(old[co?'co_preparation_id':'allocation_id'],null);
+   assert.equal(old.work_state,null);
+   assert.equal(await pendingWork(product),waiting);
    assert(!old.actions.edit);
    assert.deepEqual(old.events.filter(event=>event.action==='WORK_CANCEL').map(event=>event.reason),[reason]);
    assert(old._approval.history.items.some(row=>row.action==='WORK_CANCEL'&&row.note===reason));
@@ -136,6 +154,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.equal(available.items[0].id,work.id);
    const second=await create(work.id);
    assert.notEqual(second.id,first.id);
+   assert.equal(await pendingWork(product),waiting-1);
    assert.equal(second[co?'preparation_batch_no':'lot_no'],item.batch_no);
    const legacy=await api('admin',product,url+'/'+first.id);
    assert.equal(co?legacy.status:legacy.workflow_state,co?'WITHDRAWN':'CANCELLED');
@@ -350,6 +369,36 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));
    return {ctx,page,errors};
   }
+  for(const product of products)await t.test(product+' preparation management counts eligible plans and colors live status',async()=>{
+   const co=cobalt(product),{ctx,page,errors}=await open('admin',product,co?390:1440);
+   try{
+    for(const [language,label,allLabel] of [['zh-CN','待创建备货单计划数','全部'],['en','Plans Awaiting Preparation Order','All']]){
+     await page.evaluate(code=>I18n.change(code),language);
+     await page.goto(origin+(co?'/receipts':'/preparation'));
+     const count=page.locator('[data-pending-preparation-plans]');
+     await count.getByText(label,{exact:true}).waitFor();
+     const expected=await page.evaluate(async co=>{
+      const data=await API.request(co?'/cobalt/sales-workflow/preparations':'/v34/lists/lots');
+      return (co?data.summary:data).pending_preparation_plan_count;
+     },co);
+     assert.equal(await count.locator('strong').innerText(),String(expected));
+     assert.equal(await count.evaluate(node=>node.nextElementSibling?.querySelector('span')?.textContent),allLabel);
+     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+    }
+    await page.evaluate(()=>I18n.change('zh-CN'));
+    await page.goto(origin+'/preparation/work-plans');
+    const table=page.locator('#preparation-plans-table');
+    await table.getByRole('columnheader',{name:'计划状态'}).waitFor();
+    const badge=lot=>table.getByRole('row').filter({has:page.getByRole('link',{name:lot,exact:true})}).locator('[data-state-domain="preparation"]');
+    const waiting=badge(fixtures[product].occupied.batch_no),linked=badge(fixtures[product].item(798).batch_no);
+    assert.equal(await waiting.innerText(),'待创建备货单');
+    assert.equal(await waiting.getAttribute('class'),'status-pill tone-neutral');
+    assert.equal(await linked.innerText(),co?'草稿':'作业中');
+    assert.equal(await linked.getAttribute('data-state-code'),co?'DRAFT':'WORKING');
+    assert.match(await linked.evaluate(node=>node.parentElement.getAttribute('href')),co?/^\/receipts\//:/^\/preparation\//);
+    assert.deepEqual(errors,[]);
+   }finally{await ctx.close();}
+  });
   for(const product of products)await t.test(product+' actual browser entry, save, document links and returns',async()=>{
    const co=cobalt(product),fx=fixtures[product],width=co?390:1440;
    const {ctx,page,errors}=await open('export_supervisor',product,width);

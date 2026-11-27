@@ -43,6 +43,14 @@
 }
 
 html[data-release-ui="46"] .workspace { background: var(--uix-canvas); }
+
+html[data-release-ui="46"] .wms-access-decision-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--uix-gap-sm);
+  flex-wrap: nowrap;
+}
 html[data-release-ui="46"]:lang(en) body .product-switch button {
   white-space: normal;
   line-height: 1.25;

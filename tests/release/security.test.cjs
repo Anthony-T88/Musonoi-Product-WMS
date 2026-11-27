@@ -6,7 +6,7 @@ test('first batch management security regressions',async t=>{
  try{
  await migrate(c,{environment:'test',apply:true,backupVerified:true});const f=await E.seed(c,d.name),admin=f.accounts.find(a=>a.role==='admin');
  const other=(await c.query("INSERT INTO projects(code,name) VALUES('SEC-OUTSIDE','Synthetic outside project') RETURNING id")).rows[0].id;
- const account=async(label,role,scopes)=>{const username='sec_'+label,password=crypto.randomBytes(20).toString('base64url'),id=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Synthetic '+label,hashPassword(password),role])).rows[0].id;for(const s of scopes)await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id,customer_id) VALUES($1,$2,$3,$4)',[id,s.project_id,s.warehouse_id||null,s.customer_id||null]);return {id,username,password,role};};
+ const account=async(label,role,scopes,password=crypto.randomBytes(20).toString('base64url'))=>{const username='sec_'+label,id=(await c.query('INSERT INTO users(username,display_name,password_hash,role_code) VALUES($1,$2,$3,$4) RETURNING id',[username,'Synthetic '+label,hashPassword(password),role])).rows[0].id;for(const s of scopes)await c.query('INSERT INTO user_scopes(user_id,project_id,warehouse_id,customer_id) VALUES($1,$2,$3,$4)',[id,s.project_id,s.warehouse_id||null,s.customer_id||null]);return {id,username,password,role};};
  const role=async(label,permissions)=>{const code='custom_'+crypto.randomBytes(8).toString('hex');await c.query('INSERT INTO roles(code,name,name_en,built_in,created_by) VALUES($1,$2,$2,false,$3)',[code,'Synthetic '+label,admin.id]);for(const p of require('../../server/role-catalog.cjs').expand(permissions))await c.query('INSERT INTO role_permissions(role_code,permission_code) VALUES($1,$2)',[code,p]);return code;};
  const scope=[{project_id:f.project}],rm=await account('roles',await role('roles',['roles:manage','inventory:read','master:read']),scope),am=await account('accounts',await role('accounts',['users:manage','inventory:read','master:read']),scope),auditor=await account('auditor',await role('audit',['audit:read']),scope),viewerRole=await role('viewer',['inventory:read']),outsideAdmin=await account('outside_admin','admin',[{project_id:other}]),ownViewer=await account('viewer',viewerRole,scope),multiViewer=await account('multi',viewerRole,[...scope,{project_id:other}]);
  const foreignLog=(await c.query("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,after_data) VALUES($1,'security_outside','projects',$2,$3) RETURNING id",[outsideAdmin.id,other,{project_id:other,marker:'Synthetic outside event'}])).rows[0].id;
@@ -18,15 +18,18 @@ test('first batch management security regressions',async t=>{
  const blocked=async(mode,relation=null)=>{const end=Date.now()+5000;while(Date.now()<end){const q=await c.query("SELECT 1 FROM pg_locks l JOIN pg_stat_activity a ON a.pid=l.pid WHERE a.datname=$1 AND NOT l.granted AND (($3::text IS NULL AND l.locktype='advisory' AND l.objid=21002 AND l.mode=$2) OR ($3::text IS NOT NULL AND l.locktype='relation' AND l.relation=to_regclass($3))) LIMIT 1",[d.name,mode,relation]);if(q.rowCount)return;await wait(15);}throw Error('Expected isolated lock waiter was not observed');};
  let root=await login(admin),manager=await login(am),roles=await login(rm),audit=await login(auditor),ordinary=await login(f.accounts.find(a=>a.role==='production_operator'));
  await check('ordinary account changes only its own password and revokes every old session',async()=>{
-  const user=await account('self_password',viewerRole,scope),prior=await login(user),current=await login(user);
-  const endpoint='/api/v1/auth/change-password',newPassword=crypto.randomBytes(20).toString('base64url');
+  const user=await account('self_password',viewerRole,scope,crypto.randomBytes(64).toString('hex')),prior=await login(user),current=await login(user);
+  const endpoint='/api/v1/auth/change-password',newPassword='\u{1F512}'.repeat(48);
   const form={current_password:user.password,new_password:newPassword,confirm_password:newPassword};
   const submit=(session,payload,product='CO_HYDROXIDE')=>app.inject({method:'POST',url:endpoint,headers:{...session,'x-product-code':product},payload});
   assert.equal((await submit({},form)).statusCode,401);
   assert.equal((await submit({...current,'x-csrf-token':'invalid'},form)).statusCode,403);
   assert.equal((await submit({...current,origin:'https://invalid.example'},form)).statusCode,403);
   assert.equal((await submit(current,{...form,user_id:admin.id})).statusCode,400);
-  assert.equal((await submit(current,{...form,new_password:'too short',confirm_password:'too short'})).json().code,'NEW_PASSWORD_LENGTH');
+  for(const length of [9,49]){
+   const invalidPassword='\u{1F512}'.repeat(length);
+   assert.equal((await submit(current,{...form,new_password:invalidPassword,confirm_password:invalidPassword})).json().code,'NEW_PASSWORD_LENGTH');
+  }
   assert.equal((await submit(current,{...form,confirm_password:user.password})).json().code,'PASSWORD_CONFIRMATION_MISMATCH');
   const wrong=await submit(current,{...form,current_password:newPassword});
   assert.equal(wrong.statusCode,400);
@@ -47,7 +50,8 @@ test('first batch management security regressions',async t=>{
   assert.deepEqual(events.map(e=>[e.action,e.outcome]),[['password_change_failed','FAILED'],['password_changed','COMMITTED']]);
   assert.equal(events[1].after_data.sessions_revoked,true);
   for(const secret of [user.password,newPassword])assert(!JSON.stringify(events).includes(secret));
-  const reset=crypto.randomBytes(20).toString('base64url');
+  const reset=crypto.randomBytes(5).toString('hex');
+  assert.equal((await api(root,'POST','/users/'+user.id+'/reset-password',{password:crypto.randomBytes(25).toString('hex')})).statusCode,400);
   assert.equal((await api(root,'POST','/users/'+user.id+'/reset-password',{password:reset})).statusCode,200);
   assert.equal((await api(live,'GET','/me')).statusCode,401);
   assert.equal((await api(await login({...user,password:reset}),'GET','/me')).json().id,user.id);
@@ -112,11 +116,14 @@ test('first batch management security regressions',async t=>{
   const base='/api/v1/auth/',remoteAddress='127.88.0.47',origin=f.appCfg.origin;
   const token=await app.inject({url:base+'registration-token',remoteAddress});
   const headers={origin,cookie:token.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':token.json().csrfToken};
-  const payload={username:'registration_custom',display_name:'Synthetic applicant',password:crypto.randomBytes(20).toString('base64url')};
+  const payload={username:'registration_custom',display_name:'Synthetic applicant',password:crypto.randomBytes(5).toString('hex')};
   const submit=fields=>app.inject({method:'POST',url:base+'registration-requests',headers,remoteAddress,payload:{...payload,...fields}});
   assert.equal((await submit({contact_phone:'',contact_email:''})).statusCode,400);
   assert.equal((await submit({contact_email:'invalid'})).statusCode,400);
   const fields={contact_phone:'+243 810 000 002',contact_email:'registration@example.invalid'};
+  const overlong=await submit({...fields,password:'\u{1F512}'.repeat(49)});
+  assert.equal(overlong.statusCode,400);
+  assert.deepEqual(overlong.json().fields.map(field=>field.code),['PASSWORD_LENGTH']);
   const submitted=await submit(fields);assert.equal(submitted.statusCode,201,submitted.body);
   assert.equal((await submit(fields)).statusCode,409);
   const id=submitted.json().id,requests=(await api(root,'GET','/users/registration-requests')).json().items;

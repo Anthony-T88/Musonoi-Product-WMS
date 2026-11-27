@@ -138,6 +138,18 @@ test('General Manager approval gates effective account access and leaves reviewa
      await page.locator('#access-approval-filter').waitFor();
      const form=page.locator('form[data-request-id="'+staged.id+'"]');
      await form.locator('xpath=ancestor::details').locator('summary').click();
+     for(const width of [1440,390]){
+      await page.setViewportSize({width,height:844});
+      const actions=form.locator('.wms-access-decision-actions');
+      const bounds=await actions.boundingBox();
+      const approve=await actions.locator('[value="APPROVED"]').boundingBox();
+      const reject=await actions.locator('[value="REJECTED"]').boundingBox();
+      assert(bounds&&approve&&reject,'approval decision buttons must remain visible');
+      assert(Math.abs(approve.y-reject.y)<1,'approval decision buttons must share a row');
+      assert(Math.abs(approve.x-bounds.x)<1,'approval button must align with the left edge');
+      assert(Math.abs(reject.x+reject.width-bounds.x-bounds.width)<1,'rejection button must align with the right edge');
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+     }
      await form.locator('[name="password"]').fill(manager.password);
      await form.locator('[value="APPROVED"]').click();
      await form.waitFor({state:'detached'});
