@@ -116,11 +116,20 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
    const result=first.json(),review=path+'/'+result.reversal_id+'/review';
    assert.deepEqual((await request(supervisor,product,path,requestBody(facts.version),replay)).json(),result);
    await api(supervisor,product,path,requestBody(facts.version),409);
-   await api(supervisor,product,review,approval,403);
+   const temporaryGrant=await c.query("INSERT INTO role_permissions VALUES('site_supervisor','lot:reverse-review') ON CONFLICT DO NOTHING");
+   sessions.delete(supervisor);
+   try{
+    assert.equal((await api(supervisor,product,path)).can_review,false);
+    await api(supervisor,product,review,approval,403);
+   }finally{
+    if(temporaryGrant.rowCount)await c.query("DELETE FROM role_permissions WHERE role_code='site_supervisor' AND permission_code='lot:reverse-review'");
+    sessions.delete(supervisor);
+   }
    await api(manager,product,review,rejection);
    assert.deepEqual(await snapshot(),original);
-   const ready=await api(supervisor,product,path);
-   const submitted=await api(supervisor,product,path,requestBody(ready.version));
+   const requester=co?'admin':supervisor;
+   const ready=await api(requester,product,path);
+   const submitted=await api(requester,product,path,requestBody(ready.version));
    fixtures[product].reversal={id:submitted.reversal_id,workId:work.id,url,planId:plan.id,original,snapshot};
   });
 
@@ -250,55 +259,58 @@ test('preparation plan reopening and whole-batch reversal',async t=>{
     observation:'Stock and locations checked',work_stopped:true,physical_state_verified:true});
    assert.equal((await api(operator,copper,lotPath(replacement.id))).preapproval.reopened_preparation_plan_id,plan.id);
   });
-  await t.test('manager sees pending reversal in the actual work detail and approves in both products',async()=>{
-   const a=f.accounts.find(x=>x.role===manager),context=await browser.newContext({viewport:{width:1280,height:900}});
-   assert.equal((await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}})).status(),200);
-   const page=await context.newPage();
-   await page.addLocatorHandler(page.locator('#task-notice[open] [data-task-dismiss]'),button=>button.click());
-   await page.goto(origin+'/overview');
-   await page.waitForFunction(()=>window.AppSignedIn&&typeof Router!=='undefined'&&!Router.rendering);
+  await t.test('manager approves the copper reversal and administrator approves their own cobalt reversal',async()=>{
    for(const [i,product] of [copper,cobalt].entries()){
-    const fx=fixtures[product].reversal;
-    assert(fx,'Reversal fixture was prepared for '+product);
-    if(i){
+    const role=i?'admin':manager,a=f.accounts.find(x=>x.role===role);
+    const context=await browser.newContext({viewport:{width:1280,height:900}});
+    try{
+     assert.equal((await context.request.post(origin+'/api/v1/auth/login',{headers:{origin},data:{username:a.username,password:a.password}})).status(),200);
+     const page=await context.newPage();
+     await page.addLocatorHandler(page.locator('#task-notice[open] [data-task-dismiss]'),button=>button.click());
+     await page.goto(origin+'/overview');
+     await page.waitForFunction(()=>window.AppSignedIn&&typeof Router!=='undefined'&&!Router.rendering);
+     const fx=fixtures[product].reversal;
+     assert(fx,'Reversal fixture was prepared for '+product);
+     if(i){
+      await page.goto(origin+'/overview?management=todos');
+      await page.locator('#c461-task-product').selectOption(product);
+      await page.waitForFunction(()=>window.ProductContext?.ready&&ProductContext.code==='CO_HYDROXIDE'&&!Router.rendering);
+     }
+     const path=(i?'/receipts/':'/preparation/')+fx.workId+'?reversal='+fx.id+'#preparation-reversal';
      await page.goto(origin+'/overview?management=todos');
-     await page.locator('#c461-task-product').selectOption(product);
-     await page.waitForFunction(()=>window.ProductContext?.ready&&ProductContext.code==='CO_HYDROXIDE'&&!Router.rendering);
-    }
-    const path=(i?'/receipts/':'/preparation/')+fx.workId+'?reversal='+fx.id+'#preparation-reversal';
-    await page.goto(origin+'/overview?management=todos');
-    const todo=page.locator('#page-content a[href='+JSON.stringify(path)+']').first();
-    await todo.click();
-    const section=page.locator('#preparation-reversal');
-    await section.locator('[data-reversal-action=approve]').waitFor();
-    if(i)await page.setViewportSize({width:390,height:844});
-    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
-    await section.locator('[data-reversal-action=approve]').click();
-    const form=page.locator('#preparation-reversal-review');
-    await form.locator('[name=note]').fill('Verified physical stock and location');
-    await form.locator('[name=verified]').check();
-    const approved=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/'+fx.id+'/review'));
-    await form.locator('button[type=submit]').click();
-    const response=await approved;
-    assert.equal(response.status(),200,await response.text());
-    await section.getByText(/已撤销|Reversed/).first().waitFor();
-    assert.deepEqual(await fx.snapshot(),fx.original);
-    const {rows:[state]}=await c.query('SELECT state FROM preparation_plans WHERE id=$1',[fx.planId]);
-    assert.equal(state.state,'CANCELLED');
-    const saved=(await c.query('SELECT * FROM preparation_reversals WHERE id=$1',[fx.id])).rows[0];
-    assert.equal(saved.state,'APPROVED');
-    assert.equal(saved.stock_snapshot.length,2);
-    assert.notEqual(saved.requested_by,saved.reviewed_by);
-    if(i){
-     const inventory=await api(operator,product,'/cobalt/stock/batches/'+fx.workId);
-     assert(inventory.items.every(row=>row.status==='REVERSED'));
-    }else{
-     const active=(await c.query('SELECT count(*)::int n FROM reservations WHERE allocation_id=$1 AND released_at IS NULL',[fx.workId])).rows[0].n;
-     assert.equal(active,0);
-    }
+     const todo=page.locator('#page-content a[href='+JSON.stringify(path)+']').first();
+     await todo.click();
+     const section=page.locator('#preparation-reversal');
+     await section.locator('[data-reversal-action=approve]').waitFor();
+     if(i)await page.setViewportSize({width:390,height:844});
+     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+     await section.locator('[data-reversal-action=approve]').click();
+     const form=page.locator('#preparation-reversal-review');
+     await form.locator('[name=note]').fill('Verified physical stock and location');
+     await form.locator('[name=verified]').check();
+     const approved=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/'+fx.id+'/review'));
+     await form.locator('button[type=submit]').click();
+     const response=await approved;
+     assert.equal(response.status(),200,await response.text());
+     await section.getByText(/已撤销|Reversed/).first().waitFor();
+     assert.deepEqual(await fx.snapshot(),fx.original);
+     const {rows:[state]}=await c.query('SELECT state FROM preparation_plans WHERE id=$1',[fx.planId]);
+     assert.equal(state.state,'CANCELLED');
+     const saved=(await c.query('SELECT * FROM preparation_reversals WHERE id=$1',[fx.id])).rows[0];
+     assert.equal(saved.state,'APPROVED');
+     assert.equal(saved.stock_snapshot.length,2);
+     assert.equal(saved.reviewed_by,a.id);
+     if(i){
+      assert.equal(saved.requested_by,saved.reviewed_by);
+      const inventory=await api(operator,product,'/cobalt/stock/batches/'+fx.workId);
+      assert(inventory.items.every(row=>row.status==='REVERSED'));
+     }else{
+      assert.notEqual(saved.requested_by,saved.reviewed_by);
+      const active=(await c.query('SELECT count(*)::int n FROM reservations WHERE allocation_id=$1 AND released_at IS NULL',[fx.workId])).rows[0].n;
+      assert.equal(active,0);
+     }
+    }finally{await context.close();sessions.delete(role);}
    }
-   await context.close();
-   sessions.delete(manager);
   });
 
   await t.test('replacement cobalt plan uses the same bags, location and receipt, while retaining the old batch',async()=>{

@@ -889,6 +889,10 @@
     {
       "version": "222_v490_outbound_business_date.sql",
       "checksum": "1b203f0d584acd80833db144662cccaea84cbc2a37fd4abde6835fb0fc17174f"
+    },
+    {
+      "version": "223_v490_admin_business_self_review.sql",
+      "checksum": "7b8e1813103919b932af037d510bdaed05b77923519faebb5abbb63c3a181765"
     }
   ]
 }

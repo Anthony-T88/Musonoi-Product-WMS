@@ -125,7 +125,7 @@ async function detail(c,req,orderId,{includeHistory=true,historicalOnly=false}={
  const history=includeHistory?(await c.query(`SELECT e.*,round(e.amount_mt,5)::text display_mt,u.display_name actor_name
   FROM ${eventTable(row)} e JOIN users u ON u.id=e.actor_id WHERE outbound_id=$1 ORDER BY version DESC`,[row.outbound_id])).rows:undefined;
  return {...row,history,can_submit:canSubmit(req.user)&&row.latest_action!=='SUBMITTED',
-  can_decide:canDecide(req.user)&&row.latest_action==='SUBMITTED'&&row.latest_actor_id!==req.user.id};
+  can_decide:canDecide(req.user)&&row.latest_action==='SUBMITTED'&&(B.canSelfReview(req)||row.latest_actor_id!==req.user.id)};
 }
 const eventTable=row=>row.historical_import?'co_historical_metal_events':'co_metal_events';
 const inventorySort={date:'received_at',batch:'preparation_batch_no',net:'sum(net_kg)'};

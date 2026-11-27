@@ -208,7 +208,8 @@ test('isolated migration, initialization, business permission and concurrency ac
    };
    const before=await snapshot(),beforeCatalog=(await catalog()).filter(row=>
     row.name!=='co_dispatch_vehicle_import_plan_fk'&&
-    !(row.relation==='bundle_corrections'&&row.definition.includes('requester_id IS DISTINCT FROM reviewer_id')));
+    !(row.relation==='bundle_corrections'&&row.definition.includes('requester_id IS DISTINCT FROM reviewer_id'))&&
+    !(row.relation==='preparation_reversals'&&row.definition.includes('reviewed_by <> requested_by')));
    await assert.rejects(()=>migrate(c,{environment:'production',apply:true,backupVerified:true}),{code:'MIGRATION_TEST_CONVERSION_FORBIDDEN'});
    assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,from);
    assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,chain.length-from);
@@ -659,12 +660,14 @@ test('isolated migration, initialization, business permission and concurrency ac
   assert.equal((await api(loginRole,product,queue)).total,0);
   const report=await api('admin',product,'/cobalt/reports?from=2020-03-05&to=2020-03-05');
   assert.equal(report.outbound.find(row=>row.document_no===search).arecoms_mt,'0.24123');
-  const revision={version:2,amount_mt:'0.25000',reason:'Synthetic correction to verify revision'};
+  const revision={version:2,amount_mt:'0.24123',reason:'Retain verified laboratory value in a new revision'};
   await api('admin',product,detail+'/submit',revision);
-  const rejection={version:3,reason:'Original synthetic confirmation is correct'};
-  await api('admin',product,detail+'/confirm',rejection,403);
-  await api(approveRole,product,detail+'/reject',rejection);
-  assert.equal((await api(approveRole,product,detail)).confirmed_mt,'0.24123');
+  assert.equal((await api('admin',product,detail)).can_decide,true);
+  await api('admin',product,detail+'/confirm',{version:3,reason:'Verified the submitted laboratory value'});
+  const rechecked=await api(approveRole,product,detail);
+  assert.equal(rechecked.confirmed_mt,'0.24123');
+  const adminId=f.accounts.find(account=>account.role==='admin').id;
+  assert.deepEqual(rechecked.history.slice(0,2).map(e=>[e.action,e.actor_id]),[['CONFIRMED',adminId],['SUBMITTED',adminId]]);
   await assert.rejects(()=>c.query("UPDATE co_historical_metal_events SET reason='tamper' WHERE outbound_id=$1",[id]),/CO_RECORD_IMMUTABLE/);
   f.historicalMetalSource.outboundId=id;
  });

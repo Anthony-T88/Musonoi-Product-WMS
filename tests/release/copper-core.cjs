@@ -5,7 +5,14 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  try{
  for(const [role,permissions]of [['production_operator',['receipt:write','receipt:read']],['sales_manager',['plan:write']],['logistics_field_operator',['load:write','load:execute','allocation:write','allocation:read']]])for(const p of permissions)await c.query('INSERT INTO role_permissions VALUES($1,$2) ON CONFLICT DO NOTHING',[role,p]);
  app=await require('../../server/app.cjs').build({config:f.appCfg});const sessions={};let ip=1;
- for(const a of f.accounts){const r=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.95.0.'+(ip++),headers:{origin:f.appCfg.origin},payload:{username:a.username,password:a.password}});assert.equal(r.statusCode,200);sessions[a.role]={origin:f.appCfg.origin,cookie:r.cookies.map(x=>x.name+'='+x.value).join('; '),'x-csrf-token':r.json().csrfToken};}
+ const signIn=async account=>{
+  const response=await app.inject({method:'POST',url:'/api/v1/auth/login',remoteAddress:'127.95.0.'+(ip++),
+   headers:{origin:f.appCfg.origin},payload:{username:account.username,password:account.password}});
+  assert.equal(response.statusCode,200,'Sign in as '+account.role);
+  sessions[account.role]={origin:f.appCfg.origin,cookie:response.cookies.map(cookie=>cookie.name+'='+cookie.value).join('; '),
+   'x-csrf-token':response.json().csrfToken};
+ };
+ for(const account of f.accounts)await signIn(account);
  const request=(url,role='admin',body,key=crypto.randomUUID())=>app.inject({method:body?'POST':'GET',url:'/api/v1'+url,headers:{...sessions[role],'x-product-code':'CU_CATHODE','idempotency-key':key},...(body?{payload:body}:{})});
  const api=async(url,role='admin',body,expected=200)=>{const r=await request(url,role,body);assert.equal(r.statusCode,expected,url+' '+r.body.slice(0,250));return r.json();};
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),seq=String(Date.now()),customer=f.customers.CU_CATHODE;
@@ -428,14 +435,21 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(pending.state,'PENDING_LOGISTICS');
  await api(correctionPath,'admin',proposed,409);
  const reviewPath=correctionPath+'/'+pending.id+'/review',review={version:pending.version,decision:'APPROVED',note:'Checked source records'};
- await api(reviewPath,'admin',review,403);
  await api(reviewPath,'production_manager',review,403);
- const logistics=await api(reviewPath,'logistics_manager',review);
+ assert.equal((await api(correctionPath)).items.find(row=>row.id===pending.id).can_review,true);
+ assert((await api('/v34/ui461/tasks')).pending.some(task=>task.id===pending.id&&task.kind==='OUTBOUND_DATE_LOGISTICS_REVIEW'));
+ const logistics=await api(reviewPath,'admin',review);
  assert.equal(logistics.state,'PENDING_PRODUCTION');
  assert.equal((await api(correctionPath)).outbound_date,earlier);
  assert.equal((await datedOverview(earlier)).vehicles,1);
- const effective=await api(reviewPath,'production_manager',{...review,version:logistics.version});
+ assert((await api('/v34/ui461/tasks')).pending.some(task=>task.id===pending.id&&task.kind==='OUTBOUND_DATE_PRODUCTION_REVIEW'));
+ const effective=await api(reviewPath,'admin',{...review,version:logistics.version});
  assert.equal(effective.outbound_date,today);
+ const dateEvidence=(await c.query('SELECT requested_by,logistics_by,production_by FROM outbound_date_corrections WHERE id=$1',[pending.id])).rows[0];
+ const adminActor=f.accounts.find(actor=>actor.role==='admin').id;
+ assert.deepEqual(dateEvidence,{requested_by:adminActor,logistics_by:adminActor,production_by:adminActor});
+ assert.deepEqual((await c.query('SELECT action FROM audit_logs WHERE entity_id=$1 ORDER BY id',[pending.id])).rows.map(row=>row.action),
+  ['outbound_date_correction_requested','outbound_date_correction_logistics_approved','outbound_date_correction_production_approved']);
  assert.equal((await datedOverview(today)).vehicles,1);
  assert.equal((await datedOverview(earlier)).vehicles,0);
  assert.equal((await datedOverview(earlier,beforeDateCorrection)).vehicles,1);
@@ -665,6 +679,35 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.deepEqual(concurrent.map(response=>response.json().invoice_no).sort(),[sameDay.proforma_no+'-100',sameDay.proforma_no+'-101']);
  assert.equal((await c.query('SELECT count(*)::int n FROM loading_plan_groups WHERE invoice_no=$1',[historical])).rows[0].n,1);
  steps.push('same-prefix invoice preview, legacy padded suffix, concurrent distinct loading plans, sequences above 99');
+  const correctionBase='/v27/corrections',postedLoad=await api('/loads/'+load.id);
+  const {rows:[returnLocation]}=await c.query("SELECT id FROM locations WHERE project_id=$1 AND map_usage='TEMPORARY' AND active ORDER BY code LIMIT 1",[f.project]);
+  const returnRequest={loading_id:load.id,version:postedLoad.version,kind:'RETURN_OUTBOUND',reason:'Synthetic physical return evidence',
+   details:{return_location_id:returnLocation.id,physical_return_verified:true,physical_evidence:'Synthetic inspection recorded'}};
+  const body=row=>({version:row.version,reason:'Synthetic return approval evidence'});
+  const stage=async(row,action,role='admin',status=200)=>api(correctionBase+'/'+row.id+'/'+action,role,body(row),status);
+  const supervisor=f.accounts.find(account=>account.role==='site_supervisor');
+  const added=(await c.query("INSERT INTO role_permissions VALUES('site_supervisor','load:write') ON CONFLICT DO NOTHING")).rowCount;
+  try{
+   if(added)await signIn(supervisor);
+   const staffRequest=await api(correctionBase,'site_supervisor',returnRequest);
+   const approved=await stage(staffRequest,'authorize');
+   await stage(approved,'verify-return','site_supervisor',409);
+   await stage(approved,'reject');
+  }finally{
+   if(added){
+    await c.query("DELETE FROM role_permissions WHERE role_code='site_supervisor' AND permission_code='load:write'");
+    await signIn(supervisor);
+   }
+  }
+  const adminRequest=await api(correctionBase,'admin',returnRequest);
+  await stage(adminRequest,'verify-return','admin',409);
+  const authorized=await stage(adminRequest,'authorize'),verified=await stage(authorized,'verify-return');
+  assert.equal(verified.status,'RETURN_VERIFIED');
+  assert.equal(verified.authorized_by,adminRequest.requested_by);
+  assert.equal(verified.verified_by,adminRequest.requested_by);
+  await stage(verified,'reject');
+  assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'OUTBOUND');
+  steps.push('copper return self-verification requires administrator, authorization stage and physical evidence');
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
  }finally{await app?.close();await c.end();}
 });

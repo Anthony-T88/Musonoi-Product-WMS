@@ -9,14 +9,14 @@ const allowed=(path,method)=>correctionPath.test(path)&&(method==='POST'||method
 const can=(req,permission)=>req.user.permissions.includes(permission);
 const requestPermission=req=>['load:execute','load:write'].find(permission=>can(req,permission));
 const canReview=(req,row)=>!!stages[row.state]&&can(req,stages[row.state])&&
- req.user.id!==row.requested_by&&req.user.id!==row.logistics_by;
+ (B.canSelfReview(req)||req.user.id!==row.requested_by&&req.user.id!==row.logistics_by);
 const isCobalt=req=>req.productCode===cobalt;
 
 const errors={
  date:['请选择有效的出库日期','Choose a valid stock issue date','Choisissez une date de sortie de stock valide'],
  required:['出库日期更正原因必填，最多1000个字符','Enter a reason for the stock issue date correction (up to 1000 characters)','Indiquez le motif de la correction de la date de sortie de stock (1 000 caractères maximum)'],
  invalid:['请核对出库日期更正资料','Check the stock issue date correction details','Vérifiez les informations de correction de la date de sortie de stock'],
- forbidden:['当前账号无权办理此审批，申请人及已完成上一级审批的账号须回避','This account cannot review this correction. The requester and previous reviewer must decline to act.','Ce compte ne peut pas valider cette correction. Le demandeur et le premier approbateur doivent se récuser.'],
+ forbidden:['当前账号没有本节点审批权限，或该审批需要另一位授权人员办理','This account lacks permission for this step, or another authorized reviewer is required','Ce compte ne dispose pas de l’autorisation requise ou un autre approbateur habilité doit intervenir'],
  formal:['只有有效的正式出库单可以更正出库日期','Only active posted stock issues can be corrected','Seules les sorties de stock validées et actives peuvent être corrigées'],
  stale:['出库日期或审批状态已变化，请刷新后重新核对','The stock issue date or review status changed. Refresh and check again.','La date de sortie de stock ou le statut de validation a changé. Actualisez et vérifiez.'],
  noChange:['请选择不同的出库日期','Choose a different stock issue date','Choisissez une autre date de sortie de stock'],
@@ -150,8 +150,8 @@ async function pending(c,req){
   coalesce(q.logistics_at,q.requested_at) created_at,coalesce(${batch},l.code) document_no,u.display_name initiator_name
   FROM outbound_date_corrections q JOIN ${orderTable} l ON l.id=q.${key}
   JOIN users u ON u.id=q.requested_by LEFT JOIN ${joinedBatch}
-  WHERE q.state IN ${pendingStates} AND q.requested_by<>$1 AND q.logistics_by IS DISTINCT FROM $1
-  ORDER BY q.requested_at,q.id`,[req.user.id]);
+  WHERE q.state IN ${pendingStates} AND ($2::boolean OR (q.requested_by<>$1 AND q.logistics_by IS DISTINCT FROM $1))
+  ORDER BY q.requested_at,q.id`,[req.user.id,B.canSelfReview(req)]);
  const items=[];
  for(const row of rows){
   if(!canReview(req,row))continue;

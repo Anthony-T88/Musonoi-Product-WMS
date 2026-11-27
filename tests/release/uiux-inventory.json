@@ -1046,7 +1046,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "posted stock issue and declared date correction",
+      "state": "posted stock issue and date correction with administrator self-review",
       "template": "/outbounds/loads/:id"
     },
     {
@@ -1070,7 +1070,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "posted stock issue and declared date correction",
+      "state": "posted stock issue and date correction with administrator self-review",
       "template": "/outbounds/:id"
     },
     {

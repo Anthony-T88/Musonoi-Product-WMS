@@ -1,6 +1,7 @@
 'use strict';
 const {createHash}=require('node:crypto');
 const error=(code,message)=>Object.assign(Error(message),{statusCode:code});
+const canSelfReview=req=>req.user.role_code==='admin';
 function text(value,label,max=160){if(typeof value!=='string'||!value.trim()||value.trim().length>max)throw error(400,label+'无效');return value.trim();}
 function uuid(v){if(typeof v!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v))throw error(400,'标识格式无效');return v;}
 function version(v){if(!Number.isInteger(v)||v<1)throw error(400,'必须提供有效版本号');return v;}
@@ -19,4 +20,4 @@ function documentOrder({pending='false',historical='false',created='created_at',
 function documentPriority(row,pending){return row.historical_import?2:pending(row)?0:1;}
 function plateKey(value){return typeof value==='string'?value.slice(0,80).toUpperCase().replace(/[\s-]+/g,''):'';}
 function plateContains(column,parameter){return "strpos(regexp_replace(upper(coalesce("+column+",'')), '[[:space:]-]+','','g'),"+parameter+")>0";}
-module.exports={plateKey,plateContains,error,text,uuid,version,date,weight,audit,scope,mutate,documentOrder,documentPriority};
+module.exports={plateKey,plateContains,error,text,uuid,version,date,weight,audit,scope,mutate,documentOrder,documentPriority,canSelfReview};

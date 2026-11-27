@@ -182,10 +182,10 @@ function pages(ids){
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);
  add('cu-load-new','/outbounds/loads/new',[CU]);
- add('cu-load-detail','/outbounds/loads/:id',[CU],{example:'cuLoad',screenshot:true,state:'posted stock issue and declared date correction'});
+ add('cu-load-detail','/outbounds/loads/:id',[CU],{example:'cuLoad',screenshot:true,state:'posted stock issue and date correction with administrator self-review'});
  add('cu-load-matching','/outbounds/loads/:id/matching',[CU],{example:'cuLoadPending',state:'pending'});
  add('cu-outbound-detail','/outbounds/:id',[CU],{example:'cuOutbound'});
- add('co-outbound-detail','/outbounds/:id',[CO],{example:'coLoad',screenshot:true,state:'posted stock issue and declared date correction'});
+ add('co-outbound-detail','/outbounds/:id',[CO],{example:'coLoad',screenshot:true,state:'posted stock issue and date correction with administrator self-review'});
  add('cu-corrections','/outbounds/corrections',[CU]);
  add('cu-correction-detail','/outbounds/corrections/:id',[CU],{example:'cuCorrection'});
  add('cu-packing-legacy','/outbounds/packing-list/:id',[CU],{example:'cuLoad'});

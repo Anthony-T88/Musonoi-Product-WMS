@@ -25,11 +25,12 @@ async function read(c,req,id){
  const facts=await access(c,req,id);
  if(!facts)return {items:[],can_request:false,can_review:false};
  const {rows}=await c.query(`SELECT r.id,r.batch_no,r.state,r.reason,r.observation,r.work_version,r.requested_at,r.reviewed_at,
+  r.requested_by=$3 AS own_request,
   r.review_note,r.original_plan_id,r.customer_id,r.warehouse_id,r.project_id,jsonb_array_length(r.stock_snapshot) stock_count,
   u.display_name requester,v.display_name reviewer,replacement.id replacement_plan_id,replacement.batch_no replacement_batch
   FROM preparation_reversals r JOIN users u ON u.id=r.requested_by LEFT JOIN users v ON v.id=r.reviewed_by
   LEFT JOIN preparation_plans replacement ON replacement.reversal_id=r.id
-  WHERE r.product_code=$1 AND r.work_id=$2 ORDER BY r.requested_at DESC,r.id LIMIT 30`,[req.productCode,id]);
+  WHERE r.product_code=$1 AND r.work_id=$2 ORDER BY r.requested_at DESC,r.id LIMIT 30`,[req.productCode,id,req.user.id]);
  const archived=req.query.record?rows.find(row=>row.id===B.uuid(req.query.record)):null;
  if(req.query.record&&!archived)throw B.error(404,'PREPARATION_REVERSAL_NOT_FOUND');
  if(archived){
@@ -40,9 +41,10 @@ async function read(c,req,id){
     WHERE r.id=$1 AND j.n>$2 AND j.n<=$3 ORDER BY j.n`,[archived.id,(page-1)*100,page*100])).rows.map(row=>row.value);
   archived.stock_page=page;
  }
+ const pending=rows.find(row=>row.state==='PENDING');
  return {items:rows,version:facts.version,block:facts.block,state:facts.state,
-  can_request:canRequest(req)&&!facts.block&&!rows.some(r=>r.state==='PENDING'),
-  can_review:canReview(req)};
+  can_request:canRequest(req)&&!facts.block&&!pending,
+  can_review:canReview(req)&&!!pending&&(!pending.own_request||B.canSelfReview(req))};
 }
 
 async function mutate(c,req,id,review){
@@ -95,7 +97,7 @@ async function pending(c,req){
   cust.name customer_name,u.display_name initiator_name,r.requested_at created_at,'PREPARATION_REVERSAL' doc_type,
   'PREPARATION_REVERSAL_REVIEW' kind FROM preparation_reversals r JOIN users u ON u.id=r.requested_by
   LEFT JOIN customers cust ON cust.id=r.customer_id
-  WHERE r.product_code=$2 AND r.state='PENDING' AND EXISTS(SELECT 1 FROM user_scopes s
+  WHERE r.product_code=$2 AND r.state='PENDING' AND (r.requested_by<>$1 OR $3) AND EXISTS(SELECT 1 FROM user_scopes s
    WHERE s.user_id=$1 AND s.project_id=r.project_id AND (s.warehouse_id IS NULL OR s.warehouse_id=r.warehouse_id)
    AND (s.customer_id IS NULL OR s.customer_id=r.customer_id)
    AND (r.product_code<>'CO_HYDROXIDE' OR s.customer_id IS NULL))
@@ -103,7 +105,7 @@ async function pending(c,req){
    WHERE i.allocation_id=r.allocation_id AND NOT EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1
     AND s.project_id=r.project_id AND (s.warehouse_id IS NULL OR s.warehouse_id=l.warehouse_id)
     AND (s.customer_id IS NULL OR s.customer_id=r.customer_id)))
-  ORDER BY r.requested_at,r.id`,[req.user.id,req.productCode]);
+  ORDER BY r.requested_at,r.id`,[req.user.id,req.productCode,B.canSelfReview(req)]);
  return rows.map(row=>({...row,href:link(req.productCode,row.work_id)+'?reversal='+row.id+'#preparation-reversal'}));
 }
 

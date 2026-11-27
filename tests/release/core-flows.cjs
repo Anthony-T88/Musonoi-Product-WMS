@@ -272,6 +272,20 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(declared.outbound_date,tomorrow);
   const correction=await api(correctionPath,'logistics_field_operator',{expected_date:tomorrow,outbound_date:today,reason:'Synthetic cobalt checked business date'});
   const reviewPath=correctionPath+'/'+correction.id+'/review',decision={decision:'APPROVED',note:'Agrees with declaration'};
+  const applicant=f.accounts.find(account=>account.role==='logistics_field_operator');
+  const added=(await c.query("INSERT INTO role_permissions VALUES('logistics_field_operator','outbound:logistics-review') ON CONFLICT DO NOTHING")).rowCount;
+  try{
+   if(added)await signIn(applicant);
+   await api(reviewPath,'logistics_field_operator',{...decision,version:correction.version},403);
+   await assert.rejects(()=>c.query(`UPDATE outbound_date_corrections SET
+    state='PENDING_PRODUCTION',version=2,logistics_by=requested_by,logistics_at=clock_timestamp(),logistics_note=''
+    WHERE id=$1`,[correction.id]),{code:'23514',message:'OUTBOUND_DATE_INDEPENDENT_REVIEW_REQUIRED'});
+  }finally{
+   if(added){
+    await c.query("DELETE FROM role_permissions WHERE role_code='logistics_field_operator' AND permission_code='outbound:logistics-review'");
+    await signIn(applicant);
+   }
+  }
   const logistics=await api(reviewPath,'logistics_manager',{...decision,version:correction.version});
   assert.equal(logistics.outbound_date,tomorrow);
   assert.equal((await issuePoint(tomorrow)).vehicles,1);
@@ -378,6 +392,20 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const decision={version:1,reason:'Verified ARECOMS against original'};
   await api(base+'/confirm',officeRole,decision,403);
   await api(base+'/reject',officeRole,decision,403);
+  const grantedReview=await c.query("INSERT INTO role_permissions VALUES($1,'outbound:production-approve') ON CONFLICT DO NOTHING",[officeRole]);
+  try{
+   await signIn(office);
+   assert.equal((await api('/me',officeRole)).permissions.includes('outbound:production-approve'),true);
+   assert.equal((await api(base,officeRole)).can_decide,false);
+   await api(base+'/confirm',officeRole,decision,403);
+   await api(base+'/reject',officeRole,decision,403);
+   await assert.rejects(()=>c.query(
+    "INSERT INTO co_metal_events(outbound_id,version,action,amount_mt,actor_id,reason) VALUES($1,2,'CONFIRMED',$2,$3,$4)",
+    [initial.outbound_id,proposal.amount_mt,office.id,decision.reason]),/CO_METAL_PERMISSION/);
+  }finally{
+   if(grantedReview.rowCount)await c.query("DELETE FROM role_permissions WHERE role_code=$1 AND permission_code='outbound:production-approve'",[officeRole]);
+   await signIn(office);
+  }
   const decisions=await Promise.all([request(base+'/confirm','production_manager',decision),request(base+'/confirm','production_manager',decision)]);
   assert.deepEqual(decisions.map(r=>r.statusCode).sort(),[200,409]);
   const complete=await api(base);assert.equal(complete.shipment_status,'COMPLETED');assert.equal(complete.confirmed_mt,'0.35641');
@@ -401,9 +429,15 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   await api(base+'/submit','admin',{version:2,amount_mt:'0.40000',reason:'Synthetic revision'});
   await api(base+'/confirm','sales_operator',{version:3,reason:'Unauthorized reviewer'},403);
   assert.equal((await api(base)).confirmed_mt,'0.35641');
-  await api(base+'/reject','admin',{version:3,reason:'Cannot review own submission'},403);
-  await api(base+'/reject','production_manager',{version:3,reason:'Original confirmation is correct'});
-  assert.equal((await api(base)).confirmed_mt,'0.35641');
+  assert.equal((await api(base,'admin')).can_decide,true);
+  await api(base+'/reject','admin',{version:3,reason:'Original confirmation is correct'});
+  await api(base+'/submit','admin',{version:4,amount_mt:'0.35641',reason:'Verify retained confirmed evidence'});
+  await api(base+'/confirm','admin',{version:5,reason:'Verified the submitted assay'});
+  const selfReviewed=await api(base);
+  const adminId=f.accounts.find(account=>account.role==='admin').id;
+  assert.equal(selfReviewed.confirmed_mt,'0.35641');
+  assert.deepEqual(selfReviewed.history.slice(0,4).map(event=>[event.action,event.actor_id]),
+   [['CONFIRMED',adminId],['SUBMITTED',adminId],['REJECTED',adminId],['SUBMITTED',adminId]]);
   const workbook=new(require('exceljs').Workbook)(),exported=await request('/cobalt/metal/export?view=outbound&search='+matched.order.code);
   assert.equal(exported.statusCode,200,exported.body.slice(0,250));await workbook.xlsx.load(exported.rawPayload);
   const sheet=workbook.worksheets[0];assert.equal(sheet.getCell('H2').numFmt,'0.0000');
@@ -451,10 +485,10 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert(JSON.stringify(reportsBook.worksheets.map(ws=>ws.getSheetValues())).includes('0.35641'));
    const earlier=new Date(Date.parse(today)-86400000).toISOString().slice(0,10);
    const correctionPath='/cobalt/execution/orders/'+matched.order.id+'/outbound-date-corrections';
-   const amend=await api(correctionPath,'logistics_field_operator',{expected_date:today,outbound_date:earlier,reason:'Verify corrected shipment date on cobalt packing list'});
+   const amend=await api(correctionPath,'admin',{expected_date:today,outbound_date:earlier,reason:'Verify corrected shipment date on cobalt packing list'});
    const reviewPath=correctionPath+'/'+amend.id+'/review';
-   const firstReview=await api(reviewPath,'logistics_manager',{version:amend.version,decision:'APPROVED'});
-   await api(reviewPath,'production_manager',{version:firstReview.version,decision:'APPROVED'});
+   const firstReview=await api(reviewPath,'admin',{version:amend.version,decision:'APPROVED'});
+   await api(reviewPath,'admin',{version:firstReview.version,decision:'APPROVED'});
    const newSource=await api(base);
    assert.equal(newSource.source.shipping_date,earlier);
    assert.equal(newSource.document_date_stale,true);
@@ -473,7 +507,7 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
    const reissuedBook=new(require('exceljs').Workbook)();await reissuedBook.xlsx.load(reissued.rawPayload);
    assert.equal(reissuedBook.worksheets[0].getCell('E7').value.toISOString().slice(0,10),earlier);
  });
- await check('formal outbound with no prior ARECOMS value still posts once and remains in the confirmation queue',async()=>{
+ await check('administrator completes sequential loading and outbound approvals and posts once without ARECOMS',async()=>{
   const role='logistics_field_operator',manager='logistics_manager';
   const intakePlan=await P.approved(planApi,co,sales.id,P.batch(co,Number.parseInt(salt.slice(0,6),16)+1001));
   const p=await api('/cobalt/preparations',role,{preparation_plan_id:intakePlan.id,project_id:f.project,warehouse_id:f.warehouse,total_bags:1});
@@ -502,22 +536,29 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const args=new URLSearchParams({sales_plan_id:sales.id,preparation_id:p.id,arrival_id:arrival.id}),pv=await api('/cobalt/loading/preview?'+args);
   const suggested=(await api('/cobalt/export-permits/invoice-number?sales_plan_id='+sales.id,manager)).invoice_preview;
   const data={...Object.fromEntries(args),planned_load_date:today,destination:'Synthetic destination',remark:'',...pv.versions};
-  const draft=await api('/cobalt/loading/plans',manager,{...data,auto_invoice:true});
+  const draft=await api('/cobalt/loading/plans','admin',{...data,auto_invoice:true});
   assert.equal(draft.invoice_no,suggested);
   assert.equal(draft.packing_list_no,suggested+'-PL');
-  const lp=await api('/cobalt/loading/plans/'+draft.id,manager,{...data,version:draft.version,license_id:licensePath.split('/').at(-1)});
+  const lp=await api('/cobalt/loading/plans/'+draft.id,'admin',{...data,version:draft.version,license_id:licensePath.split('/').at(-1)});
   const match=await api('/cobalt/loading/preview?'+new URLSearchParams({...Object.fromEntries(args),plan_id:lp.id}));
-  await api('/cobalt/loading/plans/'+lp.id+'/match',role,{version:lp.version,preview_hash:match.preview_hash});
+  await api('/cobalt/loading/plans/'+lp.id+'/match','admin',{version:lp.version,preview_hash:match.preview_hash});
   const order=(await api('/cobalt/loading/plans/'+lp.id)).order,execution='/cobalt/execution/orders/'+order.id;
-  const advance=async(action,actor,extra={})=>{
+  const advance=async(action,extra={})=>{
    const data=await api(execution);
-   return api(execution+'/'+action,actor,{...(action==='start'?{order_version:data.order.version}:{version:data.execution.version}),note:'No assay fixture',...extra});
+   return api(execution+'/'+action,'admin',{...(action==='start'?{order_version:data.order.version}:{version:data.execution.version}),note:'No assay fixture',...extra});
   };
   assert.equal((await api(execution)).shipment_status,'PENDING_OUTBOUND');
   assert.equal((await api('/cobalt/metal?preparation_id='+p.id)).items[0].bags,1);
-  await advance('start',role);await advance('confirm',role,{confirmation:'ALL_BAGS'});await advance('approve','site_supervisor');
-  await advance('depart',role,{actual_departure:true,departed_at:new Date().toISOString()});
-  await advance('submit-outbound',role);await advance('logistics-approve',manager);await advance('production-approve','production_manager');
+  await advance('start');await advance('confirm',{confirmation:'ALL_BAGS'});await advance('approve');
+  await advance('depart',{actual_departure:true,outbound_date:today});
+  await advance('submit-outbound');
+  const submitted=await api(execution);
+  await api(execution+'/production-approve','admin',{version:submitted.execution.version},409);
+  await advance('logistics-approve');await advance('production-approve');
+  const posted=await api(execution);
+  const adminId=f.accounts.find(account=>account.role==='admin').id;
+  for(const key of ['started_by','confirmed_by','load_reviewed_by','submitted_by','logistics_by','production_by'])
+   assert.equal(posted.execution[key],adminId,key);
   const metal=await api('/cobalt/metal/outbounds/'+order.id);
   assert.equal(metal.legacy_metal_mt,null);assert.equal(metal.confirmed_mt,null);assert.equal(metal.shipment_status,'PENDING_ARECOMS');
   assert.equal((await api('/cobalt/metal?preparation_id='+p.id)).items.length,0);
