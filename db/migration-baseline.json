@@ -885,6 +885,10 @@
     {
       "version": "221_v490_configurable_business_roles.sql",
       "checksum": "5284f502fa33f3c2ae730db31fe8fb36c6c4c137020d95b6189734e052aa923e"
+    },
+    {
+      "version": "222_v490_outbound_business_date.sql",
+      "checksum": "1b203f0d584acd80833db144662cccaea84cbc2a37fd4abde6835fb0fc17174f"
     }
   ]
 }

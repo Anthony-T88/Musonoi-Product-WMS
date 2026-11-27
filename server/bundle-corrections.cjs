@@ -42,10 +42,12 @@ async function register({app,pool,permitted,csrf}){
  app.get(base,{preHandler:read},req=>I.transaction(pool,async c=>{
   const bundle=await visible(c,req,B.uuid(req.params.id));
   const {rows}=await c.query(`SELECT q.id,q.bundle_version,q.original,q.changes,q.reason,q.requested_at,q.state,
-   q.reviewed_at,q.review_note,u.display_name requester,v.display_name reviewer,q.requester_id<>$2 AS independent_reviewer
+   q.reviewed_at,q.review_note,u.display_name requester,v.display_name reviewer,q.requester_id=$2 AS own_request
    FROM bundle_corrections q JOIN users u ON u.id=q.requester_id LEFT JOIN users v ON v.id=q.reviewer_id
    WHERE q.bundle_id=$1 ORDER BY (q.state='PENDING') DESC,q.requested_at DESC,q.id LIMIT 20`,[bundle.id,req.user.id]);
-  return {bundle,items:rows,can_request:canRequest(req)&&bundle.available&&!rows.some(row=>row.state==='PENDING'),can_review:canReview(req)};
+  const request=canRequest(req),review=canReview(req);
+  return {bundle,items:rows.map(row=>({...row,can_review:review&&(!row.own_request||request)})),
+   can_request:request&&bundle.available&&!rows.some(row=>row.state==='PENDING'),can_review:review};
  }));
  app.post(base,{preHandler:[read,permitted(requestPermission),csrf]},req=>B.mutate(pool,req,c=>mutate(c,req,canRequest,async bundle=>{
   const body=req.body;fields(body,['version','changes','reason']);fields(body.changes,['sheets_per_bundle','seal_no','production_date']);
@@ -71,6 +73,7 @@ async function pending(c,req){
   q.requested_at created_at,u.display_name initiator_name,'BUNDLE_CORRECTION' kind,'BUNDLE_CORRECTION' doc_type,
   'PENDING' status
   FROM bundle_corrections q JOIN inventory_view v ON v.uuid=q.bundle_id JOIN users u ON u.id=q.requester_id
-  WHERE q.state='PENDING' AND q.requester_id<>$1 AND ${scope.text} ORDER BY q.requested_at,q.id`,scope.values)).rows.map(row=>({...row,href:'/inventory/'+encodeURIComponent(row.document_no)}));
+  WHERE q.state='PENDING' AND (q.requester_id<>$1 OR $${scope.values.length+1}::boolean)
+   AND ${scope.text} ORDER BY q.requested_at,q.id`,[...scope.values,canRequest(req)])).rows.map(row=>({...row,href:'/inventory/'+encodeURIComponent(row.document_no)}));
 }
 module.exports={register,pending};

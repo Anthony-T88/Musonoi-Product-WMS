@@ -14,6 +14,7 @@ async function access(c,req,id){
    net_weight:match.loading_weight||item.net_weight,contract_no:match.contract_no||null};
  });
  return {...d,creator_name:name(d.created_by),operator_name:name(d.completed_by),submitter_name:name(d.submitted_by),
+  outbound_date:await require('./outbound-date-corrections.cjs').effectiveDate(c,id,false),
   weight_summary:await require('./inventory-control.cjs').loadSummary(c,id),
   loading_plan:await require('./loading-plans.cjs').matched(c,id),
   lot_nos:[...new Set((await c.query('SELECT DISTINCT a.lot_no FROM loading_items z JOIN reservations r ON r.id=z.reservation_id JOIN allocations a ON a.id=r.allocation_id WHERE z.loading_id=$1'+selected,[id])).rows.map(a=>a.lot_no))],

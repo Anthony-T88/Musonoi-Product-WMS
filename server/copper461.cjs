@@ -44,12 +44,13 @@ async function tasks(c,req,context=null){const x=context||await M.context(c,req,
   if(sales||commerce)pending.push({...d,kind:sales?'SALES_REVIEW':'COMMERCE_REVIEW'});
   if(d.status==='REJECTED'&&d.submitted_by===req.user.id&&can(req,'plan:write'))pending.push({...d,kind:'SALES_EDIT'});
  }
- if(can(req,'gate:read')&&can(req,'gate:exit'))for(const d of await M.outbound(c,x,false)){
+ if(can(req,'gate:read')&&can(req,'gate:exit'))for(const d of await M.postedOutbound(c,x)){
   const g=(await c.query('SELECT id,state,document_no FROM gate_permits WHERE cu_loading_id=$1',[d.id])).rows[0];
   const returned=(await c.query("SELECT 1 FROM outbound_corrections WHERE loading_id=$1 AND kind='RETURN_OUTBOUND' AND status IN('REQUESTED','AUTHORIZED','RETURN_VERIFIED','APPLIED')",[d.id])).rowCount;
   if(!returned&&g?.state!=='EXITED')pending.push({...d,doc_type:'GATE',kind:'GATE_EXIT',document_no:g?.document_no||d.document_no,href:'/outbounds?view=departures'+(g?'&permit='+g.id:''),created_at:d.manager_at,initiator_name:null});
  }
  pending.push(...await require('./sales-close.cjs').pending(c,req),...await require('./preparation-plans.cjs').pending(c,req),...await require('./preparation-reversals.cjs').pending(c,req),...await require('./registration-requests.cjs').pending(c,req),...await require('./export-licenses.cjs').pending(c,req),...await require('./bundle-corrections.cjs').pending(c,req));
+ pending.push(...await require('./outbound-date-corrections.cjs').pending(c,req));
  pending=[...new Map(pending.map(t=>[t.kind+'|'+t.id,t])).values()];
  const ids=all.map(d=>d.id),audit=ids.length?(await c.query(`SELECT a.entity_id,a.entity_type,a.action,a.occurred_at,a.after_data->>'product_code' product_code,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id
   WHERE a.actor_id=$1 AND a.entity_id=ANY($2::text[]) ORDER BY a.occurred_at DESC,a.id DESC`,[req.user.id,ids])).rows:[];

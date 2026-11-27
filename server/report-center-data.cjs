@@ -30,7 +30,7 @@ async function historical(c,req,q,transport=false){
 
 async function copperLoads(c,req,q){
  const x=await M.context(c,req,{...q,type:'outbound'},true);
- return x.w.history_unavailable?[]:M.outbound(c,x);
+ return M.outbound(c,x);
 }
 
 async function shipping(c,req,q){

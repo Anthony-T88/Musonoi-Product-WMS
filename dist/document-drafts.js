@@ -16,8 +16,8 @@ window.DocumentDrafts={
   'v26-load':['装车单','Loading Order','outbounds',/^\/v26\/loads$/],
   'lp-load-form':['装车单','Loading Order','outbounds',/^\/v31\/loads(?:\/[0-9a-f-]+)?$/],
   'pending-load-edit':['装车单','Loading Order','outbounds',/^\/(?:v26\/)?loads\/[0-9a-f-]+$/],
-  'cu-departure-draft':['离场申报','Departure Declaration','outbounds',/^\/v26\/loads\/[0-9a-f-]+\/depart$/],
-  'co-execution-departure':['离场申报','Departure Declaration','outbounds',/^\/cobalt\/execution\/orders\/[0-9a-f-]+\/(?:correct-)?depart(?:ure)?$/],
+  'cu-departure-draft':['出库日期申报','Stock Issue Date Declaration','outbounds',/^\/v26\/loads\/[0-9a-f-]+\/depart$/],
+  'co-execution-departure':['出库日期申报','Stock Issue Date Declaration','outbounds',/^\/cobalt\/execution\/orders\/[0-9a-f-]+\/(?:correct-)?depart(?:ure)?$/],
   'v27-count-create':['盘点单','Inventory Count','stocktaking',/^\/v27\/stocktakes$/],
   'v33-count-create':['盘点单','Inventory Count','stocktaking',/^\/v33\/stocktakes$/],
   'co-count-create':['盘点单','Inventory Count','stocktaking',/^\/cobalt\/stocktaking$/],
@@ -70,6 +70,8 @@ window.DocumentDrafts={
   return saved.concat(form.documentDraftFields?.()||[]);
  },
  async fill(form,entries){
+  if(form.id==='co-execution-departure')entries=entries.map(([name,index,type,value])=>
+   name==='departed_at'&&type==='datetime-local'?['outbound_date',index,'date',String(value).slice(0,10)]:[name,index,type,value]);
   const repeated=entries.reduce((max,[,index])=>Math.max(max,index+1),0);
   const add=form.querySelector('#v26-add,[data-co-add-line],[data-add-line]');
   if(add&&repeated>1){

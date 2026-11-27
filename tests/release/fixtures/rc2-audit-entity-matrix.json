@@ -44,6 +44,11 @@
       "basis": "Private working content is never audited. Global audit retains only the owner's form type and draft version."
     },
     {
+      "entity": "outbound_date_correction",
+      "policy": "ADMIN_ONLY",
+      "basis": "The outbound order provides scoped correction history. The global audit requires system administration."
+    },
+    {
       "entity": "export_licenses",
       "policy": "ADMIN_ONLY",
       "basis": "Scoped operational history is available in license detail. Global audit uses the conservative administrator-only fallback."

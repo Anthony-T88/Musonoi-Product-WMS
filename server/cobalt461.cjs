@@ -50,6 +50,7 @@ async function tasks(c,req){const all=await documents(c,req),native=(await O.tod
  for(const d of all.filter(d=>d.doc_type==='COUNT')){if(['OPEN','REJECTED'].includes(d.status)&&can(req,'stocktake:write'))pending.push({...d,kind:'CO_COUNT'});if(d.status==='SUBMITTED'&&can(req,'stocktake:review'))pending.push({...d,kind:'CO_COUNT_REVIEW'});}
  if(can(req,'gate:read')&&can(req,'gate:exit'))for(const d of all.filter(d=>d.doc_type==='LOAD'&&d.status==='OUTBOUND')){const permit=(await c.query('SELECT id,state,document_no FROM gate_permits WHERE co_order_id=$1',[d.id])).rows[0];if(permit?.state!=='EXITED')pending.push({...d,kind:'GATE_EXIT',doc_type:'GATE',document_no:permit?.document_no||d.document_no,href:'/outbounds?view=departures'+(permit?'&permit='+permit.id:'')});}
  pending.push(...await require('./sales-close.cjs').pending(c,req),...await require('./preparation-plans.cjs').pending(c,req),...await require('./preparation-reversals.cjs').pending(c,req),...await require('./registration-requests.cjs').pending(c,req),...await require('./export-licenses.cjs').pending(c,req));
+ pending.push(...await require('./outbound-date-corrections.cjs').pending(c,req));
  pending=[...new Map(pending.map(t=>[t.kind+'|'+t.id,t])).values()];
  // Use the actual current-stage event, never the document's earlier creation
  // time when an approval or execution step has just advanced.

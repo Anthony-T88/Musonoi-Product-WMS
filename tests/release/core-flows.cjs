@@ -196,11 +196,14 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   }finally{await c.query('ROLLBACK');}
  });
  await check('formal outbound alone deducts inventory after independent load, logistics and production approvals',async()=>{
+  const tomorrow=new Date(Date.parse(today)+86400000).toISOString().slice(0,10);
+  const issuePoint=async day=>(await api('/cobalt/overview?'+new URLSearchParams({from:day,to:day,preparation_id:prep.id}))).chart_trend.rows[0];
   const base='/cobalt/execution/orders/'+matched.order.id,act=async(action,role,extra={})=>{const d=await api(base);await api(base+'/'+action,role,{...(action==='start'?{order_version:d.order.version}:{version:d.execution.version}),note:'Synthetic rc2 '+action,...extra});};
   await api('/cobalt/packing/orders/'+matched.order.id,'admin',undefined,409);
   const bp='/cobalt/customs/bp',ids=[matched.order.id];
   await api(bp+'/preview','admin',{ids},409);
-  await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,departed_at:new Date().toISOString()});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
+  await act('start','logistics_field_operator');await act('confirm','logistics_field_operator',{confirmation:'ALL_BAGS'});await act('approve','site_supervisor');await act('depart','logistics_field_operator',{actual_departure:true,outbound_date:tomorrow});await act('submit-outbound','logistics_field_operator');await act('logistics-approve','logistics_manager');
+  assert.equal(await issuePoint(tomorrow),undefined);
   await api(bp,'sales_operator',undefined,403);
   const template=await api(bp+'/template');
   assert.equal(template.revision,0);
@@ -259,6 +262,23 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(approvals[1].statusCode,200,approvals[1].body);
   assert.deepEqual(approvals[0].json(),approvals[1].json());
   assert.equal((await c.query('SELECT count(*)::int n FROM co_outbounds WHERE order_id=$1',[matched.order.id])).rows[0].n,1);
+  const future=await issuePoint(tomorrow);
+  assert.equal(future.vehicles,1);
+  assert.equal(future.stock_units,null);
+  assert.equal((await issuePoint(today)).vehicles,0);
+  const futureShipping=await api('/report-center?'+new URLSearchParams({kind:'shipping',source:'ONLINE',from:tomorrow,to:tomorrow}));
+  assert.deepEqual(futureShipping.detail.rows.map(row=>row.date),[tomorrow]);
+  const correctionPath=base+'/outbound-date-corrections',declared=await api(correctionPath);
+  assert.equal(declared.outbound_date,tomorrow);
+  const correction=await api(correctionPath,'logistics_field_operator',{expected_date:tomorrow,outbound_date:today,reason:'Synthetic cobalt checked business date'});
+  const reviewPath=correctionPath+'/'+correction.id+'/review',decision={decision:'APPROVED',note:'Agrees with declaration'};
+  const logistics=await api(reviewPath,'logistics_manager',{...decision,version:correction.version});
+  assert.equal(logistics.outbound_date,tomorrow);
+  assert.equal((await issuePoint(tomorrow)).vehicles,1);
+  const effective=await api(reviewPath,'production_manager',{...decision,version:logistics.version});
+  assert.equal(effective.outbound_date,today);
+  assert.equal(await issuePoint(tomorrow),undefined);
+  assert.equal((await issuePoint(today)).vehicles,1);
   assert.equal((await api('/cobalt/preparations/'+prep.id+'/reversal','site_supervisor')).block,'LOADED');
   const permitJob=await api('/cobalt/gate-permits/from/'+matched.order.id,'admin',{});
   const gatePath='/cobalt/gate-permits/'+permitJob.permit_id,current=await api(gatePath);
@@ -414,6 +434,8 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(downloaded.headers['x-content-sha256'],generated.file_sha256);
   const book=new(require('exceljs').Workbook)();await book.xlsx.load(downloaded.rawPayload);
   const sheet=book.worksheets[0],bag=(await api('/cobalt/stock/batches/'+prep.id)).items[0];
+   assert.equal(details.source.shipping_date,today);
+   assert.equal(sheet.getCell('E7').value.toISOString().slice(0,10),today);
   assert.equal(sheet.getCell('E24').value,'N/A');
   assert.equal(sheet.getCell('C30').value,bag.bag_no);
   assert.equal(sheet.getCell('E30').value,'RC2-SEAL-'+salt);
@@ -427,6 +449,29 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal(exported.statusCode,200,exported.body.slice(0,200));
   const reportsBook=new(require('exceljs').Workbook)();await reportsBook.xlsx.load(exported.rawPayload);
   assert(JSON.stringify(reportsBook.worksheets.map(ws=>ws.getSheetValues())).includes('0.35641'));
+   const earlier=new Date(Date.parse(today)-86400000).toISOString().slice(0,10);
+   const correctionPath='/cobalt/execution/orders/'+matched.order.id+'/outbound-date-corrections';
+   const amend=await api(correctionPath,'logistics_field_operator',{expected_date:today,outbound_date:earlier,reason:'Verify corrected shipment date on cobalt packing list'});
+   const reviewPath=correctionPath+'/'+amend.id+'/review';
+   const firstReview=await api(reviewPath,'logistics_manager',{version:amend.version,decision:'APPROVED'});
+   await api(reviewPath,'production_manager',{version:firstReview.version,decision:'APPROVED'});
+   const newSource=await api(base);
+   assert.equal(newSource.source.shipping_date,earlier);
+   assert.equal(newSource.document_date_stale,true);
+   assert.equal(newSource.revisions[0].current,false);
+   const waitingForReissue=await api(packing+'?'+new URLSearchParams({...filter,document_status:'MISSING'}));
+   assert.equal(waitingForReissue.items.find(row=>row.order_id===matched.order.id)?.document_date_stale,true);
+   assert.equal((await request(base+'/file')).statusCode,409);
+   const original=await request(base+'/revisions/1/file');
+   assert.equal(original.statusCode,200);
+   assert.deepEqual(original.rawPayload,downloaded.rawPayload);
+   const {layout}=await api(base+'/preview');
+   const shownDay=new Date(earlier+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+   assert.equal(layout.rows.flatMap(row=>row.cells).find(cell=>cell.address==='E7').text,shownDay);
+   assert.equal((await api(base+'/generate','admin',{expected_revision:1,source_signature:newSource.source_signature,reason:'Corrected shipment date after two approvals'})).revision,2);
+   const reissued=await request(base+'/file');assert.equal(reissued.statusCode,200);
+   const reissuedBook=new(require('exceljs').Workbook)();await reissuedBook.xlsx.load(reissued.rawPayload);
+   assert.equal(reissuedBook.worksheets[0].getCell('E7').value.toISOString().slice(0,10),earlier);
  });
  await check('formal outbound with no prior ARECOMS value still posts once and remains in the confirmation queue',async()=>{
   const role='logistics_field_operator',manager='logistics_manager';

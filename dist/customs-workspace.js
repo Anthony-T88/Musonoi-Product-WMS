@@ -38,7 +38,7 @@ window.CustomsWorkspace={
     '" aria-pressed="false" aria-controls="customs-packing-preview" aria-label="'+esc(t('预览批次 ','Preview lot ')+(row.batch||row.code))+
     '">'+esc(row.batch||'—')+'</button>';
    const cells=[select,esc(row.truck||'—')+'<small>'+esc(row.customer||'—')+'</small>',
-    esc(row.weight),esc(row.number||'—'),this.packingStatus(row.revision),esc(row.loadingDate||'—')];
+    esc(row.weight),esc(row.number||'—'),this.packingStatus(row.revision,row.dateStale),esc(row.loadingDate||'—')];
    return '<tr data-packing-row="'+esc(row.id)+'">'+cells.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>';
   });
   const template=this.can('packing-template:write')?'<a class="button secondary compact" data-packing-template href="/customs/templates">'+
@@ -83,6 +83,7 @@ window.CustomsWorkspace={
    truck:co?row.transport_snapshot?.truck_no:row.shipping_vehicle_no||row.vehicle_no,
    number:PlanDisplay.documentNo(row.document_no||row.packing_list_no,row.historical_import),weight:weight==null?'—':co?CobaltLoadingUI.mt(weight):Tonnes.format(weight),
    revision,generated:co?row.document_generated_at:row.generated_at,loadingDate:row.loading_date,
+   shippingDate:row.outbound_date,dateStale:row.document_date_stale,
    planId:co?row.plan_id:row.loading_plan_id,planCode:row.loading_plan_code,
    transporter:row.transporter,destination:row.destination,posted:co||row.posted
   };
@@ -99,9 +100,9 @@ window.CustomsWorkspace={
    '<div class="wms-filter-actions"><button class="button primary">'+t('查询','Search')+
    '</button><a class="button secondary" data-wms-reset href="/customs/packing-list">'+t('重置','Reset')+'</a></div></form>';
  },
- packingStatus(revision){
-  return '<span class="packing-document-status '+(revision?'is-generated':'is-pending')+'">'+
-   (revision?this.t('已生成','Generated'):this.t('待生成','Awaiting Generation'))+'</span>';
+  packingStatus(revision,dateStale){
+   return '<span class="packing-document-status '+(revision&&!dateStale?'is-generated':'is-pending')+'">'+
+    (dateStale?this.t('待重新生成','Needs Regeneration'):revision?this.t('已生成','Generated'):this.t('待生成','Awaiting Generation'))+'</span>';
  },
  packingPreview(preview,row,co){
   const t=this.t,body=preview.querySelector('.packing-preview-body');
@@ -113,25 +114,28 @@ window.CustomsWorkspace={
    facts([[t('当前版本','Current Revision'),row.revision?'r'+esc(row.revision):t('待首次生成','Awaiting First Generation')],
     [t('生成时间','Generated At'),BusinessTime.display(row.generated)]])+'<div class="packing-revision-list" aria-live="polite"></div></details>';
   body.innerHTML='<div class="packing-preview-title"><div><h3>'+text(row.number||row.code)+'</h3><span>'+text(row.batch)+'</span></div>'+
-   this.packingStatus(row.revision)+'</div>'+
+    this.packingStatus(row.revision,row.dateStale)+'</div>'+
    facts([[t('客户','Customer'),text(row.customer)],[t('车头号','Truck Plate'),text(row.truck)],
     [t('净重（吨）','Net Weight (MT)'),text(row.weight)],[t('业务节点','Workflow Stage'),row.posted?
      t('已正式出库','Stock Issue Posted'):t('物流经理已审批','Logistics Manager Approved')]])+
    '<section><h3>'+t('关联单据','Related Documents')+'</h3>'+facts([
     [t('装车单号','Loading Order No.'),link((co?'/outbounds/':'/outbounds/loads/')+row.id,row.code)],[t('装车计划号','Loading Plan No.'),plan]])+'</section>'+
-   '<section><h3>'+t('运输资料','Transport Details')+'</h3>'+facts([
-    [t('运输商','Transporter'),text(row.transporter)],[t('目的地','Destination'),text(row.destination)]])+'</section>'+revisions+
+    '<section><h3>'+t('运输资料','Transport Details')+'</h3>'+facts([
+     [t('运输商','Transporter'),text(row.transporter)],[t('目的地','Destination'),text(row.destination)],
+     [t('发运日期','Shipping Date'),text(row.shippingDate)]])+'</section>'+revisions+
    '<div class="business-toolbar"><a class="button primary" href="'+detail+'">'+t('单据详情','Document Details')+'</a>'+
    (Shipping.canGenerate()?'<button type="button" class="button secondary" data-packing-generate>'+
     (row.revision?t('生成新版本','Generate New Revision'):t('生成清关单据','Generate Customs Documents'))+'</button>':'')+
-   (row.revision?'<a class="button secondary" href="'+detail+'?preview=archive#packing-list-preview">'+t('预览 / 打印','Preview / Print')+'</a>'+
-    (this.can('inventory:export')?'<button type="button" class="button secondary" data-packing-download>'+t('下载归档','Download Archive')+'</button>':''):'')+'</div>';
+    (row.revision&&(!row.dateStale||co)?'<a class="button secondary" href="'+detail+
+     (row.dateStale?'?preview=current':'?preview=archive')+'#packing-list-preview">'+t('预览 / 打印','Preview / Print')+'</a>':'')+
+    (row.revision&&!row.dateStale&&this.can('inventory:export')?
+     '<button type="button" class="button secondary" data-packing-download>'+t('下载归档','Download Archive')+'</button>':'')+'</div>';
   const history=body.querySelector('details'),download=body.querySelector('[data-packing-download]'),
    generate=body.querySelector('[data-packing-generate]');
   if(row.revision)history.ontoggle=()=>{
    if(history.open)this.packingHistory(history,this.base()+'/packing-list/'+row.id+'/revisions',detail);
   };
-  if(download)download.onclick=()=>co?CobaltPackingUI.download(row.revision,row.id):Shipping.download(row.id);
+   if(download)download.onclick=()=>co?CobaltPackingUI.download(null,row.id):Shipping.download(row.id);
   if(generate)generate.onclick=()=>this.generate(row,co,generate);
  },
  async generate(row,co,button){
@@ -148,8 +152,10 @@ window.CustomsWorkspace={
     '<label class="wms-field">'+t('商业发票单价（美元/吨）','Commercial Invoice Unit Price (USD/MT)')+
     '<input name="unit_price_usd" type="number" required min="0.01" max="999999999.99" step="0.01" value="'+esc(data.document?.unit_price_usd||'')+'"></label>'+
     '<label class="wms-field">'+t('运费单价（美元/吨）','Freight Rate (USD/MT)')+'<input readonly value="50.00"></label>';
-   dialog(title,'<form id="customs-document-generate" class="user-form" data-wms-validation data-no-i18n>'+
-    '<div class="form-grid wms-field-grid">'+fields+'</div><p class="error" role="alert">'+
+    const shippingDate=co?data.source.shipping_date:data.document_date;
+    dialog(title,'<form id="customs-document-generate" class="user-form" data-wms-validation data-no-i18n>'+
+     '<div class="form-grid wms-field-grid"><label class="wms-field">'+t('发运日期','Shipping Date')+
+     '<input readonly value="'+esc(shippingDate||'—')+'"></label>'+fields+'</div><p class="error" role="alert">'+
     (blocked?t('原始重量缺失：','Missing original weights: ')+esc(data.missing_weights.join(' / ')):'')+
     '</p><div class="wms-filter-actions"><button class="button primary"'+(blocked?' disabled':'')+'>'+
     t('生成','Generate')+'</button></div></form>',{protectForm:'#customs-document-generate'});
@@ -211,9 +217,9 @@ window.CustomsWorkspace={
    if(ProductContext.isCopper())await Shipping.detail(path.split('/').pop());
    else{
     await CobaltPackingUI.route();
-    if(new URLSearchParams(location.search).get('preview')==='archive'&&$('co-packing-preview-section')&&CobaltPackingUI.data?.document){
-     await CobaltPackingUI.preview(CobaltPackingUI.data.document.revision);
-    }
+    const preview=new URLSearchParams(location.search).get('preview'),data=CobaltPackingUI.data;
+    if($('co-packing-preview-section')&&(preview==='archive'||preview==='current'))
+     await CobaltPackingUI.preview(preview==='archive'&&!data?.document_date_stale?data?.document?.revision:null);
    }
   }else throw Object.assign(Error(t('找不到页面','Page not found')),{statusCode:404});
   this.decorate(tab);

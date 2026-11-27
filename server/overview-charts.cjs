@@ -3,7 +3,15 @@
 // Stock points read the historical ledger at each period close.
 const T=require('../dist/tonnes.js');
 function trend(rows,window,{dateKey='date',weightKey='net_weight',kilograms=false,asOf=null,inbound=[]}={}){
- const from=window.from.slice(0,10),requestedTo=window.to.slice(0,10),observed=asOf?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(asOf)):requestedTo,to=observed<requestedTo?observed:requestedTo,monthly=(Date.parse(to)-Date.parse(from))/86400000>92;
+ const from=window.from.slice(0,10),requestedTo=window.to.slice(0,10);
+ const observed=asOf?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(asOf)):requestedTo;
+ // Formally approved future declarations are reportable, but they cannot extend stock observations.
+ let to=observed<requestedTo?observed:requestedTo;
+ for(const row of rows){
+  const date=String(row[dateKey]||'').slice(0,10);
+  if(date>=from&&date<=requestedTo&&date>to)to=date;
+ }
+ const monthly=(Date.parse(to)-Date.parse(from))/86400000>92;
  const key=date=>String(date).slice(0,monthly?7:10),map=new Map();
  const start=new Date(from+'T00:00:00Z'),end=new Date(to+'T00:00:00Z');
  if(monthly)start.setUTCDate(1);
@@ -11,11 +19,11 @@ function trend(rows,window,{dateKey='date',weightKey='net_weight',kilograms=fals
  for(const row of rows){const bucket=map.get(key(row[dateKey]));if(!bucket)continue;bucket.vehicles++;bucket.unknown_weights+=Number(row.unknown_weights||0);if(row[weightKey]==null){if(!row.unknown_weights)bucket.unknown_weights++;continue;}bucket.total+=T.scaled(String(row[weightKey]),9)/(kilograms?1000n:1n);bucket.known++;}
  const receipts=new Map([...map.keys()].map(k=>[k,{total:0n,known:0,prepared:0,bundles:0,units:0,unknown:0}]));
  for(const row of inbound){const b=receipts.get(key(row.date));if(!b)continue;b.units++;b.bundles+=Number(row.bundles||0);b.unknown+=Number(row.unknown_weights??(row.net_weight==null?1:0));if(!row.prepared)continue;b.prepared++;if(row.net_weight==null)continue;b.known++;b.total+=T.scaled(String(row.net_weight),9);}
- return {granularity:monthly?'month':'day',unit:'MT',from,to:from>to?requestedTo:to,requested_to:requestedTo,observed_through:observed,future_window:from>to,time_zone:'Africa/Lubumbashi',basis:'FINAL_APPROVAL_CANONICAL_OUTBOUND',inbound_basis:'CONFIRMED_RECEIPT_DATE_CUTOFF_EVIDENCE',rows:[...map.values()].map(b=>{const r=receipts.get(b.period);return {period:b.period,net_weight:b.vehicles&&!b.known?null:T.fixed(b.total,9),vehicles:b.vehicles,unknown_weights:b.unknown_weights,inbound_net_weight:r.units&&!r.known?null:T.fixed(r.total,9),inbound_bundles:r.bundles,inbound_units:r.units,inbound_unknown_weights:r.unknown};})};
+ return {granularity:monthly?'month':'day',unit:'MT',from,to:from>to?requestedTo:to,requested_to:requestedTo,observed_through:observed,future_window:from>to,time_zone:'Africa/Lubumbashi',basis:'DECLARED_CANONICAL_OUTBOUND',inbound_basis:'CONFIRMED_RECEIPT_DATE_CUTOFF_EVIDENCE',rows:[...map.values()].map(b=>{const r=receipts.get(b.period);return {period:b.period,net_weight:b.vehicles&&!b.known?null:T.fixed(b.total,9),vehicles:b.vehicles,unknown_weights:b.unknown_weights,inbound_net_weight:r.units&&!r.known?null:T.fixed(r.total,9),inbound_bundles:r.bundles,inbound_units:r.units,inbound_unknown_weights:r.unknown};})};
 }
 function closingPoints(chart,cutoff){
  const limit=Math.min(+new Date(cutoff),+new Date(chart.to+'T00:00:00+02:00')+86400000);
- return chart.rows.map(({period})=>{
+ return chart.rows.filter(({period})=>period<=chart.observed_through.slice(0,chart.granularity==='month'?7:10)).map(({period})=>{
   let next;
   if(chart.granularity==='month'){
    const [year,month]=period.split('-').map(Number);

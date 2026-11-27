@@ -72,7 +72,8 @@ async function register({app,pool,auth,permitted,csrf,workEnabled=false,stockEna
  app.get(prefix+'/operations/status',async req=>{
   const {key,path,method}=req.query,route=typeof path==='string'?'/api/v1'+path:'';
   const submission=Metal?.isSubmission(route,method);
-  await (submission?metalSubmission:read)(req);
+  const dateCorrection=executionEnabled&&require('./outbound-date-corrections.cjs').allowed(route,method);
+  await (submission?metalSubmission:dateCorrection?permitted('load:read'):read)(req);
   if(method!=='POST'||typeof key!=='string'||!/^[-a-zA-Z0-9_]{8,128}$/.test(key)||!route||
    !allowed(route,method)&&!require('./dispatch-transport.cjs').allowed(route,method)&&
    !require('./preparation-reversals.cjs').allowed(route,method)&&
@@ -86,7 +87,7 @@ async function register({app,pool,auth,permitted,csrf,workEnabled=false,stockEna
   const r=(await pool.query('SELECT response FROM co_requests WHERE actor_id=$1 AND route=$2 AND key=$3',[req.user.id,method+' '+route,key])).rows[0];
   if(!r)return {committed:false,state:'UNKNOWN',notice:'结果尚未确认，请保留原幂等键'};
   const result=r.response;
-  if(submission)await B.scope(pool,req,result.project_id,result.warehouse_id,result.customer_id);
+  if(submission||dateCorrection)await B.scope(pool,req,result.project_id,result.warehouse_id,result.customer_id);
   return {committed:true,state:'CONFIRMED',entity_id:result.id,notice:'已确认钴业务操作结果'};
  });
 }

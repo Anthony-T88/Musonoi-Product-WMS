@@ -17,7 +17,7 @@ window.LoadingDetails465={
    corrections||=P.card(left,t('更正与异常办理','Corrections and Exceptions'),s,'loading465-corrections');
    P.move(n,corrections,s);
   };
-  P.facts(facts,[[t('备货批次号','Preparation Lot Number'),batch],[t('客户','Customer'),customer],[t('装车单号','Loading Order No.'),order.code],[t('装箱单号','Packing List No.'),PlanDisplay.documentNo(plan.packing_list_no)||'—'],[t('车牌','Truck'),transport.truck_no||transport.vehicle_no||d.shipping_vehicle_no||order.vehicle_no||'—'],[t('司机','Driver'),transport.driver_name?.trim()||plan.driver_name?.trim()||'—'],[t('销售计划','Sales Plan'),co?d.plan.sales_plan_code:d.plan_code||plan.sales_plan_code||'—'],[t('创建时间','Created At'),order.created_at?BusinessTime.display(order.created_at):'—'],...(co?[[t('合同号','Contract No.'),d.outbound?.snapshot?.contract?.contract_no||d.plan.contract_no||'—'],[t('挂车1 / 挂车2','Trailer 1 / Trailer 2'),[transport.trailer_one,transport.trailer_two].filter(Boolean).join(' / ')||'—'],[t('运输商','Transporter'),transport.transporter||'—'],[t('集装箱号','Container No.'),transport.container_no||'—']]:[])],s);
+  P.facts(facts,[[t('备货批次号','Preparation Lot Number'),batch],[t('客户','Customer'),customer],[t('装车单号','Loading Order No.'),order.code],[t('装箱单号','Packing List No.'),PlanDisplay.documentNo(plan.packing_list_no)||'—'],[t('车牌','Truck'),transport.truck_no||transport.vehicle_no||d.shipping_vehicle_no||order.vehicle_no||'—'],[t('司机','Driver'),transport.driver_name?.trim()||plan.driver_name?.trim()||'—'],[t('销售计划','Sales Plan'),co?d.plan.sales_plan_code:d.plan_code||plan.sales_plan_code||'—'],[t('创建时间','Created At'),order.created_at?BusinessTime.display(order.created_at):'—'],...(d.outbound_date&&!root.querySelector('#outbound-date-correction-panel')?[[t('已申报出库日期','Declared Stock Issue Date'),d.outbound_date]]:[]),...(co?[[t('合同号','Contract No.'),d.outbound?.snapshot?.contract?.contract_no||d.plan.contract_no||'—'],[t('挂车1 / 挂车2','Trailer 1 / Trailer 2'),[transport.trailer_one,transport.trailer_two].filter(Boolean).join(' / ')||'—'],[t('运输商','Transporter'),transport.transporter||'—'],[t('集装箱号','Container No.'),transport.container_no||'—']]:[])],s);
   const transportDetails=P.el('details','loading465-transport',facts,s);
   P.el('summary','',transportDetails,s).textContent=t('运输与装车计划资料','Transport and Loading Plan Details');
   const planId=co?d.plan.id:plan.id;
@@ -72,6 +72,8 @@ window.LoadingDetails465={
    else {if(n.matches('p,.co-execution-policy'))P.cls(n,'loading465-note',s);P.move(n,left,s);}}
   if(co)for(const n of root.querySelectorAll(':scope>#ux11-co-corrections'))addCorrection(n);
   if(corrections)left.append(corrections);
+  const dateCorrection=root.querySelector('#outbound-date-correction-panel');
+  if(dateCorrection){P.move(dateCorrection,left,s);actions.after(dateCorrection);}
   if(!actionRow.children.length)P.hide(actionRow,s);
   if(!weightNode&&!actions.querySelector('button,input:not([type=hidden]),form,a'))P.hide(actions,s);
   P.finish(root,s);return true;

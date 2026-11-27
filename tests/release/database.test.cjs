@@ -206,7 +206,9 @@ test('isolated migration, initialization, business permission and concurrency ac
      ORDER BY 1,2,3`);
     return rows.filter(row=>!row.name.startsWith('v490_manager_'));
    };
-   const before=await snapshot(),beforeCatalog=(await catalog()).filter(row=>row.name!=='co_dispatch_vehicle_import_plan_fk');
+   const before=await snapshot(),beforeCatalog=(await catalog()).filter(row=>
+    row.name!=='co_dispatch_vehicle_import_plan_fk'&&
+    !(row.relation==='bundle_corrections'&&row.definition.includes('requester_id IS DISTINCT FROM reviewer_id')));
    await assert.rejects(()=>migrate(c,{environment:'production',apply:true,backupVerified:true}),{code:'MIGRATION_TEST_CONVERSION_FORBIDDEN'});
    assert.equal((await c.query('SELECT count(*)::int n FROM schema_migrations')).rows[0].n,from);
    assert.equal((await migrate(c,{environment:'test',apply:true,backupVerified:true})).added,chain.length-from);

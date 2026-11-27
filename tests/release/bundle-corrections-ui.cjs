@@ -76,7 +76,7 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
    await page.addLocatorHandler(page.locator('#task-notice[open]'),()=>page.evaluate(()=>document.querySelector('#task-notice [data-task-dismiss]')?.click()));
    return {context,page};
   }
-  await t.test('request and independent approval from the bundle detail and manager tasks',async()=>{
+   await t.test('request and manager approval from the bundle detail and tasks',async()=>{
    const url='/inventory/'+main.bundle_no;
    let login=await open(requester,'zh-CN',390);
    try{
@@ -111,7 +111,7 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
     assert.equal((await c.query("SELECT count(*)::int n FROM bundle_metadata_history WHERE bundle_id=$1 AND kind='BUNDLE_CORRECTION'",[main.id])).rows[0].n,1);
    }finally{await login.context.close();}
   });
-  await t.test('administrator delegates a recommended correction permission to sales and the account uses it',async()=>{
+   await t.test('administrator grants both correction permissions and sales submits and approves its own request',async()=>{
    const permission='inventory:correct-request',review='inventory:correct-review',role='sales_operator';
    const management=await open('admin');
    try{
@@ -149,10 +149,24 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
      form.getByRole('button',{name:'提交审核'}).click()
     ]);
     assert.equal(submitted.status(),200,await submitted.text());
-    assert.equal((await submitted.json()).state,'PENDING');
+     const correction=await submitted.json();
+     assert.equal(correction.state,'PENDING');
     await p.getByText('Synthetic delegated correction proof',{exact:true}).waitFor();
-    assert.equal(await p.locator('#bundle-correction-records [data-bundle-correction]').count(),0);
     assert.equal((await current(delegated.id)).sheets_per_bundle,48);
+     const approve=p.locator('#bundle-correction-records [data-bundle-correction="'+correction.id+'"][data-decision=APPROVED]');
+     await approve.click();
+     const [approved]=await Promise.all([
+      p.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/v1'+base(delegated)+'/'+correction.id+'/review'),
+      p.locator('#operation-confirm-accept').click()
+     ]);
+     assert.equal(approved.status(),200,await approved.text());
+     await p.locator('#bundle-correction-records').getByText('已通过',{exact:true}).waitFor();
+     const after=await current(delegated.id);
+     assert.equal(after.sheets_per_bundle,52);
+     assert.equal(after.net_weight,delegated.net_weight);
+     const roleActor=f.accounts.find(account=>account.role===role).id;
+     const {rows:[record]}=await c.query('SELECT requester_id,reviewer_id FROM bundle_corrections WHERE id=$1',[correction.id]);
+     assert.deepEqual(record,{requester_id:roleActor,reviewer_id:roleActor});
    }finally{await sales.context.close();}
   });
   await t.test('grant and revoke show the affected permissions and honor cancellation',async()=>{
@@ -172,6 +186,77 @@ assert.equal((await c.query("SELECT count(*)::int n FROM role_permissions WHERE 
     await page.getByRole('heading',{name:'Enable Required Permissions'}).waitFor();
     assert.match(await page.locator('#operation-confirm').innerText(),/View Vehicle Gate Exit and Permit History/);
     await page.locator('#operation-confirm-accept').click();assert(await read.isChecked()&&await print.isChecked());
+   }finally{await context.close();}
+  });
+  await t.test('stock issue browser sends the selected date and displays each correction approval stage',async()=>{
+   const {context,page}=await open('admin','zh-CN',390);
+   try{
+    const id=crypto.randomUUID(),correction=crypto.randomUUID(),url='/outbounds/loads/'+id;
+    const path='/api/v1/v26/loads/'+id,base=path+'/outbound-date-corrections',review=base+'/'+correction+'/review';
+    const declared='2001-02-03',corrected='2040-12-31',reason='Synthetic stock issue date evidence',requests=[];
+    let posted=false,stage=null;
+    const states=['PENDING_LOGISTICS','PENDING_PRODUCTION','APPROVED'];
+    const fulfill=(route,data)=>route.fulfill({json:data});
+    await page.route('**/api/v1/loads/'+id,route=>fulfill(route,{id,code:'DATE-UI-TEST',
+     customer_name:'Synthetic date customer',vehicle_no:'DATE-UI',items:[],version:1,
+     status:posted?'DEPARTED':'LOADED',workflow_state:posted?'OUTBOUND':'READY'}));
+    await page.route('**/api/v1/v26/reviews/loads/'+id,route=>fulfill(route,{items:[]}));
+    await page.route('**/api/v1/outbound-workspace/orders/'+id+'/corrections',route=>fulfill(route,{items:[]}));
+    await page.route('**'+path+'/depart',route=>{
+     requests.push(route.request().postDataJSON());
+     posted=true;
+     return fulfill(route,{id});
+    });
+    await page.route('**'+base,route=>{
+     if(route.request().method()==='POST'){
+      requests.push(route.request().postDataJSON());
+      stage=0;
+      return fulfill(route,{id:correction});
+     }
+     return fulfill(route,{outbound_date:stage===2?corrected:declared,can_request:stage===null,
+      items:stage===null?[]:[{id:correction,version:stage+1,state:states[stage],can_review:stage<2,
+       original_date:declared,corrected_date:corrected,requester_name:'Synthetic operator',reason}]});
+    });
+    await page.route('**'+review,route=>{
+     requests.push(route.request().postDataJSON());
+     stage++;
+     return fulfill(route,{id:correction});
+    });
+    await page.goto(origin+url+'?date_correction=1#outbound-date-correction-panel');
+    const date=page.locator('#v26-departure-date');
+    await date.fill(declared);
+    assert.equal(await date.getAttribute('min'),null);
+    assert.equal(await date.getAttribute('max'),null);
+    await page.locator('[data-v26-action=depart]').click();
+    const confirmation=page.locator('#operation-confirm');
+    await confirmation.getByText(declared,{exact:true}).waitFor();
+    const [departure]=await Promise.all([
+     page.waitForResponse(r=>new URL(r.url()).pathname===path+'/depart'),
+     confirmation.locator('#operation-confirm-accept').click()
+    ]);
+    assert.equal(departure.status(),200,await departure.text());
+    await page.goto(origin+url+'?date_correction=1#outbound-date-correction-panel');
+    const request=page.locator('#outbound-date-correction-request');
+    await request.click().catch(async error=>{
+     throw Error((await page.locator('#page-content').innerText()).slice(0,1400),{cause:error});
+    });
+    const form=page.locator('#outbound-date-correction-form');
+    await form.locator('[name=outbound_date]').fill(corrected);
+    await form.locator('[name=reason]').fill(reason);
+    await form.locator('button[type=submit]').click();
+    const panel=page.locator('#outbound-date-correction-panel');
+    for(const title of ['待物流经理审批','待生产管理部经理审批']){
+     await panel.getByText(title,{exact:true}).waitFor();
+     await panel.locator('[data-decision=APPROVED]').click();
+     await page.locator('#operation-confirm-accept').click();
+    }
+    await panel.getByText('已生效',{exact:true}).waitFor();
+    assert.equal(await panel.locator('.business-toolbar span[data-no-i18n]').textContent(),corrected);
+    assert.deepEqual(requests,[
+     {version:1,note:'',actual_departure:true,outbound_date:declared},
+     {expected_date:declared,outbound_date:corrected,reason},
+     {version:1,decision:'APPROVED',note:''},{version:2,decision:'APPROVED',note:''}
+    ]);
    }finally{await context.close();}
   });
  }finally{await browser?.close();await app?.close();await c.end();}

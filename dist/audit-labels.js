@@ -12,6 +12,14 @@ Object.assign(actions,{
  customs_bp_agency_updated:['更新清关代理','Update Customs Agency'],
  customs_bp_agency_archived:['归档清关代理','Archive Customs Agency']
 });
+Object.assign(actions,{
+ outbound_date_declared:['出库日期申报','Stock Issue Date Declaration'],
+ outbound_date_correction_requested:['提交出库日期更正申请','Submit Stock Issue Date Correction'],
+ outbound_date_correction_logistics_approved:['物流经理通过出库日期更正','Logistics Manager Approved Stock Issue Date Correction'],
+ outbound_date_correction_logistics_rejected:['物流经理驳回出库日期更正','Logistics Manager Rejected Stock Issue Date Correction'],
+ outbound_date_correction_production_approved:['生产管理部经理通过出库日期更正','Production Manager Approved Stock Issue Date Correction'],
+ outbound_date_correction_production_rejected:['生产管理部经理驳回出库日期更正','Production Manager Rejected Stock Issue Date Correction']
+});
 const nouns={receipt:'入库单',receipts:'入库单',lot:'备货单',allocation:'备货单',loading:'装车单',load:'装车单',loading_plan:'装车管理',loading_plan_document:'装车管理',sales_plan:'销售计划',customer:'客户档案',contract:'合同档案',user:'员工账户',account:'员工账户',stocktake:'盘点任务',outbound_correction:'出库更正'};
 const verbs={created:['创建','Create'],updated:['修改','Update'],submitted:['提交','Submit'],confirmed:['确认','Confirm'],approved:['批准','Approve'],rejected:['驳回','Reject'],cancelled:['取消','Cancel'],deleted:['删除','Delete'],restored:['恢复','Restore'],observed:['登记实盘','Record observations'],start:['开始','Start'],review:['复核','Review'],approve:['批准','Approve'],complete:['完成','Complete'],cancel:['取消','Cancel']};
 const api={actions,label(code,language){const en=language?language==='en':typeof I18n!=='undefined'&&I18n.usesEnglish,a=actions[code]||actions[String(code).toUpperCase()];if(a)return a[en?1:0];for(const [verb,pair] of Object.entries(verbs)){if(String(code).endsWith('_'+verb)){const kind=String(code).slice(0,-verb.length-1);return en?pair[1]+' '+kind.replaceAll('_',' '):pair[0]+(nouns[kind]||'业务记录');}}return en?'Business operation':'业务操作';}};

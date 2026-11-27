@@ -46,7 +46,8 @@ const outboundFrom=`FROM (
   customer_name,contract_no,truck_no,bags,historical_import,historical_source_id,customer_name,contract_no
  FROM co_historical_metal_outbound
 ) m LEFT JOIN users u ON u.id=m.confirmed_by`;
-const postedDay="(m.posted_at AT TIME ZONE 'Africa/Lubumbashi')::date";
+const postingDay="(m.posted_at AT TIME ZONE 'Africa/Lubumbashi')::date";
+const postedDay=`(CASE WHEN m.historical_import THEN ${postingDay} ELSE coalesce(wms_cobalt_outbound_date(m.order_id),${postingDay}) END)`;
 const shipment=`SELECT m.*,${postedDay}::text posted_day,u.display_name confirmed_by_name,
  round(m.net_kg*0.001,4)::text net_mt,round(m.estimated_metal_mt,5)::text estimated_mt,
  round(m.confirmed_metal_mt,5)::text confirmed_mt,
@@ -85,8 +86,8 @@ function outboundFilter(user,f,historicalOnly=false){
  if(['PENDING_ARECOMS','COMPLETED'].includes(f.status))q.add('m.shipment_status=?',f.status);
  if(f.search)q.add(`strpos(lower(concat_ws(' ',m.outbound_code,m.order_no,m.document_no,m.preparation_batch_no,
   m.current_customer_name,m.current_contract_no,m.truck_no)),lower(?))>0`,f.search);
- if(f.from)q.add("m.posted_at >= (?::date::timestamp AT TIME ZONE 'Africa/Lubumbashi')",f.from);
- if(f.to)q.add("m.posted_at < ((?::date+1)::timestamp AT TIME ZONE 'Africa/Lubumbashi')",f.to);
+ if(f.from)q.add(postedDay+' >= ?::date',f.from);
+ if(f.to)q.add(postedDay+' <= ?::date',f.to);
  return q;
 }
 async function summary(c,req,f={},window,historicalOnly=false){
@@ -95,15 +96,15 @@ async function summary(c,req,f={},window,historicalOnly=false){
  const status=(await c.query('SELECT '+shipTotals+' '+outboundFrom+o.where(),o.args)).rows[0];
  const currentMonth="date_trunc('month',clock_timestamp() AT TIME ZONE 'Africa/Lubumbashi')";
  const month=(await c.query('SELECT '+shipTotals+' '+outboundFrom+o.where()+
-  ' AND m.posted_at >= ('+currentMonth+" AT TIME ZONE 'Africa/Lubumbashi') AND m.posted_at < (("+currentMonth+"+interval '1 month') AT TIME ZONE 'Africa/Lubumbashi')",o.args)).rows[0];
+  ' AND '+postedDay+' >= '+currentMonth+'::date AND '+postedDay+' < ('+currentMonth+"+interval '1 month')::date",o.args)).rows[0];
  let period=month,months=[];
  if(window){
   const selected=outboundFilter(req.user,{...f,from:window.from,to:window.to},historicalOnly);
   period=(await c.query('SELECT '+shipTotals+' '+outboundFrom+selected.where(),selected.args)).rows[0];
-  const start="(date_trunc('month',?::date::timestamp) AT TIME ZONE 'Africa/Lubumbashi')";
-  const end="((date_trunc('month',?::date::timestamp)+interval '1 month') AT TIME ZONE 'Africa/Lubumbashi')";
+  const start="date_trunc('month',?::date::timestamp)::date";
+  const end="(date_trunc('month',?::date::timestamp)+interval '1 month')::date";
   const monthly=outboundFilter(req.user,{...f,from:null,to:null},historicalOnly);
-  monthly.add('m.posted_at >= '+start,window.from);monthly.add('m.posted_at < '+end,window.to);
+  monthly.add(postedDay+' >= '+start,window.from);monthly.add(postedDay+' < '+end,window.to);
   months=(await c.query(`SELECT to_char(${postedDay},'YYYY-MM') period,${shipTotals} ${outboundFrom}${monthly.where()} GROUP BY 1 ORDER BY 1`,monthly.args)).rows;
  }
  return {inventory,status,month,period,months};
@@ -128,7 +129,7 @@ async function detail(c,req,orderId,{includeHistory=true,historicalOnly=false}={
 }
 const eventTable=row=>row.historical_import?'co_historical_metal_events':'co_metal_events';
 const inventorySort={date:'received_at',batch:'preparation_batch_no',net:'sum(net_kg)'};
-const outboundSort={date:'m.posted_at',batch:'m.preparation_batch_no',net:'m.net_kg',metal:'m.confirmed_metal_mt'};
+const outboundSort={date:postedDay,batch:'m.preparation_batch_no',net:'m.net_kg',metal:'m.confirmed_metal_mt'};
 function listOptions(q){
  const view=q.view||'inventory',page=Number(q.page||1),sort=q.sort||'date',direction=q.direction||'desc';
  if(Object.keys(q).some(k=>!['view','page','sort','direction','search','status','from','to',...filters].includes(k))||

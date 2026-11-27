@@ -121,7 +121,7 @@ async function parameters(c,input){
  const monthly=kind==='balance'||kind==='sales';
  const from=monthly?month+'-01':C.date(input.from||today.slice(0,8)+'01');
  const to=monthly?(kind==='balance'? [clippedMonth(month),today].sort()[0]:clippedMonth(month)):C.date(input.to||today);
- if(from>to||kind!=='sales'&&to>today||(+new Date(to)-+new Date(from))/86400000>366)throw C.error(400,'日期范围无效');
+ if(from>to||!['sales','shipping'].includes(kind)&&to>today||(+new Date(to)-+new Date(from))/86400000>366)throw C.error(400,'日期范围无效');
  const group=input.group||'date';
  if(!groupKeys.includes(group))throw C.error(400,'发运分组无效');
  const q={kind,from,to,group,month,today};

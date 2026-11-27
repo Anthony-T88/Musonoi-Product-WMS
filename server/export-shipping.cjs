@@ -12,7 +12,8 @@ const format=n=>(n/1000000n)+'.'+String(n%1000000n).padStart(6,'0');
 async function load(c,req,id,formal=true){
  const l=(await c.query(`SELECT l.*,(${posted}) posted,(${packingEligible}) packing_eligible,cu.name customer_name,cu.code customer_code,cu.address customer_address,cu.email customer_email,cu.phone customer_phone,
  coalesce((SELECT o.code FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED' ORDER BY o.created_at DESC LIMIT 1),l.code) outbound_no,
- coalesce(l.manager_at,(SELECT max(o.departed_at) FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED')) outbound_at
+ coalesce(l.manager_at,(SELECT max(o.departed_at) FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED')) outbound_at,
+ wms_copper_outbound_date(l.id)::text outbound_date
  FROM loading_orders l JOIN copper_customers cu ON cu.id=l.customer_id WHERE l.id=$2 AND ${scope}`,[req.user.id,C.uuid(id)])).rows[0];
  if(!l)throw C.error(403,'装车记录不存在或超出授权范围');
  if(formal&&!l.packing_eligible)throw C.error(409,'物流经理审批通过后方可生成、预览或下载Packing List；已取消、驳回或冲销单据不可使用');return l;
@@ -31,23 +32,27 @@ async function detail(c,req,id){
  const transport=(await c.query('SELECT fields,version,updated_at FROM export_transport WHERE loading_id=$1',[l.id])).rows[0]||{fields:{},version:0};
  const authorized_correction=(await c.query("SELECT id,code,proposed_data->>'vehicle_no' vehicle_no,applied_revision FROM outbound_corrections WHERE loading_id=$1 AND kind='VEHICLE' AND status='APPLIED' ORDER BY applied_at DESC,id DESC LIMIT 1",[l.id])).rows[0]||null;const loading_plan=await LP.matched(c,l.id);transport.fields={vehicle_no:l.vehicle_no,forwarder:l.carrier||'',...transport.fields,...(loading_plan?LP.transport(loading_plan):{})};
  if(authorized_correction)transport.fields.vehicle_no=authorized_correction.vehicle_no;transport.fields.buyer_information=contact(l);const customer_contact={name:l.customer_name,address:l.customer_address,email:l.customer_email,phone:l.customer_phone},customer_contact_signature=PL.digest(Buffer.from(JSON.stringify(customer_contact)));
- const document=(await c.query("SELECT d.*,r.file_name,r.file_sha256,r.template_sha256,r.snapshot->>'customer_contact_signature' customer_contact_signature,r.snapshot->>'source_signature' source_signature,r.snapshot->>'generation_basis' generation_basis,coalesce((r.snapshot->'included_sheets') ? 'INV',false) includes_invoice,r.snapshot->'commercial_invoice'->>'unit_price_usd' unit_price_usd FROM packing_list_documents d JOIN packing_list_revisions r ON r.loading_id=d.loading_id AND r.revision=d.revision WHERE d.loading_id=$1",[l.id])).rows[0]||null;
+ const document=(await c.query("SELECT d.*,r.file_name,r.file_sha256,r.template_sha256,r.snapshot->>'customer_contact_signature' customer_contact_signature,r.snapshot->>'source_signature' source_signature,r.snapshot->>'generation_basis' generation_basis,coalesce(r.snapshot->>'document_date',r.snapshot->>'outbound_date',left(r.snapshot->>'outbound_at',10)) shipping_date,coalesce((r.snapshot->'included_sheets') ? 'INV',false) includes_invoice,r.snapshot->'commercial_invoice'->>'unit_price_usd' unit_price_usd FROM packing_list_documents d JOIN packing_list_revisions r ON r.loading_id=d.loading_id AND r.revision=d.revision WHERE d.loading_id=$1",[l.id])).rows[0]||null;
  const totals={gross:0n,net:0n},missing=[];for(const i of items){for(const key of ['gross','net']){const v=i[key+'_weight'];if(v==null)missing.push(i.bundle_no+' '+(key==='gross'?'毛重':'净重'));else totals[key]+=T.scaled(v,6);}}
- const date=at=>at?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(at):null,document_date=loading_plan?.planned_load_date||date(l.actual_departed_at||l.logistics_review_at||l.outbound_at),source_signature=PL.digest(Buffer.from(JSON.stringify({loading_id:l.id,customer:l.customer_name,document_date,...(authorized_correction?{authorized_correction}:{}),actual_departed_at:l.actual_departed_at,logistics_review_at:l.logistics_review_at,plan:loading_plan?{id:loading_plan.id,version:loading_plan.version,fields:LP.transport(loading_plan)}:null,items}))),document_stale=!!document&&(document.transport_version!==transport.version||!!authorized_correction&&!document.source_signature||!!document.source_signature&&document.source_signature!==source_signature||(document.customer_contact_signature?document.customer_contact_signature!==customer_contact_signature:!!contact(l)));
- return {authorized_correction,customer_contact,customer_contact_signature,posted:l.posted,packing_eligible:l.packing_eligible,document_date,source_signature,document_stale,generation_basis:l.posted?'POSTED':'LOGISTICS_APPROVED',loading_plan,packing_list_no:loading_plan?.packing_list_no||null,loading_id:l.id,loading_code:l.code,outbound_no:loading_plan?.packing_list_no||document?.document_no||l.outbound_no,outbound_at:l.outbound_at?.toISOString(),outbound_date:l.outbound_at?new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit',day:'2-digit'}).format(l.outbound_at):null,vehicle_no:l.vehicle_no,customer_name:l.customer_name,customer_code:l.customer_code,
+ const document_date=l.outbound_date,document_date_stale=!!document&&document.shipping_date!==document_date;
+ const source_signature=PL.digest(Buffer.from(JSON.stringify({loading_id:l.id,customer:l.customer_name,document_date,...(authorized_correction?{authorized_correction}:{}),actual_departed_at:l.actual_departed_at,logistics_review_at:l.logistics_review_at,plan:loading_plan?{id:loading_plan.id,version:loading_plan.version,fields:LP.transport(loading_plan)}:null,items})));
+ const document_stale=!!document&&(document_date_stale||document.transport_version!==transport.version||!!authorized_correction&&!document.source_signature||!!document.source_signature&&document.source_signature!==source_signature||(document.customer_contact_signature?document.customer_contact_signature!==customer_contact_signature:!!contact(l)));
+ return {authorized_correction,customer_contact,customer_contact_signature,posted:l.posted,packing_eligible:l.packing_eligible,document_date,document_date_stale,source_signature,document_stale,generation_basis:l.posted?'POSTED':'LOGISTICS_APPROVED',loading_plan,packing_list_no:loading_plan?.packing_list_no||null,loading_id:l.id,loading_code:l.code,outbound_no:loading_plan?.packing_list_no||document?.document_no||l.outbound_no,outbound_at:l.outbound_at?.toISOString(),outbound_date:l.outbound_date,vehicle_no:l.vehicle_no,customer_name:l.customer_name,customer_code:l.customer_code,
  items,bundle_count:items.length,total_net_weight:missing.some(x=>x.endsWith('净重'))?null:format(totals.net),total_gross_weight:missing.some(x=>x.endsWith('毛重'))?null:format(totals.gross),
  contracts:[...new Set(items.map(i=>i.contract_no).filter(Boolean))],lots:[...new Set(items.map(i=>i.lot_no).filter(Boolean))],plans:[...new Map(items.map(i=>[i.plan_id,{id:i.plan_id,code:i.plan_code}])).values()],
- transport,document,missing_weights:missing,transport_changes:(await c.query("SELECT a.occurred_at,a.before_data->'fields' before_fields,a.after_data->'fields' after_fields,a.after_data->>'reason' reason,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.entity_id=$1 AND a.action='export_transport_updated' ORDER BY a.id DESC",[l.id])).rows,revisions:(await c.query('SELECT revision,file_name,file_sha256,template_sha256,generated_at,generated_by,reason FROM packing_list_revisions WHERE loading_id=$1 ORDER BY revision DESC',[l.id])).rows};
+ transport,document,missing_weights:missing,transport_changes:(await c.query("SELECT a.occurred_at,a.before_data->'fields' before_fields,a.after_data->'fields' after_fields,a.after_data->>'reason' reason,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id WHERE a.entity_id=$1 AND a.action='export_transport_updated' ORDER BY a.id DESC",[l.id])).rows,revisions:(await c.query("SELECT revision,file_name,file_sha256,template_sha256,generated_at,generated_by,reason,coalesce((snapshot->'included_sheets') ? 'INV',false) includes_invoice FROM packing_list_revisions WHERE loading_id=$1 ORDER BY revision DESC",[l.id])).rows};
 }
 async function list(c,req,formal,includeApproved=false,includeHistory=false,{packingWorkspace=false}={}){
  const v31=await LP.enabled(c),selected=v31?' AND NOT i.plan_removed':'';const q=req.query||{},page=Number(q.page||1);if(!Number.isInteger(page)||page<1||page>100000)throw C.error(400,'页码无效');
  const size=packingWorkspace&&q.page_size!==undefined?Number(q.page_size):30;
  if(size!==30&&![10,25,50,100].includes(size))throw C.error(400,'每页行数无效');
  const values=[req.user.id],parts=[scope];if(formal)parts.push(includeApproved?packingEligible:posted);
+ const day='wms_copper_outbound_date(l.id)',dateStale=packingWorkspace?
+  "(d.revision IS NOT NULL AND coalesce(r.snapshot->>'document_date',r.snapshot->>'outbound_date',left(r.snapshot->>'outbound_at',10)) IS DISTINCT FROM "+day+"::text)":'false';
  const bind=v=>{values.push(v);return '$'+values.length;};
  for(const key of ['search','document_status','contract_no','customer','outbound_no','vehicle_no','status','plan_id','start','end','customer_id','created_date'])if(q[key]!==undefined&&(typeof q[key]!=='string'||q[key].length>160))throw C.error(400,'筛选参数无效');
  if(q.search){const p=bind('%'+q.search.trim()+'%');parts.push(`(l.code ILIKE ${p} OR l.vehicle_no ILIKE ${p} OR t.fields->>'vehicle_no' ILIKE ${p} OR EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' AND cr.proposed_data->>'vehicle_no' ILIKE ${p}) OR cu.name ILIKE ${p} OR d.document_no ILIKE ${p} OR EXISTS(SELECT 1 FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id AND (x.packing_list_no ILIKE ${p} OR x.invoice_no ILIKE ${p} OR x.shipment_batch_no ILIKE ${p})) OR EXISTS(SELECT 1 FROM loading_items z JOIN reservations rr ON rr.id=z.reservation_id JOIN allocations aa ON aa.id=rr.allocation_id JOIN sales_plans pp ON pp.id=aa.plan_id LEFT JOIN customer_contracts kk ON kk.id=pp.contract_id WHERE z.loading_id=l.id AND(aa.lot_no ILIKE ${p} OR kk.contract_no ILIKE ${p})))`);}
- if(q.document_status){if(!['GENERATED','MISSING'].includes(q.document_status))throw C.error(400,'单证筛选无效');parts.push(q.document_status==='GENERATED'?'d.loading_id IS NOT NULL':'d.loading_id IS NULL');}
+ if(q.document_status){if(!['GENERATED','MISSING'].includes(q.document_status))throw C.error(400,'单证筛选无效');parts.push(q.document_status==='GENERATED'?'d.loading_id IS NOT NULL AND NOT '+dateStale:'(d.loading_id IS NULL OR '+dateStale+')');}
  if(q.customer_id)parts.push('l.customer_id='+bind(C.uuid(q.customer_id)));
  if(q.created_date)parts.push("(l.created_at AT TIME ZONE 'Africa/Lubumbashi')::date="+bind(C.date(q.created_date)));
  if(q.customer)parts.push('cu.name ILIKE '+bind('%'+q.customer.trim()+'%'));
@@ -57,11 +62,12 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
  if(q.contract_no)parts.push(`EXISTS(SELECT 1 FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations a ON a.id=r.allocation_id JOIN sales_plans p ON p.id=a.plan_id JOIN customer_contracts k ON k.id=p.contract_id WHERE i.loading_id=l.id ${selected} AND k.contract_no ILIKE ${bind('%'+q.contract_no.trim()+'%')})`);
  if(q.plan_id)parts.push(`EXISTS(SELECT 1 FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations a ON a.id=r.allocation_id WHERE i.loading_id=l.id ${selected} AND a.plan_id=${bind(C.uuid(q.plan_id))})`);
  const at=includeApproved?"coalesce(l.manager_at,l.actual_departed_at,l.logistics_review_at,(SELECT max(o.departed_at) FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED'))":"coalesce(l.manager_at,(SELECT max(o.departed_at) FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED'))";
- if(q.start)parts.push(`${at}>=(${bind(C.date(q.start))}::date::timestamp AT TIME ZONE 'Africa/Lubumbashi')`);
+ if(q.start)parts.push(`${day}>=${bind(C.date(q.start))}::date`);
  if(q.start&&q.end&&q.start>q.end)throw C.error(400,'开始日期不能晚于结束日期');
- if(q.end)parts.push(`${at}<((${bind(C.date(q.end))}::date+1)::timestamp AT TIME ZONE 'Africa/Lubumbashi')`);
+ if(q.end)parts.push(`${day}<=${bind(C.date(q.end))}::date`);
  const planJoin=packingWorkspace?`LEFT JOIN loading_plan_matches m ON m.loading_id=l.id
-  LEFT JOIN loading_plan_documents lp ON lp.id=m.document_id`:'';
+  LEFT JOIN loading_plan_documents lp ON lp.id=m.document_id
+  LEFT JOIN packing_list_revisions r ON r.loading_id=d.loading_id AND r.revision=d.revision`:'';
  const from=`FROM loading_orders l JOIN copper_customers cu ON cu.id=l.customer_id LEFT JOIN export_transport t ON t.loading_id=l.id LEFT JOIN packing_list_documents d ON d.loading_id=l.id ${planJoin} WHERE ${parts.join(' AND ')}`;
  // Counts share all original authorization and business filters, while the
  // selected workflow state narrows only the list. Keep parameter positions.
@@ -76,7 +82,7 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
   v31?"(SELECT x.packing_list_no FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id) packing_list_no,":'';
  const live=`SELECT ${planFields} l.id,l.created_at,l.code,l.workflow_state,l.logistics_review_by,l.status,l.vehicle_no,coalesce((SELECT cr.proposed_data->>'vehicle_no' FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' ORDER BY cr.applied_at DESC,cr.id DESC LIMIT 1),nullif(t.fields->>'vehicle_no',''),l.vehicle_no) shipping_vehicle_no,cu.name customer_name,
  coalesce((SELECT o.code FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED' ORDER BY o.created_at DESC LIMIT 1),l.code) outbound_no,
- ${at} outbound_at,to_char((${at}) AT TIME ZONE 'Africa/Lubumbashi','YYYY-MM-DD') outbound_date,(${posted}) posted,(${packingEligible}) packing_eligible,d.document_no,d.revision,d.generated_at,
+ ${at} outbound_at,${day}::text outbound_date,${dateStale} document_date_stale,(${posted}) posted,(${packingEligible}) packing_eligible,d.document_no,d.revision,d.generated_at,
  (SELECT count(*)::int FROM loading_items i WHERE i.loading_id=l.id ${selected}) bundle_count,
  (SELECT ${packingWorkspace?'CASE WHEN count(*)=count(i.original_weight) THEN sum(i.original_weight)::text END':'sum(i.original_weight)::text'}
   FROM loading_items i WHERE i.loading_id=l.id ${selected}) total_net_weight,
@@ -96,7 +102,7 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
     'outbound_date',h.planned_load_day,'packing_eligible',false) FROM (${history}) h`;
   }
  }
- const pending=packingWorkspace?"data->>'revision' IS NULL":
+ const pending=packingWorkspace?"data->>'revision' IS NULL OR data->>'document_date_stale'='true'":
   "data->>'workflow_state' IN('WAITING','LOADING','READY','DEPARTED_PENDING','DEPARTED_CORRECTION') OR data->>'posted'='false' AND data->>'status'<>'CANCELLED' OR data->>'packing_eligible'='true' AND data->>'revision' IS NULL";
  const {rows}=await c.query(`SELECT data FROM (SELECT live.id,live.created_at,to_jsonb(live) data FROM (${live}) live${archive}) records
   ORDER BY ${require('./business-common.cjs').documentOrder({historical:"data->>'historical_import'='true'",pending})} LIMIT ${size} OFFSET ${bind((page-1)*size)}`,values);
@@ -120,10 +126,20 @@ async function progress(c,req,id){
  shipped_net_weight:outUnknown?null:shippedNet,shipped_bundles:out.length,remaining_net_weight:remaining==null?null:(remaining<0n?'-'+format(-remaining):format(remaining)),over_shipped:remaining!=null&&remaining<0n,
  allocations:related,shipments:shipmentList,unit:'MT'};
 }
-async function currentRevision(c,req,id){const d=await detail(c,req,id);if(!d.document)throw C.error(409,'请先生成Packing List');if(d.document_stale)throw C.error(409,'计划或运输资料已变更，请重新生成Packing List。旧修订保留。');const r=(await c.query('SELECT * FROM packing_list_revisions WHERE loading_id=$1 AND revision=$2',[id,d.document.revision])).rows[0];if(!r||PL.digest(r.content)!==r.file_sha256)throw C.error(409,'单证文件校验失败');return {...r,transport_version:d.document.transport_version};}
+async function revision(c,req,id,archived){
+ const d=await detail(c,req,id);
+ if(archived===undefined){
+  if(!d.document)throw C.error(409,'请先生成Packing List');
+  if(d.document_stale)throw C.error(409,d.document_date_stale?'出库日期已变更，请重新生成单据。旧修订保留。':'计划或运输资料已变更，请重新生成Packing List。旧修订保留。');
+ }else if(typeof archived!=='string'||!/^[1-9]\d{0,8}$/.test(archived))throw C.error(400,'单证版本无效');
+ const r=(await c.query('SELECT * FROM packing_list_revisions WHERE loading_id=$1 AND revision=$2',[id,archived===undefined?d.document.revision:Number(archived)])).rows[0];
+ if(!r)throw C.error(404,'单证版本不存在');
+ if(PL.digest(r.content)!==r.file_sha256)throw C.error(409,'单证文件校验失败');
+ return {...r,transport_version:d.document?.transport_version};
+}
 async function download({pool,req,reply}){
  if(!req.user.permissions.includes('inventory:export'))throw C.error(403,'当前账号没有单证下载权限');
- const file=await C.read(pool,c=>currentRevision(c,req,req.params.id));
+ const file=await C.read(pool,c=>revision(c,req,req.params.id,req.query.revision));
  const name=documentFilename(file.snapshot);
  return reply.header('Content-Disposition','attachment; filename="'+name.replace(/[^\x20-\x7e]/g,'_')+'"; filename*=UTF-8\'\''+encodeURIComponent(name)).type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(file.content);
 }
@@ -136,9 +152,9 @@ async function register({app,pool,permitted,csrf}){
  app.get('/api/v1/shipping/:id/eligibility',{preHandler:permitted('load:read')},req=>C.read(pool,async c=>{const l=await load(c,req,req.params.id,false);return {posted:l.posted,packing_eligible:l.packing_eligible};}));
  app.get('/api/v1/shipping/:id',{preHandler:permitted('load:read')},req=>C.read(pool,c=>detail(c,req,req.params.id)));
  app.get('/api/v1/shipping/:id/packing-list/preview',{preHandler:permitted('load:read')},req=>C.read(pool,async c=>{
-  const d=await currentRevision(c,req,req.params.id);return {revision:d.revision,transport_version:d.transport_version,snapshot:d.snapshot,layout:await PL.preview(d.content)};
+   const d=await revision(c,req,req.params.id,req.query.revision);return {revision:d.revision,transport_version:d.transport_version,snapshot:d.snapshot,layout:await PL.preview(d.content)};
  }));
- app.get('/api/v1/shipping/:id/invoice/preview',{preHandler:permitted('load:read')},req=>C.read(pool,async c=>{const d=await currentRevision(c,req,req.params.id);return {revision:d.revision,layout:await PL.preview(d.content,'INV')};}));
+ app.get('/api/v1/shipping/:id/invoice/preview',{preHandler:permitted('load:read')},req=>C.read(pool,async c=>{const d=await revision(c,req,req.params.id,req.query.revision);return {revision:d.revision,layout:await PL.preview(d.content,'INV')};}));
  app.patch('/api/v1/shipping/:id/transport',{preHandler:[permitted('load:write'),permitted('load:read'),csrf]},req=>C.mutate(pool,req,async c=>{
   const l=await load(c,req,req.params.id);await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['packing-list:'+l.id]);
   const old=(await c.query('SELECT * FROM export_transport WHERE loading_id=$1 FOR UPDATE',[l.id])).rows[0],b=req.body||{};if(b.version!==(old?.version||0))throw C.error(409,'运输资料版本已变化，请刷新');
@@ -152,12 +168,12 @@ async function register({app,pool,permitted,csrf}){
   if(b.expected_revision!==(d.document?.revision||0)||b.transport_version!==d.transport.version)throw C.error(409,'单证或运输资料版本已变化，请刷新后重新生成');
   if(d.loading_plan){const labels=requiredTransport,missing=Object.keys(labels).filter(k=>!d.transport.fields[k]?.trim());if(missing.length)throw C.error(409,'装车计划单缺少必需信息：'+missing.map(k=>labels[k]).join('、')+(d.posted?'；请使用授权更正流程核实补充':'；请编辑装车计划单补齐，并重新进行物流审核'));}
   if(b.source_signature!==undefined&&b.source_signature!==d.source_signature)throw C.error(409,'计划或装车资料已变化，请刷新核对后重新生成');
-  if(!d.document_date)throw C.error(409,'装车日期缺失，请核查计划和离场记录');
+  if(!d.document_date)throw C.error(409,'出库日期申报缺失，请到出库单据核对');
   if(!d.bundle_count||d.missing_weights.length)throw C.error(409,'装车明细或原始重量缺失，不能生成Packing List：'+d.missing_weights.slice(0,5).join(' / '));
   for(const i of d.items)if(T.scaled(i.gross_weight,6)<=2500n||T.scaled(i.net_weight,6)<=0n||T.scaled(i.gross_weight,6)-T.scaled(i.net_weight,6)!==2500n)throw C.error(409,'原装车净重与每捆扣2.5kg规则不一致，请先核查原记录：'+i.bundle_no);
   const reason=b.reason===undefined?'根据已审核装车明细生成商业发票与装箱单':C.text(b.reason,'生成原因',1000);if(reason.length<5)throw C.error(400,'生成原因至少5个字');
   const invoice=require('./commercial-invoice.cjs'),commercial_invoice={unit_price_usd:invoice.unitPrice(b.unit_price_usd),freight_price_usd:invoice.freightPrice};
-  const revision=(d.document?.revision||0)+1,document_no=d.loading_plan?d.loading_plan.packing_list_no:d.document?.document_no||d.outbound_no+'-PL',snapshot={...d,transport:{...d.transport.fields},document_no,commercial_invoice,include_invoice:true,included_sheets:['INV','PL']};delete snapshot.document;delete snapshot.revisions;delete snapshot.document_stale;
+  const revision=(d.document?.revision||0)+1,document_no=d.loading_plan?d.loading_plan.packing_list_no:d.document?.document_no||d.outbound_no+'-PL',snapshot={...d,transport:{...d.transport.fields},document_no,commercial_invoice,include_invoice:true,included_sheets:['INV','PL']};delete snapshot.document;delete snapshot.revisions;delete snapshot.document_stale;delete snapshot.document_date_stale;
   snapshot.invoice_bank_details=await invoice.bankDetails(c,d.loading_plan);
   const activeTemplate=await require('./packing-templates.cjs').source(c,true);snapshot.template_revision=activeTemplate.revision||0;const rendered=await PL.render(snapshot,activeTemplate.content),file_name=documentFilename(snapshot);
   await c.query('INSERT INTO packing_list_documents(loading_id,document_no,revision,transport_version,generated_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT(loading_id) DO UPDATE SET document_no=excluded.document_no,revision=excluded.revision,transport_version=excluded.transport_version,generated_by=excluded.generated_by,generated_at=clock_timestamp()',[l.id,document_no,revision,d.transport.version,req.user.id]);

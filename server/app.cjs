@@ -234,6 +234,7 @@ async function build(options={}){
  await require('./v262.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./v261.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./v26.cjs').register({app,pool,cfg,permitted,csrf});
+ await require('./outbound-date-corrections.cjs').register({app,pool,permitted,csrf,cobaltExecutionEnabled});
  await require('./preferences.cjs')({app,pool,cfg,auth,csrf});
  await require('./copper461.cjs').register({app,pool,permitted,auth,csrf});
  if(cobaltSalesEnabled)await require('./cobalt461.cjs').register({app,pool,permitted,auth,csrf});

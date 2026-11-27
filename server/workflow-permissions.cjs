@@ -60,7 +60,7 @@ const definitions={
  'load:read':['铜钴装车单、审批记录及装箱单查看','View Loading Orders, Approval Records and Packing Lists'],
  'load:write':['铜装车单维护／钴装车完工提交','Maintain Copper Loads or Submit Cobalt Loading'],
  'load:review':['铜装车审核／钴装车完工审核','Review Copper Loads or Cobalt Loading'],
- 'load:execute':['装车后出库流程申报（非销售实际出厂确认）','Register the Stock Issue Workflow after Loading'],
+ 'load:execute':['装车后出库日期申报（车辆实际出厂另行确认）','Declare Stock Issue Date after Loading'],
  'outbound:read':['铜钴出库进度及正式出库记录查看','View Stock Issue Progress and Posted Records'],
  'outbound:logistics-review':['装车离场申报的物流审核','Logistics Review of the Stock Issue Declaration'],
  'outbound:production-approve':['正式出库终审','Final Stock Issue Approval'],

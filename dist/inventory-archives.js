@@ -77,7 +77,7 @@ window.InventoryArchives={
   const states={PENDING:['待审核','Pending Review'],APPROVED:['已通过','Approved'],REJECTED:['已退回','Returned']};
   const rows=data.items.map(row=>{
    const changes=this.correctionChanges(row).map(([label,value])=>'<div>'+esc(label)+' · '+esc(value)+'</div>').join('');
-   const buttons=data.can_review&&row.independent_reviewer&&row.state==='PENDING'?'<button type="button" class="button primary compact" data-bundle-correction="'+row.id+'" data-decision="APPROVED">'+t('审核通过','Approve')+
+   const buttons=row.can_review&&row.state==='PENDING'?'<button type="button" class="button primary compact" data-bundle-correction="'+row.id+'" data-decision="APPROVED">'+t('审核通过','Approve')+
     '</button> <button type="button" class="button secondary compact" data-bundle-correction="'+row.id+'" data-decision="REJECTED">'+t('退回','Return')+'</button>':'—';
    return [changes,esc(row.reason),this.time(row.requested_at)+' · '+this.text(row.requester),
     esc(t(...states[row.state])),this.text(row.reviewer)+(row.reviewed_at?' · '+this.time(row.reviewed_at):'')+
