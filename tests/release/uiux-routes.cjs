@@ -93,7 +93,7 @@ function pages(ids){
  add('co-stock-detail','/inventory/:id',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-archive','/inventory/:id/archive',[CO],{example:'coPrep',screenshot:true});
  add('co-stock-history-alias','/inventory/:id/history',[CO],{example:'coPrep'});
- add('map','/stock-map',BOTH,{screenshot:true,state:'copper batch net weights grouped by customer and cobalt site map'});
+ add('map','/stock-map',BOTH,{screenshot:true,state:'copper customer batch details, separate new-production storage and cobalt site map'});
  add('co-map-expired-filter','/stock-map',[CO],{query:'?zone_id=obsolete&unit=old-stock-archive&page=0',state:'recovers expired map filter'});
  add('map-move','/stock-map/relocate',[CU]);
  add('customers','/customers',BOTH,{screenshot:true,roles:['sales_operator','customer_admin']});

@@ -1,7 +1,7 @@
 {
   "version": "4.9.0",
   "auditRevision": "v488",
-  "revision": "4.9.0-ui7",
+  "revision": "4.9.0-ui8",
   "files": [
     {
       "path": ".dockerignore",
@@ -1201,7 +1201,7 @@
     },
     {
       "path": "dist/index.html",
-      "sha256": "d5c75abb987b41337e042655f7d153db5675baeb2321c12dc1e42d5b1cb594ce"
+      "sha256": "4a7cd4fbeba0465cb05f95bf7f6fe5448ef2429bc3a69dbe06828631005d622c"
     },
     {
       "path": "dist/interaction-completion.css",
@@ -1209,7 +1209,7 @@
     },
     {
       "path": "dist/interaction-completion.js",
-      "sha256": "cfab7be2bee7a03ae233acaafb4188ac7dc391b6cf2b3f97068b331095e1a590"
+      "sha256": "e1e89ca56896165b9a0f526f1b54adc979781002baf467ebd830c5b19e28387d"
     },
     {
       "path": "dist/interaction-polish.css",
@@ -1429,7 +1429,7 @@
     },
     {
       "path": "dist/release.js",
-      "sha256": "55bd4af9787ba73c60228f19b9fa202ebc97061c80719f461d319bf26f82c5b1"
+      "sha256": "3a55e0f2aa357383613ead6b831169d1d019a29a045c348311410eaab0f19d21"
     },
     {
       "path": "dist/reports463.js",
@@ -1477,7 +1477,7 @@
     },
     {
       "path": "dist/sw.js",
-      "sha256": "ec1f93b214a9c7ecebbcb1d48f3310b53262286dbb4d5c9fa023c407f01f6419"
+      "sha256": "ca71988e43a3bdfaf18318938639938680f713552dfe5b9579a664076c5c10ef"
     },
     {
       "path": "dist/system46-pages.js",
@@ -1649,7 +1649,7 @@
     },
     {
       "path": "dist/v271-map.js",
-      "sha256": "cc8a6eb0714a791777e87ceda654e83d552bfd3c7c80fa73d4cbf77cd1c8b252"
+      "sha256": "2f9c22f66e41ba19c55095dedd0fce51e7b97562a97d996218233fca631e099b"
     },
     {
       "path": "dist/v272-ui.js",
@@ -1809,7 +1809,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "36fc05c9ff00344ad025b3b26c09d434d6e0444d0a8334e865267c9c6c988745"
+      "sha256": "cb358689ab00b865b841b60e23a8c6c8bde6449a441bbcaecbcd88ad58fa30e1"
     },
     {
       "path": "scripts/database-backup.cjs",
@@ -2273,7 +2273,7 @@
     },
     {
       "path": "server/release.cjs",
-      "sha256": "ba2cbcb699342f1892d4919a7bfb6a58ad7ecf276b0dfe102ebcee607ab6b182"
+      "sha256": "b38de6f7794f8b20bfe011b329fc67d7b133157da354e4b7cbdf5b40297ca3e4"
     },
     {
       "path": "server/report-center-data.cjs",
@@ -2677,7 +2677,7 @@
     },
     {
       "path": "tests/release/uiux-inventory.json",
-      "sha256": "6285b6774aec3436a4c3a560fa5e186aa4de79fe7f39a260cbd38b7b523d1275"
+      "sha256": "0ed8c7b77afecdb9a8a45ba8dafde64d71724a27eef8ccb6d0baea10143efa06"
     },
     {
       "path": "tests/release/uiux-matrix.cjs",
@@ -2689,7 +2689,7 @@
     },
     {
       "path": "tests/release/uiux-routes.cjs",
-      "sha256": "64bc99e3a7e24083b7cac894fe5225dcdb0c840579a963d395a7469755b17682"
+      "sha256": "0d378e3c6921216ea3e2e4a3bb3c8c47e89920fe8c616329c7cfa5acba20abcf"
     },
     {
       "path": "tests/release/uiux-verify.cjs",
@@ -2825,7 +2825,7 @@
     },
     {
       "path": "tests/release/v483-hotfix.cjs",
-      "sha256": "b78bbb2380f1c969f8fecaf942a89988f02fc11bf1e49f07e5f68793bb1f6fc9"
+      "sha256": "98c7d51e184bc3e463236190fb0130d57d00d8dc7fa5be884aa6ffb07bde2ee0"
     },
     {
       "path": "deploy/remove-copper-test-chain.sql",

@@ -19,7 +19,8 @@ async export(){
    const data=await API.request('/stock-map/pdf-data?'+StockMap.params());
    const canvas=this.canvas(I18n.translate('库存地图')),ctx=canvas.getContext('2d');
    await this.drawMap(ctx,data);
-   const pages=[canvas],locations=data.locations.filter(location=>location.matched.bundle_count>0);
+   const pages=[canvas];
+   const locations=data.locations.filter(location=>location.map_usage!=='TEMPORARY'&&location.matched.bundle_count>0);
    const detailTitle=I18n.label('占用货位明细','Occupied Location Details');
    ctx.fillStyle='#17364f';
    ctx.font='bold 36px "Microsoft YaHei",sans-serif';

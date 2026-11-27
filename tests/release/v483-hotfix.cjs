@@ -363,14 +363,18 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    const {rows:[slot]}=await client.query("INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage) VALUES($1,$2,'P4-01','P4-01','FORMAL') RETURNING id",[f.project,f.warehouse]);
    const {rows:[p3]}=await client.query(`INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage)
     VALUES($1,$2,'P3','P3','LEFTOVER') ON CONFLICT(project_id,code) DO UPDATE SET map_cell_code='P3' RETURNING id`,[f.project,f.warehouse]);
+   const {rows:[p5]}=await client.query("SELECT id FROM locations WHERE project_id=$1 AND warehouse_id=$2 AND map_usage='TEMPORARY'",[f.project,f.warehouse]);
    const customer=f.customers[CU].id;
    const {rows:[other]}=await client.query("INSERT INTO customers(project_id,code,name,product_code) VALUES($1,'QA-MAP-CUSTOMER','Synthetic Map Customer','CU_CATHODE') RETURNING id",[f.project]);
    const {rows:[batch]}=await client.query("INSERT INTO batches(project_id,code) VALUES($1,'QA-MAP-BATCH') RETURNING id",[f.project]);
+   const {rows:[production]}=await client.query("INSERT INTO batches(project_id,code) VALUES($1,'QA-MAP-P5-BATCH') RETURNING id",[f.project]);
    const {rows:[receipt]}=await client.query("SELECT id FROM receipts WHERE project_id=$1 AND status='CONFIRMED' LIMIT 1",[f.project]);
    for(const [serial,owner,weight] of [[1,customer,'1.2345'],[2,customer,null],[3,other.id,'2.5000']]){
     await client.query(`INSERT INTO bundles(bundle_no,project_id,batch_id,location_id,customer_id,net_weight,physical_status,sample_status,inbound_date,inbound_at,data_kind,receipt_id)
      VALUES($1,$2,$3,$4,$5,$6,'IN_STOCK','NOT_SAMPLED',current_date,now(),'REAL',$7)`,['QA-MAP-BUNDLE-'+serial,f.project,batch.id,p3.id,owner,weight,weight===null?receipt.id:null]);
    }
+   await client.query(`INSERT INTO bundles(bundle_no,project_id,batch_id,location_id,customer_id,net_weight,physical_status,sample_status,inbound_date,inbound_at,data_kind)
+    VALUES('QA-MAP-P5-BUNDLE',$1,$2,$3,$4,'1.5000','IN_STOCK','NOT_SAMPLED',current_date,now(),'REAL')`,[f.project,production.id,p5.id,other.id]);
    const scope='?'+new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse});
    const visible=await request('customer_admin',CU,'/stock-map'+scope),visibleGroups=visible.locations.find(row=>row.id===p3.id).current.customer_batch_groups;
    assert.deepEqual(visibleGroups.map(group=>[group.customer_id,group.bundle_count,Number(group.net_weight),group.unweighed_count]),[[customer,2,1.2345,1]]);
@@ -383,15 +387,53 @@ test('historical administrator reviews and cobalt map recovery in isolated TEST'
    await cu.goto(origin+'/stock-map'+scope);
    const field=cu.locator('.wms-map-search select[name=customer_id]');
    await field.waitFor({timeout:8000}).catch(async e=>{throw Error(e.message+' '+(await cu.locator('body').innerText()).slice(-1600));});
+   const productionStock=await cu.evaluate(id=>StockMap.data.locations.find(row=>row.id===id).current,p5.id);
+   assert(productionStock.customers.some(row=>row.name==='Musonoi')&&productionStock.customers.some(row=>row.id===other.id));
+   const p5Card=cu.locator('.v47-map-temporary [data-cell-code="P5"]');
+   const p3Card=cu.locator('.v47-map-temporary [data-cell-code="P3"]');
    for(const width of [390,1440]){
     await cu.setViewportSize({width,height:900});
     assert(await field.evaluate(el=>Math.abs(el.getBoundingClientRect().bottom-document.querySelector('.wms-map-search input').getBoundingClientRect().bottom)<3));
+    assert.match(await p5Card.innerText(),/新生产捆包堆存区|New Production Bundles Stock Area/);
+    assert.doesNotMatch(await p5Card.innerText(),/Musonoi|Synthetic Map Customer/);
+    assert.equal(await p5Card.locator('.v271-label-count strong').innerText(),String(productionStock.bundle_count));
+    assert.match(await p3Card.innerText(),/Synthetic Map Customer/);
+    assert.equal(await cu.locator('.v271-customer-group [data-cell-code="P5"]').count(),0);
     const cards=cu.locator('.v271-customer-group [data-batch-group="QA-MAP-BATCH"]');
     assert.equal(await cards.count(),2);
     assert.match(await cards.filter({has:cu.getByText(/2捆\/已知1.2345吨|2 bundles \/ Known Net 1.2345 t/)}).innerText(),/1捆待核实|1 unweighed/);
     assert.match(await cards.filter({has:cu.getByText(/1捆\/2.5000吨|1 bundle \/ 2.5000 t/)}).innerText(),/QA-MAP-BATCH/);
     assert.equal(await cu.locator('.v271-customer-group').filter({hasText:'Synthetic Map Customer'}).count(),1);
    }
+   await p5Card.getByRole('button').click();
+   const productionDetail=cu.locator('#stock-map-detail');
+   await productionDetail.getByRole('heading',{name:/新生产捆包堆存区|New Production Bundles Stock Area/}).waitFor();
+   assert(await productionDetail.getByRole('link',{name:'QA-MAP-P5-BUNDLE',exact:true}).isVisible());
+   // The PDF embeds rendered canvases. Observe the actual text drawn into the details and map.
+   const [output,pdf]=await Promise.all([
+    cu.waitForEvent('download',{timeout:15000}),
+    cu.evaluate(async()=>{
+     const detail=[],fillText=CanvasRenderingContext2D.prototype.fillText;
+     const serialize=XMLSerializer.prototype.serializeToString;
+     let mapLabel='';
+     CanvasRenderingContext2D.prototype.fillText=function(text,x,y,...rest){
+      detail.push(text);
+      return fillText.call(this,text,x,y,...rest);
+     };
+     XMLSerializer.prototype.serializeToString=function(root){
+      mapLabel=root.querySelector?.('[data-map-cell="P5"] text')?.textContent||mapLabel;
+      return serialize.call(this,root);
+     };
+     try{await MapPDF.export();return {detail:detail.join('\n'),mapLabel};}
+     finally{CanvasRenderingContext2D.prototype.fillText=fillText;XMLSerializer.prototype.serializeToString=serialize;}
+    })
+   ]);
+   assert.match(output.suggestedFilename(),/^StockMap-.*\.pdf$/);
+   assert.equal(await output.failure(),null);
+   assert.match(pdf.detail,/QA-MAP-BATCH.*2\.5000/);
+   assert.doesNotMatch(pdf.detail,/新生产捆包堆存区|New Production Bundles Stock Area|QA-MAP-P5-BATCH|MUS-2026-325/);
+   assert.match(pdf.mapLabel,/新生产捆包堆存区|New Production Bundles Stock Area/);
+   assert.match(pdf.mapLabel,/\d+捆|\d+ bundles?/);
    const selected=cu.locator('.v271-customer-group [data-customer-group="'+other.id+'"] [type=button]');
    await selected.click();
    const drilldown=cu.locator('#stock-map-detail .map-bundle-card a');

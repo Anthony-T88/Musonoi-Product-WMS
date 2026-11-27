@@ -275,7 +275,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "copper batch net weights grouped by customer and cobalt site map",
+      "state": "copper customer batch details, separate new-production storage and cobalt site map",
       "template": "/stock-map"
     },
     {

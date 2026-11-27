@@ -13,18 +13,21 @@ const MapView={minZoom:1,maxZoom:8,zoom:1,selectedBatch:null,selectedCustomer:nu
   const rail=$('v271-map-labels');if(!rail)return;
   const t=(zh,en)=>I18n.label(zh,en),customers=new Map();
   const shared=StockMap.data.locations.filter(l=>l.active&&['TEMPORARY','LEFTOVER'].includes(l.map_usage));
-  for(const location of StockMap.data.locations.filter(l=>l.active)){
+  for(const location of StockMap.data.locations.filter(l=>l.active&&l.map_usage!=='TEMPORARY')){
    for(const group of location.matched?.customer_batch_groups??location.current.customer_batch_groups??[]){
     const key=group.customer_id||'unassigned';
     if(!customers.has(key))customers.set(key,{name:group.customer_name||t('未分配','Unassigned'),batches:[]});
     customers.get(key).batches.push({location,group});
    }
   }
-  const sharedSummary=shared.length?'<section class="v47-map-temporary" aria-label="'+esc(t('共享堆存区','Shared Storage Areas'))+'"><h3>'+
-   esc(t('共享堆存区','Shared Storage Areas'))+'</h3>'+shared.map(l=>'<article id="v271-label-'+l.id+'" class="v271-location-label v31-temporary-summary" data-location-id="'+
-    l.id+'" data-cell-code="'+esc(l.cell_code||l.code)+'"><button type="button" class="v271-label-code" data-no-i18n>'+esc(StockMap.areaName(l))+
-    '</button><span class="v271-label-customer" data-no-i18n>'+esc(this.fields(l).customer)+'</span><span class="v271-label-count"><strong>'+
-    l.current.bundle_count+'</strong> <span>'+esc(t('捆','bundles'))+'</span></span></article>').join('')+'</section>':'';
+  const sharedCards=shared.map(l=>{
+   const customer=l.map_usage==='LEFTOVER'?'<span class="v271-label-customer" data-no-i18n>'+esc(this.fields(l).customer)+'</span>':'';
+   return '<article id="v271-label-'+l.id+'" class="v271-location-label v31-temporary-summary" data-location-id="'+l.id+
+    '" data-cell-code="'+esc(l.cell_code||l.code)+'"><button type="button" class="v271-label-code" data-no-i18n>'+esc(StockMap.areaName(l))+'</button>'+
+    customer+'<span class="v271-label-count"><strong>'+l.current.bundle_count+'</strong> <span>'+esc(t('捆','bundles'))+'</span></span></article>';
+  }).join('');
+  const sharedTitle=esc(t('共享堆存区','Shared Storage Areas'));
+  const sharedSummary=sharedCards?'<section class="v47-map-temporary" aria-label="'+sharedTitle+'"><h3>'+sharedTitle+'</h3>'+sharedCards+'</section>':'';
   let index=0;
   const card=({location:l,group})=>'<article id="v271-label-'+l.id+'-'+index+++'" class="v271-location-label v31-batch-card" data-location-id="'+
    l.id+'" data-cell-code="'+esc(l.cell_code||l.code)+'" data-batch-group="'+esc(group.batch_no||'')+'" data-customer-group="'+esc(group.customer_id||'unassigned')+'">'+
