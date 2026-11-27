@@ -24,8 +24,14 @@ async function access(c,req,id){
   contract_nos:[...new Set(contracts.map(k=>k.contract_no).filter(Boolean))],contract_notice:contracts.some(k=>!k.contract_no)?'含历史未关联合同捆包':'',items,
   total_weight:(await c.query('SELECT coalesce(sum(original_weight),0)::text AS w FROM loading_items WHERE loading_id=$1'+(v31?' AND NOT plan_removed':''),[id])).rows[0].w};
 }
+async function read(c,req,id){
+ const d=await access(c,req,id);
+ const {rows:[returned]}=await c.query(`SELECT id,code,applied_at FROM outbound_corrections
+  WHERE loading_id=$1 AND kind='RETURN_OUTBOUND' AND status='APPLIED'`,[d.id]);
+ return returned?{...d,workflow_state:'REVERSED',status:'REVERSED',return_correction:returned}:d;
+}
 module.exports={access,register:async({app,pool,permitted,csrf})=>{
- app.get('/api/v1/loads',{preHandler:permitted('load:read')},req=>W.recent(pool,req,'loading_orders',access));app.get('/api/v1/loads/:id',{preHandler:permitted('load:read')},req=>access(pool,req,req.params.id));
+ app.get('/api/v1/loads',{preHandler:permitted('load:read')},req=>W.recent(pool,req,'loading_orders',read));app.get('/api/v1/loads/:id',{preHandler:permitted('load:read')},req=>read(pool,req,req.params.id));
  app.post('/api/v1/loads',{preHandler:[permitted('load:write'),csrf]},req=>W.mutate(pool,req,async c=>{const b=req.body||{},p=W.uuid(b.project_id),customer=W.uuid(b.customer_id),rows=await W.bundles(c,req,b.bundle_ids,p,customer);if(rows.some(x=>x.allocated_customer_id!==customer))throw W.error(409,'装车只能选择该客户的有效锁定捆包');const d=(await c.query('INSERT INTO loading_orders(project_id,customer_id,vehicle_no,carrier,loading_point,loaded_at,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[p,customer,W.text(b.vehicle_no,'车牌',80).toUpperCase(),W.text(b.carrier,'运输商',160),W.text(b.loading_point,'装车点',160),W.time(b.loaded_at),req.user.id])).rows[0];for(const row of rows){const r=(await c.query('SELECT id FROM reservations WHERE bundle_id=$1 AND released_at IS NULL',[row.uuid])).rows[0];if(!r)throw W.error(409,'客户锁定已变化');await c.query('INSERT INTO loading_items(loading_id,bundle_id,reservation_id,original_weight,original_location_id) VALUES($1,$2,$3,$4,$5)',[d.id,row.uuid,r.id,row.weight,(await c.query('SELECT location_id FROM bundles WHERE id=$1',[row.uuid])).rows[0].location_id]);}await W.audit(c,req,'loading_created','loading_orders',d.id,null,{...d,bundle_ids:b.bundle_ids});return d;}));
  for(const action of ['complete','cancel','unload'])app.post('/api/v1/loads/:id/'+action,{preHandler:[permitted('load:write'),csrf]},req=>W.mutate(pool,req,async c=>{await access(c,req,req.params.id);return(await c.query('SELECT * FROM loading_action($1,$2,$3,$4,$5)',[req.user.id,req.params.id,W.version(req.body?.version),action,action==='complete'?'':W.text(req.body?.reason,'取消或退装原因',500)])).rows[0];}));
  app.get('/api/v1/loads/:id/packing-list',{preHandler:permitted('load:read')},(req,reply)=>require('./export-shipping.cjs').download({pool,req,reply}));

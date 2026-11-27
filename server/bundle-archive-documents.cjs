@@ -1,4 +1,5 @@
 'use strict';
+const returned=require('./copper-returns.cjs').applied('l.id');
 module.exports=async function documents(c,bundleId){
  const {rows}=await c.query(`
  SELECT * FROM (
@@ -9,11 +10,11 @@ module.exports=async function documents(c,bundleId){
    coalesce(a.workflow_state,a.status),'/preparation/'||a.id FROM allocations a
    JOIN allocation_items i ON i.allocation_id=a.id WHERE i.bundle_id=$1
   UNION ALL
-  SELECT 'loading',l.code,coalesce(l.loaded_at,l.created_at),coalesce(l.workflow_state,l.status),
+  SELECT 'loading',l.code,coalesce(l.loaded_at,l.created_at),CASE WHEN ${returned} THEN 'REVERSED' ELSE coalesce(l.workflow_state,l.status) END,
    '/outbounds/loads/'||l.id FROM loading_orders l JOIN loading_items i ON i.loading_id=l.id
    WHERE i.bundle_id=$1 AND NOT i.plan_removed
   UNION ALL
-  SELECT 'outbound',l.code,l.manager_at,l.workflow_state,'/outbounds/loads/'||l.id
+  SELECT 'outbound',l.code,l.manager_at,CASE WHEN ${returned} THEN 'REVERSED' ELSE l.workflow_state END,'/outbounds/loads/'||l.id
    FROM loading_orders l JOIN loading_items i ON i.loading_id=l.id
    WHERE i.bundle_id=$1 AND NOT i.plan_removed AND l.workflow_state='OUTBOUND'
   UNION ALL

@@ -1,6 +1,7 @@
 'use strict';
 const C=require('./control-common.cjs'),A=require('./allocations.cjs'),PL=require('./packing-list.cjs'),T=require('../dist/tonnes.js');
-const posted="NOT EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='RETURN_OUTBOUND' AND cr.status='APPLIED') AND l.status='DEPARTED' AND (l.workflow_state='OUTBOUND' AND l.manager_at IS NOT NULL OR l.workflow_state IS NULL AND EXISTS(SELECT 1 FROM outbound_orders oo WHERE oo.loading_id=l.id AND oo.status='DEPARTED' AND oo.reversal_status<>'CONFIRMED'))";
+const returned=require('./copper-returns.cjs').applied('l.id');
+const posted=`NOT ${returned} AND l.status='DEPARTED' AND (l.workflow_state='OUTBOUND' AND l.manager_at IS NOT NULL OR l.workflow_state IS NULL AND EXISTS(SELECT 1 FROM outbound_orders oo WHERE oo.loading_id=l.id AND oo.status='DEPARTED' AND oo.reversal_status<>'CONFIRMED'))`;
 const logisticsReady="l.workflow_state='DEPARTED_PENDING' AND l.status NOT IN('CANCELLED','REVERSED') AND l.logistics_review_by IS NOT NULL AND l.logistics_review_at IS NOT NULL AND l.actual_departed_at IS NOT NULL AND NOT EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.status IN('REQUESTED','AUTHORIZED','RETURN_VERIFIED'))";
 const packingEligible='(('+posted+') OR ('+logisticsReady+'))';
 const scope=`EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=l.project_id AND(s.customer_id IS NULL OR s.customer_id=l.customer_id)) AND NOT EXISTS(SELECT 1 FROM loading_items ix JOIN bundles bx ON bx.id=ix.bundle_id JOIN locations lx ON lx.id=ix.original_location_id WHERE ix.loading_id=l.id AND NOT EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$1 AND s.project_id=l.project_id AND(s.customer_id IS NULL OR s.customer_id=l.customer_id) AND(s.warehouse_id IS NULL OR s.warehouse_id=lx.warehouse_id)))`;
@@ -58,7 +59,9 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
  if(q.customer)parts.push('cu.name ILIKE '+bind('%'+q.customer.trim()+'%'));
  if(q.vehicle_no){const p=bind('%'+q.vehicle_no.trim()+'%');parts.push(`(l.vehicle_no ILIKE ${p} OR t.fields->>'vehicle_no' ILIKE ${p} OR EXISTS(SELECT 1 FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' AND cr.proposed_data->>'vehicle_no' ILIKE ${p}))`);}
  if(q.outbound_no){const p=bind('%'+q.outbound_no.trim()+'%');parts.push(`(l.code ILIKE ${p} OR EXISTS(SELECT 1 FROM outbound_orders oo WHERE oo.loading_id=l.id AND oo.code ILIKE ${p}) ${v31?`OR EXISTS(SELECT 1 FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id AND x.packing_list_no ILIKE ${p})`:""})`);}
- let statusPredicate=null;if(q.status){statusPredicate='l.workflow_state='+bind(q.status);parts.push(statusPredicate);}
+ const effectiveState=`CASE WHEN ${returned} THEN 'REVERSED' ELSE l.workflow_state END`;
+ const statusParam=q.status?bind(q.status):null,statusPredicate=statusParam?`(${effectiveState})=${statusParam}`:null;
+ if(statusPredicate)parts.push(statusPredicate);
  if(q.contract_no)parts.push(`EXISTS(SELECT 1 FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations a ON a.id=r.allocation_id JOIN sales_plans p ON p.id=a.plan_id JOIN customer_contracts k ON k.id=p.contract_id WHERE i.loading_id=l.id ${selected} AND k.contract_no ILIKE ${bind('%'+q.contract_no.trim()+'%')})`);
  if(q.plan_id)parts.push(`EXISTS(SELECT 1 FROM loading_items i JOIN reservations r ON r.id=i.reservation_id JOIN allocations a ON a.id=r.allocation_id WHERE i.loading_id=l.id ${selected} AND a.plan_id=${bind(C.uuid(q.plan_id))})`);
  const at=includeApproved?"coalesce(l.manager_at,l.actual_departed_at,l.logistics_review_at,(SELECT max(o.departed_at) FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED'))":"coalesce(l.manager_at,(SELECT max(o.departed_at) FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED'))";
@@ -71,8 +74,8 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
  const from=`FROM loading_orders l JOIN copper_customers cu ON cu.id=l.customer_id LEFT JOIN export_transport t ON t.loading_id=l.id LEFT JOIN packing_list_documents d ON d.loading_id=l.id ${planJoin} WHERE ${parts.join(' AND ')}`;
  // Counts share all original authorization and business filters, while the
  // selected workflow state narrows only the list. Keep parameter positions.
- const scopeFrom=statusPredicate?from.replace(statusPredicate,'('+statusPredicate.split('=')[1]+'::text IS NOT NULL)'):from;
- const stateCounts=(await c.query('SELECT l.workflow_state state,count(*)::int count '+scopeFrom+' GROUP BY l.workflow_state',values)).rows;
+ const scopeFrom=statusParam?from.replace(statusPredicate,'('+statusParam+'::text IS NOT NULL)'):from;
+ const stateCounts=(await c.query(`SELECT ${effectiveState} state,count(*)::int count ${scopeFrom} GROUP BY 1`,values)).rows;
  const state_counts=Object.fromEntries(stateCounts.map(r=>[r.state||'UNKNOWN',r.count])),scope_total=stateCounts.reduce((n,r)=>n+r.count,0);
  let total=statusPredicate?(stateCounts.find(row=>row.state===q.status)?.count||0):scope_total,visibleTotal=scope_total;
  const planFields=packingWorkspace?`lp.packing_list_no,lp.id loading_plan_id,lp.code loading_plan_code,
@@ -80,7 +83,8 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
  coalesce(nullif(lp.transporter,''),nullif(t.fields->>'forwarder',''),l.carrier) transporter,
  coalesce(nullif(lp.destination,''),t.fields->>'destination') destination,`:
   v31?"(SELECT x.packing_list_no FROM loading_plan_matches m JOIN loading_plan_documents x ON x.id=m.document_id WHERE m.loading_id=l.id) packing_list_no,":'';
- const live=`SELECT ${planFields} l.id,l.created_at,l.code,l.workflow_state,l.logistics_review_by,l.status,l.vehicle_no,coalesce((SELECT cr.proposed_data->>'vehicle_no' FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' ORDER BY cr.applied_at DESC,cr.id DESC LIMIT 1),nullif(t.fields->>'vehicle_no',''),l.vehicle_no) shipping_vehicle_no,cu.name customer_name,
+ const live=`SELECT ${planFields} l.id,l.created_at,l.code,${effectiveState} workflow_state,l.logistics_review_by,
+ CASE WHEN ${returned} THEN 'REVERSED' ELSE l.status END status,l.vehicle_no,coalesce((SELECT cr.proposed_data->>'vehicle_no' FROM outbound_corrections cr WHERE cr.loading_id=l.id AND cr.kind='VEHICLE' AND cr.status='APPLIED' ORDER BY cr.applied_at DESC,cr.id DESC LIMIT 1),nullif(t.fields->>'vehicle_no',''),l.vehicle_no) shipping_vehicle_no,cu.name customer_name,
  coalesce((SELECT o.code FROM outbound_orders o WHERE o.loading_id=l.id AND o.status='DEPARTED' ORDER BY o.created_at DESC LIMIT 1),l.code) outbound_no,
  ${at} outbound_at,${day}::text outbound_date,${dateStale} document_date_stale,(${posted}) posted,(${packingEligible}) packing_eligible,d.document_no,d.revision,d.generated_at,
  (SELECT count(*)::int FROM loading_items i WHERE i.loading_id=l.id ${selected}) bundle_count,
@@ -103,7 +107,7 @@ async function list(c,req,formal,includeApproved=false,includeHistory=false,{pac
   }
  }
  const pending=packingWorkspace?"data->>'revision' IS NULL OR data->>'document_date_stale'='true'":
-  "data->>'workflow_state' IN('WAITING','LOADING','READY','DEPARTED_PENDING','DEPARTED_CORRECTION') OR data->>'posted'='false' AND data->>'status'<>'CANCELLED' OR data->>'packing_eligible'='true' AND data->>'revision' IS NULL";
+  "data->>'workflow_state' IN('WAITING','LOADING','READY','DEPARTED_PENDING','DEPARTED_CORRECTION') OR data->>'posted'='false' AND data->>'status' NOT IN('CANCELLED','REVERSED') OR data->>'packing_eligible'='true' AND data->>'revision' IS NULL";
  const {rows}=await c.query(`SELECT data FROM (SELECT live.id,live.created_at,to_jsonb(live) data FROM (${live}) live${archive}) records
   ORDER BY ${require('./business-common.cjs').documentOrder({historical:"data->>'historical_import'='true'",pending})} LIMIT ${size} OFFSET ${bind((page-1)*size)}`,values);
  const customer_options=packingWorkspace?(await c.query(`SELECT DISTINCT cu.id,cu.name

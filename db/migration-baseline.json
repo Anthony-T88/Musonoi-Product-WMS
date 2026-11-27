@@ -909,6 +909,14 @@
     {
       "version": "227_v490_dispatch_removal_evidence.sql",
       "checksum": "fbdb323a0f2a3cd38a54381f1bbc4a41b839c1100f7333b620ca568a718bee54"
+    },
+    {
+      "version": "228_v490_copper_return_preparation.sql",
+      "checksum": "9afcf6abdb99115a74082d9b5b10b72afa2aeb6b4c958f3f5e8b0b6a3d3867ec"
+    },
+    {
+      "version": "229_v490_copper_return_close_loading_plan.sql",
+      "checksum": "afe93c7647c41010430224e500bcbf496a2f48e2d400e699e86fa888a78e6ad3"
     }
   ]
 }

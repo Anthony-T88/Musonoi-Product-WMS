@@ -715,15 +715,109 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
     await signIn(supervisor);
    }
   }
+  const loadPath='/loads/'+load.id,lotPath='/v261/lots/'+lot.id;
+  const snapshotLoad=async ()=>(await c.query('SELECT status,workflow_state,actual_departed_at,manager_at FROM loading_orders WHERE id=$1',[load.id])).rows[0];
+  const outboundByDate='/v34/overview?'+new URLSearchParams({project_id:f.project,customer_id:customer.id,from:postedLoad.outbound_date,to:postedLoad.outbound_date});
+  const previousLoad=await snapshotLoad(),previousLot=await api(lotPath),previousOutbound=(await api(outboundByDate)).outbound;
+  const {rows:[originalItem]}=await c.query('SELECT reservation_id,original_weight,seal_no_snapshot,sheets_snapshot FROM loading_items WHERE loading_id=$1 AND bundle_id=$2',[load.id,bundle.id]);
+  const {rows:[originalReservation]}=await c.query('SELECT * FROM reservations WHERE id=$1',[originalItem.reservation_id]);
+  const snapshotRemainder=async ()=>(await c.query('SELECT to_jsonb(b) bundle,to_jsonb(p3) custody FROM bundles b LEFT JOIN copper_leftover_custody p3 ON p3.bundle_id=b.id WHERE b.id=$1',[other.id])).rows[0];
+  const previousRemainder=await snapshotRemainder();
+
   const adminRequest=await api(correctionBase,'admin',returnRequest);
   await stage(adminRequest,'verify-return','admin',409);
-  const authorized=await stage(adminRequest,'authorize'),verified=await stage(authorized,'verify-return');
+  const authorized=await stage(adminRequest,'authorize');
+  assert.equal(authorized.status,'AUTHORIZED');
+  await stage(authorized,'apply','admin',409);
+  const verified=await stage(authorized,'verify-return');
   assert.equal(verified.status,'RETURN_VERIFIED');
   assert.equal(verified.authorized_by,adminRequest.requested_by);
   assert.equal(verified.verified_by,adminRequest.requested_by);
-  await stage(verified,'reject');
+  assert.equal((await api(loadPath)).workflow_state,'OUTBOUND');
   assert.equal((await api('/bundles/'+encodeURIComponent(number))).physical_status,'OUTBOUND');
-  steps.push('copper return self-verification requires administrator, authorization stage and physical evidence');
+  assert.equal((await api(lotPath)).workflow_state,previousLot.workflow_state);
+  assert.deepEqual((await api(outboundByDate)).outbound,previousOutbound);
+  assert.equal((await c.query("SELECT count(*)::int n FROM inventory_events WHERE after_data->>'correction_id'=$1",[verified.id])).rows[0].n,0);
+
+  const applied=await stage(verified,'apply');
+  assert.equal(applied.status,'APPLIED');
+  await stage(verified,'apply','admin',409);
+  const updatedCorrection=await api(correctionBase+'/'+applied.id);
+  assert.equal(updatedCorrection.preparation_recovery.state,'RESTORED');
+  assert.deepEqual(updatedCorrection.preparation_recovery.allocation_ids,[lot.id]);
+  for(const action of ['REQUEST','authorize','verify-return','apply','restore-preparation'])
+   assert(updatedCorrection.steps.some(step=>step.action===action),action);
+  const returnedLoad=await api(loadPath);
+  assert.equal(returnedLoad.status,'REVERSED');
+  assert.equal(returnedLoad.workflow_state,'REVERSED');
+  assert.deepEqual(await snapshotLoad(),previousLoad,'The original posted outbound record stays available for audit');
+  assert.equal(returnedLoad.items.find(row=>row.id===bundle.id).seal_no,originalItem.seal_no_snapshot);
+  const returnedList=await api('/v34/lists/loads?'+new URLSearchParams({search:load.code,status:'REVERSED'}));
+  assert(returnedList.items.some(row=>row.id===load.id&&row.status==='REVERSED'));
+  assert(!(await api('/v34/lists/loads?'+new URLSearchParams({search:load.code,status:'OUTBOUND'}))).items.some(row=>row.id===load.id));
+  assert(!(await api(bpPath)).items.some(row=>row.source_ids.includes(load.id)));
+  assert(!(await api(salesPath)).posted_batches.some(row=>row.loading_id===load.id));
+  assert.equal((await api(outboundByDate)).outbound.vehicles,previousOutbound.vehicles-1);
+  assert.equal((await c.query('SELECT count(*)::int n FROM sales_invoice_confirmations WHERE loading_id=$1',[load.id])).rows[0].n,1);
+
+  const reopened=await api(lotPath,'logistics_field_operator');
+  assert.equal(reopened.lot_no,previousLot.lot_no);
+  assert.equal(reopened.workflow_state,'RECTIFY');
+  assert.equal(reopened.status,'LOCKED');
+  assert.equal(reopened.quantities.original_count,2);
+  assert.equal(reopened.quantities.effective_count,1);
+  assert.equal(reopened.quantities.released_count,1);
+  assert.equal(reopened.quantities.loaded_count,0);
+  assert.equal(reopened.quantities.outbound_count,0);
+  const reopenedRow=reopened.items.find(row=>row.id===bundle.id);
+  assert.equal(reopenedRow.location_id,returnLocation.id);
+  assert.equal(reopenedRow.seal_no,originalItem.seal_no_snapshot);
+  assert.equal(Number(reopenedRow.net_weight),Number(originalItem.original_weight));
+  assert.equal(reopenedRow.active_assignment,true);
+  assert.equal(reopened.items.find(row=>row.id===other.id).active_assignment,false);
+  assert.deepEqual(await snapshotRemainder(),previousRemainder,'Unloaded P3 stock and custody must stay unchanged');
+  const actualReturn=(await api('/inventory?'+new URLSearchParams({search:number}))).items.find(row=>row.id===number);
+  assert.equal(actualReturn.inventory_state_code,'PREPARATION_LOCKED');
+  const {rows:currentReservations}=await c.query('SELECT id,bundle_id,weight FROM reservations WHERE allocation_id=$1 AND released_at IS NULL',[lot.id]);
+  assert.equal(currentReservations.length,1);
+  assert.equal(currentReservations[0].bundle_id,bundle.id);
+  assert.notEqual(currentReservations[0].id,originalReservation.id);
+  assert.equal(Number(currentReservations[0].weight),Number(originalReservation.weight));
+  assert.deepEqual((await c.query('SELECT * FROM reservations WHERE id=$1',[originalReservation.id])).rows[0],originalReservation);
+  assert.equal((await c.query('SELECT count(*)::int n FROM lot_location_claims WHERE allocation_id=$1 AND location_id=$2 AND released_at IS NULL',[lot.id,location.id])).rows[0].n,1);
+  assert.equal((await c.query('SELECT count(*)::int n FROM loading_plan_lot_locks WHERE allocation_id=$1',[lot.id])).rows[0].n,0);
+  assert((await c.query('SELECT cancelled_at FROM loading_plan_documents WHERE id=$1',[document.id])).rows[0].cancelled_at);
+  const {rows:returnEvents}=await c.query("SELECT bundle_id,physical_delta,after_data FROM inventory_events WHERE event_type='REVERSAL' AND after_data->>'correction_id'=$1",[applied.id]);
+  assert.equal(returnEvents.length,1);
+  assert.equal(returnEvents[0].bundle_id,bundle.id);
+  assert.equal(Number(returnEvents[0].physical_delta),Number(originalItem.original_weight));
+  assert.equal(returnEvents[0].after_data.location_id,returnLocation.id);
+  assert(!(await api(choices)).items.some(row=>row.id===lot.id),'A returned preparation requires reapproval before planning another loading');
+
+  const reweighed=(await api('/v262/lots/'+lot.id+'/weigh','logistics_field_operator',{version:reopened.version,
+   items:[{bundle_id:bundle.id,item_version:reopenedRow.item_version,gross_weight:'2.0400',seal_no:'SYNTH-RETURN-'+seq}],note:'Synthetic return reweigh evidence'})).lot;
+  const reSubmitted=await api(lotPath+'/submit','logistics_field_operator',{version:reweighed.version});
+  await api(lotPath+'/approve','site_supervisor',{version:reSubmitted.version,all_weighed_and_stored:true});
+  assert.equal((await api(choices)).items.find(row=>row.id===lot.id)?.bundle_count,1);
+  const returnPlate='SYNTH-RETURN-'+seq,returnBook=new(require('exceljs').Workbook)();
+  returnBook.addWorksheet('Dispatch').addRows([['Horse','Capacity','Transporter','Destination'],[returnPlate,30,'Synthetic Carrier','Synthetic Depot']]);
+  const returnFile={file_name:'synthetic-return-rebook.xlsx',file_base64:Buffer.from(await returnBook.xlsx.writeBuffer()).toString('base64')};
+  const returnFilePreview=await api(dispatchPath+'/import-preview','admin',returnFile);
+  await api(dispatchPath,'admin',{...returnFile,preview_sha256:returnFilePreview.file_sha256});
+  const returnVehicle=(await api(dispatchPath)).vehicles.find(row=>row.truck_no===returnPlate);
+  const nextArrival=await api('/loading-plans/arrivals/'+returnVehicle.id,'admin',{...arrivalBody,trailer_one:returnPlate+'-TR',
+   driver_name:'Synthetic return shipment driver '+seq,passport_no:'Fresh return shipment passport '+seq});
+  const nextDocument=await api('/loading-plans/unified','admin',{...planBody,license_id:sameDay.id,arrival_id:nextArrival.id});
+  assert.notEqual(nextDocument.id,document.id);
+  const nextLoad=await api('/v31/loads','admin',{document_id:nextDocument.id,document_version:nextDocument.version,bundle_ids:[bundle.id]});
+  assert.notEqual(nextLoad.id,load.id);
+  const {rows:[nextLoadingItem]}=await c.query('SELECT active,reservation_id,seal_no_snapshot FROM loading_items WHERE loading_id=$1 AND bundle_id=$2',[nextLoad.id,bundle.id]);
+  assert.equal(nextLoadingItem.active,true);
+  assert.equal(nextLoadingItem.reservation_id,currentReservations[0].id);
+  assert.equal(nextLoadingItem.seal_no_snapshot,'SYNTH-RETURN-'+seq);
+  assert.deepEqual(await snapshotRemainder(),previousRemainder);
+  assert.equal((await api(loadPath)).items.find(row=>row.id===bundle.id).seal_no,originalItem.seal_no_snapshot);
+  steps.push('copper formal return preserves original outbound evidence, reopens only returned preparation stock and allows independent reapproval');
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
  }finally{await app?.close();await c.end();}
 });

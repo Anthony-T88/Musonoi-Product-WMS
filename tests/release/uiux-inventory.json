@@ -744,7 +744,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "preparation detail, reselection after initial rejection or review correction, whole-batch reversal",
+      "state": "preparation detail, reselection, whole-batch reversal, and work restored after outbound return",
       "template": "/preparation/:id"
     },
     {
@@ -1046,7 +1046,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "posted stock issue and date correction with administrator self-review",
+      "state": "posted stock issue, controlled physical return and preparation restoration",
       "template": "/outbounds/loads/:id"
     },
     {

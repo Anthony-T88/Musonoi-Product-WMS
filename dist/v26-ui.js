@@ -1,7 +1,7 @@
 /* Receipt workflow UI using the shared router and permission model. */
 'use strict';
 const V26={
- states:{PENDING:'待审核',REJECTED:'已驳回',PREPARED:'已备货',PARTIAL:'部分装车',FULFILLED:'全部出库',READY:'已审核/待离场',DEPARTED_PENDING:'已离场/待出库审批',DEPARTED_CORRECTION:'已离场/待纠正',OUTBOUND:'已出库'},
+ states:{PENDING:'待审核',REJECTED:'已驳回',PREPARED:'已备货',PARTIAL:'部分装车',FULFILLED:'全部出库',READY:'已审核/待离场',DEPARTED_PENDING:'已离场/待出库审批',DEPARTED_CORRECTION:'已离场/待纠正',OUTBOUND:'已出库',REVERSED:'已冲销'},
  units(v){if(typeof v!=='string'||!/^\d{1,8}(\.\d{1,4})?$/.test(v))throw Error('毛重须为正数，最多4位小数');const [a,b='']=v.split('.');return BigInt(a)*10000n+BigInt(b.padEnd(4,'0'));},
  fixed(n){return `${n/10000n}.${String(n%10000n).padStart(4,'0')}`;},
  weight(v){return v===null||v===undefined?'未检斤':Number(v).toFixed(4);},

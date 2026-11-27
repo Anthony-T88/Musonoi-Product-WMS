@@ -45,7 +45,8 @@ async function related(c,req,plan){
    CASE WHEN e.state='OUTBOUND' THEN 'OUTBOUND' WHEN EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.co_plan_id=d.id AND a.state='RELEASED') THEN 'CANCELLED' ELSE d.status END status
    FROM co_loading_plans d JOIN co_preparations p ON p.id=d.preparation_id LEFT JOIN co_load_executions e ON e.order_id=d.current_load_id
    WHERE d.sales_plan_id=$2`:`SELECT d.id,d.code,coalesce(d.invoice_no,g.invoice_no) invoice_no,d.shipment_batch_no batch_no,m.loading_id,
-   CASE WHEN d.cancelled_at IS NOT NULL OR g.cancelled_at IS NOT NULL THEN 'CANCELLED' WHEN m.loading_id IS NULL THEN 'WAITING'
+   CASE WHEN ${require('./copper-returns.cjs').applied('m.loading_id')} THEN 'REVERSED'
+    WHEN d.cancelled_at IS NOT NULL OR g.cancelled_at IS NOT NULL THEN 'CANCELLED' WHEN m.loading_id IS NULL THEN 'WAITING'
     WHEN v31_load_posted(m.loading_id) THEN 'OUTBOUND' WHEN l.workflow_state IN('READY','DEPARTED_PENDING','DEPARTED_CORRECTION') THEN 'LOADING' ELSE 'MATCHED' END status
    FROM loading_plan_documents d JOIN loading_plan_groups g ON g.id=d.group_id
    LEFT JOIN loading_plan_matches m ON m.document_id=d.id LEFT JOIN loading_orders l ON l.id=m.loading_id

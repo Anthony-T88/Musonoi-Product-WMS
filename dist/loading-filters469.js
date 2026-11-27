@@ -21,7 +21,7 @@ window.LoadingFiltersR9={
  query(form,data,co){
   this.fields(form,data.customer_options||[],co,true);this.actions(form,co,true);
   const totals=document.createElement('div');totals.className='yard-counts r9-loading-totals';
-  const states=co?['DRAFT','MATCHED','OUTBOUND']:['DRAFT','WAITING','MATCHED','LOADING','PENDING_OUTBOUND','COMPLETED','CANCELLED'];
+  const states=co?['DRAFT','MATCHED','OUTBOUND']:['DRAFT','WAITING','MATCHED','LOADING','PENDING_OUTBOUND','COMPLETED','REVERSED','CANCELLED'];
   const cards=[[this.t('合计','Total'),data.scope_total??data.total],...states.map(key=>[co?CobaltLoadingUI.state(key):I18n.translate(ManagementLabels.names[key]||key,true),data.state_counts?.[key]||0])];
   totals.innerHTML=cards.map(([label,count])=>'<article><span>'+esc(label)+'</span><strong>'+count+'</strong></article>').join('');
   form.before(totals);
