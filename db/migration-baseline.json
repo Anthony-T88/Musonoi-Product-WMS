@@ -861,6 +861,14 @@
     {
       "version": "215_v490_report_mail_transport.sql",
       "checksum": "9667653c3761011be4b4299fe8188b123c0de76deb8f2e74f506fc611e97a627"
+    },
+    {
+      "version": "216_v490_reusable_cancelled_invoice.sql",
+      "checksum": "ce5ce9521761cdcf630db0c3e76dfbf7aca5eadc5b4608f360204d3103eb02d5"
+    },
+    {
+      "version": "217_v490_loading_completed_preparation.sql",
+      "checksum": "199f72468c827b9b60b422308e15966b047de9cfac49662ea4cbf1716ff15017"
     }
   ]
 }

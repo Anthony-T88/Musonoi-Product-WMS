@@ -49,7 +49,7 @@ function candidateSql(co){
    AND NOT EXISTS (SELECT 1 FROM historical_sales_dispatch_links h WHERE h.source_id=m.id OR h.${link}=v.id)
    AND NOT EXISTS (SELECT 1 FROM ${co?'co_loading_plans':'loading_plan_documents'} d
     JOIN ${co?'co_vehicle_arrivals':'vehicle_arrivals'} a ON a.id=d.arrival_id
-    WHERE a.dispatch_vehicle_id=v.id AND ${co?"NOT EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.co_plan_id=d.id AND a.state='RELEASED')":"d.cancelled_at IS NULL"})
+    WHERE a.dispatch_vehicle_id=v.id AND ${co?"d.status<>'CANCELLED' AND NOT EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.co_plan_id=d.id AND a.state='RELEASED')":"d.cancelled_at IS NULL"})
  ) SELECT * FROM pairs v WHERE sales_plan_id=$3 AND EXISTS (SELECT 1 FROM user_scopes s
   WHERE s.user_id=$1 AND s.project_id=v.project_id AND(s.warehouse_id IS NULL OR s.warehouse_id=v.warehouse_id)
   AND(s.customer_id IS NULL OR s.customer_id=v.customer_id))`;

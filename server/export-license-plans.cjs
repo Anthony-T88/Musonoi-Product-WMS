@@ -32,12 +32,17 @@ async function invoiceConflict(c,invoice,owner=null){
 }
 async function hasInvoice(c,invoice,owner=null){
  const {rowCount}=await c.query(`SELECT 1 FROM (
-  SELECT invoice_no FROM export_license_allocations WHERE plan_id IS DISTINCT FROM $2::uuid
-  UNION ALL SELECT invoice_no FROM loading_plan_documents WHERE id IS DISTINCT FROM $2
-  UNION ALL SELECT invoice_no FROM loading_plan_groups WHERE id IS DISTINCT FROM $2
-   AND id IS DISTINCT FROM (SELECT group_id FROM loading_plan_documents WHERE id=$2)
-  UNION ALL SELECT invoice_no FROM co_loading_plans WHERE id IS DISTINCT FROM $2
+  SELECT invoice_no FROM export_license_allocations WHERE plan_id IS DISTINCT FROM $2::uuid AND state<>'RELEASED'
+  UNION ALL SELECT d.invoice_no FROM loading_plan_documents d JOIN loading_plan_groups g ON g.id=d.group_id
+   WHERE d.id IS DISTINCT FROM $2 AND d.cancelled_at IS NULL AND g.cancelled_at IS NULL
+  UNION ALL SELECT g.invoice_no FROM loading_plan_groups g WHERE g.id IS DISTINCT FROM $2 AND g.cancelled_at IS NULL
+   AND g.id IS DISTINCT FROM (SELECT group_id FROM loading_plan_documents WHERE id=$2)
+   AND (NOT EXISTS(SELECT 1 FROM loading_plan_documents d WHERE d.group_id=g.id)
+        OR EXISTS(SELECT 1 FROM loading_plan_documents d WHERE d.group_id=g.id AND d.cancelled_at IS NULL))
+  UNION ALL SELECT d.invoice_no FROM co_loading_plans d WHERE d.id IS DISTINCT FROM $2 AND d.status<>'CANCELLED'
+   AND NOT EXISTS(SELECT 1 FROM export_license_allocations a WHERE a.co_plan_id=d.id AND a.state='RELEASED')
   UNION ALL SELECT invoice_no FROM sales_invoice_confirmations
+  UNION ALL ${issuedInvoices}
   UNION ALL ${historicalInvoices}
  ) n WHERE historical_unit_key(n.invoice_no)=historical_unit_key($1) LIMIT 1`,[invoice,owner]);
  return rowCount>0;
@@ -48,6 +53,11 @@ async function lockInvoice(c,invoice){
 const invoices=`SELECT invoice_no FROM export_license_allocations UNION ALL SELECT invoice_no FROM loading_plan_documents
  UNION ALL SELECT invoice_no FROM loading_plan_groups UNION ALL SELECT invoice_no FROM co_loading_plans
  UNION ALL SELECT invoice_no FROM sales_invoice_confirmations`;
+const issuedInvoices=`SELECT source_invoice_no invoice_no FROM sales_invoice_shipments WHERE source_invoice_no IS NOT NULL
+ UNION ALL SELECT coalesce(nullif(snapshot#>>'{loading_plan,invoice_no}',''),nullif(snapshot#>>'{transport,invoice_no}',''),
+   regexp_replace(snapshot->>'document_no','-?PL$','','i')) invoice_no FROM packing_list_revisions
+ UNION ALL SELECT regexp_replace(document_no,'-?PL$','','i') invoice_no FROM packing_list_documents
+ UNION ALL SELECT regexp_replace(document_no,'-?PL$','','i') invoice_no FROM co_packing_revisions`;
 const historicalInvoices=`SELECT n.invoice_no FROM historical_movement_documents m
  LEFT JOIN export_license_historical_sources s ON s.source_id=m.id
  CROSS JOIN LATERAL (VALUES (m.source_facts->>'invoice_no'),(s.invoice_no),(regexp_replace(m.document_no,'-?PL$','','i'))) n(invoice_no)
@@ -58,7 +68,7 @@ async function invoiceCandidate(c,l){
   WHERE left(lower(invoice_no),length($1)+1)=lower($1)||'-'
  ), next AS (SELECT greatest($2::numeric,coalesce(max(CASE WHEN suffix~'^[0-9]+$' THEN suffix::numeric END),0)+1) serial FROM suffixes),
  historical_suffixes AS (
-  SELECT substr(historical_unit_key(invoice_no),length(historical_unit_key($1))+2) suffix FROM (${historicalInvoices}) h
+  SELECT substr(historical_unit_key(invoice_no),length(historical_unit_key($1))+2) suffix FROM (${historicalInvoices} UNION ALL ${issuedInvoices}) h
   WHERE left(historical_unit_key(invoice_no),length(historical_unit_key($1))+1)=historical_unit_key($1)||'-'
  ), blocked AS (SELECT DISTINCT CASE WHEN suffix~'^[0-9]+$' THEN suffix::numeric END serial FROM historical_suffixes),
  candidates AS (SELECT next.serial+offsets.n serial FROM next CROSS JOIN generate_series(0,(SELECT count(*)::int FROM blocked)) offsets(n))
@@ -135,11 +145,16 @@ async function beforeMatch(c,product,id,date){
 async function cancelCobalt(c,req,plan){
  if(plan.status!=='DRAFT'||plan.version!==B.version(req.body?.version))throw B.error(409,'仅可取消版本一致的未匹配计划');
  const reason=B.text(req.body.reason,'取消原因',1000),r=await link(c,CO,plan.id);
- if(!r||r.state!=='RESERVED')throw B.error(409,'此装车计划无可释放的许可证预占');
- await c.query('SELECT id FROM export_licenses WHERE id=$1 FOR UPDATE',[r.license_id]);
- await c.query("UPDATE export_license_allocations SET state='RELEASED',closed_at=clock_timestamp() WHERE id=$1",[r.id]);
- await B.audit(c,req,'licensed_cobalt_plan_cancelled','co_loading_plans',plan.id,r,{...r,state:'RELEASED',reason});
- return {id:plan.id,status:'CANCELLED',project_id:plan.project_id,warehouse_id:plan.warehouse_id,customer_id:plan.customer_id};
+ if(r&&r.state!=='RESERVED')throw B.error(409,'此装车计划的许可证预占已结束');
+ const {rows:[cancelled]}=await c.query(`UPDATE co_loading_plans SET status='CANCELLED',last_action='CANCEL',
+  cancelled_at=clock_timestamp(),cancelled_by=$2,cancel_reason=$3,
+  updated_at=clock_timestamp(),updated_by=$2,version=version+1 WHERE id=$1 RETURNING *`,[plan.id,req.user.id,reason]);
+ if(r){
+  await c.query('SELECT id FROM export_licenses WHERE id=$1 FOR UPDATE',[r.license_id]);
+  await c.query("UPDATE export_license_allocations SET state='RELEASED',closed_at=clock_timestamp() WHERE id=$1",[r.id]);
+  await B.audit(c,req,'licensed_cobalt_plan_cancelled','co_loading_plans',plan.id,r,{...r,state:'RELEASED',reason});
+ }else await B.audit(c,req,'cobalt_loading_plan_cancelled','co_loading_plans',plan.id,plan,cancelled);
+ return {...cancelled,project_id:plan.project_id,warehouse_id:plan.warehouse_id,customer_id:plan.customer_id};
 }
 
 module.exports={link,prepare,bind,beforeMatch,cancelCobalt,invoiceConflict,invoiceCandidate,hasInvoice};

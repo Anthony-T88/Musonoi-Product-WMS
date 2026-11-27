@@ -845,7 +845,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "scoped license choices, planned loading date and editable automatic invoice recommendation",
+      "state": "completed preparation batch choices, scoped licenses and an editable invoice recommendation",
       "template": "/loading-plans/new"
     },
     {
@@ -909,7 +909,7 @@
       "products": [
         "CO_HYDROXIDE"
       ],
-      "state": "standard",
+      "state": "loading plan details with cancellation and history",
       "template": "/loading-plans/orders/:id"
     },
     {

@@ -68,6 +68,30 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
    preview_sha256:validated.file_sha256});
   assert.deepEqual([filled.added_count,filled.transport_filled_count],[0,1]);
   preview=await api(previewPath);
+  assert.equal(preview.preparation_ready,true);
+  const optionsUrl='/cobalt/loading/options?sales_plan_id='+sales.id;
+  const incompletePlan=await P.approved(planApi,co,sales.id,P.batch(co,Number.parseInt(salt.slice(0,6),16)+2000));
+  const incomplete=await api('/cobalt/preparations',intakeActor,{preparation_plan_id:incompletePlan.id,
+   project_id:f.project,warehouse_id:f.warehouse,total_bags:1});
+  const newPlan={...Object.fromEntries(query),planned_load_date:today,...preview.versions};
+  const tooSoon=await api('/cobalt/loading/plans','logistics_manager',{...newPlan,preparation_id:incomplete.id},409);
+  assert.equal(tooSoon.error,'CO_LOADING_NOT_READY');
+  assert((await api(optionsUrl)).batches.some(row=>row.id===prep.id));
+  assert(!(await api(optionsUrl)).batches.some(row=>row.id===incomplete.id));
+
+  const workPath='/cobalt/preparations/'+prep.id+'/work';
+  const amendment=await api(workPath+'/amend-request',intakeActor,{batch_version:preview.versions.batch_version,reason:'Synthetic pending correction'});
+  assert(!(await api(optionsUrl)).batches.some(row=>row.id===prep.id));
+  assert.equal((await api(previewPath)).preparation_ready,false);
+  const staleAfterAmendment=await api('/cobalt/loading/plans','logistics_manager',newPlan,409);
+  assert.equal(staleAfterAmendment.error,'CO_LOADING_NOT_READY');
+  const actor=f.accounts.find(row=>row.role==='logistics_manager').id;
+  await assert.rejects(c.query(`INSERT INTO co_loading_plans(sales_plan_id,preparation_id,arrival_id,planned_load_date,destination,created_by,updated_by)
+   VALUES($1,$2,$3,$4,'Synthetic guard test',$5,$5)`,[sales.id,prep.id,a.id,today,actor]),/CO_LOADING_NOT_READY/);
+  await api(workPath+'/amend-reject','site_supervisor',{batch_version:amendment.version,reason:'Synthetic cancelled correction'});
+  assert((await api(optionsUrl)).batches.some(row=>row.id===prep.id));
+  preview=await api(previewPath);
+  assert.equal(preview.preparation_ready,true);
   const permit=await api('/cobalt/export-permits','sales_operator',{contract_id:customer.contract,applied_on:today,proforma_no:'RMM-CO-'+salt,quantity:'30',unit_basis:'COBALT_MT',unit:'Co MT',currency:'USD'});
   const path=licensePath='/cobalt/export-permits/'+permit.id,issue=await api(path+'/actions','sales_operator',{action:'ISSUE',payload:{license_no:'RC2-LICENSE',valid_from:today,valid_until:today},version:permit.version,reason:'Synthetic cobalt licence'});
   const issued=await api(path+'/actions/'+issue.id,'sales_manager',{decision:'APPROVED',note:'Synthetic independent cobalt review'});
@@ -89,7 +113,35 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   assert.equal((await api(permitOptions+previewFilter,role)).invoice_preview,permit.proforma_no+'-01');
   const registry=await request(path,role);
   assert([403,404].includes(registry.statusCode),'Plan scope must not grant access to the permit registry');
-  plan=await api('/cobalt/loading/plans',role,{sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,license_id:permit.id,remark:'Synthetic rc2 matching',...preview.versions});
+  const planFields={sales_plan_id:sales.id,preparation_id:prep.id,arrival_id:a.id,planned_load_date:today,remark:'Synthetic rc2 matching',...preview.versions};
+  const invoiceTaken=async invoice_no=>(await api('/cobalt/export-permits/invoice-number?'+new URLSearchParams({sales_plan_id:sales.id,invoice_no}),role)).duplicate;
+  const cancel=async(doc,actor=role,expected=200,version=doc.version)=>
+   api('/cobalt/loading/plans/'+doc.id+'/cancel',actor,{version,reason:'Synthetic invoice reuse'},expected);
+  const manualFields={...planFields,invoice_no:'RC2-MANUAL-'+salt};
+  const manual=await api('/cobalt/loading/plans',role,manualFields);
+  assert.equal(await invoiceTaken(manual.invoice_no.toLowerCase()),true);
+  await cancel(manual,'production_operator',403);
+  await cancel(manual,role,409,manual.version+1);
+  const cancelled=await cancel(manual);
+  assert.equal(cancelled.status,'CANCELLED');
+  assert.equal(cancelled.cancel_reason,'Synthetic invoice reuse');
+  const arrival=(await api('/cobalt/sales/arrivals?sales_plan_id='+sales.id)).items.find(row=>row.arrival_id===a.id);
+  assert(arrival&&!arrival.loading_plan_id);
+  assert.equal((await api('/cobalt/loading/plans/'+manual.id)).plan.invoice_no,manual.invoice_no);
+  assert.equal(await invoiceTaken(manual.invoice_no),false);
+  const reused=await api('/cobalt/loading/plans',role,manualFields);
+  assert.notEqual(reused.id,manual.id);
+  assert.equal(reused.invoice_no,manual.invoice_no);
+  await cancel(reused);
+  const licensedFields={...planFields,license_id:permit.id};
+  const licensed=await api('/cobalt/loading/plans',role,licensedFields);
+  assert.equal(licensed.invoice_no,permit.proforma_no+'-01');
+  await cancel(licensed);
+  assert.equal((await api(path)).allocations.find(row=>row.plan_id===licensed.id).state,'RELEASED');
+  assert.equal(await invoiceTaken(licensed.invoice_no),false);
+  const readiness=(await c.query("SELECT v468_close_readiness('CO_HYDROXIDE',$1) AS state",[sales.id])).rows[0].state;
+  assert.equal(readiness.pending_loading_plans,0);
+  plan=await api('/cobalt/loading/plans',role,{...licensedFields,invoice_no:licensed.invoice_no});
   assert.equal(plan.transporter,'Synthetic Carrier');
   assert.equal(plan.destination,'Synthetic Depot');
   assert.equal(plan.invoice_no,permit.proforma_no+'-01');
@@ -97,7 +149,9 @@ test('native cobalt match independence, cancellation, rematch, formal outbound a
   const arrivalsByPlate=await api('/cobalt/sales/arrivals?'+new URLSearchParams({truck_no:byPlate}));
   assert.deepEqual(arrivalsByPlate.items.map(row=>row.arrival_id),[a.id]);
   const plansByPlate=await api('/cobalt/loading/plans?'+new URLSearchParams({truck_no:byPlate}));
-  assert.deepEqual(plansByPlate.items.map(row=>row.id),[plan.id]);
+  assert.deepEqual(plansByPlate.items.filter(row=>row.status!=='CANCELLED').map(row=>row.id),[plan.id]);
+  assert(plansByPlate.items.some(row=>row.id===manual.id&&row.status==='CANCELLED'));
+  assert(plansByPlate.items.some(row=>row.id===licensed.id&&row.status==='CANCELLED'));
   assert.equal(plan.packing_list_no,plan.invoice_no+'-PL');
   assert.equal(Number((await api(path)).reserved),0.647123);
   assert.equal(Number((await api(path)).used),0);

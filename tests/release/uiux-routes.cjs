@@ -158,7 +158,7 @@ function pages(ids){
   entry.url='/loading-plans?'+new URLSearchParams({vehicle_id:ids[example]||missingId});
  }
  add('loading-search','/loading-plans/query',BOTH,{screenshot:true,state:'single-row plate filter with full invoice and packing list numbers'});
- add('loading-new','/loading-plans/new',BOTH,{state:'scoped license choices, planned loading date and editable automatic invoice recommendation'});
+ add('loading-new','/loading-plans/new',BOTH,{state:'completed preparation batch choices, scoped licenses and an editable invoice recommendation'});
  add('cu-plan-group','/loading-plans/:id',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-edit','/loading-plans/:id/edit',[CU],{example:'cuPlanGroup'});
  add('cu-plan-group-cancel','/loading-plans/:id/cancel',[CU],{example:'cuPlanGroup'});
@@ -166,7 +166,7 @@ function pages(ids){
  add('cu-loading-plan','/loading-plans/orders/:id',[CU],{example:'cuPlanDoc',screenshot:true});
  add('cu-loading-plan-edit','/loading-plans/orders/:id/edit',[CU],{example:'cuPlanDoc'});
  add('cu-loading-plan-cancel','/loading-plans/orders/:id/cancel',[CU],{example:'cuPlanDoc'});
- add('co-loading-plan','/loading-plans/orders/:id',[CO],{example:'coPlanDoc',screenshot:true});
+ add('co-loading-plan','/loading-plans/orders/:id',[CO],{example:'coPlanDoc',state:'loading plan details with cancellation and history',screenshot:true});
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
  add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail and correction links'});

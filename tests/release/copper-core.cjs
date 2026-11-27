@@ -61,6 +61,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(workingOverview.analysis.states.find(s=>s.key==='preparing').quantity,2);
  assert.equal(workingOverview.chart_trend.rows[0].inbound_bundles,2);
  const mapQuery=new URLSearchParams({project_id:f.project,warehouse_id:f.warehouse,preparation_batch:approvedWork.batch_no,bundle_no:number});
+ const choices='/loading-plans/unified/lots?sales_plan_id='+plan.id;
+ assert(!(await api(choices)).items.some(x=>x.id===lot.id),'Work in progress cannot be selected');
  const map=await api('/stock-map?'+mapQuery);assert.equal(map.summary.bundle_count,1);
  const productionArea=map.locations.find(x=>x.map_usage==='TEMPORARY');assert(productionArea);
  const productionInventory=await api('/inventory?'+new URLSearchParams({location:'新生产捆包堆存区',search:otherNumber}));
@@ -68,8 +70,10 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert.equal(map.summary.net_weight,null);
  assert.equal((await c.query('SELECT weight,gross_weight FROM inventory_view WHERE uuid=$1',[bundle.id])).rows[0].weight,null);
  lot=await api('/v261/lots/'+lot.id+'/submit','logistics_field_operator',{version:lot.version});
+ assert(!(await api(choices)).items.some(x=>x.id===lot.id),'Pending completion review cannot be selected');
  assert.equal((await api('/stock-map?'+mapQuery)).summary.net_weight,null);
  await api('/v261/lots/'+lot.id+'/approve','site_supervisor',{version:lot.version,all_weighed_and_stored:true});
+ assert.equal((await api(choices)).items.find(x=>x.id===lot.id)?.bundle_count,2);
  assert.equal(Number((await api('/stock-map?'+mapQuery)).summary.net_weight),2.0325);
  const approvedOverview=await api(overviewUrl);
  assert.equal(approvedOverview.metrics.prepared_pending_outbound.batches,1);
@@ -211,7 +215,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  const replacement='SYNTH-MANUAL-INV-'+seq;
  const manual=await api('/loading-plans/unified','admin',{...unlinked,invoice_no:replacement});
  assert.equal(manual.invoice_no,replacement);
+ const invoiceTaken=async invoice_no=>(await api('/export-permits/invoice-number?'+new URLSearchParams({sales_plan_id:plan.id,invoice_no}))).duplicate;
+ assert.equal(await invoiceTaken(replacement.toLowerCase()),true);
  await api('/loading-plan-documents/'+manual.id+'/cancel','admin',{version:manual.version,reason:'Synthetic manual invoice check'});
+ assert.equal(await invoiceTaken(replacement),false);
+ const reentered=await api('/loading-plans/unified','admin',{...unlinked,invoice_no:replacement});
+ assert.notEqual(reentered.id,manual.id);
+ assert.equal(reentered.invoice_no,replacement);
+ const oldManual=await api('/loading-plan-documents/'+manual.id);
+ assert.equal(oldManual.document.invoice_no,replacement);
+ assert.equal(oldManual.document.status,'CANCELLED');
+ await api('/loading-plan-documents/'+reentered.id+'/cancel','admin',{version:reentered.version,reason:'Synthetic reuse check complete'});
  const unlicensedContract=await api('/contracts','admin',{project_id:f.project,customer_id:customer.id,
   contract_no:'RC3-NO-LICENSE-'+seq,effective_date:today,end_date:'2099-12-31',active:true});
  const otherContract=await api('/plans','sales_operator',{project_id:f.project,customer_id:customer.id,contract_id:unlicensedContract.id,
@@ -232,6 +246,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await api(permitPath+'/actions','sales_operator',{action:'CLOSE',payload:{closed_on:today,reference:'Synthetic closure with active reservation'},version:quota.version,reason:'Synthetic guard check'},409);
  await api('/loading-plan-documents/'+firstDocument.id+'/cancel','admin',{version:firstDocument.version,reason:'Synthetic release'});
  quota=await api(permitPath);assert.equal(Number(quota.reserved),0);assert.equal(Number(quota.available),7500);
+ assert.equal(quota.allocations.find(a=>a.plan_id===firstDocument.id).state,'RELEASED');
+ assert.equal(await invoiceTaken(firstDocument.invoice_no),false);
+ const voidInvoice='SYNTH-VOID-INV-'+seq;
+ await c.query(`INSERT INTO export_license_allocations(license_id,product_code,cu_plan_id,batch_id,invoice_no,reserved_quantity,state,created_by,closed_at)
+  SELECT license_id,product_code,cu_plan_id,batch_id,$2,reserved_quantity,'VOID',created_by,clock_timestamp()
+  FROM export_license_allocations WHERE cu_plan_id=$1`,[firstDocument.id,voidInvoice]);
+ assert.equal(await invoiceTaken(voidInvoice),true);
+ const reused=await api('/loading-plans/unified','admin',{...autoPlan,invoice_no:firstDocument.invoice_no});
+ assert.equal(reused.invoice_no,firstDocument.invoice_no);
+ assert.equal(await invoiceTaken(reused.invoice_no),true);
+ await api('/loading-plan-documents/'+reused.id+'/cancel','admin',{version:reused.version,reason:'Synthetic licensed reuse check'});
  const race=await Promise.all([request('/loading-plans/unified','admin',planBody),request('/loading-plans/unified','logistics_manager',planBody)]);
  assert.deepEqual(race.map(r=>r.statusCode).sort(),[200,409],race.map(r=>r.body).join(' '));
  const document=race.find(r=>r.statusCode===200).json();
@@ -406,6 +431,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  assert(pendingPacking.customer_options.some(row=>row.id===customer.id));
  await api('/shipping/'+load.id+'/packing-list','admin',{...generate,unit_price_usd:'-1'},400);
  await api('/shipping/'+load.id+'/packing-list','admin',generate);
+ assert.equal(await require('../../server/export-license-plans.cjs').hasInvoice(c,document.invoice_no,document.id),true);
  const generatedPacking=await api(packingPath+'?'+new URLSearchParams({...packingFilter,document_status:'GENERATED'}));
  assert.equal(generatedPacking.items.find(row=>row.id===load.id)?.revision,1);
  assert.equal((await api(packingPath+'/'+load.id+'/revisions')).items[0].revision,1);
@@ -526,6 +552,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  await c.query('INSERT INTO loading_plan_groups(sales_plan_id,name,invoice_no,created_by) VALUES($1,$2,$3,$4)',[plan.id,'Synthetic historical numbering',historical,f.accounts.find(a=>a.role==='admin').id]);
  assert.equal((await api(previewInvoice)).invoice_preview,sameDay.proforma_no+'-100');
  const ready=[];
+ let pendingForLoading;
  for(const [i,code] of ['P1-02','P1-03'].entries()){
   const {rows:[slot]}=await c.query(`INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage)
    VALUES($1,$2,$3,$3,'FORMAL') ON CONFLICT(project_id,code) DO UPDATE SET map_cell_code=EXCLUDED.map_cell_code,map_usage='FORMAL' RETURNING id`,[f.project,f.warehouse,code]);
@@ -539,7 +566,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   batch=await api('/v261/lots/'+batch.id,'logistics_field_operator');
   batch=(await api('/v262/lots/'+batch.id+'/weigh','logistics_field_operator',{version:batch.version,items:batch.items.map(b=>({bundle_id:b.id,item_version:b.item_version,gross_weight:'2.0350',seal_no:'V475-CONCURRENT-'+seq+'-'+i}))})).lot;
   batch=await api('/v261/lots/'+batch.id+'/submit','logistics_field_operator',{version:batch.version});
-  await api('/v261/lots/'+batch.id+'/approve','site_supervisor',{version:batch.version,all_weighed_and_stored:true});
+  if(i===0)pendingForLoading=batch;
+  else await api('/v261/lots/'+batch.id+'/approve','site_supervisor',{version:batch.version,all_weighed_and_stored:true});
   ready.push(batch.id);
  }
  const trucks=new(require('exceljs').Workbook)(),sheet=trucks.addWorksheet('Dispatch');
@@ -553,6 +581,21 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   const vehicle=candidates.find(item=>item.truck_no===truck);
   readyArrivals.push(await api('/loading-plans/arrivals/'+vehicle.id,'admin',{...arrivalBody,trailer_one:'V475-T-'+i+'-'+seq,driver_name:'Synthetic V475 Driver '+i,passport_no:'Synthetic V475 Passport '+i}));
  }
+ const submittedTooSoon=await request('/loading-plans/unified','admin',{...planBody,license_id:sameDay.id,
+  arrival_id:readyArrivals[0].id,allocation_ids:[pendingForLoading.id]});
+ assert.equal(submittedTooSoon.statusCode,409,submittedTooSoon.body);
+ assert.match(submittedTooSoon.json().error,/已审核完成/);
+ await c.query('BEGIN');
+ try{
+  const actor=f.accounts.find(a=>a.role==='admin').id;
+  const {rows:[group]}=await c.query('INSERT INTO loading_plan_groups(sales_plan_id,name,created_by,invoice_no) VALUES($1,$2,$3,$4) RETURNING id',
+   [plan.id,'Synthetic preparation guard test',actor,'SYNTH-GUARD-'+seq]);
+  const {rows:[document]}=await c.query('INSERT INTO loading_plan_documents(group_id,created_by,planned_load_date,arrival_required) VALUES($1,$2,$3,false) RETURNING id',
+   [group.id,actor,today]);
+  await assert.rejects(c.query('INSERT INTO loading_plan_lots(document_id,allocation_id) VALUES($1,$2)',[document.id,pendingForLoading.id]),
+   /只能新增已审核完成的备货批次/);
+ }finally{await c.query('ROLLBACK');}
+ await api('/v261/lots/'+pendingForLoading.id+'/approve','site_supervisor',{version:pendingForLoading.version,all_weighed_and_stored:true});
  const concurrent=await Promise.all(ready.map((id,i)=>request('/loading-plans/unified','admin',{...planBody,license_id:sameDay.id,arrival_id:readyArrivals[i].id,allocation_ids:[id]})));
  assert.deepEqual(concurrent.map(response=>response.statusCode),[200,200],concurrent.map(response=>response.body).join(' '));
  assert.deepEqual(concurrent.map(response=>response.json().invoice_no).sort(),[sameDay.proforma_no+'-100',sameDay.proforma_no+'-101']);

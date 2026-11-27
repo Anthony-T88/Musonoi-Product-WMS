@@ -824,7 +824,28 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     assert(await draft.evaluate(button=>button.nextElementSibling?.matches('button.primary')&&
      button.nextElementSibling?.type==='submit'&&Boolean(button.closest('.o4-footer'))));
     assert.equal(await form.locator('#loading-permit-picker-search').count(),0);
+    const {rows:[unfinished]}=await c.query('SELECT coalesce(allocation_id,co_preparation_id) id FROM preparation_plans WHERE product_code=$1 AND batch_no=$2',
+     [product,fixtures[product].item(798).batch_no]);
+    assert(unfinished.id,'The normal entry test needs an unfinished preparation');
+    const eligibilityResponse=page.waitForResponse(response=>{
+     const url=new URL(response.url());
+     return url.pathname.endsWith(co?'/cobalt/loading/options':'/loading-plans/unified/lots')&&url.searchParams.get('sales_plan_id')===fixtures[product].plan;
+    });
     await form.locator('[name="sales_plan_id"]').selectOption(fixtures[product].plan);
+    const eligibility=await eligibilityResponse;
+    assert.equal(eligibility.status(),200,await eligibility.text());
+    const options=await eligibility.json(),batchChoices=(co?options.batches:options.items).map(row=>row.id);
+    assert(!batchChoices.includes(unfinished.id));
+    if(batchChoices.length)await page.waitForFunction(({co,count})=>{
+     const filter=co?'#co-loading-form select[name="preparation_id"]':'#single-plan-lots';
+     return document.querySelectorAll(filter+' option[value]:not([value=""])').length===count;
+    },{co,count:batchChoices.length});
+    await form.locator('[data-op4-batch]').click();
+    const picker=page.locator('#dialog .o4-batch-list');
+    await picker.waitFor();
+    assert.deepEqual(await picker.locator('[data-op4-pick]').evaluateAll(nodes=>nodes.map(node=>node.dataset.op4Pick)),batchChoices);
+    if(!batchChoices.length)await picker.getByText(/当前销售计划暂无已完成的可用备货批次|No completed preparation batches are available/).waitFor();
+    await page.keyboard.press('Escape');
     const permits=form.locator('.o4-doc-fields select[name="license_id"]');
     assert.equal(await form.locator('select[name="license_id"]').count(),1);
     assert.equal(await form.locator('input[name="export_license_no"]:visible').count(),0);

@@ -103,7 +103,8 @@ async function review(c,req,body){
    LEFT JOIN bundles b ON b.id=s.bundle_id WHERE historical_unit_key(s.seal_key)=ANY($1::text[])`,[seals]):{rows:[]};
  const {rows:existingDocs}=await c.query(product==='CO_HYDROXIDE'?
   `SELECT document_no reference FROM co_packing_documents WHERE historical_unit_key(document_no)=$1
-   UNION SELECT code FROM co_loading_plans WHERE historical_unit_key(packing_list_no)=$1 AND status<>'CANCELLED'`:
+   UNION SELECT d.code FROM co_loading_plans d WHERE historical_unit_key(d.packing_list_no)=$1 AND d.status<>'CANCELLED'
+    AND NOT EXISTS(SELECT 1 FROM export_license_allocations x WHERE x.co_plan_id=d.id AND x.state='RELEASED')`:
   `SELECT document_no reference FROM packing_list_documents WHERE historical_unit_key(document_no)=$1
    UNION SELECT code FROM loading_plan_documents WHERE historical_unit_key(packing_list_no)=$1 AND cancelled_at IS NULL`,[facts.document_key]);
  if(existingDocs.length){
