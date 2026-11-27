@@ -5,6 +5,17 @@ window.DispatchTransport={
  // Cobalt pages translate their own markup and opt out of the global DOM translator.
  label:value=>ProductContext.isCopper()?value:I18n.translate(value,true),
  state:new WeakMap(),
+ removalReason(code){
+  const labels={
+   ONLINE_ARRIVAL:['已有到厂登记','Arrival registered'],
+   ONLINE_LOADING:['已关联装车计划或装车单','Linked to a loading plan or order'],
+   MANUAL_HISTORY_LINK:['历史单据已人工关联','Historical document linked manually'],
+   CONFIRMED_HISTORY_INVOICE:['历史发票已人工确认','Historical invoice confirmed manually'],
+   HISTORICAL_SCOPE:['历史单据超出授权范围','Historical document is outside your scope'],
+   PLAN_CLOSED:['销售计划已关闭','Sales plan is closed']
+  };
+  return labels[code]?this.t(...labels[code]):'';
+ },
  historicalRemoval(vehicle){
   const t=this.t;
   return {
@@ -58,6 +69,7 @@ window.DispatchTransport={
  },
  outcome(row,transportOnly=false){
   if(row.cancelled)return transportOnly?'取消行 · 跳过':'已取消 · 不计入';
+  if(row.action==='RESTORE')return this.t('恢复已删除车辆','Restore deleted vehicles');
   if(row.action==='FILL_TRANSPORT')return '补全运输资料';
   if(row.action==='UNMATCHED')return '未匹配 · 跳过';
   if(row.action==='TRANSPORT_CONFLICT')return '运输资料冲突 · 跳过';
@@ -68,8 +80,9 @@ window.DispatchTransport={
  summary(result){
   const parts=[];
   if(Array.isArray(result.items))parts.push('已读取 '+result.row_count);
-  parts.push('新增 '+(result.new_count??result.added_count??0),'补全运输资料 '+result.transport_filled_count,
-   '重复跳过 '+result.duplicate_count);
+  parts.push('新增 '+(result.new_count??result.added_count??0));
+  if(result.restored_count)parts.push(this.t('恢复','Restored')+' '+result.restored_count);
+  parts.push('补全运输资料 '+result.transport_filled_count,'重复跳过 '+result.duplicate_count);
   if(result.unmatched_count)parts.push('未匹配 '+result.unmatched_count);
   if(result.transport_conflict_count)parts.push('资料冲突 '+result.transport_conflict_count);
   if(result.transport_locked_count)parts.push('装车单锁定 '+result.transport_locked_count);

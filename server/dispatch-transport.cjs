@@ -21,23 +21,36 @@ function importMonth(plan,body){
 }
 
 async function assertImportAvailable(c,req,plan,parsed,{co=false,transportOnly=false}={}){
- if(transportOnly)return;
- // Keep re-uploads in the original plan valid, including after an authorized month transfer.
- const ownership=co?`FROM co_dispatch_imports i JOIN co_dispatch_vehicles v ON v.import_id=i.id
-  JOIN co_sales_plans p ON p.id=v.sales_plan_id`:
-  `FROM sales_dispatch_imports i JOIN sales_dispatch_vehicles v ON v.import_id=i.id
-  LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id
-  JOIN sales_plans p ON p.id=coalesce(k.sales_plan_id,i.sales_plan_id)`;
+ if(transportOnly)return false;
+ const imports=co?'co_dispatch_imports':'sales_dispatch_imports';
+ const vehicles=co?'co_dispatch_vehicles':'sales_dispatch_vehicles';
+ const plans=co?'co_sales_plans':'sales_plans';
+ const currentPlan=co?'v.sales_plan_id':'coalesce(k.sales_plan_id,i.sales_plan_id)';
  const shipmentMonth=co?'v.shipment_month':'coalesce(k.shipment_month,i.shipment_month)';
- const {rows:[conflict]}=await c.query(`SELECT p.code,${shipmentMonth} shipment_month,
-  EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$6 AND s.project_id=p.project_id
-   AND (s.customer_id IS NULL OR s.customer_id=p.customer_id)${co?' AND (s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id)':''}) visible
-  ${ownership}
-  WHERE i.file_sha256=$1 AND v.source_sheet=$2 AND v.cancelled_at IS NULL AND i.sales_plan_id<>$3 AND p.id<>$3
-   AND p.project_id=$4 AND p.customer_id=$5
-  ORDER BY visible DESC,i.created_at,p.id,v.id LIMIT 1`,
+ // The import batch records its original plan even if its vehicles have since been moved or cancelled.
+ const {rows:[conflict]}=await c.query(`WITH matching_imports AS (
+  SELECT i.id,i.sales_plan_id,i.shipment_month,i.created_at FROM ${imports} i
+  JOIN ${plans} p ON p.id=i.sales_plan_id
+  WHERE i.file_sha256=$1 AND p.project_id=$4 AND p.customer_id=$5
+   AND EXISTS(SELECT 1 FROM ${vehicles} v WHERE v.import_id=i.id AND v.source_sheet=$2)
+ ), first_imports AS (
+  SELECT sales_plan_id FROM matching_imports ORDER BY created_at FETCH FIRST 1 ROW WITH TIES
+ ), origin AS (
+  SELECT coalesce(bool_and(sales_plan_id=$3),false) original FROM first_imports
+ )
+ SELECT origin.original,active.code,active.shipment_month,active.visible FROM origin
+ LEFT JOIN LATERAL (
+  SELECT p.code,${shipmentMonth} shipment_month,
+   EXISTS(SELECT 1 FROM user_scopes s WHERE s.user_id=$6 AND s.project_id=p.project_id
+    AND (s.customer_id IS NULL OR s.customer_id=p.customer_id)${co?' AND (s.warehouse_id IS NULL OR s.warehouse_id=p.warehouse_id)':''}) visible
+  FROM matching_imports i JOIN ${vehicles} v ON v.import_id=i.id
+  ${co?'':'LEFT JOIN sales_dispatch_vehicle_keys k ON k.vehicle_id=v.id'}
+  JOIN ${plans} p ON p.id=${currentPlan}
+  WHERE NOT origin.original AND v.source_sheet=$2 AND v.cancelled_at IS NULL AND i.sales_plan_id<>$3 AND p.id<>$3
+  ORDER BY visible DESC,i.created_at,p.id,v.id LIMIT 1
+ ) active ON true`,
   [parsed.file_sha256,parsed.mapping.sheet,plan.id,plan.project_id,plan.customer_id,req.user.id]);
- if(!conflict)return;
+ if(conflict.original||!conflict.code)return conflict.original;
  const reference=conflict.visible?` (${[conflict.code,conflict.shipment_month].filter(Boolean).join(' · ')})`:'';
  const message=req.user.language_code==='en'
   ?`This dispatch sheet has already been imported into another sales plan${reference}. Check the existing import before continuing.`
@@ -47,7 +60,7 @@ async function assertImportAvailable(c,req,plan,parsed,{co=false,transportOnly=f
  throw B.error(409,message);
 }
 
-async function analyzeImport(c,planId,month,items,{co=false,transportOnly=false,lock=false}={}){
+async function analyzeImport(c,planId,month,items,{co=false,transportOnly=false,lock=false,restoreFrom}={}){
  const groups=new Map();
  for(const item of items){
   const key=truckKey(item.truck_no);
@@ -55,14 +68,27 @@ async function analyzeImport(c,planId,month,items,{co=false,transportOnly=false,
   if(!groups.has(key))groups.set(key,[]);
   groups.get(key).push(item);
  }
- const source=co?`SELECT v.id,v.truck_key,v.transporter,v.destination,v.cancelled_at,${cobaltTransportLocked} transport_locked FROM co_dispatch_vehicles v
+ const imports=co?'co_dispatch_imports':'sales_dispatch_imports';
+ const origin=restoreFrom?`LEFT JOIN ${imports} i ON i.id=v.import_id AND i.sales_plan_id=$1 AND i.shipment_month=$2
+  AND i.file_sha256=$4 AND v.source_sheet=$5`:'';
+ const manuallyDeleted=co?'co_dispatch_was_manually_deleted(v.id,v.version,v.updated_by)':"v.cancellation_reason='MANUAL_DELETE'";
+ const blocker=co?'cobalt_dispatch_online_blocker(v.id)':'copper_dispatch_online_blocker(v.id,$1,$2,k.truck_key)';
+ const historyColumn=co?'co_dispatch_id':'cu_dispatch_id';
+ const restorable=restoreFrom?`,CASE WHEN v.cancelled_at IS NOT NULL AND i.id IS NOT NULL THEN
+  ${manuallyDeleted} AND ${blocker} IS NULL
+   AND NOT EXISTS(SELECT 1 FROM historical_sales_dispatch_links h WHERE h.${historyColumn}=v.id)
+  ELSE false END can_restore`:'';
+ const fields=`v.id,v.source_row,v.transporter,v.destination,v.cancelled_at,v.cancellation_reason${restorable}`;
+ const source=co?`SELECT ${fields},v.truck_key,${cobaltTransportLocked} transport_locked FROM co_dispatch_vehicles v ${origin}
   WHERE v.sales_plan_id=$1 AND v.shipment_month=$2 AND v.truck_key=ANY($3::text[])`:
-  `SELECT v.id,k.truck_key,v.transporter,v.destination,v.cancelled_at FROM sales_dispatch_vehicle_keys k
-  JOIN sales_dispatch_vehicles v ON v.id=k.vehicle_id
+  `SELECT ${fields},k.truck_key FROM sales_dispatch_vehicle_keys k
+  JOIN sales_dispatch_vehicles v ON v.id=k.vehicle_id ${origin}
   WHERE k.sales_plan_id=$1 AND k.shipment_month=$2 AND k.truck_key=ANY($3::text[])`;
- const {rows}=groups.size?await c.query(source+(lock?' FOR UPDATE OF v':''),[planId,month,[...groups.keys()]]):{rows:[]};
- const known=new Map(rows.map(row=>[row.truck_key,row])),fresh=[],updates=[],preview=[];
- const tally={new_count:0,transport_filled_count:0,duplicate_count:0,unmatched_count:0,transport_conflict_count:0,transport_locked_count:0};
+ const parameters=[planId,month,[...groups.keys()]];
+ if(restoreFrom)parameters.push(restoreFrom.file_sha256,restoreFrom.mapping.sheet);
+ const {rows}=groups.size?await c.query(source+(lock?' FOR UPDATE OF v':''),parameters):{rows:[]};
+ const known=new Map(rows.map(row=>[row.truck_key,row])),fresh=[],restores=[],updates=[],preview=[];
+ const tally={new_count:0,restored_count:0,transport_filled_count:0,duplicate_count:0,unmatched_count:0,transport_conflict_count:0,transport_locked_count:0};
  for(const [key,group] of groups){
   const [item,...duplicates]=group;
   const current=known.get(key);
@@ -75,6 +101,9 @@ async function analyzeImport(c,planId,month,items,{co=false,transportOnly=false,
     action='ADD';
     fresh.push(item);
    }
+  }else if(current.can_restore&&current.source_row===item.source_row){
+   action='RESTORE';
+   restores.push(current);
   }else if(!current.cancelled_at){
    // A repeated plate can supply blank fields only when its spreadsheet values agree.
    const next={transporter:current.transporter,destination:current.destination},source_rows={};
@@ -100,12 +129,27 @@ async function analyzeImport(c,planId,month,items,{co=false,transportOnly=false,
    }
   }
   tally.duplicate_count+=duplicates.length+Number(action==='DUPLICATE');
-  preview.push({...item,...updated,action,duplicate:action!=='ADD'});
+  preview.push({...item,...updated,action,duplicate:!['ADD','RESTORE'].includes(action)});
   for(const repeated of duplicates)preview.push({...repeated,action:'DUPLICATE',duplicate:true});
  }
  tally.new_count=fresh.length;
+ tally.restored_count=restores.length;
  tally.transport_filled_count=updates.length;
- return {fresh,updates,tally,items:preview.sort((a,b)=>a.source_row-b.source_row)};
+ return {fresh,restores,updates,tally,items:preview.sort((a,b)=>a.source_row-b.source_row)};
+}
+
+async function restoreFromImport(c,req,plan,month,parsed,restores,co){
+ if(!restores.length)return [];
+ const table=co?'co_dispatch_vehicles':'sales_dispatch_vehicles';
+ const ids=restores.map(row=>row.id);
+ const result=await c.query(`UPDATE ${table} SET cancelled_at=NULL,cancellation_reason=NULL
+  ${co?',version=version+1,updated_by=$2,updated_at=clock_timestamp()':''}
+  WHERE id=ANY($1::uuid[]) AND cancelled_at IS NOT NULL`,[ids,...(co?[req.user.id]:[])]);
+ if(result.rowCount!==ids.length)throw B.error(409,'DISPATCH_TRANSPORT_STALE');
+ for(const {id,cancelled_at,cancellation_reason,source_row} of restores)await B.audit(c,req,'dispatch_vehicle_restored_from_import',table,id,
+  {cancelled_at,cancellation_reason},{cancelled_at:null,cancellation_reason:null,project_id:plan.project_id,
+   sales_plan_id:plan.id,shipment_month:month,source_row,source_sheet:parsed.mapping.sheet,file_sha256:parsed.file_sha256});
+ return ids;
 }
 
 async function fillFromImport(c,req,plan,month,body,parsed,updates,co){
@@ -156,4 +200,4 @@ function register({app,pool,permitted,csrf}){
      B.mutate(pool,req,c=>save(c,req,co)));
 }
 
-module.exports={register,allowed,truckKey,importMonth,assertImportAvailable,analyzeImport,fillFromImport,cobaltTransportLocked,requireForLoading};
+module.exports={register,allowed,truckKey,importMonth,assertImportAvailable,analyzeImport,restoreFromImport,fillFromImport,cobaltTransportLocked,requireForLoading};

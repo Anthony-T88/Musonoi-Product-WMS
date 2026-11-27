@@ -462,7 +462,7 @@ test('isolated migration, initialization, business permission and concurrency ac
    assert.deepEqual(concurrent.map(result=>result.statusCode).sort(),[200,404]);
   }
  });
- await check('BP Excel downloads use the exact archived revision and document permissions',async()=>{
+ await check('BP number correction, exact archived Excel and document permissions',async()=>{
   const Excel=require('exceljs');
   const BPPrint=require('../../server/customs-bp-print.cjs');
   for(const product of ['CU_CATHODE','CO_HYDROXIDE']){
@@ -479,13 +479,13 @@ test('isolated migration, initialization, business permission and concurrency ac
     JSON.stringify([{project_id:f.project,customer_id:customer,warehouse_id:f.warehouse}]),snapshot,f.accounts[0].id]);
    await business.client.query('INSERT INTO customs_bp_revisions(document_id,revision,snapshot,created_by) VALUES($1,2,$2,$3)',
     [doc.id,{...snapshot,header:{...snapshot.header,mode:'RAILWAY'}},f.accounts[0].id]);
-   const path=(co?'/cobalt':'')+'/customs/bp/'+doc.id+'/excel';
+   const base=(co?'/cobalt':'')+'/customs/bp',route=base+'/'+doc.id,path=route+'/excel';
    (f.bpExcelDocuments??={})[product]={id:doc.id,number};
-   const checkRevision=async(suffix,rev,mode)=>{
+   const checkRevision=async(suffix,rev,mode,expectedNumber=number)=>{
     const response=await request('admin',product,path+suffix);
     assert.equal(response.statusCode,200,response.body.slice(0,220));
     assert.match(response.headers['content-type'],/spreadsheetml\.sheet/);
-    assert.match(response.headers['content-disposition'],new RegExp('attachment; filename="BP_EXCEL-AUDIT-2026-'+(co?'CO':'CU')+'_r'+rev+'\\.xlsx"'));
+    assert(response.headers['content-disposition'].includes('attachment; filename="BP_'+expectedNumber.replaceAll('/','-')+'_r'+rev+'.xlsx"'));
     const book=new Excel.Workbook();await book.xlsx.load(response.rawPayload);
     assert.equal(book.worksheets.length,1);
     const sheet=book.worksheets[0];
@@ -497,7 +497,7 @@ test('isolated migration, initialization, business permission and concurrency ac
     const headings=cells(15);
     assert.deepEqual(headings.map(cell=>cell.text),BPPrint.columns.map(([label])=>label));
     const vehicle=(row,label)=>sheet.getCell(row,headings.find(cell=>cell.text===label).col);
-    assert.match(sheet.getCell('A1').text,/EXCEL-AUDIT/);
+    assert(sheet.getCell('A1').text.includes(expectedNumber));
     assert.deepEqual(['A4','A5','A6','A7'].map(cell=>sheet.getCell(cell).text),
      ['RCCM: AUDIT-RCCM','ID-NAT: AUDIT-IDNAT','NIF: AUDIT-NIF','Contact: Audit Contact']);
     assert.deepEqual(cells(11).slice(0,2).map(cell=>cell.text),['Transport mode:',mode]);
@@ -527,6 +527,44 @@ test('isolated migration, initialization, business permission and concurrency ac
    };
    await checkRevision('',2,'RAILWAY');
    await checkRevision('?revision=1',1,'ROAD');
+   const corrected='BP-CORRECTED/2026/'+(co?'CO':'CU');
+   const edit={revision:2,number:corrected,header:{mode:'RAILWAY',border:'Sakania',signature_date:'2026-11-24'}};
+   await api('production_operator',product,route,edit,403,'PATCH');
+   await api('admin',product,route+'/print/preview',{...edit,number:'   '},400);
+   const preview=await api('admin',product,route+'/print/preview',edit);
+   assert.equal(preview.number,corrected);
+   assert(preview.content.includes(corrected));
+   assert.deepEqual(await api('admin',product,route,edit,200,'PATCH'),{id:doc.id,document_no:corrected,revision:3});
+   const archive=await api('admin',product,route);
+   assert.deepEqual(archive.versions.map(v=>[v.revision,v.document_no]),[[3,corrected],[2,number],[1,number]]);
+   assert.equal(archive.number,corrected);
+   const found=await api('admin',product,base+'?document_no='+encodeURIComponent(corrected.toLowerCase()));
+   assert.deepEqual(found.documents.map(d=>[d.id,d.document_no]),[[doc.id,corrected]]);
+   await checkRevision('',3,'RAILWAY',corrected);
+   await checkRevision('?revision=2',2,'RAILWAY');
+   await checkRevision('?revision=1',1,'ROAD');
+   assert((await request('admin',product,route+'/print')).body.includes(corrected));
+   assert((await request('admin',product,route+'/print?revision=1')).body.includes(number));
+   const {rows:[stored]}=await business.client.query('SELECT document_no,source_ids,snapshot FROM customs_bp_documents WHERE id=$1',[doc.id]);
+   assert.deepEqual(stored,{document_no:number,source_ids:[order],snapshot});
+   const {rows:[audit]}=await business.client.query(`SELECT before_data,after_data FROM audit_logs
+    WHERE entity_id=$1 AND action='customs_bp_revised' ORDER BY id DESC LIMIT 1`,[doc.id]);
+   assert.equal(audit.before_data.document_no,number);
+   assert.equal(audit.after_data.document_no,corrected);
+   const otherNumber='OTHER-BP/'+(co?'CO':'CU'),otherOrder=crypto.randomUUID();
+   const {rows:[other]}=await business.client.query(`INSERT INTO customs_bp_documents(product_code,document_no,source_ids,source_context,snapshot,created_by)
+    SELECT product_code,$2,ARRAY[$3::uuid],source_context,$4,created_by FROM customs_bp_documents WHERE id=$1 RETURNING id`,
+    [doc.id,otherNumber,otherOrder,{...snapshot,number:otherNumber}]);
+   const otherRoute=base+'/'+other.id;
+   for(const reserved of [corrected,number]){
+    const collision={...edit,revision:1,number:reserved.toLowerCase()};
+    assert.equal((await api('admin',product,otherRoute+'/print/preview',collision,409)).error,'BP_NUMBER_IN_USE');
+    assert.equal((await api('admin',product,otherRoute,collision,409,'PATCH')).error,'BP_NUMBER_IN_USE');
+   }
+   const shared='BP-RACE/'+(co?'CO':'CU');
+   const race=await Promise.all([request('admin',product,route,{...edit,revision:3,number:shared},'PATCH'),
+    request('admin',product,otherRoute,{...edit,revision:1,number:shared.toLowerCase()},'PATCH')]);
+   assert.deepEqual(race.map(r=>r.statusCode).sort(),[200,409]);
    await api('admin',product,path+'?revision=99',undefined,404);
    await api('production_operator',product,path,undefined,403);
    if(co)await api('customer_admin',product,path,undefined,404);

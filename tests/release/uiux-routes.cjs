@@ -120,7 +120,7 @@ function pages(ids){
  for(const [product,prefix] of [[CU,'cu'],[CO,'co']]){
   add(prefix+'-sales-detail','/sales-plans/:id',[product],{example:prefix+'Plan',screenshot:true,state:'approved, with historical invoice confirmation when matched'});
   add(prefix+'-sales-edit','/sales-plans/:id/edit',[product],{example:prefix+'Plan'});
-  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'vehicle search, month transfer, Excel backfill, duplicate sheet check and removal of automatic historical matches'});
+  add(prefix+'-dispatch','/sales-plans/:id/dispatch',[product],{example:prefix+'Plan',screenshot:true,roles:['logistics_manager','sales_operator','sales_manager'],state:'vehicle search, month transfer, original workbook restoration, duplicate sheet check and removal evidence'});
  }
  add('cu-sales-shipping','/sales-plans/:id/shipping',[CU],{example:'cuPlan'});
  add('legacy-sales-new','/preparation/plans/new',[CU]);
@@ -173,7 +173,7 @@ function pages(ids){
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters, dated permit print and exited history'});
  add('customs-entry','/customs',BOTH,{state:'default to commercial invoice and packing list'});
  add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'pending lots, default BP template with issuer details and scoped template controls'});
- add('customs-bp-archive','/customs/bp',BOTH,{query:'?view=documents',state:'issued BP weights, expanded batch dates, centered printing and Excel downloads'});
+ add('customs-bp-archive','/customs/bp',BOTH,{query:'?view=documents',state:'issued BP numbers, number correction entry, expanded batch dates, printing and Excel downloads'});
  add('customs-bp-filtered','/customs/bp',BOTH,{query:'?document_no=UIUX-NO-MATCH',state:'archive number filter with no match'});
  add('customs-packing','/customs/packing-list',BOTH,{screenshot:true,state:'customs document preview with complete packing list numbers and authorized generation'});
  add('customs-packing-empty','/customs/packing-list',BOTH,{query:'?search=UIUX-NO-PACKING-MATCH',state:'empty filtered packing workspace'});

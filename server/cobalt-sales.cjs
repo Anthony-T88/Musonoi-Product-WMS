@@ -26,7 +26,7 @@ function vehicleFields(b){const v={trailer_no:optional(b.trailer_no,80),transpor
 async function saveVehicle(c,req,p,b,source=null){const truck=plate(b.truck_no),f=vehicleFields(b),columns=['sales_plan_id','shipment_month','truck_no','created_by','updated_by',...Object.keys(f)],values=[p.id,source?b.shipment_month:Month.effective(p,b.shipment_month),truck,req.user.id,req.user.id,...Object.values(f)];if(source){Object.assign(f,{});columns.push('import_id','source_row','source_sheet');values.push(source.id,b.source_row,source.sheet);}return (await c.query('INSERT INTO co_dispatch_vehicles('+columns.join(',')+') VALUES('+values.map((_,i)=>'$'+(i+1)).join(',')+') RETURNING *',values)).rows[0];}
 async function importPlan(c,req,plan,body,parsed){
  const month=Transport.importMonth(plan,body);
- await Transport.assertImportAvailable(c,req,plan,parsed,{co:true,transportOnly:body.transport_only});
+ const original=await Transport.assertImportAvailable(c,req,plan,parsed,{co:true,transportOnly:body.transport_only});
  let cancelled_count=0;
  for(const item of body.transport_only?[]:parsed.cancelled||[]){
   const changed=await c.query(`UPDATE co_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason=$4,
@@ -36,10 +36,11 @@ async function importPlan(c,req,plan,body,parsed){
    [plan.id,month,truckKey(item.truck_no||''),item.reason||'Cancelled in dispatch file',req.user.id]);
   cancelled_count+=changed.rowCount;
  }
- const {fresh,updates,tally}=await Transport.analyzeImport(c,plan.id,month,parsed.items,{co:true,transportOnly:body.transport_only,lock:true});
+ const {fresh,restores,updates,tally}=await Transport.analyzeImport(c,plan.id,month,parsed.items,
+  {co:true,transportOnly:body.transport_only,lock:true,restoreFrom:original?parsed:null});
  await Transport.fillFromImport(c,req,plan,month,body,parsed,updates,true);
  let imported=null;
- const dispatchIds=[];
+ const dispatchIds=await Transport.restoreFromImport(c,req,plan,month,parsed,restores,true);
  if(fresh.length){
   imported=(await c.query('INSERT INTO co_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$6) RETURNING *',
    [plan.id,month,body.file_name,parsed.file_sha256,fresh.length,req.user.id])).rows[0];
@@ -58,16 +59,19 @@ async function listDispatch(c,req){
  const plan=await access(c,req,'plan',req.params.id),shipmentMonth=req.query.shipment_month?month(req.query.shipment_month):null;
  const {rows:vehicles}=await c.query(`SELECT v.*,${Transport.cobaltTransportLocked} transport_locked,a.id arrival_id,a.arrived_at,
   h.source_id historical_source_id,
-  v.cancelled_at IS NULL AND a.id IS NULL AND (h.source_id IS NULL OR history.can_detach) can_cancel,
-  history.can_detach historical_auto_detach,
+  v.cancelled_at IS NULL AND removal.blocker IS NULL can_cancel,
+  h.source_id IS NOT NULL AND removal.blocker IS NULL historical_auto_detach,
+  removal.blocker removal_blocker,
   NOT (${transferHistory}) AND v.cancelled_at IS NULL can_transfer,
   CASE WHEN v.cancelled_at IS NOT NULL THEN 'CANCELLED' WHEN h.source_id IS NOT NULL THEN 'HISTORICAL_ARRIVED'
-   WHEN a.id IS NOT NULL THEN 'WAITING_PLAN' ELSE 'WAITING_ARRIVAL' END arrival_state
+   WHEN a.registration_phase='DRAFT' OR arrival_legacy_draft('CO_HYDROXIDE',v.id,a.updated_at) THEN 'PENDING_CONFIRMATION'
+   WHEN a.registration_phase='CONFIRMED' THEN 'WAITING_PLAN' ELSE 'WAITING_ARRIVAL' END arrival_state
   FROM co_dispatch_vehicles v LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id
   LEFT JOIN historical_sales_arrivals h ON h.co_dispatch_id=v.id
-  CROSS JOIN LATERAL (SELECT a.id IS NULL AND ${History.canDetach('h','$3','$4','$5','$6::uuid')} can_detach) history
+  CROSS JOIN LATERAL (SELECT coalesce(cobalt_dispatch_online_blocker(v.id),
+   ${History.removalBlocker('h','$3','$4','$5','$6::uuid')},CASE WHEN NOT $7::boolean THEN 'PLAN_CLOSED' END) blocker) removal
   WHERE v.sales_plan_id=$1 AND ($2::text IS NULL OR v.shipment_month=$2) ORDER BY v.created_at DESC,v.id`,
-  [plan.id,shipmentMonth,req.user.id,plan.project_id,plan.customer_id,plan.warehouse_id]);
+  [plan.id,shipmentMonth,req.user.id,plan.project_id,plan.customer_id,plan.warehouse_id,plan.status==='OPEN']);
  const byImport=new Map();
  for(const v of vehicles){
   if(!v.import_id)continue;
@@ -165,8 +169,9 @@ async function register({app,pool,permitted,csrf,auth}){
   if(plan.version!==B.version(body.plan_version))throw error(409,'CO_SALES_STALE');
   const month=Transport.importMonth(plan,body),parsed=await D.parse(body);
   if(parsed.needs_mapping)return parsed;
-  await Transport.assertImportAvailable(c,req,plan,parsed,{co:true,transportOnly:body.transport_only});
-  const change=await Transport.analyzeImport(c,plan.id,month,parsed.items,{co:true,transportOnly:body.transport_only});
+  const original=await Transport.assertImportAvailable(c,req,plan,parsed,{co:true,transportOnly:body.transport_only});
+  const change=await Transport.analyzeImport(c,plan.id,month,parsed.items,
+   {co:true,transportOnly:body.transport_only,restoreFrom:original?parsed:null});
   return {...parsed,shipment_month:month,items:change.items,...change.tally};
  }));
  app.post(prefix+'/plans/:id/dispatch/import',{bodyLimit:3000000,preHandler:writes('dispatch:write')},req=>mutation(pool,req,'dispatch:write',async c=>{
@@ -188,6 +193,8 @@ async function register({app,pool,permitted,csrf,auth}){
   fields(b,['version','reason']);
   if(v.version!==B.version(b.version))throw error(409,'CO_SALES_STALE');
   const reason=B.text(b.reason,'CO_SALES_REASON',1000);
+  const {rows:[{blocker}]}=await c.query('SELECT cobalt_dispatch_online_blocker($1) blocker',[v.id]);
+  if(blocker)throw History.cancellationError(req,blocker);
   const sourceId=await History.prepareDispatchCancellation(c,req,p,v.id);
   const row=(await c.query('UPDATE co_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason=$2,version=version+1,updated_by=$3,updated_at=clock_timestamp() WHERE id=$1 RETURNING *',
    [v.id,reason,req.user.id])).rows[0];

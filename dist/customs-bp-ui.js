@@ -23,7 +23,9 @@ window.CustomsBP={
    BP_AGENCY_DUPLICATE:['记录簿已有同名清关代理。','An agency with that name already exists.'],
    BP_INVALID_WEIGHT:['请填写有效的净重和毛重，净重不能大于毛重。','Enter valid weights. Net weight must not exceed gross weight.'],
    BP_INVALID_QUANTITY:['件数须为正整数。','Package count must be a positive whole number.'],
-   BP_NUMBER_IN_USE:['该BP编号已使用，请换一个编号。','This BP number is already in use. Choose another number.']
+   BP_NUMBER_IN_USE:['该BP编号已使用，请换一个编号。','This BP number is already in use. Choose another number.'],
+   BP_NUMBER_REQUIRED:['请输入BP编号。','Enter a BP number.'],
+   BP_NUMBER_SERIAL_EXHAUSTED:['自动编号已达长度上限，请手工填写BP编号。','Enter a BP number manually. The suggested number exceeds the length limit.']
   };
   return labels[error.message]?this.t(...labels[error.message]):error.message;
  },
@@ -341,7 +343,7 @@ window.CustomsBP={
   const facts=keys=>UI46Pages.factList(keys.map(key=>[labels.get(key),esc(summary[key]||'—')]));
   const history=d.versions?'<details class="bp-versions"><summary>'+t('历史版本','Revision History')+'</summary><ul>'+
    d.versions.map(v=>'<li><a href="/api/v1'+this.base()+'/'+esc(d.id)+'/print?revision='+v.revision+'" target="_blank" rel="noopener">r'+v.revision+'</a> · '+
-   esc(BusinessTime.display(v.created_at))+' · '+this.excelLink(d.id,v.revision,'bp-version-download')+'</li>').join('')+'</ul></details>':'';
+   (v.document_no?esc(v.document_no)+' · ':'')+esc(BusinessTime.display(v.created_at))+' · '+this.excelLink(d.id,v.revision,'bp-version-download')+'</li>').join('')+'</ul></details>':'';
   const select=(key,entries,selected,placeholder,required=true)=>'<label class="wms-field">'+labels.get(key)+
    '<select name="'+key+'"'+(required?' required':'')+'><option value="">'+esc(placeholder)+'</option>'+
    entries.map(([id,name])=>'<option value="'+esc(id)+'"'+(id===selected?' selected':'')+'>'+esc(name)+'</option>').join('')+'</select></label>';
@@ -361,7 +363,7 @@ window.CustomsBP={
    '<section class="wms-section"><div class="bp-review-heading"><h2>'+t('单据资料','Document Details')+'</h2><span>'+
     (d.id?'r'+d.revision:t('待生成','Awaiting Generation'))+'</span></div>'+
    '<div class="bp-review-overview"><label class="wms-field">'+t('BP编号','BP Number')+
-   '<input id="bp-number" name="number" maxlength="80" value="'+esc(d.number)+'" aria-describedby="bp-number-hint" '+(d.id?'readonly':'required')+'>'+
+   '<input id="bp-number" name="number" maxlength="80" value="'+esc(d.number)+'" aria-describedby="bp-number-hint" required>'+
    '<small id="bp-number-hint"></small></label>'+facts(['customer','product','license','loading_date'])+'</div>'+
    '<details class="bp-template-details"><summary>'+t('模板固定资料','Fixed Template Details')+'</summary>'+facts(fixed)+'</details>'+history+'</section>'+
    '<section class="wms-section"><div class="bp-review-heading"><h2>'+t('申报选择','Declaration Selections')+'</h2>'+this.agencyButton()+'</div>'+
@@ -378,14 +380,14 @@ window.CustomsBP={
   const form=$('customs-bp-form'),number=$('bp-number'),hint=$('bp-number-hint'),error=$('customs-bp-save-error');
   const sync=()=>{
    d.number=number.value;
-   hint.textContent=d.id?'':number.value.trim()===d.suggestion?
+   hint.textContent=d.id?'':d.suggestion&&number.value.trim()===d.suggestion?
     t('系统建议 · 生成时确认','Suggested · confirmed on generation'):t('手工编号','Manual number');
    for(const key of ['mode','border','signature_date'])header[key]=form.elements[key].value;
    d.agencyId=form.elements.agency.value;
    header.agency=d.agencies.find(item=>item.id===d.agencyId)?.name||d.archivedAgency||'';
   };
   sync();
-  form.oninput=()=>{sync();if(!problem)error.textContent='';ProductContext.dirty=true;};
+  form.oninput=e=>{sync();if(e.target===number)number.removeAttribute('aria-invalid');if(!problem)error.textContent='';ProductContext.dirty=true;};
   this.bindAgencyBook();
   $('customs-bp-back').onclick=()=>{this.preview=null;this.proof=null;this.page();};
   form.onsubmit=e=>UI46Pages.submit(e,async()=>{
@@ -398,7 +400,9 @@ window.CustomsBP={
     if(!d.id&&d.number.trim()===d.suggestion)d.number=d.suggestion=outline.number;
     this.proof={...outline,payload};this.printPreview();
    }catch(failure){
-    if(failure.message==='BP_NUMBER_IN_USE'){number.setAttribute('aria-invalid','true');number.focus();}
+    if(['BP_NUMBER_IN_USE','BP_NUMBER_REQUIRED','BP_NUMBER_SERIAL_EXHAUSTED'].includes(failure.message)){
+     number.setAttribute('aria-invalid','true');number.focus();
+    }
     throw Error(this.feedback(failure));
    }
   });
@@ -406,7 +410,7 @@ window.CustomsBP={
  payload(){
   const d=this.preview,{mode,border,signature_date}=d.header;
   const agency=d.agencies.find(item=>item.id===d.agencyId);
-  return {...(d.id?{revision:d.revision}:{ids:d.ids,token:d.token,number:d.number.trim()===d.suggestion?'':d.number}),
+  return {...(d.id?{revision:d.revision,number:d.number}:{ids:d.ids,token:d.token,number:d.number.trim()===d.suggestion?'':d.number}),
    header:{mode,border,signature_date},agency_id:agency?.id||null,agency_version:agency?.version||null};
  },
  documentPath(){return this.base()+(this.preview.id?'/'+this.preview.id:'');},
@@ -428,7 +432,7 @@ window.CustomsBP={
     if(!form.isConnected)return;
     this.preview=null;this.proof=null;this.clearSelection();ProductContext.dirty=false;this.saved(saved);
    }catch(error){
-    if(error.message==='BP_NUMBER_IN_USE'&&form.isConnected){
+    if(['BP_NUMBER_IN_USE','BP_NUMBER_REQUIRED','BP_NUMBER_SERIAL_EXHAUSTED'].includes(error.message)&&form.isConnected){
      this.proof=null;this.editor();$('customs-bp-save-error').textContent=this.feedback(error);
      $('bp-number').setAttribute('aria-invalid','true');$('bp-number').focus();
      return;

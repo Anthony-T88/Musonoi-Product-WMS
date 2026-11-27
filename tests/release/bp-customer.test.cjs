@@ -16,7 +16,7 @@ for(const [productCode,base] of [['CU_CATHODE','/api/v1/customs/bp'],['CO_HYDROX
    if(sql.includes('eligible WHERE id=ANY'))return {rows};
    if(sql.includes('FROM customs_bp_templates'))return {rows:[]};
    if(sql.includes('FROM customs_bp_agencies'))return {rows:[]};
-   if(sql.includes('last_number FROM customs_bp_counters'))return {rows:[{last_number:0,used:[]}]};
+   if(sql.includes('last_number FROM customs_bp_counters'))return {rows:[{last_number:0,max_issued:'0'}]};
    if(/^(BEGIN|COMMIT|ROLLBACK|SELECT (v24_revision|pg_advisory_xact_lock|customs_bp_lock_cu)|SELECT \* FROM idempotency_requests)/.test(sql))return {rows:[]};
    throw Error('Unexpected query in customer guard test');
   }})};

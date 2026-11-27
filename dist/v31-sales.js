@@ -71,14 +71,20 @@ const Dispatch={
   return `<div class="business-table"><table><thead><tr><th>Excel行号</th><th>车头号</th>${saved?'<th>派车月份</th>':''}${transportOnly?'':'<th>载重（吨）</th>'}<th>运输商</th><th>目的地</th><th>识别结果</th>${actions?'<th>操作</th>':''}</tr></thead><tbody>${rows.map(r=>{
    const removeButton=remove&&r.can_remove&&!r.cancelled_at?'<button type="button" class="button secondary danger" data-dispatch-remove="'+r.id+'">删除车辆</button>':'';
    const changeButton=this.vehicleMonthButton(r,change&&r.can_transfer);
+   const blocker=DispatchTransport.removalReason(r.removal_blocker);
+   const hasOnlineWork=r.removal_blocker==='ONLINE_ARRIVAL'||r.removal_blocker==='ONLINE_LOADING';
+   const blockerIsStatus=hasOnlineWork&&r.counted!==false&&!r.historical_source_id;
+   const result=r.cancelled_at?'已取消 · 不计入':r.counted===false?'重复车辆 · 不计入':r.historical_source_id?'已到场（历史）':
+    hasOnlineWork?blocker:'待到厂登记';
+   const actionHint=!r.cancelled_at&&!blockerIsStatus?blocker:'';
    return `<tr><td>${r.source_row}</td><td data-no-i18n>${esc(r.truck_no)}</td>${saved?'<td data-no-i18n>'+esc(r.shipment_month||'—')+'</td>':''}
-    ${transportOnly?'':`<td>${r.capacity_tonnes?Tonnes.format(r.capacity_tonnes):'未提供'}</td>`}<td data-no-i18n>${esc(r.transporter||'—')}</td><td data-no-i18n>${esc(r.destination||'—')}</td><td>${saved?r.cancelled_at?'已取消 · 不计入':r.counted===false?'重复车辆 · 不计入':r.historical_source_id?'已到场（历史）':'已保存':DispatchTransport.outcome(r,transportOnly)}</td>
-    ${actions?'<td><div class="wms-dispatch-row-actions">'+(removeButton+changeButton||'<span>—</span>')+'</div></td>':''}</tr>`;
+    ${transportOnly?'':`<td>${r.capacity_tonnes?Tonnes.format(r.capacity_tonnes):'未提供'}</td>`}<td data-no-i18n>${esc(r.transporter||'—')}</td><td data-no-i18n>${esc(r.destination||'—')}</td><td>${saved?esc(result):DispatchTransport.outcome(r,transportOnly)}</td>
+    ${actions?'<td><div class="wms-dispatch-row-actions">'+(removeButton+changeButton||'<span>'+esc(actionHint||'—')+'</span>')+'</div></td>':''}</tr>`;
   }).join('')}</tbody></table></div>`;
  },
  async page(id){
   const expanded=new Set([...document.querySelectorAll('[data-dispatch-import][open]')].map(group=>group.dataset.dispatchImport));
-  const path='/plans/'+id+'/dispatch',d=await API.request(path),writable=Business.can('dispatch:write')&&d.plan.status==='OPEN';
+  const path='/plans/'+id+'/dispatch',d=await API.request(path),canDelete=Business.can('dispatch:write'),writable=canDelete&&d.plan.status==='OPEN';
   const search=DispatchTransport.search(id,d.vehicles),groups=new Map();
   for(const row of search.rows){
    if(!groups.has(row.import_id))groups.set(row.import_id,[]);
@@ -90,7 +96,7 @@ const Dispatch={
      <button id="dispatch-preview" data-dispatch-preview type="button" class="button secondary">读取预览</button>
      <button id="dispatch-save" type="submit" class="button primary" disabled>确认保存</button></div>
     <p id="dispatch-error" class="error" role="alert"></p><div id="dispatch-mapping"></div><div id="dispatch-rows" data-dispatch-preview-rows></div>
-   </form></section>`:''}<h3>已保存派车单</h3>${search.form}${writable?'':DispatchTransport.notice(d.vehicles,false,d.plan.status==='CLOSED')}${d.imports.filter(i=>groups.has(i.id)).map(i=>`<details class="lp-load-summary" data-dispatch-import="${esc(i.id)}" ${search.term||expanded.has(i.id)?'open':''}><summary><strong data-no-i18n>${esc([...new Set(groups.get(i.id).map(row=>row.shipment_month))].sort().join(' / '))}</strong> · <span data-no-i18n>${esc(i.file_name)}</span> · ${groups.get(i.id).length} 辆</summary><p data-no-i18n>${esc(i.created_by_name)} · ${esc(new Date(i.created_at).toLocaleString())}</p>${this.table(groups.get(i.id),{saved:true,remove:Business.can('dispatch:write'),change:d.dispatch_month.can_change})}</details>`).join('')||'<p>'+(search.term?esc(search.empty):'暂无派车记录')+'</p>'}`);
+   </form></section>`:''}<h3>已保存派车单</h3>${!canDelete&&d.vehicles.some(v=>!v.cancelled_at)?'<p>'+esc(DispatchTransport.t('当前账号无删除派车车辆权限','Your account cannot remove dispatch vehicles'))+'</p>':''}${search.form}${writable?'':DispatchTransport.notice(d.vehicles,false,d.plan.status==='CLOSED')}${d.imports.filter(i=>groups.has(i.id)).map(i=>`<details class="lp-load-summary" data-dispatch-import="${esc(i.id)}" ${search.term||expanded.has(i.id)?'open':''}><summary><strong data-no-i18n>${esc([...new Set(groups.get(i.id).map(row=>row.shipment_month))].sort().join(' / '))}</strong> · <span data-no-i18n>${esc(i.file_name)}</span> · ${groups.get(i.id).length} 辆</summary><p data-no-i18n>${esc(i.created_by_name)} · ${esc(new Date(i.created_at).toLocaleString())}</p>${this.table(groups.get(i.id),{saved:true,remove:canDelete,change:d.dispatch_month.can_change})}</details>`).join('')||'<p>'+(search.term?esc(search.empty):'暂无派车记录')+'</p>'}`);
   DispatchTransport.bindSearch();
   this.bindVehicleMonth(path,d.vehicles,d.dispatch_month.targets,()=>this.page(id));
   for(const button of document.querySelectorAll('[data-dispatch-remove]'))button.onclick=async()=>{
@@ -99,7 +105,8 @@ const Dispatch={
    const historical=vehicle.historical_auto_detach;
    const confirmation=historical?DispatchTransport.historicalRemoval(vehicle):{
     title:'确认删除未到厂车辆',rows:[['车头号',vehicle.truck_no],['发运月份',vehicle.shipment_month]],
-    note:'删除后不再显示、不计入车辆及载重统计；历史记录保留。同车同月重新上传不会自动恢复。'
+    note:DispatchTransport.t('删除后，该车辆不再计入本计划的车辆数和载重。操作记录会保留。',
+     'Removal updates this plan’s vehicle count and capacity totals. The operation is recorded.')
    };
    button.disabled=true;
    try{

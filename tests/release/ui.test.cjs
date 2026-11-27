@@ -1,5 +1,5 @@
 'use strict';
-const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{chromium}=require('playwright'),E=require('./environment.cjs');
+const test=require('node:test'),assert=require('node:assert/strict'),path=require('node:path'),{randomUUID}=require('node:crypto'),{chromium}=require('playwright'),E=require('./environment.cjs');
 const release=require('../../server/release.cjs');
 test('online commercial numbers keep the complete invoice or packing list identifier',()=>{
  const {documentNo}=require('../../dist/plan-display.js');
@@ -294,6 +294,21 @@ test('real browser: current cobalt stock, independent permissions and both langu
    await expand.click();
    await page.getByRole('columnheader',{name:'Lot No.',exact:true}).first().waitFor();
    await page.getByRole('button',{name:/Collapse Lots/}).first().click();
+  }
+  const issued=f.bpExcelDocuments?.[product];
+  if(issued){
+   await page.locator('[data-bp-edit-doc="'+issued.id+'"]').click();
+   const number=page.getByRole('textbox',{name:'BP Number'});
+   assert(await number.isEditable());
+   const corrected='BROWSER-BP-'+randomUUID();
+   await number.fill(corrected);
+   await page.getByRole('button',{name:'Preview BP Sheet'}).click();
+   await page.locator('.bp-proof-sheet').getByText(corrected,{exact:false}).waitFor();
+   await page.getByRole('button',{name:'Save Revision'}).click();
+   await page.getByRole('heading',{name:'BP Sheet Revision Saved'}).waitFor();
+   await page.getByText(corrected,{exact:true}).waitFor();
+   await page.getByRole('button',{name:'Back to BP Sheets'}).click();
+   await page.getByRole('link',{name:/Lots on Created BP Sheets/}).waitFor();
   }
   await language.selectOption('zh-CN');
   await page.getByRole('link',{name:/已创建BP表批次/}).waitFor();

@@ -164,11 +164,12 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const co=cobalt(product),plan=fixtures[product].plan,alternate=await P.salesPlan(api,f,product);
    const plate=co?'AUDIT-CO-REPEAT':'AUDIT-CU-REPEAT',month=P.localMonth(),day=month+'-01';
    const dispatchBase=plan=>(co?'/cobalt/sales':'')+'/plans/'+plan+'/dispatch';
-   function dispatchFile(truck,destination='Synthetic Destination',secondSheetTruck){
+   function dispatchFile(trucks,destination='Synthetic Destination',secondSheetTruck,cancelled=[]){
     const workbook=X.utils.book_new();
-    const sheet=plate=>X.utils.aoa_to_sheet([['HORSE','TON','TRANSPORTEUR','DESTINATION'],[plate,30,'Synthetic Transport',destination]]);
-    X.utils.book_append_sheet(workbook,sheet(truck),'Dispatch');
-    if(secondSheetTruck)X.utils.book_append_sheet(workbook,sheet(secondSheetTruck),'Second Dispatch');
+    const sheet=plates=>X.utils.aoa_to_sheet([['HORSE','TON','TRANSPORTEUR','DESTINATION','STATUS'],
+     ...plates.map(truck=>[truck,30,'Synthetic Transport',destination,cancelled.includes(truck)?'Cancelled':''])]);
+    X.utils.book_append_sheet(workbook,sheet([trucks].flat()),'Dispatch');
+    if(secondSheetTruck)X.utils.book_append_sheet(workbook,sheet([secondSheetTruck]),'Second Dispatch');
     return {file_name:'historical-trips.xlsx',mapping:{sheet:'Dispatch',header_row:1,truck_column:1,capacity_column:2,capacity_kg:false},
      file_base64:X.write(workbook,{type:'base64',bookType:'xlsx'})};
    }
@@ -189,6 +190,25 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     }
     return api(role,product,dispatchBase(plan)+'/vehicles/'+vehicle,{reason},expected,'DELETE');
    };
+   // An older release could persist an identical workbook on another sales plan.
+   async function seedLegacyDispatch(plan,month,file,plates){
+    const actor=f.accounts.find(account=>account.role==='admin').id;
+    const hash=crypto.createHash('sha256').update(Buffer.from(file.file_base64,'base64')).digest('hex');
+    const {rows:[imported]}=await c.query(co?`INSERT INTO co_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by,updated_by)
+     VALUES($1,$2,$3,$4,$5,$6,$6) RETURNING id`:`INSERT INTO sales_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by)
+     VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,[plan,month,file.file_name,hash,plates.length,actor]);
+    const vehicles=[];
+    for(const [index,truck] of plates.entries()){
+     const {rows:[vehicle]}=co?await c.query(`INSERT INTO co_dispatch_vehicles(import_id,sales_plan_id,shipment_month,source_row,source_sheet,truck_no,capacity_tonnes,created_by,updated_by)
+      VALUES($1,$2,$3,$4,$5,$6,30,$7,$7) RETURNING id`,[imported.id,plan,month,index+2,file.mapping.sheet,truck,actor]):
+      await c.query("INSERT INTO sales_dispatch_vehicles(import_id,source_sheet,source_row,truck_no,trailer_no,capacity_tonnes) VALUES($1,$2,$3,$4,'',30) RETURNING id",
+       [imported.id,file.mapping.sheet,index+2,truck]);
+     if(!co)await c.query('INSERT INTO sales_dispatch_vehicle_keys(sales_plan_id,shipment_month,truck_key,vehicle_id) VALUES($1,$2,$3,$4)',
+      [plan,month,truck.replaceAll('-',''),vehicle.id]);
+     vehicles.push(vehicle);
+    }
+    return vehicles;
+   }
    const first=await dispatch(plan),second=await dispatch(alternate,plate,'admin',dispatchFile(plate,'Synthetic Second Destination'));
    assert.equal(first.transporter,'Synthetic Transport');
    assert.equal(second.destination,'Synthetic Second Destination');
@@ -350,17 +370,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.equal((await api('admin',product,novemberBase)).vehicles.length,0);
    assert.equal((await api('admin',product,sales+novemberPlan)).posted_batches.length,0);
 
-   // Older releases accepted this November duplicate before the cross-plan import guard existed.
-   const actor=f.accounts.find(account=>account.role==='admin').id;
-   const {rows:[legacyImport]}=await c.query(co?`INSERT INTO co_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by,updated_by)
-    VALUES($1,$2,$3,$4,1,$5,$5) RETURNING id`:`INSERT INTO sales_dispatch_imports(sales_plan_id,shipment_month,file_name,file_sha256,row_count,created_by)
-    VALUES($1,$2,$3,$4,1,$5) RETURNING id`,[novemberPlan,november,renamed.file_name,digest,actor]);
-   const {rows:[legacyVehicle]}=co?await c.query(`INSERT INTO co_dispatch_vehicles(import_id,sales_plan_id,shipment_month,source_row,source_sheet,truck_no,capacity_tonnes,created_by,updated_by)
-    VALUES($1,$2,$3,2,'Dispatch',$4,30,$5,$5) RETURNING id`,[legacyImport.id,novemberPlan,november,duplicatePlate,actor]):
-    await c.query("INSERT INTO sales_dispatch_vehicles(import_id,source_sheet,source_row,truck_no,trailer_no,capacity_tonnes) VALUES($1,'Dispatch',2,$2,'',30) RETURNING id",
-     [legacyImport.id,duplicatePlate]);
-   if(!co)await c.query('INSERT INTO sales_dispatch_vehicle_keys(sales_plan_id,shipment_month,truck_key,vehicle_id) VALUES($1,$2,$3,$4)',
-    [novemberPlan,november,duplicatePlate.replaceAll('-',''),legacyVehicle.id]);
+   const [legacyVehicle]=await seedLegacyDispatch(novemberPlan,november,renamed,[duplicatePlate]);
    assert.deepEqual(await api('admin',product,sales+novemberPlan+'/historical-matches',{automatic:true}),
     {linked:1,ambiguous:0,invoice_confirmed:1,invoice_missing:0});
    const novemberVehicle=(await api('admin',product,novemberBase)).vehicles.find(row=>row.id===legacyVehicle.id);
@@ -395,6 +405,103 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.match(unlink.after_data.reason,/wrong sales plan/);
    const secondSheet={...renamed,mapping:{...renamed.mapping,sheet:'Second Dispatch'}};
    assert.equal((await dispatch(novemberPlan,secondSheetPlate,'admin',secondSheet)).truck_no,secondSheetPlate);
+
+   if(!co){
+    const obsolete=await dispatch(novemberPlan,plate+'-OBSOLETE-PLAN');
+    const protectedLoading=await dispatch(novemberPlan,plate+'-ACTIVE-PLAN');
+    const actor=f.accounts.find(account=>account.role==='admin').id;
+    const {rows:[group]}=await c.query('INSERT INTO loading_plan_groups(sales_plan_id,name,created_by,updated_by,invoice_no) VALUES($1,$2,$3,$3,$4) RETURNING id',
+     [novemberPlan,'Synthetic legacy loading links',actor,'SYN-HIST-DISPATCH-LINKS']);
+    for(const [trip,cancelled] of [[obsolete,true],[protectedLoading,false]])await c.query(`INSERT INTO loading_plan_documents
+     (group_id,created_by,planned_load_date,vehicle_no,invoice_no,packing_list_no,arrival_required,cancelled_at,cancelled_by,cancel_reason)
+     VALUES($1,$2,$3,$4,$5,$5||'PL',false,CASE WHEN $6::boolean THEN clock_timestamp() END,
+      CASE WHEN $6 THEN $2::uuid END,CASE WHEN $6 THEN 'Synthetic obsolete loading plan' END)`,
+    [group.id,actor,november+'-04',trip.truck_no,trip.truck_no+'-INV',cancelled]);
+    const listed=(await api('admin',product,novemberBase)).vehicles;
+    const obsoleteRow=listed.find(row=>row.id===obsolete.id),protectedRow=listed.find(row=>row.id===protectedLoading.id);
+    assert.equal(obsoleteRow.historical_source_id,null);
+    assert.equal(obsoleteRow.can_remove,true,'An obsolete cancelled loading plan must not hide the dispatch delete action');
+    assert.equal(protectedRow.can_remove,false);
+    assert.equal(protectedRow.removal_blocker,'ONLINE_LOADING');
+    await removeVehicle(novemberPlan,protectedLoading.id,409);
+    fixtures[product].historicalTrip.browserLegacySaved={plan:novemberPlan,path:novemberBase,vehicle:obsolete,protectedLoading};
+   }else{
+    const cleared=await dispatch(novemberPlan,plate+'-CLEARED-ARRIVAL');
+    const arrivalPath=arrivalBase+'/'+cleared.id;
+    const registered=await api('admin',product,arrivalPath,{dispatch_version:cleared.version,trailer_one:plate+'-CO-CLEARED-TR',
+     driver_name:'Synthetic cleared arrival',passport_no:'QA-CLEARED-PASS',transporter:'Synthetic Transport',arrived_at:new Date(Date.now()-1000).toISOString()});
+    const clearance=await api('admin',product,arrivalPath,{dispatch_version:cleared.version,version:registered.version,action:'CLEAR'});
+    assert.equal(clearance.registration_phase,'CLEARED');
+    const listed=(await api('admin',product,novemberBase)).vehicles.find(row=>row.id===cleared.id);
+    assert.equal(listed.can_cancel,true,'A cleared cobalt arrival must not hide the dispatch delete action');
+    await removeVehicle(novemberPlan,cleared.id);
+    assert.equal((await c.query('SELECT registration_phase FROM co_vehicle_arrivals WHERE id=$1',[registered.id])).rows[0].registration_phase,'CLEARED');
+   }
+
+   const restorePlates=co?['QA8901CO','QA8902CO']:['QA8901CU','QA8902CU'];
+   const restoreFile={...dispatchFile(restorePlates),file_name:'original-october-dispatch.xlsx'};
+   const octoberBase=dispatchBase(octoberPlan);
+   const restorePayload=await dispatchPayload(octoberPlan,restoreFile);
+   const previewOctober=()=>api('admin',product,octoberBase+'/import-preview',restorePayload);
+   const confirmOctober=preview=>api('admin',product,octoberBase+(co?'/import':''),{
+    ...restorePayload,shipment_month:october,preview_sha256:preview.file_sha256
+   });
+   const activeOctober=async ()=>(await api('admin',product,octoberBase)).vehicles.filter(row=>restorePlates.includes(row.truck_no)&&!row.cancelled_at);
+   assert.equal((await confirmOctober(await previewOctober())).added_count,2);
+   const octoberOriginals=await activeOctober();
+   const originalIds=octoberOriginals.map(row=>row.id).sort();
+   const [restoreFirst]=octoberOriginals;
+   const duplicateRestoreFile={...restoreFile,file_name:'legacy-november-copy.xlsx'};
+   const novemberDuplicates=await seedLegacyDispatch(novemberPlan,november,duplicateRestoreFile,restorePlates);
+   const snapshotNovember=async ()=>(await api('admin',product,novemberBase)).vehicles.filter(row=>novemberDuplicates.some(copy=>copy.id===row.id));
+   const novemberBeforeRecovery=await snapshotNovember();
+
+   await removeVehicle(octoberPlan,restoreFirst.id,200,'logistics_manager');
+   assert.equal((await activeOctober()).length,1);
+   const partial=await previewOctober();
+   assert.equal(partial.new_count,0);
+   assert.equal(partial.restored_count,1);
+   assert.deepEqual(partial.items.filter(row=>row.action==='RESTORE').map(row=>row.truck_no),[restoreFirst.truck_no]);
+   assert.equal((await confirmOctober(partial)).restored_count,1);
+   assert.deepEqual((await activeOctober()).map(row=>row.id).sort(),originalIds);
+   assert.deepEqual(await snapshotNovember(),novemberBeforeRecovery);
+   const novemberRestorePayload=await dispatchPayload(novemberPlan,duplicateRestoreFile);
+   await api('admin',product,novemberBase+'/import-preview',novemberRestorePayload,409);
+   await api('admin',product,novemberBase+(co?'/import':''),{
+    ...novemberRestorePayload,shipment_month:november,preview_sha256:partial.file_sha256
+   },409);
+
+   for(const id of originalIds)await removeVehicle(octoberPlan,id,200,'logistics_manager');
+   assert.equal((await activeOctober()).length,0);
+   const december='2019-12',decemberPlan=await P.salesPlan(api,f,product,december),decemberBase=dispatchBase(decemberPlan);
+   const decemberPayload=await dispatchPayload(decemberPlan,restoreFile);
+   await api('admin',product,decemberBase+'/import-preview',decemberPayload,409);
+   await api('admin',product,decemberBase+(co?'/import':''),{
+    ...decemberPayload,shipment_month:december,preview_sha256:partial.file_sha256
+   },409);
+   const full=await previewOctober();
+   assert.equal(full.restored_count,2);
+   assert(full.items.every(row=>row.action==='RESTORE'));
+   const recovered=await confirmOctober(full);
+   assert.equal(recovered.restored_count,2);
+   assert.equal(recovered.added_count,0);
+   assert.deepEqual((await activeOctober()).map(row=>row.id).sort(),originalIds);
+   assert.deepEqual(await snapshotNovember(),novemberBeforeRecovery);
+   assert.equal((await previewOctober()).restored_count,0);
+   const {rows:[restoreAudit]}=await c.query("SELECT count(*)::int n FROM audit_logs WHERE action='dispatch_vehicle_restored_from_import' AND entity_id=ANY($1::text[])",[originalIds]);
+   assert.equal(restoreAudit.n,3);
+
+   const cancellationFile=await dispatchPayload(octoberPlan,dispatchFile([restoreFirst.truck_no],'Synthetic Destination',undefined,[restoreFirst.truck_no]));
+   const cancellationPreview=await api('admin',product,octoberBase+'/import-preview',cancellationFile);
+   assert.equal(cancellationPreview.cancelled_count,1);
+   await api('admin',product,octoberBase+(co?'/import':''),{
+    ...cancellationFile,shipment_month:october,preview_sha256:cancellationPreview.file_sha256
+   });
+   assert.equal((await activeOctober()).length,1);
+   assert.equal((await previewOctober()).restored_count,0,'Excel cancellations are not restored by re-importing the active source workbook');
+   const [browserRestoreVehicle]=await activeOctober();
+   await removeVehicle(octoberPlan,browserRestoreVehicle.id);
+   fixtures[product].historicalTrip.browserRestore={plan:octoberPlan,path:octoberBase,file:restoreFile,vehicle:browserRestoreVehicle};
 
    const browserPlate=plate+'-BROWSER',browserTrip=await importTrip('BROWSER',november+'-03',browserPlate);
    const browserVehicle=await dispatch(novemberPlan,browserPlate);
@@ -493,6 +600,64 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const archived=await ctx.request.get(origin+'/api/v1/historical-movements/'+source.id,{headers:{origin,'x-product-code':product}});
     assert.equal(archived.status(),200,await archived.text());
     assert.equal((await archived.json()).voided_at,null);
+    assert.deepEqual(errors,[]);
+   }finally{await ctx.close();}
+  });
+  await t.test('copper lets an operator remove a saved dispatch when its only same-plate loading plan was cancelled',async()=>{
+   const product='CU_CATHODE',{plan,path,vehicle,protectedLoading}=fixtures[product].historicalTrip.browserLegacySaved;
+   const {ctx,page,errors}=await open('admin',product,1440);
+   try{
+    await page.goto(origin+'/sales-plans/'+plan+'/dispatch');
+    const group=id=>page.locator('details[data-dispatch-import="'+id+'"]');
+    await group(vehicle.import_id).locator(':scope > summary').click();
+    const row=group(vehicle.import_id).getByRole('row').filter({hasText:vehicle.truck_no});
+    assert.match(await row.innerText(),/待到厂登记|Waiting for Arrival/i);
+    const remove=row.locator('[data-dispatch-remove]');
+    await remove.click();
+    const endpoint=path+'/vehicles/'+vehicle.id;
+    const saved=page.waitForResponse(response=>response.url().endsWith(endpoint)&&response.request().method()==='DELETE');
+    await page.locator('#operation-confirm-accept').click();
+    const response=await saved;
+    assert.equal(response.status(),200,await response.text());
+    await row.waitFor({state:'detached'});
+    await group(protectedLoading.import_id).locator(':scope > summary').click();
+    const protectedRow=group(protectedLoading.import_id).getByRole('row').filter({hasText:protectedLoading.truck_no});
+    await protectedRow.waitFor();
+    assert.equal(await protectedRow.locator('[data-dispatch-remove]').count(),0);
+    assert.deepEqual(errors,[]);
+   }finally{await ctx.close();}
+  });
+  for(const product of products)await t.test(product+' previews and restores only the manually deleted row in the original workbook',async()=>{
+   const co=cobalt(product),{plan,path,file,vehicle}=fixtures[product].historicalTrip.browserRestore;
+   const {ctx,page,errors}=await open('admin',product,1440);
+   try{
+    await page.goto(origin+'/sales-plans/'+plan+'/dispatch');
+    const form=page.locator('[data-dispatch-excel-import]');
+    const reading=page.waitForResponse(response=>response.url().endsWith(path+'/import-preview')&&response.request().method()==='POST');
+    await form.locator('input[name=file]').setInputFiles({name:file.file_name,
+     mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(file.file_base64,'base64')});
+    const read=await reading;
+    assert.equal(read.status(),200,await read.text());
+    const parsed=await read.json();
+    assert.equal(parsed.restored_count,1,JSON.stringify({errors:parsed.error,mapping:parsed.mapping,warnings:parsed.warnings,items:parsed.items}));
+    const preview=form.locator('[data-dispatch-preview-rows]');
+    const restoreRow=preview.getByRole('row').filter({hasText:vehicle.truck_no});
+    const restoreLabel=/^(恢复已删除车辆|Restore deleted vehicles)$/i;
+    await restoreRow.getByText(restoreLabel).waitFor();
+    assert.match(await preview.getByRole('status').innerText(),/恢复 1|Restored 1/i);
+    assert.equal(await preview.getByText(restoreLabel).count(),1);
+    const endpoint=path+(co?'/import':'');
+    const confirming=page.waitForResponse(response=>response.url().endsWith(endpoint)&&response.request().method()==='POST');
+    await form.locator('button[type=submit]').click();
+    if(co)await page.locator('#operation-confirm-accept').click();
+    const response=await confirming;
+    assert.equal(response.status(),200,await response.text());
+    assert.equal((await response.json()).restored_count,1);
+    const refreshed=await ctx.request.get(origin+'/api/v1'+path,{headers:{origin,'x-product-code':product}});
+    assert.equal(refreshed.status(),200,await refreshed.text());
+    const restored=(await refreshed.json()).vehicles.find(row=>row.truck_no===vehicle.truck_no);
+    assert.equal(restored.id,vehicle.id);
+    assert.equal(restored.cancelled_at,null);
     assert.deepEqual(errors,[]);
    }finally{await ctx.close();}
   });

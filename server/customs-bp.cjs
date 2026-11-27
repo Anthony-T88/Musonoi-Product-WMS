@@ -134,10 +134,12 @@ async function list(c,req){
   FROM eligible WHERE NOT ${claimed('eligible','$2')} AND ($3::uuid IS NULL OR customer_id=$3) AND ($4='' OR strpos(lower(batch),lower($4))>0)
   GROUP BY batch_key,customer_id HAVING bool_or($7='' OR strpos(lower(concat_ws(' ',batch,code,customer,truck)),lower($7))>0)
  ), visible AS MATERIALIZED (
-  SELECT d.id,d.document_no,d.created_at,d.source_context FROM customs_bp_documents d
+  SELECT d.id,coalesce(r.number,d.document_no) document_no,d.created_at,d.source_context FROM customs_bp_documents d
+  LEFT JOIN LATERAL (SELECT nullif(snapshot->>'number','') number FROM customs_bp_revisions
+   WHERE document_id=d.id ORDER BY revision DESC LIMIT 1) r ON true
   WHERE d.product_code=$2 AND ${clearanceScope}
  ), matching AS MATERIALIZED (
-  SELECT d.id,d.created_at FROM visible d
+  SELECT d.id,d.document_no,d.created_at FROM visible d
   WHERE ($3 IS NULL OR d.source_context @> jsonb_build_array(jsonb_build_object('customer_id',$3::text)))
    AND ($5='' OR strpos(lower(d.document_no),lower($5))>0)
    AND ($6::date IS NULL OR (d.created_at AT TIME ZONE 'Africa/Lubumbashi')::date=$6)
@@ -145,7 +147,7 @@ async function list(c,req){
     CROSS JOIN LATERAL jsonb_array_elements(s.snapshot->'rows'||coalesce(s.snapshot->'original'->'rows','[]')) r
     WHERE s.id=d.id AND strpos(lower(r->>'batch'),lower($4))>0))
  ), bp_page AS (
-  SELECT id,created_at FROM matching ORDER BY created_at DESC,id LIMIT $10 OFFSET $11
+  SELECT id,document_no,created_at FROM matching ORDER BY created_at DESC,id LIMIT $10 OFFSET $11
  ), customers AS (
   SELECT customer_id id,customer name FROM eligible
   UNION
@@ -156,7 +158,7 @@ async function list(c,req){
   coalesce((SELECT jsonb_agg(f ORDER BY approved_at DESC,batch_key,customer_id)
    FROM (SELECT * FROM grouped ORDER BY approved_at DESC,batch_key,customer_id LIMIT $8 OFFSET $9) f),'[]') items,
   coalesce((SELECT jsonb_agg(f ORDER BY created_at DESC,id) FROM (
-   SELECT s.id,s.document_no,s.created_at,cardinality(s.source_ids) vehicle_count,coalesce(r.revision,1) revision,
+   SELECT s.id,b.document_no,s.created_at,cardinality(s.source_ids) vehicle_count,coalesce(r.revision,1) revision,
     coalesce(r.snapshot,s.snapshot)->'header'->>'customer' customer,
     coalesce(r.snapshot,s.snapshot)->'total'->>'net_mt' net_mt,coalesce(r.snapshot,s.snapshot)->'total'->>'gross_mt' gross_mt
    FROM bp_page b JOIN customs_bp_documents s ON s.id=b.id
@@ -187,7 +189,7 @@ async function chosen(c,req,ids){
 }
 const rowFieldsFrom=row=>Object.fromEntries(Object.keys(rowFields).map(k=>[k,row[k]??'']));
 const draftFields={ids:0,token:0,number:0,header:0,agency_id:0,agency_version:0};
-const editFields={revision:0,header:0,agency_id:0,agency_version:0};
+const editFields={revision:0,number:0,header:0,agency_id:0,agency_version:0};
 
 async function declaration(c,req,body,project,{prior,lock=false}={}){
  const edited=fieldMap(body.header,editableHeader);
@@ -211,24 +213,36 @@ async function draft(c,req,source,{lock=false}={}){
   template_revision:source.template_revision,template_title:source.template_title};
 }
 
-async function documentNumber(c,product,value='',reserve=false){
+const issuedNumbers=`SELECT d.id document_id,d.document_no FROM customs_bp_documents d WHERE d.product_code=$1
+ UNION ALL
+ SELECT r.document_id,r.snapshot->>'number' document_no FROM customs_bp_revisions r
+ JOIN customs_bp_documents d ON d.id=r.document_id WHERE d.product_code=$1`;
+
+async function documentNumber(c,product,value='',{reserve=false,documentId=null,allowManual=false}={}){
  const requested=text(value,80);
+ if(documentId&&!requested)throw B.error(400,'BP_NUMBER_REQUIRED');
  if(reserve)await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['customs-bp-number/'+product]);
  if(requested){
-  const used=await c.query('SELECT 1 FROM customs_bp_documents WHERE product_code=$1 AND upper(document_no)=upper($2)',[product,requested]);
+  const used=await c.query(`SELECT 1 FROM (${issuedNumbers}) issued
+   WHERE upper(document_no)=upper($2) AND document_id IS DISTINCT FROM $3::uuid LIMIT 1`,[product,requested,documentId]);
   if(used.rowCount)throw B.error(409,'BP_NUMBER_IN_USE');
   return requested;
  }
  const year=Number(date().slice(0,4)),suffix='/'+year+'/'+(product===CO?'CO':'CU');
  const {rows:[counter]}=await c.query(`SELECT coalesce((SELECT last_number FROM customs_bp_counters WHERE product_code=$1 AND business_year=$2),0) last_number,
-  ARRAY(SELECT upper(document_no) FROM customs_bp_documents WHERE product_code=$1 AND upper(document_no) LIKE $3) used`,[product,year,'%'+suffix]);
- const format=serial=>String(serial).padStart(3,'0')+suffix;
- const used=new Set(counter.used);
- let serial=counter.last_number+1;
- while(used.has(format(serial)))serial++;
- if(reserve)await c.query(`INSERT INTO customs_bp_counters(product_code,business_year,last_number) VALUES($1,$2,$3)
-  ON CONFLICT(product_code,business_year) DO UPDATE SET last_number=EXCLUDED.last_number`,[product,year,serial]);
- return format(serial);
+  coalesce((SELECT max(substring(upper(document_no),$3)::numeric) FROM (${issuedNumbers}) issued),0)::text max_issued`,
+  [product,year,'^([0-9]+)'+suffix+'$']);
+ const recorded=BigInt(counter.last_number),issued=BigInt(counter.max_issued);
+ const serial=(recorded>issued?recorded:issued)+1n;
+ const number=serial.toString().padStart(3,'0')+suffix;
+ if(number.length>80){
+  if(allowManual)return '';
+  throw B.error(409,'BP_NUMBER_SERIAL_EXHAUSTED');
+ }
+ // Above the counter's integer range, the issued document itself stores the next sequence baseline.
+ if(reserve&&serial<=2147483647n)await c.query(`INSERT INTO customs_bp_counters(product_code,business_year,last_number) VALUES($1,$2,$3)
+  ON CONFLICT(product_code,business_year) DO UPDATE SET last_number=EXCLUDED.last_number`,[product,year,serial.toString()]);
+ return number;
 }
 
 async function save(c,req){
@@ -241,7 +255,7 @@ async function save(c,req){
  }else await c.query('SELECT customs_bp_lock_cu($1,$2)',[req.user.id,ids]);
  const source=await chosen(c,req,ids);
  const snapshot=await draft(c,req,source,{lock:true});
- const number=await documentNumber(c,req.productCode,body.number??'',true);
+ const number=await documentNumber(c,req.productCode,body.number??'',{reserve:true});
  snapshot.number=number;
  const context=scopeFor(source.rows);
  let doc;
@@ -262,7 +276,7 @@ async function save(c,req){
 }
 
 async function archived(c,req,revision=null){
- const doc=(await c.query(`SELECT d.id,d.document_no,d.created_at,d.source_context->0->>'project_id' project_id,
+ const doc=(await c.query(`SELECT d.id,d.document_no original_number,d.created_at,d.source_context->0->>'project_id' project_id,
   CASE WHEN $4::integer=1 THEN d.snapshot ELSE coalesce(r.snapshot,d.snapshot) END snapshot,
   CASE WHEN $4::integer=1 THEN 1 ELSE coalesce(r.revision,1) END revision
   FROM customs_bp_documents d LEFT JOIN LATERAL (
@@ -271,7 +285,8 @@ async function archived(c,req,revision=null){
   WHERE d.product_code=$2 AND d.id=$3 AND ${clearanceScope}`,
  [req.user.id,req.productCode,B.uuid(req.params.id),revision])).rows[0];
  if(!doc||revision!==null&&doc.revision!==revision)throw B.error(404,'BP_NOT_FOUND');
- return doc;
+ const number=doc.revision===1?doc.original_number:doc.snapshot.number||doc.original_number;
+ return {...doc,document_no:number,snapshot:{...doc.snapshot,number}};
 }
 
 async function archiveBasis(c,req,doc){
@@ -315,7 +330,10 @@ async function revised(c,req,doc,lock=false){
  if(B.version(req.body.revision)!==doc.revision)throw B.error(409,'BP_REVISION_CHANGED');
  const basis=await archiveBasis(c,req,doc);
  const {agency_id,...fields}=await declaration(c,req,req.body,doc.project_id,{prior:doc.snapshot,lock});
- return {...doc.snapshot,...basis,header:{...basis.header,...fields},agency_id,number:doc.document_no};
+ const requested=Object.hasOwn(req.body,'number')?req.body.number:doc.document_no;
+ const number=requested===doc.document_no?requested:
+  await documentNumber(c,req.productCode,requested,{reserve:lock,documentId:doc.id});
+ return {...doc.snapshot,...basis,header:{...basis.header,...fields},agency_id,number};
 }
 
 async function archiveBatches(c,req,rows){
@@ -348,8 +366,8 @@ async function editArchive(c,req){
   [id,revision,snapshot,req.user.id]);
  await B.audit(c,req,'customs_bp_revised','customs_bp_documents',id,
   {document_no:doc.document_no,project_id:doc.project_id,product_code:req.productCode,revision:doc.revision},
-  {document_no:doc.document_no,project_id:doc.project_id,product_code:req.productCode,revision});
- return {id,document_no:doc.document_no,revision};
+  {document_no:snapshot.number,project_id:doc.project_id,product_code:req.productCode,revision});
+ return {id,document_no:snapshot.number,revision};
 }
 
 async function status(c,req,url){
@@ -400,7 +418,7 @@ function register({app,pool,permitted,csrf}){
    const source=await chosen(c,req,selection(req.body));
    return {header:{...source.header,mode:'',border:'',agency:'',signature_date:date()},
     rows:source.data.map((row,i)=>({...row,id:source.rows[i].id,code:source.rows[i].code})),
-    token:source.token,number:await documentNumber(c,req.productCode),options:choices,template_revision:source.template_revision,
+    token:source.token,number:await documentNumber(c,req.productCode,'',{allowManual:true}),options:choices,template_revision:source.template_revision,
     project_id:source.project_id,agencies:await Agencies.list(c,req,source.project_id)};
   }));
   app.post(url+'/print/preview',{preHandler:[permission,csrf]},req=>C.readTransaction(pool,async c=>{
@@ -414,9 +432,10 @@ function register({app,pool,permitted,csrf}){
    req=>status(pool,req,url));
   app.get(url+'/:id',{preHandler:permission},req=>C.readTransaction(pool,async c=>{
    const doc=await archived(c,req),view=editorData(doc,await archiveBasis(c,req,doc));
-   const {rows}=await c.query(`SELECT revision,created_at FROM customs_bp_revisions WHERE document_id=$1 ORDER BY revision DESC`,[doc.id]);
+   const {rows}=await c.query(`SELECT r.revision,r.created_at,coalesce(nullif(r.snapshot->>'number',''),d.document_no) document_no
+    FROM customs_bp_documents d JOIN customs_bp_revisions r ON r.document_id=d.id WHERE d.id=$1 ORDER BY r.revision DESC`,[doc.id]);
    return {...view,options:choices,project_id:doc.project_id,agencies:await Agencies.list(c,req,doc.project_id),
-    versions:[...rows,{revision:1,created_at:doc.created_at}]};
+    versions:[...rows,{revision:1,created_at:doc.created_at,document_no:doc.original_number}]};
   }));
   app.post(url+'/:id/print/preview',{preHandler:[permission,csrf]},req=>C.readTransaction(pool,async c=>{
    const snapshot=await withPrintIdentification(c,req.productCode,await revised(c,req,await archived(c,req)));

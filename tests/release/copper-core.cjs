@@ -333,10 +333,28 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  for(const [,field] of identity)assert(bpDraft.header[field]&&bpDraft.header[field]===initialTemplate.fields[field],field);
  const bpRows=bpDraft.rows;
  assert.equal(bpRows[0].trailer_two,'N/A');
- assert.match(bpDraft.number,/^\d{3}\/\d{4}\/CU$/);
+ assert.match(bpDraft.number,/^\d{3,}\/\d{4}\/CU$/);
  const agency=await api(bpPath+'/agencies','admin',{project_id:f.project,name:'Synthetic clearance agency '+seq});
  const sharedAgencies=await app.inject({method:'GET',url:'/api/v1/cobalt'+bpPath+'/agencies',headers:{...sessions.admin,'x-product-code':'CO_HYDROXIDE'}});
  assert.equal(sharedAgencies.statusCode,200);assert(sharedAgencies.json().items.some(item=>item.id===agency.id));
+ const revise=(method,url,body,key=crypto.randomUUID())=>app.inject({method,url:'/api/v1'+url,
+  headers:{...sessions.admin,'x-product-code':'CU_CATHODE','idempotency-key':key},payload:body});
+ const suffix='/'+today.slice(0,4)+'/CU',manualSerial=BigInt(seq)+2147483648n;
+ const manualNumber=manualSerial+suffix,correctedSerial=manualSerial+10n;
+ const declaration={mode:'ROAD',border:'Sakania',signature_date:today};
+ const {rows:[higherBP]}=await c.query(`INSERT INTO customs_bp_documents(product_code,document_no,source_ids,source_context,snapshot,created_by)
+  VALUES('CU_CATHODE',$1,$2,$3,$4,$5) RETURNING id`,[manualNumber,[crypto.randomUUID()],
+  JSON.stringify([{project_id:f.project,customer_id:customer.id,warehouse_id:f.warehouse}]),
+  {number:manualNumber,header:{...bpDraft.header,...declaration,agency:agency.name},rows:bpRows,template_revision:0},f.accounts[0].id]);
+ assert.equal((await api(bpPath+'/preview','admin',{ids:bpIds})).number,(manualSerial+1n)+suffix);
+ const correctedNumber=correctedSerial+suffix,correction=await revise('PATCH',bpPath+'/'+higherBP.id,
+  {revision:1,number:correctedNumber,header:declaration});
+ assert.equal(correction.statusCode,200,correction.body);
+ assert.equal((await api(bpPath+'/preview','admin',{ids:bpIds})).number,(correctedSerial+1n)+suffix);
+ const previousNumber=await revise('PATCH',bpPath+'/'+higherBP.id,
+  {revision:2,number:manualNumber,header:declaration});
+ assert.equal(previousNumber.statusCode,200,previousNumber.body);
+ assert.equal((await api(bpPath+'/preview','admin',{ids:bpIds})).number,(correctedSerial+1n)+suffix);
  const bpBody={ids:bpIds,token:bpDraft.token,header:{mode:'RAILWAY',border:'Sakania',signature_date:today},
   number:'SYNTHETIC-MANUAL-CU-'+seq,agency_id:agency.id,agency_version:agency.version};
  await api(bpPath+'/print/preview','admin',{...bpBody,header:{...bpBody.header,destination:'OVERRIDE'}},400);
@@ -390,8 +408,6 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
  for(const [label,field] of identity)assert(legacyPrint.body.includes(label+': '+templateFields[field]),label);
  assert.equal((await api(bpPath+'/'+legacyBP.id+'/batches')).items[0].loading_date,bpRows[0].loading_date);
  assert.deepEqual((await c.query('SELECT snapshot FROM customs_bp_documents WHERE id=$1',[legacyBP.id])).rows[0].snapshot,legacyBP.snapshot);
- const revise=(method,url,body,key=crypto.randomUUID())=>app.inject({method,url:'/api/v1'+url,
-  headers:{...sessions.admin,'x-product-code':'CU_CATHODE','idempotency-key':key},payload:body});
  const edit={revision:1,header:{...bpBody.header,border:'Mokambo'}};
  const bpEditKey=crypto.randomUUID(),revision=await revise('PATCH',bpPath+'/'+bpDoc.id,edit,bpEditKey);
  assert.equal(revision.statusCode,200,revision.body);

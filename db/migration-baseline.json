@@ -901,6 +901,14 @@
     {
       "version": "225_v490_dispatch_historical_detach.sql",
       "checksum": "f7c4056a12da67fbb17e083f0f3a6a39b4f68cb0f876c8c7e0d39366f4cfca10"
+    },
+    {
+      "version": "226_v490_dispatch_import_restore.sql",
+      "checksum": "5745c9f386b3401fbec4b05d5e150bea6594997ef7a4b8d1265b23689b65f133"
+    },
+    {
+      "version": "227_v490_dispatch_removal_evidence.sql",
+      "checksum": "fbdb323a0f2a3cd38a54381f1bbc4a41b839c1100f7333b620ca568a718bee54"
     }
   ]
 }

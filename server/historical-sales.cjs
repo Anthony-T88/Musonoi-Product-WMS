@@ -21,38 +21,37 @@ const sourceInScope=(h,actor,project,customer,warehouse)=>`EXISTS(
   AND (s.warehouse_id IS NULL OR s.warehouse_id=b.warehouse_id)
   AND (s.customer_id IS NULL OR s.customer_id=${customer})
 )`;
-const manualInvoice=h=>`historical_dispatch_has_manual_invoice(${h}.product_code,${h}.plan_id,${h}.source_id)`;
-const canDetach=(h,actor,project,customer,warehouse='NULL::uuid')=>
- 'COALESCE('+h+'.automatic AND '+sourceInScope(h,actor,project,customer,warehouse)+' AND NOT '+manualInvoice(h)+',false)';
+const removalBlocker=(h,actor,project,customer,warehouse='NULL::uuid')=>`CASE
+ WHEN ${h}.source_id IS NULL THEN NULL
+ WHEN NOT ${sourceInScope(h,actor,project,customer,warehouse)} THEN 'HISTORICAL_SCOPE'
+ WHEN NOT ${h}.automatic THEN 'MANUAL_HISTORY_LINK'
+ WHEN historical_dispatch_has_manual_invoice(${h}.product_code,${h}.plan_id,${h}.source_id) THEN 'CONFIRMED_HISTORY_INVOICE'
+ END`;
 
 function cancellationError(req,code){
  const messages={
-  HISTORICAL_DISPATCH_LINK_PROTECTED:['该车辆关联了人工确认的历史单据，不能撤销派车','This dispatch cannot be cancelled because its historical document was linked manually.','Cette affectation est liée manuellement à un document historique et ne peut pas être annulée.'],
-  HISTORICAL_DISPATCH_INVOICE_PROTECTED:['该车辆的历史发票已经人工确认，不能撤销派车','This dispatch cannot be cancelled because its historical invoice was confirmed manually.','La facture historique a été confirmée manuellement. Cette affectation ne peut pas être annulée.'],
-  HISTORICAL_DISPATCH_SOURCE_SCOPE:['无权解除该历史单据的派车关联','You do not have permission to unlink this historical document.','Vous n’avez pas l’autorisation de dissocier ce document historique.'],
+  MANUAL_HISTORY_LINK:['该车辆关联了人工确认的历史单据，不能撤销派车','This dispatch cannot be cancelled because its historical document was linked manually.','Cette affectation est liée manuellement à un document historique et ne peut pas être annulée.'],
+  CONFIRMED_HISTORY_INVOICE:['该车辆的历史发票已经人工确认，不能撤销派车','This dispatch cannot be cancelled because its historical invoice was confirmed manually.','La facture historique a été confirmée manuellement. Cette affectation ne peut pas être annulée.'],
+  HISTORICAL_SCOPE:['无权解除该历史单据的派车关联','You do not have permission to unlink this historical document.','Vous n’avez pas l’autorisation de dissocier ce document historique.'],
+  ONLINE_ARRIVAL:['该车辆已有在线到厂登记，不能删除派车记录','This dispatch cannot be removed because a vehicle arrival was registered.','Une arrivée a été enregistrée pour ce véhicule. Cette affectation ne peut pas être supprimée.'],
+  ONLINE_LOADING:['该车辆已关联装车计划或装车单，不能删除派车记录','This dispatch cannot be removed because it is linked to a loading plan or order.','Cette affectation est liée à un plan ou ordre de chargement et ne peut pas être supprimée.'],
   HISTORICAL_DISPATCH_ONLINE_WORK:['该车辆已有在线到厂或装车记录，不能撤销派车','This dispatch cannot be cancelled because it has a vehicle arrival or loading record.','Cette affectation ne peut pas être annulée car une arrivée ou un chargement a été enregistré.']
  };
  const message=messages[code];
  if(!message)return null;
  const language=req.user.language_code;
- return B.error(code==='HISTORICAL_DISPATCH_SOURCE_SCOPE'?403:409,message[language==='en'?1:language==='fr'?2:0]);
+ return B.error(code==='HISTORICAL_SCOPE'?403:409,message[language==='en'?1:language==='fr'?2:0]);
 }
 
 async function prepareDispatchCancellation(c,req,plan,dispatchId){
  const co=req.productCode===cobalt;
  // The caller already locked the dispatch. Recheck against concurrent historical imports, voids and invoice confirmations.
  await c.query('SELECT pg_advisory_xact_lock(477189)');
- const {rows:[linked]}=await c.query(
-  'SELECT h.source_id,h.automatic,'+sourceInScope('h','$3','$4','$5','$6::uuid')+' in_scope,'+manualInvoice('h')+' manual_invoice,'
-  +(co?'EXISTS(SELECT 1 FROM co_vehicle_arrivals WHERE dispatch_vehicle_id=$1)':'false')+' online_arrival '
-  +'FROM historical_sales_arrivals h WHERE h.'+dispatchColumn(co)+'=$1 AND h.plan_id=$2',
+ const {rows:[linked]}=await c.query(`SELECT h.source_id,${removalBlocker('h','$3','$4','$5','$6::uuid')} removal_blocker
+  FROM historical_sales_arrivals h WHERE h.${dispatchColumn(co)}=$1 AND h.plan_id=$2`,
   [dispatchId,plan.id,req.user.id,plan.project_id,plan.customer_id,co?plan.warehouse_id:null]);
- if(!linked)return null;
- if(!linked.in_scope)throw cancellationError(req,'HISTORICAL_DISPATCH_SOURCE_SCOPE');
- if(linked.online_arrival)throw cancellationError(req,'HISTORICAL_DISPATCH_ONLINE_WORK');
- if(!linked.automatic)throw cancellationError(req,'HISTORICAL_DISPATCH_LINK_PROTECTED');
- if(linked.manual_invoice)throw cancellationError(req,'HISTORICAL_DISPATCH_INVOICE_PROTECTED');
- return linked.source_id;
+ if(linked?.removal_blocker)throw cancellationError(req,linked.removal_blocker);
+ return linked?.source_id||null;
 }
 
 async function finishDispatchCancellation(c,req,plan,dispatchId,sourceId,reason){
@@ -61,7 +60,12 @@ async function finishDispatchCancellation(c,req,plan,dispatchId,sourceId,reason)
   await c.query('SELECT historical_dispatch_detach_cancelled($1,$2,$3,$4,$5,$6,$7)',
    [req.productCode,plan.id,dispatchId,sourceId,req.user.id,reason,req.id]);
  }catch(error){
-  throw cancellationError(req,error.message)||error;
+  const codes={
+   HISTORICAL_DISPATCH_LINK_PROTECTED:'MANUAL_HISTORY_LINK',
+   HISTORICAL_DISPATCH_INVOICE_PROTECTED:'CONFIRMED_HISTORY_INVOICE',
+   HISTORICAL_DISPATCH_SOURCE_SCOPE:'HISTORICAL_SCOPE'
+  };
+  throw cancellationError(req,codes[error.message]||error.message)||error;
  }
 }
 
@@ -195,5 +199,5 @@ async function afterDispatchImport(c,req,plan,month,dispatchIds){
  return autoLink(c,req,{plan,month,dispatchIds});
 }
 
-module.exports={candidates,link,autoLink,afterDispatchImport,arrivalExists,assertNotArrived,canDetach,
+module.exports={candidates,link,autoLink,afterDispatchImport,arrivalExists,assertNotArrived,removalBlocker,cancellationError,
  prepareDispatchCancellation,finishDispatchCancellation};
