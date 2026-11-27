@@ -9,12 +9,14 @@ const fullSizes=[desktop,compact,large,wide],allSizes=[...fullSizes,phone];
 const standardSizes=[compact,large,phone];
 const narrowKeys=new Set(['overview','password-dialog','inventory','map','sales','receipts','loading-search','outbounds','customs','customs-packing','metal','accounts','permissions','reports','export-licenses','export-license-new','cu-sales-detail','co-sales-detail','preparation-plans','cu-work-plan-detail','co-work-plan-detail','cu-preparation-from-plan','co-preparation-from-plan']);
 const quickKeys=new Set(['overview','password-dialog','inventory','map','receipts','co-prep-work','cu-receipt-edit','arrivals','loading-search','cu-plan-group-edit','cu-plan-order-new','outbounds','customs','customs-packing','metal','permissions','export-licenses','export-license-new','sales','cu-sales-detail','co-sales-detail','preparation-plans','cu-work-plan-detail','co-work-plan-detail','cu-preparation-from-plan','co-preparation-from-plan']);
-const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator']};
+quickKeys.add('report-mail');
+narrowKeys.add('report-mail');
+const quickRoles={overview:['sales_operator'], 'co-prep-work':['site_supervisor'], permissions:['production_operator'], 'report-mail':['production_operator']};
 const deniedCases=new Set([
  'logistics_field_operator/CU_CATHODE/receipts','logistics_field_operator/CU_CATHODE/receipt-new',
  'site_supervisor/CU_CATHODE/receipts',...R.BOTH.flatMap(p=>[
   'production_manager/'+p+'/stocktakes','production_operator/'+p+'/permissions','production_operator/'+p+'/audit','production_operator/'+p+'/export-licenses',
-  'production_operator/'+p+'/historical-movements','production_operator/'+p+'/preparation-batch','production_operator/'+p+'/customs'
+  'production_operator/'+p+'/historical-movements','production_operator/'+p+'/preparation-batch','production_operator/'+p+'/customs','production_operator/'+p+'/report-mail'
  ])
 ]);
 // Each exception is scoped to one role, product, state and scenario. Expired entries fail the gate.

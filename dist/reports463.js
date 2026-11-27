@@ -104,7 +104,7 @@ window.Reports463={
    extra=make('vehicle','车辆','Vehicle')+lot()+
     fieldEnum('status','单证状态','Document Status',['DOCUMENT_COMPLETE','DOCUMENT_MISSING','INVOICE_PENDING','IMPORTED_PACKING'])+source();
   }else if(q.kind==='movement'){
-   fields+=fieldEnum('kind_filter','业务类型','Movement',['INBOUND','OUTBOUND','RETURN','WEIGHT','TRANSFER','ADJUSTMENT','BASELINE'])+source();
+   fields+=fieldEnum('kind_filter','业务类型','Movement',['INBOUND','OUTBOUND','RETURN','WEIGHT','PREPARATION_TRANSFER','TRANSFER','ADJUSTMENT','BASELINE'])+source();
    extra=make('document','单据号','Document No.')+lot();
   }else if(q.kind==='balance')fields+=warehouse();
   else if(q.kind==='stocktake'){
@@ -134,6 +134,11 @@ window.Reports463={
  },
  cell(row,col,data){
   const value=row[col.key];
+  const reason=row.pending_fields?.[col.key];
+  if(reason&&(value==null||typeof value==='string'&&!value.trim())){
+   const fallback=row.source==='HISTORICAL'?'HISTORICAL_SOURCE_MISSING':'ONLINE_SOURCE_MISSING';
+   return '<span class="r481-pending">'+esc(data.pendingLabels?.[reason]||data.pendingLabels?.[fallback]||this.t('因关联资料不足，待确认补充','Pending confirmation: linked details are incomplete.'))+'</span>';
+  }
   if(col.type==='enum'){
    const text=data.labels[value]||value;
    if(!text)return '—';

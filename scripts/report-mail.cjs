@@ -9,40 +9,20 @@ const DB = require('../server/database-connection.cjs');
 const Lease = require('../server/authorization-lease.cjs');
 const Management = require('../server/management.cjs');
 const ReportCenter = require('../server/report-center.cjs');
+const Policy = require('../server/report-mail-policy.cjs');
 const { display } = require('../server/business-time.cjs');
 
-const reportKinds = new Set(['shipping', 'movement', 'balance', 'stocktake', 'sales']);
-const products = new Set(['CU_CATHODE', 'CO_HYDROXIDE']);
 const maxAttachmentBytes = 10 * 1024 * 1024;
 const crlf = '\r\n';
 const writeStatus = record => console.log(JSON.stringify(record));
 const sha256 = value => createHash('sha256').update(value).digest('hex');
-const addressKey = value => typeof value === 'string' ? value.toLowerCase() : value;
-
-function hasKeys(object, expected) {
-  return object && typeof object === 'object' && !Array.isArray(object) &&
-    Object.keys(object).length === expected.length && expected.every(key => Object.hasOwn(object, key));
-}
-
-function uniqueArray(values, max, key = value => value) {
-  return Array.isArray(values) && values.length > 0 && values.length <= max &&
-    new Set(values.map(key)).size === values.length;
-}
-
-function mailbox(value) {
-  if (typeof value !== 'string' || value.length > 254) return false;
-  const parts = value.split('@');
-  const [user, domain] = parts;
-  return parts.length === 2 && user.length <= 64 && /^[a-zA-Z0-9_+-]+(?:\.[a-zA-Z0-9_+-]+)*$/.test(user) &&
-    /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(domain);
-}
-
-function validate(value, environment) {
+function validateTransport(value, environment) {
   if (!['test', 'production'].includes(environment)) DB.fail('REPORT_MAIL_INVALID_ENVIRONMENT');
-  if (!hasKeys(value, ['smtp', 'recipientAllowlist', 'schedules']) ||
-      !hasKeys(value.smtp, ['url', 'from']) || !mailbox(value.smtp.from) ||
-      !uniqueArray(value.recipientAllowlist, 100, addressKey) || !value.recipientAllowlist.every(mailbox) ||
-      !uniqueArray(value.schedules, 20, schedule => schedule?.id)) DB.fail('REPORT_MAIL_CONFIG_INVALID');
+  if (!(Policy.hasKeys(value, ['smtp', 'recipientAllowlist']) ||
+        Policy.hasKeys(value, ['smtp', 'recipientAllowlist', 'schedules'])) ||
+      !Policy.hasKeys(value.smtp, ['url', 'from']) || !Policy.mailbox(value.smtp.from) ||
+      !Policy.uniqueArray(value.recipientAllowlist, 100, Policy.addressKey) ||
+      !value.recipientAllowlist.every(Policy.mailbox)) DB.fail('REPORT_MAIL_CONFIG_INVALID');
   if (typeof value.smtp.url !== 'string' || /[\s\u0000-\u001f\u007f]/.test(value.smtp.url)) DB.fail('REPORT_MAIL_SMTP_INVALID');
   let url;
   try { url = new URL(value.smtp.url); } catch { DB.fail('REPORT_MAIL_SMTP_INVALID'); }
@@ -50,29 +30,24 @@ function validate(value, environment) {
       url.username || url.password || url.search || url.hash || !['', '/'].includes(url.pathname) ||
       !/^[a-zA-Z0-9.-]+$/.test(url.hostname)) DB.fail('REPORT_MAIL_SMTP_INVALID');
   if (environment === 'test' && (url.hostname !== '127.0.0.1' ||
-      ![value.smtp.from, ...value.recipientAllowlist].every(address => address.toLowerCase().endsWith('.test')))) {
+      ![value.smtp.from, ...value.recipientAllowlist].every(Policy.testMailbox))) {
     DB.fail('REPORT_MAIL_TEST_DESTINATION_FORBIDDEN');
   }
-  const allowlist = new Set(value.recipientAllowlist);
-  for (const schedule of value.schedules) {
-    if (!hasKeys(schedule, ['id', 'hour', 'frequency', 'actor', 'recipients', 'reports']) ||
-        typeof schedule.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(schedule.id) ||
-        !Number.isInteger(schedule.hour) || schedule.hour < 0 || schedule.hour > 23 ||
-        !['daily', 'monthly'].includes(schedule.frequency) ||
-        typeof schedule.actor !== 'string' || !schedule.actor.trim() || schedule.actor.length > 160 ||
-        schedule.actor.trim() !== schedule.actor || /[\u0000-\u001f\u007f]/.test(schedule.actor) ||
-        !uniqueArray(schedule.recipients, 8, addressKey) || !schedule.recipients.every(address => allowlist.has(address)) ||
-        !uniqueArray(schedule.reports, 6, report => `${report?.kind}:${report?.product}`)) {
-      DB.fail('REPORT_MAIL_SCHEDULE_INVALID');
-    }
-    for (const report of schedule.reports) {
-      if (!hasKeys(report, ['kind', 'product']) || !reportKinds.has(report.kind) || !products.has(report.product) ||
-          (schedule.frequency === 'daily' && ['balance', 'sales'].includes(report.kind))) {
-        DB.fail('REPORT_MAIL_REPORT_INVALID');
-      }
-    }
-  }
   return { ...value, smtp: { from: value.smtp.from, url: `${url.protocol}//${url.host}` } };
+}
+
+function validate(value, environment) {
+  const config = validateTransport(value, environment);
+  Policy.validateSchedules(config.schedules, { environment, allowlist: new Set(config.recipientAllowlist) });
+  return config;
+}
+
+function selectedSchedules(config, policy) {
+  const schedules = policy.version === 0 ? (config.schedules ?? []) : policy.enabled ? policy.schedules : [];
+  Policy.validateSchedules(schedules, {
+    environment: config.environment, allowlist: new Set(config.recipientAllowlist), enabled: false
+  });
+  return schedules;
 }
 
 function duePeriod(schedule, now) {
@@ -102,7 +77,7 @@ async function settings(env) {
   let input;
   try { input = JSON.parse(await fs.readFile(configFile, 'utf8')); } catch { DB.fail('REPORT_MAIL_CONFIG_INVALID'); }
   const environment = env.APP_ENV || 'test';
-  const config = validate(input, environment);
+  const config = validateTransport(input, environment);
   const stateDir = env.WMS_REPORT_MAIL_STATE_DIR;
   await checkedPath(stateDir, true, 0o077);
   const netrcFile = env.WMS_REPORT_MAIL_NETRC_FILE;
@@ -189,7 +164,7 @@ async function syncDirectory(directory) {
 }
 
 function deliveryRecord(config, schedule, period, recipient) {
-  const jobId = sha256(JSON.stringify([config.environment, schedule.id, period.key, addressKey(recipient)])).slice(0, 40);
+  const jobId = sha256(JSON.stringify([config.environment, schedule.id, period.key, Policy.addressKey(recipient)])).slice(0, 40);
   return { jobId, location: path.join(config.stateDir, jobId + '.jsonl') };
 }
 
@@ -274,7 +249,10 @@ async function dueJobs(config, due, pool, now, {
       for (const recipient of pending) {
         try {
           Lease.healthy(req);
-          await c.query('SELECT 1');
+          if (config.policyVersion !== undefined) {
+            const { rows: [current] } = await c.query('SELECT version FROM report_mail_settings WHERE singleton');
+            if (current?.version !== config.policyVersion) DB.fail('REPORT_MAIL_POLICY_CHANGED');
+          } else await c.query('SELECT 1');
           const status = await deliverOnce(config, schedule, period, recipient, jobId =>
             transport(config, recipient, message({
               from: config.smtp.from, to: recipient, jobId, period, attachments,
@@ -300,27 +278,31 @@ async function dueJobs(config, due, pool, now, {
 async function main(env = process.env, now = new Date()) {
   const config = await settings(env);
   if (!config) { writeStatus({ status: 'DISABLED' }); return 0; }
-  const due = config.schedules.map(schedule => ({ schedule, period: duePeriod(schedule, now) })).filter(job => job.period);
-  if (!due.length) { writeStatus({ status: 'NO_REPORT_DUE' }); return 0; }
   const cfg = require('../server/config.cjs').config();
   if (cfg.environment !== config.environment) DB.fail('REPORT_MAIL_ENVIRONMENT_MISMATCH');
   const options = DB.connection(cfg, 'app');
   await DB.network(cfg, options);
   const pool = new Pool({ ...options, max: 2, application_name: 'musonoi-report-mail' });
   try {
+    let policy;
     const client = await pool.connect();
     try {
       await DB.verify(client, cfg, 'app');
       const { rows: [system] } = await client.query('SELECT environment FROM system_info WHERE singleton');
       if (system?.environment !== config.environment) DB.fail('REPORT_MAIL_DATABASE_MISMATCH');
+      policy = await Policy.readPolicy(client);
     } finally { client.release(); }
-    return await dueJobs(config, due, pool, now) ? 1 : 0;
+    const schedules = selectedSchedules(config, policy);
+    if (!schedules.length) { writeStatus({ status: 'DISABLED' }); return 0; }
+    const due = schedules.map(schedule => ({ schedule, period: duePeriod(schedule, now) })).filter(job => job.period);
+    if (!due.length) { writeStatus({ status: 'NO_REPORT_DUE' }); return 0; }
+    return await dueJobs({ ...config, policyVersion: policy.version }, due, pool, now) ? 1 : 0;
   } finally {
     await pool.end();
   }
 }
 
-module.exports = { validate, duePeriod, settings, message, send, deliverOnce, dueJobs, readReport, main };
+module.exports = { validate, selectedSchedules, duePeriod, settings, message, send, deliverOnce, dueJobs, readReport, main };
 if (require.main === module) main().then(code => { process.exitCode = code; }).catch(error => {
   console.error(JSON.stringify(DB.safeError(error)));
   process.exitCode = 1;

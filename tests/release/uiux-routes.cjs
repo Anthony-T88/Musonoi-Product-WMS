@@ -219,11 +219,15 @@ function pages(ids){
  }
  for(const kind of ['shipping','movement','balance','stocktake','sales'])
   add('report-center-'+kind,'/reports',BOTH,{query:'?kind='+kind,state:kind});
+ add('report-center-preparation-transfer','/reports',[CU],{query:'?kind=movement&kind_filter=PREPARATION_TRANSFER',state:'preparation transfer filter'});
+ add('report-center-historical-shipping','/reports',BOTH,{query:'?kind=shipping&tab=detail&source=HISTORICAL',state:'historical documents in shipping detail'});
+ add('report-center-historical-movement','/reports',BOTH,{query:'?kind=movement&tab=detail&source=HISTORICAL',state:'historical document numbers in movement detail'});
  add('workbench','/workbench',BOTH);
  add('accounts','/workbench/accounts',BOTH,{screenshot:true});
  add('permissions','/workbench/permissions',BOTH,{screenshot:true,roles:['limited_role_manager','production_operator']});
  add('access-approvals','/workbench/access-approvals',BOTH,{state:'approval inbox for an account manager',screenshot:true});
  add('diagnostics','/workbench/diagnostics',BOTH);
+ add('report-mail','/workbench/report-mail',BOTH,{screenshot:true,roles:['production_operator'],state:'administrator report delivery settings'});
  add('former-design-entry','/workbench/design',BOTH);
  add('audit','/audit',BOTH,{screenshot:true,roles:['production_operator']});
  return cases;

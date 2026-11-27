@@ -1406,6 +1406,26 @@
       "template": "/reports"
     },
     {
+      "key": "report-center-preparation-transfer",
+      "products": [
+        "CU_CATHODE"
+      ],
+      "state": "preparation transfer filter",
+      "template": "/reports"
+    },
+    {
+      "key": "report-center-historical-shipping",
+      "products": ["CU_CATHODE", "CO_HYDROXIDE"],
+      "state": "historical documents in shipping detail",
+      "template": "/reports"
+    },
+    {
+      "key": "report-center-historical-movement",
+      "products": ["CU_CATHODE", "CO_HYDROXIDE"],
+      "state": "historical document numbers in movement detail",
+      "template": "/reports"
+    },
+    {
       "key": "workbench",
       "products": [
         "CU_CATHODE",
@@ -1449,6 +1469,15 @@
       ],
       "state": "standard",
       "template": "/workbench/diagnostics"
+    },
+    {
+      "key": "report-mail",
+      "products": [
+        "CU_CATHODE",
+        "CO_HYDROXIDE"
+      ],
+      "state": "administrator report delivery settings",
+      "template": "/workbench/report-mail"
     },
     {
       "key": "former-design-entry",

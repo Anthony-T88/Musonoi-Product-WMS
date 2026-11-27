@@ -215,6 +215,7 @@ async function build(options={}){
  await require('./adjustments.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./reports.cjs').register({app,pool,cfg,permitted,csrf});
  require('./report-center.cjs').register({app,pool,permitted,csrf});
+ require('./report-mail-settings.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./dashboard.cjs').register({app,pool,cfg,permitted,csrf});
  await require('./overview.cjs').register({app,pool,permitted});
  if((await pool.query("SELECT to_regclass('public.gate_permits') IS NOT NULL ok")).rows[0].ok){await require('./gate-permits.cjs').register({app,pool,permitted,csrf});}
@@ -246,6 +247,9 @@ async function build(options={}){
    await auth(request);
    if(!request.user.permissions.some(p=>['users:manage','roles:manage','access-change:approve'].includes(p)))throw problem(403,'当前账号没有此页面权限');
   }
+ }));
+ app.get('/workbench/report-mail',(req,reply)=>require('./ui-page-response.cjs').serve(req,reply,{
+  permission:require('./report-mail-settings.cjs').administrator(permitted)
  }));
  const Historical=require('./historical-movements.cjs'),Backfill=require('./historical-backfill.cjs');
  for(const route of ['/workbench/historical-movements','/workbench/historical-movements/:id']){

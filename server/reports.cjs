@@ -6,19 +6,55 @@ const stream=`WITH ordered AS(SELECT h.*,lag(state) OVER(PARTITION BY bundle_id 
 async function summary(c,actor,f,w){const r=(await c.query(stream+` SELECT jsonb_build_object('opening_weight',(SELECT qty FROM opening)::text,'inbound_weight',coalesce(sum(delta) FILTER(WHERE kind='INBOUND'),0)::text,'outbound_weight',coalesce(-sum(delta) FILTER(WHERE kind='OUTBOUND'),0)::text,'returned_weight',coalesce(sum(delta) FILTER(WHERE kind='REVERSAL'),0)::text,'adjustment_net',coalesce(sum(delta) FILTER(WHERE kind LIKE 'ADJUST_%'),0)::text,'transfer_net',coalesce(sum(delta) FILTER(WHERE kind='SCOPE_TRANSFER'),0)::text,'opening_import',coalesce(sum(delta) FILTER(WHERE kind='OPENING_BALANCE'),0)::text,'movement_net',coalesce(sum(delta),0)::text,'closing_weight',(SELECT qty FROM closing)::text,'reconciliation_difference',((SELECT qty FROM opening)+coalesce(sum(delta),0)-(SELECT qty FROM closing))::text) AS summary FROM changes`,[actor,f,w.start_revision,w.end_revision])).rows[0].summary;return r;}
 async function movements(c,actor,f,w,detail=false){
  if(detail)return (await c.query(stream+`,facts AS (
-  SELECT v.*,e.event_type,e.after_data,e.occurred_at,
+  SELECT v.*,e.event_type,e.receipt_id,e.after_data,
    CASE WHEN e.event_type='OUTBOUND' OR before_qty>after_qty THEN previous ELSE state END fact
   FROM valued v LEFT JOIN LATERAL(SELECT * FROM inventory_events e WHERE e.bundle_id=v.bundle_id AND e.revision_id=v.revision_id
    AND (e.physical_delta<>0 OR e.event_type IN ('INBOUND','OUTBOUND','REVERSAL','ADJUST_GAIN','ADJUST_LOSS')) ORDER BY e.id LIMIT 1) e ON true
- ) SELECT fact->>'bundle_no' bundle_no,coalesce(fact->>'lot_no',fact->>'preparation_batch_no') lot_no,
-  wh.name warehouse,fact->>'location' location,coalesce(event_type,
+ ), visible AS (
+  SELECT h.*,coalesce(event_type,
    CASE WHEN previous IS NULL AND EXISTS(SELECT 1 FROM inventory_origins o WHERE o.bundle_id=h.bundle_id AND o.opening_qty>0)
-    THEN 'OPENING_BALANCE' ELSE 'SCOPE_TRANSFER' END) type,(after_qty-before_qty)::text physical_delta,
+    THEN 'OPENING_BALANCE' ELSE 'SCOPE_TRANSFER' END) movement_type
+  FROM facts h WHERE (after_qty<>before_qty OR event_type IN('INBOUND','OUTBOUND','REVERSAL','ADJUST_GAIN','ADJUST_LOSS'))
+   AND v24_visible($1,fact,$2)
+ ) SELECT fact->>'bundle_no' bundle_no,
+  coalesce(prep.lot_no,fact->>'lot_no',fact->>'preparation_batch_no') lot_no,
+  wh.name warehouse,fact->>'location' location,
+  CASE WHEN prep.code IS NOT NULL THEN 'PREPARATION_TRANSFER' ELSE movement_type END type,
+  (after_qty-before_qty)::text physical_delta,
   fact->>'weight' IS NULL AND event_type IN('INBOUND','OUTBOUND','REVERSAL') unknown_weight,
-  r.posted_at confirmed_at,after_data->>'code' document_code
-  FROM facts h JOIN inventory_revisions r ON r.id=h.revision_id LEFT JOIN warehouses wh ON wh.id=(fact->>'warehouse_id')::uuid
-  WHERE (after_qty<>before_qty OR event_type IN('INBOUND','OUTBOUND','REVERSAL','ADJUST_GAIN','ADJUST_LOSS'))
-   AND v24_visible($1,fact,$2) ORDER BY h.revision_id,h.bundle_id LIMIT 10001`,
+  r.posted_at confirmed_at,
+  CASE movement_type
+   WHEN 'INBOUND' THEN receipt.code
+   WHEN 'OUTBOUND' THEN coalesce(nullif(btrim(packing.document_no),''),nullif(btrim(plan.packing_list_no),''),
+    nullif(btrim(transport.fields->>'packing_list_no'),''))
+   WHEN 'SCOPE_TRANSFER' THEN prep.code
+   ELSE h.after_data->>'code'
+  END document_code
+  FROM visible h JOIN inventory_revisions r ON r.id=h.revision_id
+  LEFT JOIN warehouses wh ON wh.id=(fact->>'warehouse_id')::uuid
+  LEFT JOIN bundles bundle ON h.movement_type='INBOUND' AND bundle.id=h.bundle_id
+  LEFT JOIN receipts receipt ON receipt.id=coalesce(h.receipt_id,bundle.receipt_id)
+  LEFT JOIN outbound_orders outbound ON h.movement_type='OUTBOUND' AND outbound.id=(h.after_data->>'outbound_id')::uuid
+  LEFT JOIN loading_orders loading ON h.movement_type='OUTBOUND'
+   AND loading.id=coalesce((h.after_data->>'loading_id')::uuid,outbound.loading_id)
+  LEFT JOIN packing_list_documents packing ON packing.loading_id=loading.id
+  LEFT JOIN loading_plan_matches match ON match.loading_id=loading.id
+  LEFT JOIN loading_plan_documents plan ON plan.id=match.document_id
+  LEFT JOIN export_transport transport ON transport.loading_id=loading.id
+  LEFT JOIN LATERAL (
+   SELECT min(a.code) code,min(a.lot_no) lot_no
+   FROM inventory_events preparation_event
+   JOIN allocations a ON a.id=(preparation_event.after_data->>'allocation_id')::uuid
+   JOIN sales_plans s ON s.id=a.plan_id
+   WHERE h.movement_type='SCOPE_TRANSFER' AND preparation_event.bundle_id=h.bundle_id
+    AND preparation_event.revision_id=h.revision_id AND preparation_event.event_type IN ('LOCK','UNLOCK','MOVE')
+    AND preparation_event.physical_delta=0 AND s.project_id=(fact->>'project_id')::uuid
+    AND EXISTS(SELECT 1 FROM user_scopes u WHERE u.user_id=$1 AND u.project_id=s.project_id
+     AND (u.customer_id IS NULL OR u.customer_id=s.customer_id)
+     AND (u.warehouse_id IS NULL OR u.warehouse_id=wh.id))
+   HAVING count(DISTINCT a.id)=1
+  ) prep ON true
+  ORDER BY h.revision_id,h.bundle_id LIMIT 10001`,
   [actor,f,w.start_revision,w.end_revision])).rows;
  return(await c.query(stream+` SELECT coalesce(state->>'bundle_no',previous->>'bundle_no') AS bundle_no,kind AS type,delta::text AS physical_delta,r.posted_at AS confirmed_at,(SELECT e.after_data->>'code' FROM inventory_events e WHERE e.bundle_id=h.bundle_id AND e.revision_id=h.revision_id AND e.after_data->>'code' IS NOT NULL ORDER BY e.id LIMIT 1) AS document_code FROM changes h JOIN inventory_revisions r ON r.id=h.revision_id ORDER BY h.revision_id,h.bundle_id LIMIT 10001`,[actor,f,w.start_revision,w.end_revision])).rows;
 }

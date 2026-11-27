@@ -27,7 +27,9 @@ test('isolated migration, initialization, business permission and concurrency ac
   await c.query('BEGIN');
   try{
    for(const [label,account] of claims)await c.query('INSERT INTO bundle_number_registry VALUES($1,$2,false,$3)',[label,account,JSON.stringify([{bundle_no:label}])]);
-   await c.query(chain.at(-1).sql);
+   const suffix=chain.find(entry=>entry.version==='213_v490_bundle_number_suffix.sql');
+   assert(suffix);
+   await c.query(suffix.sql);
    const {rows}=await c.query("SELECT * FROM bundle_number_registry WHERE number_key LIKE 'MUS-2026-370-%' ORDER BY number_key");
    assert.deepEqual(rows.map(row=>[row.number_key,row.owner_id,row.conflicted,row.sources.map(source=>source.bundle_no).sort()]),[
     ['MUS-2026-370-28',owner,false,['MUS-2026-370-28']],

@@ -40,6 +40,66 @@ function licenseReferences(book){
  return {license_no:entries.size===1?[...entries.values()][0]:null,invoice_no};
 }
 
+// Historical PL and INV workbooks may contain shipment evidence omitted by
+// the earlier import projection. Match labeled cells, not inferred dates.
+const shippingHeaders={
+ invoice_no:/^(?:COMMERCIAL )?INVOICE (?:NO|NUMBER)$|^商业发票号$/,
+ license_no:/^(?:(?:EB|EXPORT) )?(?:LICEN[CS]E|PERMIT) (?:NO|NUMBER)$|^(?:出口)?许可证号$/,
+ driver_name:/^DRIVER(?:S)?(?: NAME)?$|^司机姓名$/,
+ passport_no:/^PASSPORT (?:NO|NUMBER)$|^护照号$/,
+ truck:/^(?:HORSE|TRUCK|VEHICLE|TRACTOR) (?:NO|NUMBER)$|^车牌号$/,
+ trailer_one:/^(?:TRAILER|TAILER) 1 (?:NO|NUMBER)$|^挂车1号$/,
+ trailer_two:/^(?:TRAILER|TAILER) 2 (?:NO|NUMBER)$|^挂车2号$/,
+ transporter:/^(?:FORWARDER|TRANSPORTER|CARRIER)$|^运输商$/,
+ destination:/^(?:DESTINATION|PLACE OFFLOADED|PLACEOFFLOADED)$|^目的地$/,
+ sales_plan_no:/^SALES PLAN (?:NO|NUMBER)$|^销售计划号$/,
+ shipment_month:/^(?:SALES )?SHIPMENT MONTH$|^销售发运月$|^发运月$/,
+ loading_date:/^(?:ACTUAL )?(?:LOADING DATE|LOAD DATE|DATE OF LOADING)$|^装车日期$|^实际装车日期$/
+};
+const placeholder=/^(?:N\/A|NA|NONE|UNKNOWN|-|—|待确认|待补充)$/i;
+const archiveDay=value=>{
+ const date=value instanceof Date&&Number.isFinite(+value)?value.toISOString().slice(0,10):typeof value==='string'?value.trim():null;
+ try{return B.date(date);}catch{return null;}
+};
+function shippingMetadata(book){
+ const candidates=new Map();
+ for(const name of ['PL','INV']){
+  const sheet=book.Sheets[name];
+  if(!sheet)continue;
+  for(let row=3;row<29;row++){
+   const header=normalize(sheet['D'+row]?.v).replace(/[’'.:：]/g,'').trim();
+   const field=Object.keys(shippingHeaders).find(k=>shippingHeaders[k].test(header));
+   if(!field)continue;
+   const cell=sheet['E'+row];
+   if(!cell||cell.t==='e'||cell.v==null)continue;
+   const text=String(typeof cell.v==='number'?cell.w??cell.v:cell.v).trim();
+   if(!text||text.length>(field==='destination'?1000:160)||/[\x00-\x1f]/.test(text)||
+      !field.startsWith('trailer_')&&placeholder.test(text))continue;
+   const date=field==='loading_date'||field==='shipment_month'&&cell.v instanceof Date?archiveDay(cell.v):null;
+   const value=field==='loading_date'?date:field==='shipment_month'?(date?.slice(0,7)||(/^\d{4}-(0[1-9]|1[0-2])$/.test(text)?text:null)):text;
+   if(!value)continue;
+   if(!candidates.has(field))candidates.set(field,new Map());
+   if(!candidates.get(field).has(key(value)))candidates.get(field).set(key(value),value);
+  }
+ }
+ const values={},ambiguous=[];
+ for(const [field,entries] of candidates){
+  if(entries.size===1)values[field]=entries.values().next().value;
+  else ambiguous.push(field);
+ }
+ return {values,ambiguous};
+}
+
+function archivedShippingMetadata(product,file){
+ let book;
+ try{book=XLSX.read(file.data,{type:'buffer',cellDates:true,cellFormula:false,bookVBA:true,sheetRows:29,sheets:['PL','INV']});}
+ catch{throw problem('WORKBOOK_UNREADABLE','无法读取工作簿');}
+ const sheet=book.Sheets.PL,detected=({'BAG NO':'CO_HYDROXIDE','BUNDLE NO':'CU_CATHODE'})[normalize(sheet?.C29?.v)];
+ if(book.vbaraw||book.SheetNames.length>16||normalize(sheet?.A1?.v)!=='PACKING LIST'||detected!==product)
+  throw problem('WORKBOOK_STRUCTURE_INVALID','历史装箱单结构无法核实');
+ return shippingMetadata(book);
+}
+
 function parse(product,file){
  let book;
  try{book=XLSX.read(file.data,{type:'buffer',cellDates:true,cellFormula:false,bookVBA:true,sheetRows:5100});}
@@ -147,7 +207,8 @@ function parse(product,file){
   ...(shippingFields.length>1?{cells:shippingFields.map(field=>field.cell)}:{})});
  return {product_code:detected,template:co?'CO-PL':'CU-PL',document_no,document_key:key(document_no),batch_no,customer,truck,
   shipping_issue,shipping_cell:shipping?.cell||'PL!E7',
-  contract_no:text('E5'),...licenseReferences(book),trailer_one:text('E23'),trailer_two:text('E24'),shipping_date,actual_dates,source_sheet:'PL',rows,totals,
+  contract_no:text('E5'),...licenseReferences(book),trailer_one:text('E23'),trailer_two:text('E24'),shipping_date,actual_dates,
+  shipping_metadata:shippingMetadata(book),source_sheet:'PL',rows,totals,
   errors:[...new Set(errors)],issue_details};
 }
 
@@ -159,4 +220,4 @@ function weight(value){
 function sum(rows,field){
  return rows.length&&rows.every(row=>row[field]!==null)?T.fixed(rows.reduce((sum,row)=>sum+T.scaled(row[field],6),0n),6):null;
 }
-module.exports={source,parse,digest,key,unitKey};
+module.exports={source,parse,digest,key,unitKey,archivedShippingMetadata};

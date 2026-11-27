@@ -64,6 +64,95 @@ test('report mail is disabled without configuration and TEST refuses external de
   assert.throws(() => Mail.validate(config, 'test'), { code: 'REPORT_MAIL_SMTP_INVALID' });
 });
 
+test('saved delivery plans override the legacy file without bypassing its recipient policy', () => {
+  const legacy = { ...sample(), environment: 'test' };
+  assert.deepEqual(Mail.selectedSchedules(legacy, { version: 0, enabled: false, schedules: [] }), legacy.schedules);
+  const { schedules, ...relay } = legacy;
+  assert.deepEqual(Mail.selectedSchedules(relay, { version: 0, enabled: false, schedules: [] }), []);
+  assert.deepEqual(Mail.selectedSchedules(relay, { version: 1, enabled: true, schedules }), schedules);
+  assert.deepEqual(Mail.selectedSchedules(legacy, { version: 2, enabled: false, schedules }), []);
+  const unapproved = [{ ...schedules[0], recipients: ['outside@musonoi.test'] }];
+  assert.throws(() => Mail.selectedSchedules(relay, { version: 2, enabled: true, schedules: unapproved }),
+    { code: 'REPORT_MAIL_SCHEDULE_INVALID' });
+});
+
+test('report email administration persists plans, respects authorization and avoids writing addresses to audit', async t => {
+  const app = require('fastify')();
+  const settings = require('../../server/report-mail-settings.cjs');
+  const { digest } = require('../../server/security.cjs');
+  t.after(() => app.close());
+  const path = settings.path;
+  const decisions = [];
+  const records = new Map();
+  let policy = { version: 0, enabled: false, schedules: [], updatedAt: null };
+  const c = {
+    release() {},
+    async query(sql, args = []) {
+      if (sql.includes('FROM sessions s JOIN users u')) {
+        return { rows: [{ id: 'operator-admin', role_code: 'admin', csrf_hash: digest('csrf') }] };
+      }
+      if (sql.startsWith('SELECT permission_code FROM role_permissions')) {
+        return { rows: [{ permission_code: 'system:manage' }] };
+      }
+      if (sql.includes('ORDER BY u.username')) {
+        return { rows: [{ username: 'report-user', displayName: 'Test Account' }] };
+      }
+      if (sql.includes('FROM report_mail_settings')) return { rows: [{ ...policy }] };
+      if (sql.startsWith('UPDATE report_mail_settings')) {
+        policy = { enabled: args[0], schedules: JSON.parse(args[1]), version: policy.version + 1, updatedAt: '2026-11-27T07:30:00Z' };
+        const { schedules, ...response } = policy;
+        return { rows: [response] };
+      }
+      if (sql.startsWith('INSERT INTO audit_logs')) { decisions.push(args); return { rows: [] }; }
+      if (sql.includes('FROM idempotency_requests')) return { rows: records.has(args[2]) ? [records.get(args[2])] : [] };
+      if (sql.startsWith('INSERT INTO idempotency_requests')) {
+        records.set(args[2], { request_hash: args[3], response: args[4] });
+      }
+      return { rows: [] };
+    }
+  };
+  const fail = statusCode => { throw Object.assign(Error('denied'), { statusCode }); };
+  settings.register({
+    app, cfg: { environment: 'test' }, pool: { connect: async () => c },
+    permitted: permission => async req => {
+      assert.equal(permission, 'system:manage');
+      const role_code = req.headers['x-test-role'];
+      if (!role_code) fail(401);
+      req.user = { id: 'operator-admin', role_code };
+      req.cookies = { musonoi_session: 'test-session' };
+    },
+    csrf: async req => { if (req.headers['x-csrf-token'] !== 'csrf') fail(403); }
+  });
+  const send = (method, { role = 'admin', csrf = 'csrf', key = 'request-0001', payload } = {}) => app.inject({
+    method, url: path, headers: { 'x-test-role': role, 'x-csrf-token': csrf, 'idempotency-key': key }, payload
+  });
+  assert.equal((await send('GET', { role: '' })).statusCode, 401);
+  assert.equal((await send('GET', { role: 'production_operator' })).statusCode, 403);
+  const first = await send('GET');
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.headers['cache-control'], 'no-store');
+  assert.deepEqual(first.json().schedules, []);
+  assert.doesNotMatch(first.payload, /smtp|recipientAllowlist|netrc/i);
+  const payload = { version: 0, enabled: true, schedules: sample().schedules };
+  assert.equal((await send('PUT', { role: 'limited_role_manager', payload })).statusCode, 403);
+  assert.equal((await send('PUT', { csrf: '', payload })).statusCode, 403);
+  const malicious = { ...payload, schedules: [{ ...payload.schedules[0], recipients: ['x@example.com'] }] };
+  assert.equal((await send('PUT', { payload: malicious })).statusCode, 400);
+  const invalidActor = { ...payload, schedules: [{ ...payload.schedules[0], actor: 'out-of-scope' }] };
+  assert.equal((await send('PUT', { payload: invalidActor })).statusCode, 400);
+  const saved = await send('PUT', { payload });
+  assert.equal(saved.statusCode, 200);
+  assert.equal(saved.json().version, 1);
+  assert.deepEqual(saved.json(), (await send('PUT', { payload })).json());
+  const readBack = await send('GET');
+  assert.deepEqual(readBack.json().schedules, payload.schedules);
+  assert.equal((await send('PUT', { payload, key: 'request-0002' })).statusCode, 409);
+  const disabled = await send('PUT', { payload: { version: 1, enabled: false, schedules: [] }, key: 'request-0003' });
+  assert.equal(disabled.statusCode, 200);
+  assert.equal(disabled.json().enabled, false);
+  assert.equal(decisions.length, 2);
+  assert.doesNotMatch(JSON.stringify(decisions), /@musonoi\.test|report-user/);
+});
 test('dispatched date ranges use completed Lubumbashi days and months', () => {
   const schedule = sample().schedules[0];
   assert.equal(Mail.duePeriod(schedule, new Date('2026-11-27T04:59:59Z')), null);

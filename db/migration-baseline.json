@@ -853,6 +853,10 @@
     {
       "version": "213_v490_bundle_number_suffix.sql",
       "checksum": "2137238651ccd849a421c071ae3188595bd9e3b783f5d7f5ffaa64ecd6a0df13"
+    },
+    {
+      "version": "214_v490_report_mail_settings.sql",
+      "checksum": "f57cae61308796b3390c4e1a5855a0e46d0dd36cc30473bcd6269958dc9ef974"
     }
   ]
 }

@@ -5,8 +5,106 @@ Object.assign(System46,{
  link(href,zh,en,primary=false){return '<a class="button '+(primary?'primary':'secondary')+'" href="'+esc(href)+'">'+this.L(zh,en)+'</a>';},
  badge(ok,zh,en){return '<span class="s46-badge '+(ok?'':'s46-badge-muted')+'">'+this.L(zh,en)+'</span>';},
  hub(){const tiles=[['users:manage','/workbench/accounts','SYS-02','账户管理','Account Management','员工账号、岗位与数据范围','Employee accounts, roles and data scopes'],['roles:manage','/workbench/permissions','SYS-04','角色权限管理','Role Permissions','角色、功能与分配范围集中维护','Maintain roles, permissions and assigned scopes'],['access-approvals',AccessApprovals.path,'SYS-17','权限变更审批','Access Change Approvals','复核岗位、权限和授权范围的变更','Review changes to roles, permissions and data scopes'],['audit:read','/audit','SYS-06','系统日志','System Audit','查询实际操作、执行结果与前后变更','Review operations, results and before/after changes'],['master:write','/customers/master-data','SYS-09','基础资料管理','Master Data','生产批次、仓库、堆场与货位','Production batches, warehouses, yards and locations'],['historical-admin','/workbench/historical-movements','SYS-11','历史出入库导入','Historical Stock Imports','批量导入装箱单并查看记录','Import packing lists in batches and view import records'],['system:manage','/workbench/diagnostics','SYS-10','传输与网络诊断','Transfer & Network Diagnostics','连接检查与原请求结果核实','Check connectivity and original request results']].filter(x=>x[0]==='historical-admin'?HistoricalMovements.canImport():x[0]==='access-approvals'?(this.can('access-change:approve')||AccessApprovals.canRequest()):this.can(x[0]));
+  if(this.canManageReportMail())tiles.push(['system:manage','/workbench/report-mail','SYS-18','报表邮件','Report Email','维护定时发送和收件人','Manage delivery schedules and recipients']);
   this.page('系统管理','System Administration','SYS','<div class="s46-hub-grid">'+tiles.map(([,href,code,zh,en,sub,suben])=>'<a class="s46-card s46-hub-card" href="'+esc(href)+'"><h2>'+this.L(zh,en)+'</h2><p>'+this.L(sub,suben)+'</p><span class="s46-hub-arrow" aria-hidden="true">↗</span></a>').join('')+'</div>');
  },
+
+  async reportMail(){
+   const setting=await API.request('/system/report-mail');
+   const reportLabels=[
+    ['shipping','发运及单证','Shipments & Documents'],['movement','出入库流水','Inventory Movements'],
+    ['balance','库存平衡','Inventory Balance'],['stocktake','盘点','Stock Counts'],['sales','销售统计','Sales']
+   ];
+   const productLabels=[['CU_CATHODE','阴极铜','Copper Cathodes'],['CO_HYDROXIDE','氢氧化钴','Cobalt Hydroxide']];
+   const inputLabel=(zh,en,input)=>'<label class="wms-field">'+this.L(zh,en)+input+'</label>';
+   const updateTime=at=>at?BusinessTime.display(at):this.t('系统管理尚未保存计划','No plan saved in System Administration');
+   const option=(value,text,current)=>'<option value="'+esc(value)+'"'+(current===value?' selected':'')+'>'+esc(text)+'</option>';
+   const plan=s=>{
+    const actors=setting.actors.map(a=>option(a.username,(a.displayName?a.displayName+' · ':'')+a.username,s.actor)).join('');
+    const unavailable=s.actor&&!setting.actors.some(a=>a.username===s.actor)
+     ?option(s.actor,s.actor+' · '+this.t('已失效','Unavailable'),s.actor):'';
+    const actor='<select name="actor" required>'+option('',this.t('请选择','Select'),s.actor)+unavailable+actors+'</select>';
+    const frequency='<select name="frequency">'+option('daily',this.t('每天','Daily'),s.frequency)+option('monthly',this.t('每月 1 日','First day of each month'),s.frequency)+'</select>';
+    const recipients='<textarea name="recipients" rows="3" maxlength="2048" required>'+esc(s.recipients.join('\n'))+'</textarea>';
+    const products=productLabels.map(([product,zh,en])=>
+     '<fieldset class="report-mail-reports"><legend>'+this.L(zh,en)+'</legend>'+reportLabels.map(([kind,label,english])=>
+      '<label><input type="checkbox" name="report" value="'+kind+':'+product+'"'+
+      (['sales','balance'].includes(kind)?' data-monthly-report':'')+
+      (s.reports.some(r=>r.kind===kind&&r.product===product)?' checked':'')+'>'+this.L(label,english)+'</label>'
+     ).join('')+'</fieldset>').join('');
+    return '<section class="wms-section report-mail-plan" data-plan-id="'+esc(s.id)+'">'+
+     '<div class="s46-card-heading"><h3 tabindex="-1">'+this.L('发送计划','Delivery Schedule')+'</h3>'+
+     '<button class="button secondary" type="button" data-plan-remove>'+this.L('移除计划','Remove Schedule')+'</button></div>'+
+     '<div class="form-grid wms-field-grid">'+
+      inputLabel('发送频率','Frequency',frequency)+
+      inputLabel('发送整点（卢本巴希）','Hour (Lubumbashi)','<input name="hour" type="number" required min="0" max="23" step="1" value="'+esc(String(s.hour))+'">')+
+      inputLabel('报表授权账号','Report Account',actor)+
+      inputLabel('收件邮箱（每行一个，最多 8 个）','Recipients (one per line, up to 8)',recipients)+
+     '</div>'+products+'</section>';
+   };
+   const intro=this.block('发送设置','Delivery Settings',
+    '<p class="s46-muted">'+this.L('邮件按授权账号的数据范围生成。运维须在服务器配置邮件中继及收件白名单。','Reports use the selected account’s data scope. The server administrator configures the mail relay and approved recipients.')+'</p>'+
+    (setting.environment==='test'?'<p>'+this.L('测试环境仅允许 .test 邮箱。','TEST allows .test addresses only.')+'</p>':''));
+   this.page('报表邮件','Report Email','SYS-18',intro+
+    '<form id="report-mail-form" class="user-form s46-card" data-wms-validation>'+
+    '<label class="report-mail-switch"><input type="checkbox" name="enabled"'+(setting.enabled?' checked':'')+'>'+this.L('启用定时报表邮件','Enable scheduled report email')+'</label>'+
+    '<p class="s46-muted" id="report-mail-updated" data-no-i18n>'+esc(updateTime(setting.updatedAt))+'</p>'+
+    (setting.version===0?'<p class="s46-muted" id="report-mail-legacy">'+this.L('首次保存后，由此页面的计划接管服务器上可能存在的旧计划。','The first save takes over any existing server schedules.')+'</p>':'')+
+    '<div id="report-mail-plans">'+setting.schedules.map(plan).join('')+'</div>'+
+    '<div class="s46-form-footer"><button type="button" id="report-mail-add" class="button secondary">'+this.L('添加发送计划','Add Schedule')+'</button>'+
+    '<button type="submit" class="button primary">'+this.L('保存设置','Save Settings')+'</button></div>'+
+    '<p class="wms-feedback" id="report-mail-status" role="status"></p><p class="wms-feedback error" role="alert"></p></form>');
+   const form=document.getElementById('report-mail-form'),plans=document.getElementById('report-mail-plans');
+   const add=document.getElementById('report-mail-add'),status=document.getElementById('report-mail-status');
+   const reflect=()=>{
+    add.disabled=plans.children.length>=20;
+    for(const card of plans.children){
+     const daily=card.querySelector('[name=frequency]').value==='daily';
+     for(const field of card.querySelectorAll('[data-monthly-report]'))field.disabled=daily;
+    }
+   };
+   add.onclick=()=>{
+    if(form.getAttribute('aria-busy')==='true'||plans.children.length>=20)return;
+    plans.insertAdjacentHTML('beforeend',plan({id:crypto.randomUUID(),hour:7,frequency:'daily',actor:'',recipients:[],reports:[]}));
+    reflect();
+    plans.lastElementChild.querySelector('h3').focus();
+   };
+   plans.onclick=event=>{
+    const button=event.target.closest('[data-plan-remove]');
+    if(button&&form.getAttribute('aria-busy')!=='true'){button.closest('[data-plan-id]').remove();reflect();add.focus();}
+   };
+   form.onchange=reflect;
+   let lastRequest;
+   form.onsubmit=event=>UI46Pages.submit(event,async()=>{
+    status.textContent='';
+    const schedules=[...plans.children].map(card=>({
+     id:card.dataset.planId,
+     hour:Number(card.querySelector('[name=hour]').value),
+     frequency:card.querySelector('[name=frequency]').value,
+     actor:card.querySelector('[name=actor]').value,
+     recipients:card.querySelector('[name=recipients]').value.split(/[\r\n,;，；]+/).map(x=>x.trim()).filter(Boolean),
+     reports:[...card.querySelectorAll('[name=report]:checked:not(:disabled)')].map(field=>{
+      const [kind,product]=field.value.split(':');
+      return {kind,product};
+     })
+    }));
+    const body={version:setting.version,enabled:form.elements.enabled.checked,schedules},signature=JSON.stringify(body);
+    if(lastRequest?.signature!==signature)lastRequest={signature,key:crypto.randomUUID()};
+    try{
+     const saved=await API.request('/system/report-mail',{method:'PUT',body,idempotencyKey:lastRequest.key});
+     setting.version=saved.version;lastRequest=null;
+     document.getElementById('report-mail-legacy')?.remove();
+     document.getElementById('report-mail-updated').textContent=updateTime(saved.updatedAt);
+     status.textContent=this.t('报表邮件设置已保存','Report email settings saved');
+    }catch(error){
+     if(!error.statusCode)throw Error(this.t('保存结果待确认。请保留当前内容，核对后可使用原请求重试。','Save result pending. Keep these settings and retry with the original request after checking.'));
+     if(error.statusCode===409)throw Error(this.t('设置已更新，请重新打开页面核对。','Settings were updated. Reopen this page to review them.'));
+     if(I18n.language==='en'&&error.statusCode===400)throw Error('Check the report account, report choices and recipient settings.');
+     throw error;
+    }
+   });
+   reflect();
+  },
  async audit(){const q=new URLSearchParams(location.search),record=q.get('record');if(record)return this.auditDetail(record,q);
   const d=await API.request('/v27/audit?'+q),actions=[['','全部操作','All Actions'],['login','用户登录','User Login'],['role_permissions_changed','修改角色权限','Role Permission Changes'],['user_created','创建账户','Account Creation'],['user_updated','修改账户','Account Updates'],['access_change_submitted','提交权限变更','Access Change Submitted'],['access_change_decided','审批权限变更','Access Change Decision'],['audit_evidence_exported','导出审计证据','Audit Evidence Export'],['operation_failed','操作失败','Failed Operations']],options=actions.map(([v,z,e])=>'<option value="'+v+'" '+(q.get('action')===v?'selected':'')+'>'+esc(this.t(z,e))+'</option>').join('');
   const custom=q.get('action')&&!actions.some(x=>x[0]===q.get('action'))?'<option selected value="'+esc(q.get('action'))+'">'+esc(AuditLabels.label(q.get('action')))+' · '+esc(q.get('action'))+'</option>':'';

@@ -6,6 +6,9 @@ const kindNames={shipping:['发运及单证','Shipments & Documents'],movement:[
 const names={
  date:['日期','Date','date'],document:['单据号','Document No.'],customer:['客户','Customer'],contract:['合同号','Contract No.'],
  vehicle:['车辆','Vehicle'],lot:['批次号','Lot Number'],packing:['装箱单号','Packing List No.'],invoice:['商业发票号','Commercial Invoice No.'],
+ license:['许可证号','Export License No.'],driver:['司机姓名','Driver Name'],passport:['护照号','Passport No.'],
+ trailerOne:['挂车1号','Trailer 1 No.'],trailerTwo:['挂车2号','Trailer 2 No.'],transporter:['运输商','Transporter'],
+ destination:['目的地','Destination'],loadDate:['装车日期','Loading Date','date'],
  trips:['发运车次','Trips','number'],qty:['数量','Quantity','number'],gross:['毛重（MT）','Gross (MT)','weight'],
  net:['净重（MT）','Net (MT)','weight'],history:['历史净重（MT）','Historical Net (MT)','weight'],
  pending:['待处理','Pending','number'],status:['状态','Status','enum'],source:['数据来源','Source','enum'],
@@ -31,7 +34,8 @@ Object.assign(names,{
 const enums={
  ONLINE:['在线单据','Online'],HISTORICAL:['历史导入','Historical Import'],INBOUND:['入库','Receipt'],OUTBOUND:['出库','Outbound'],
  RETURN:['返场','Return'],ADJUSTMENT:['调整','Adjustment'],WEIGHT:['重量确认 / 更正','Weight Confirmation / Correction'],
- TRANSFER:['范围流转','Scope Transfer'],BASELINE:['追溯基准','History Baseline'],YES:['是','Yes'],NO:['否','No'],
+ PREPARATION_TRANSFER:['备货流转','Preparation Transfer'],TRANSFER:['范围流转','Scope Transfer'],
+ BASELINE:['追溯基准','History Baseline'],YES:['是','Yes'],NO:['否','No'],
  DOCUMENT_MISSING:['未归档','Not Archived'],IMPORTED_PACKING:['历史装箱单','Historical Packing List'],
  INVOICE_PENDING:['待开票确认','Awaiting Invoice Confirmation'],INVOICE_CONFIRMED:['已确认开票','Invoice Confirmed'],
  DOCUMENT_COMPLETE:['单证齐全','Documents Complete'],UNLINKED_HISTORY:['历史发运未关联销售计划','Historical Shipment Without Sales Plan'],
@@ -42,16 +46,35 @@ const enums={
 };
 const groupKeys=['date','customer','contract','vehicle','lot'];
 const formats={
- shipping:['date document customer contract vehicle lot packing invoice qty gross net status source','trips qty net history pending'],
+ shipping:['date document customer contract plan month loadDate vehicle trailerOne trailerTwo driver passport transporter destination lot packing invoice license qty gross net status source',
+  'trips qty net history pending'],
  movement:['date kind document lot piece warehouse position qty net source','kind source qty net change'],
  balance:['date warehouse kind document lot piece qty change source included',
   'period warehouse opening_net_mt inbound_net_mt outbound_net_mt weight_correction_mt other_net_mt baseline_net_mt closing_net_mt reconciliation_net_mt coverage history'],
  stocktake:['document date warehouse position lot piece bookQty realQty bookWeight realWeight variance finding status snapshot',
   'document date warehouse bookQty realQty qtyDelta variance unknown pending snapshot'],
- sales:['plan date customer contract lot document outbound status confirmed invoice source','plan customer contract month target prepared loaded outbound invoiced rate']
+ sales:['plan month date customer contract lot document outbound status confirmed invoice source','plan customer contract month target prepared loaded outbound invoiced rate']
 };
 const required={stocktake:'stocktake:read',sales:'plan:read'};
 const texts=(en)=>Object.fromEntries(Object.entries(enums).map(([k,v])=>[k,v[+en]]));
+const pendingText={
+ HISTORICAL_SOURCE_MISSING:['因历史原始单据资料不足，待确认补充','Pending confirmation: historical source details are incomplete.'],
+ HISTORICAL_NOT_LINKED:['因历史关联单据尚未确认，待确认补充','Pending confirmation: the related historical document has not been linked.'],
+ HISTORICAL_AMBIGUOUS:['因存在多份可能的历史记录，待确认补充','Pending confirmation: more than one historical record matches.'],
+ INVOICE_NOT_CONFIRMED:['因开票尚未确认，待确认补充','Pending confirmation: the invoice has not been confirmed.'],
+ ONLINE_SOURCE_MISSING:['因关联业务单据资料不足，待确认补充','Pending confirmation: linked operational details are incomplete.']
+};
+const empty=value=>value==null||typeof value==='string'&&!value.trim();
+function detailPending(row,keys){
+ if(row.source!=='HISTORICAL'&&!row.pending_fields)return row;
+ const pending={};
+ for(const key of keys){
+  if(!empty(row[key]))continue;
+  const reason=row.pending_fields?.[key]||(row.source==='HISTORICAL'?'HISTORICAL_SOURCE_MISSING':null);
+  if(reason)pending[key]=reason;
+ }
+ return Object.keys(pending).length?{...row,pending_fields:pending}:row;
+}
 const groupBy=(rows,fn)=>{
  const groups=new Map();
  for(const row of rows){const key=fn(row);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
@@ -157,6 +180,8 @@ async function report(c,req,input){
  const customerOptions=[...new Set([...summary,...detail].map(r=>r.customer).filter(Boolean))].sort();
  const columns=(keys)=>keys.map(key=>{
   const column=col(key,en);
+  if(kind==='shipping'&&key==='vehicle')column.label=en?'Vehicle Plate No.':'车牌号';
+  if(kind==='shipping'&&key==='month')column.label=en?'Sales Shipment Month':'销售发运月';
   if(key==='qty')column.label=req.productCode==='CO_HYDROXIDE'?(en?'Bags':'袋数'):(en?'Bundles':'捆包数');
   return column;
  });
@@ -165,9 +190,10 @@ async function report(c,req,input){
  const scopeLabel=selected?(localLabels[selected[keyForScope[kind]]]||selected[keyForScope[kind]]||'—'):null;
  return {kind,title:kindNames[kind][+en],from:q.from,to:q.to,today:q.today,product:req.productCode,traceableFrom,
   summary:{columns:columns(summaryCols),rows:selected?[selected]:summary},
-  detail:{columns:columns(detailCols),rows:detail},
+  detail:{columns:columns(detailCols),rows:detail.map(row=>detailPending(row,detailCols))},
   metrics:columns(Object.keys(metric)).map(item=>({...item,value:metric[item.key]})),
-  labels:localLabels,scopeLabel,warehouses,customers:customerOptions,canExport:req.user.permissions.includes('inventory:export')};
+  labels:localLabels,pendingLabels:Object.fromEntries(Object.entries(pendingText).map(([key,value])=>[key,value[+en]])),
+  scopeLabel,warehouses,customers:customerOptions,canExport:req.user.permissions.includes('inventory:export')};
 }
 async function workbook(data,req,{summaryOnly=false}={}){
  const ctx=W.make(req),t=ctx.t;
@@ -186,6 +212,20 @@ async function workbook(data,req,{summaryOnly=false}={}){
     const cell=sheet.getCell(row,metalColumn);
     if(cell.value!=null){cell.value=Number(cell.value);cell.numFmt='#,##0.00000';cell.alignment={horizontal:'right'};}
    }
+  }
+  for(const [index,record] of section.rows.entries()){
+   if(!record.pending_fields)continue;
+   const row=sheet.getRow(index+7);
+   columns.forEach((column,i)=>{
+    const reason=record.pending_fields[column.key];
+    if(!reason||!empty(record[column.key]))return;
+    const cell=row.getCell(i+2);
+    cell.value=(pendingText[reason]||pendingText[record.source==='HISTORICAL'?'HISTORICAL_SOURCE_MISSING':'ONLINE_SOURCE_MISSING'])[+ctx.en];
+    cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    const width=sheet.getColumn(i+2);
+    width.width=Math.max(width.width,23);
+    row.height=Math.max(row.height,44);
+   });
   }
   if(data.kind==='balance')W.note(ctx,sheet,last+2,'历史导入的发运单独列示，在线账只包含正式业务。','Historical shipments are shown separately from the live ledger.');
   if(data.kind==='sales')W.note(ctx,sheet,last+2,'履约率以确认开票净重计算。','Fulfilment uses invoice-confirmed net weight.');

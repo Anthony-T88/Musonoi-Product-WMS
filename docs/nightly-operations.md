@@ -25,24 +25,16 @@
 
 ## 报表邮件
 
-邮件需要配置后启用，默认关闭。支持仓储出入库、发运和盘点日报或月报，以及库存平衡、销售月报。生成报表时校验已配置账号的报表读取、导出及仓库范围权限，邮件只发给配置内同时获准的地址。请准备可用的 TLS SMTP 系统邮箱，并在服务器私有目录配置发件地址、允许接收人、报表范围和发送时间。
+在「系统管理 → 报表邮件」选择授权账号、收件邮箱、铜钴报表和发送时段，勾选启用后保存。首次保存接管服务器配置文件中的旧计划。禁用后，后续任务停止发送。汇总报表继续沿用所选账号的报表查看、导出和数据范围权限。
+
+请在服务器私有目录配置 TLS SMTP 发件地址和收件白名单。计划中的每个收件地址都须位于该清单。SMTP 凭据、TLS 校验及白名单由服务器管理员维护。未配置中继文件时，推送保持关闭。
 
 在 `WMS_REPORT_SECRET_DIR` 保存私有 `reports.json`，例如：
 
 ```json
 {
   "smtp": {"url": "smtp://smtp.company.example:587", "from": "wms@company.example"},
-  "recipientAllowlist": ["reader@company.example"],
-  "schedules": [
-    {
-      "id": "warehouse-daily",
-      "hour": 7,
-      "frequency": "daily",
-      "actor": "wms_report_reader",
-      "recipients": ["reader@company.example"],
-      "reports": [{"kind": "movement", "product": "CU_CATHODE"}]
-    }
-  ]
+  "recipientAllowlist": ["reader@company.example"]
 }
 ```
 

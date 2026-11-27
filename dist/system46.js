@@ -6,6 +6,7 @@ window.System46={
  t:(zh,en)=>I18n.language==='en'?en:zh,
  L(zh,en){return '<span data-s46-zh="'+esc(zh)+'" data-s46-en="'+esc(en)+'" data-no-i18n>'+esc(this.t(zh,en))+'</span>';},
  can:p=>!!window.CurrentUser?.permissions.includes(p),
+ canManageReportMail(){return window.CurrentUser?.role_code==='admin'&&this.can('system:manage');},
  enabled:()=>!!window.UI46?.enabled()&&!!window.AppSignedIn&&!UI46.copperMap(),
  route(){return location.pathname+location.search;},
  systemPermission(){return ['users:manage','roles:manage','access-change:approve','audit:read','master:write','system:manage'].find(p=>this.can(p));},
@@ -16,10 +17,11 @@ window.System46={
   const global=ProductContext.globalPage.bind(ProductContext);ProductContext.globalPage=p=>/^\/customers\/master-data(?:\/|$)/.test(p)||global(p);
   RoutePermissions.register('system46',p=>['/workbench','/workbench/diagnostics'].includes(p),p=>p==='/workbench'?this.systemPermission()||'system:manage':'system:manage');
   RoutePermissions.register('access-approvals',p=>p===AccessApprovals.path,()=>AccessApprovals.permission());
+  RoutePermissions.register('report-mail',p=>p==='/workbench/report-mail',()=>this.canManageReportMail()?'system:manage':'report-mail:admin');
   const show=Router.performShow.bind(Router);Router.performShow=async(...args)=>{this.lastFailure=null;
    const oldMaster=!ProductContext.isCopper()&&location.pathname.match(/^\/customers\/master-data\/(customers|batches|warehouses|yards|locations)\/(?:new|[a-f0-9-]{36})$/);
    if(oldMaster)history.replaceState(history.state,'','/customers/master-data?type='+(['warehouses','yards','locations'].includes(oldMaster[1])?oldMaster[1]:'warehouses'));
-   const path=location.pathname,own=this.enabled()&&['/workbench','/workbench/diagnostics','/audit','/customers/master-data'].includes(path);if(!own)return show(...args);Router.current=path;Router.rendering=true;try{if(!this.canRoute())throw Object.assign(Error(this.t('当前账号没有此页面权限','This account has no permission for this page')),{statusCode:403});if(path==='/workbench')this.hub();else if(path==='/workbench/diagnostics')await this.diagnostics();else if(path==='/audit')await this.audit();else await this.masters();I18n.apply();}catch(e){WmsException.route(e);}finally{Router.rendering=false;UnifiedNavigation.refresh();AdaptiveLayout.queue();}};
+   const path=location.pathname,own=this.enabled()&&['/workbench','/workbench/diagnostics','/workbench/report-mail','/audit','/customers/master-data'].includes(path);if(!own)return show(...args);Router.current=path;Router.rendering=true;try{if(!this.canRoute()||path==='/workbench/report-mail'&&!this.canManageReportMail())throw Object.assign(Error(this.t('当前账号没有此页面权限','This account has no permission for this page')),{statusCode:403});if(path==='/workbench')this.hub();else if(path==='/workbench/diagnostics')await this.diagnostics();else if(path==='/workbench/report-mail')await this.reportMail();else if(path==='/audit')await this.audit();else await this.masters();I18n.apply();}catch(e){WmsException.route(e);}finally{Router.rendering=false;UnifiedNavigation.refresh();AdaptiveLayout.queue();}};
   const nav=UnifiedNavigation.refresh.bind(UnifiedNavigation);UnifiedNavigation.refresh=()=>{nav();this.navigation();};
   const adaptive=AdaptiveLayout.refresh.bind(AdaptiveLayout);AdaptiveLayout.refresh=(...args)=>{const r=adaptive(...args);this.navigation();return r;};
   const render=Accounts.render.bind(Accounts);Accounts.render=async(...args)=>{if(this.enabled()){Accounts.tab=location.pathname==='/workbench/permissions'?'roles':'users';const role=new URLSearchParams(location.search).get('role');if(Accounts.tab==='users'&&role)Accounts.query={...Accounts.query,role};}await render(...args);UI46.queue();};

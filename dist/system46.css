@@ -227,3 +227,11 @@ html[data-release-ui="46"] body:not([data-ui46-page="copper-map"]) #page-content
 }
 
 .s46-create-actions{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}.s46-create-actions .button{white-space:nowrap}
+
+#report-mail-form .report-mail-plan{margin-block:var(--uix-panel-gap);padding:var(--uix-gap);min-inline-size:0;border:1px solid var(--uix-border);border-radius:var(--uix-radius)}
+#report-mail-form .report-mail-plan .form-grid{margin-bottom:var(--uix-gap)}
+#report-mail-form .report-mail-reports{display:flex;flex-wrap:wrap;gap:var(--uix-gap-sm);padding:var(--uix-gap-sm) 0;min-inline-size:0;border:0}
+#report-mail-form .report-mail-reports legend{font-weight:var(--uix-weight-emphasis)}
+#report-mail-form :is(.report-mail-switch,.report-mail-reports label){display:inline-flex;align-items:center;gap:var(--uix-gap-xs)}
+#report-mail-form input[type="checkbox"]{inline-size:1rem;min-inline-size:0;margin:0}
+#report-mail-form .wms-feedback:empty{display:none}
