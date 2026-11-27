@@ -818,6 +818,107 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   assert.deepEqual(await snapshotRemainder(),previousRemainder);
   assert.equal((await api(loadPath)).items.find(row=>row.id===bundle.id).seal_no,originalItem.seal_no_snapshot);
   steps.push('copper formal return preserves original outbound evidence, reopens only returned preparation stock and allows independent reapproval');
+
+  // Commit the old return implementation first so the evidence cases use separate inventory revisions.
+  const legacyDocument=concurrent[0].json(),legacyAllocation=ready[0];
+  const {rows:[legacyBundle]}=await c.query('SELECT b.id,b.bundle_no FROM allocation_items i JOIN bundles b ON b.id=i.bundle_id WHERE i.allocation_id=$1',[legacyAllocation]);
+  let legacyLoad=await api('/v31/loads','admin',{document_id:legacyDocument.id,document_version:legacyDocument.version,bundle_ids:[legacyBundle.id]});
+  for(const [action,role,extra]of [['approve','site_supervisor',{}],['depart','logistics_field_operator',{actual_departure:true,outbound_date:today}],
+   ['logistics-approve','logistics_manager',{}],['manager-approve','production_manager',{}]])
+   legacyLoad=await api('/v26/loads/'+legacyLoad.id+'/'+action,role,{version:legacyLoad.version,...extra});
+  const legacyRequest=await api(correctionBase,'admin',{...returnRequest,loading_id:legacyLoad.id,version:legacyLoad.version});
+  const legacyVerified=await stage(await stage(legacyRequest,'authorize'),'verify-return');
+  const repairActor=f.accounts.find(account=>account.role==='admin').id,legacyCorrectionPath=correctionBase+'/'+legacyRequest.id;
+  const {rows:[legacyApplied]}=await c.query("SELECT * FROM v32_prior_correction_action($1,$2,$3,'apply',$4)",
+   [repairActor,legacyVerified.id,legacyVerified.version,'Synthetic legacy posting before preparation recovery was available']);
+  assert.equal(legacyApplied.status,'APPLIED');
+  const evidenceState=async ()=>(await c.query('SELECT copper_return_preparation_state($1) AS recovery',[legacyApplied.id])).rows[0].recovery;
+  const trace=async ()=>(await c.query("SELECT (SELECT count(*)::int FROM inventory_events WHERE event_type='REVERSAL' AND after_data->>'correction_id'=$1) AS returns,(SELECT count(*)::int FROM reservations WHERE bundle_id=$2 AND released_at IS NULL) AS reserved",[legacyApplied.id,legacyBundle.id])).rows[0];
+  assert.equal((await evidenceState()).state,'READY');
+  assert.deepEqual(await trace(),{returns:1,reserved:0});
+
+  async function expectUnchangedBlocked(change,reason){
+   await c.query('BEGIN');
+   try{
+    await change();
+    const state=await evidenceState();
+    assert.equal(state.state,'BLOCKED',JSON.stringify(state));
+    assert.equal(state.blocker,'RETURNED_STOCK_CHANGED');
+    assert(state.stock_blockers.some(row=>row.bundle_no===legacyBundle.bundle_no&&row.reason===reason),JSON.stringify(state));
+    const initial=await trace();
+    const {rows:[attempt]}=await c.query('SELECT copper_restore_return_with_plan($1,$2,$3,$4) recovery',
+     [repairActor,legacyApplied.id,legacyApplied.version,'Synthetic blocked recovery diagnostic']);
+    assert.deepEqual(attempt.recovery,state);
+    assert.deepEqual(await trace(),initial);
+   }finally{await c.query('ROLLBACK');}
+  }
+  const {rows:[returnLot]}=await c.query('SELECT planned_location_id FROM allocations WHERE id=$1',[legacyAllocation]);
+  await expectUnchangedBlocked(async()=>{
+   for(const target of [returnLot.planned_location_id,returnLocation.id]){
+    const {rows:[move]}=await c.query('INSERT INTO stock_moves(project_id,customer_id,target_location_id,reason,created_by) VALUES($1,$2,$3,$4,$5) RETURNING id',
+     [f.project,customer.id,target,'Synthetic movement away from and back to the return area',repairActor]);
+    await c.query('INSERT INTO stock_move_items SELECT $1,id,location_id,version FROM bundles WHERE id=$2',[move.id,legacyBundle.id]);
+    await c.query('SELECT confirm_stock_move($1,$2)',[repairActor,move.id]);
+   }
+  },'SUBSEQUENT_STOCK_ACTIVITY');
+  await expectUnchangedBlocked(async()=>{
+   const {rows:[newLot]}=await c.query('SELECT * FROM v261_create($1,$2,$3,$4,$5)',
+    [repairActor,plan.id,blockedWork.batch_no,returnLot.planned_location_id,JSON.stringify([{bundle_id:legacyBundle.id,sample_required:false}])]);
+   await c.query("SELECT v261_lot_action($1,$2,$3,'cancel',$4)",[repairActor,newLot.id,newLot.version,
+    {note:'Synthetic later preparation cancelled',current_state_verified:true,observation:'Original physical return location unchanged'}]);
+   assert.equal((await trace()).reserved,0);
+  },'SUBSEQUENT_STOCK_ACTIVITY');
+  await expectUnchangedBlocked(async()=>{
+   const {rows:[exception]}=await c.query(`INSERT INTO inventory_exceptions(project_id,warehouse_id,customer_id,bundle_no,
+    category,source_key,related_kind,description,responsible_id,created_by)
+    VALUES($1,$2,$3,$4,'WEIGHT','synthetic-return-weight','bundle','Synthetic pending stock adjustment',$5,$5) RETURNING id`,
+    [f.project,f.warehouse,customer.id,legacyBundle.bundle_no,repairActor]);
+   const {rows:[adjustment]}=await c.query('INSERT INTO stock_adjustments(project_id,exception_id,reason,created_by) VALUES($1,$2,$3,$4) RETURNING id',
+    [f.project,exception.id,'Synthetic pending stock adjustment',repairActor]);
+   await c.query(`INSERT INTO adjustment_lines(adjustment_id,bundle_no,kind,before_data,after_data,expected_version)
+    SELECT $1,bundle_no,'WEIGHT',to_jsonb(b),jsonb_build_object('net_weight',net_weight+1),version FROM bundles b WHERE id=$2`,[adjustment.id,legacyBundle.id]);
+  },'STOCK_ADJUSTMENT_PENDING');
+  await expectUnchangedBlocked(async()=>{
+   // Synthetic later stock-issue evidence, while the current stock happens to match the old snapshot.
+   await c.query(`INSERT INTO inventory_events(bundle_id,event_type,physical_delta,actor_id,before_data,after_data)
+    SELECT id,'OUTBOUND',-net_weight,$2,to_jsonb(b),jsonb_build_object('loading_id',$3::uuid) FROM bundles b WHERE id=$1`,
+   [legacyBundle.id,repairActor,nextLoad.id]);
+  },'SUBSEQUENT_STOCK_ACTIVITY');
+  await expectUnchangedBlocked(async()=>{
+   await c.query('ALTER TABLE inventory_events DISABLE TRIGGER immutable_events');
+   await c.query("UPDATE inventory_events SET after_data=after_data-'correction_id' WHERE event_type='REVERSAL' AND after_data->>'correction_id'=$1",[legacyApplied.id]);
+  },'RETURN_EVIDENCE_MISSING');
+  await expectUnchangedBlocked(async()=>{
+   await c.query('ALTER TABLE inventory_events DISABLE TRIGGER event_revision');
+   await c.query(`INSERT INTO inventory_events(bundle_id,event_type,physical_delta,actor_id,before_data,after_data,revision_id,occurred_at)
+    SELECT bundle_id,event_type,physical_delta,actor_id,before_data,after_data,revision_id,occurred_at
+    FROM inventory_events WHERE event_type='REVERSAL' AND after_data->>'correction_id'=$1`,[legacyApplied.id]);
+  },'RETURN_EVIDENCE_MISSING');
+
+  const {rows:[beforeMetadata]}=await c.query('SELECT version,sheets_per_bundle,physical_status,location_id,net_weight FROM bundles WHERE id=$1',[legacyBundle.id]);
+  const bundleCorrectionPath='/bundles/'+legacyBundle.id+'/corrections';
+  const sheetCorrection=await api(bundleCorrectionPath,'admin',{version:beforeMetadata.version,
+   changes:{sheets_per_bundle:beforeMetadata.sheets_per_bundle+1},reason:'Synthetic approved metadata-only correction after return'});
+  await api(bundleCorrectionPath+'/'+sheetCorrection.id+'/review','admin',{decision:'APPROVED',note:'Verified corrected paper label'});
+  assert.equal((await api(legacyCorrectionPath)).preparation_recovery.state,'READY');
+  const seal='SYNTH-LEGACY-RETURN-'+seq;
+  const sealCorrection=await api(bundleCorrectionPath,'admin',{version:beforeMetadata.version+1,
+   changes:{seal_no:seal},reason:'Synthetic approved seal correction after return'});
+  await api(bundleCorrectionPath+'/'+sealCorrection.id+'/review','admin',{decision:'APPROVED',note:'Verified corrected seal label'});
+  assert.equal((await api(legacyCorrectionPath)).preparation_recovery.state,'READY');
+  const repaired=await api(legacyCorrectionPath+'/restore-preparation','admin',{
+   version:legacyApplied.version,reason:'Synthetic recovery from old applied stock issue return'
+  });
+  assert.equal(repaired.state,'RESTORED');
+  assert.deepEqual(repaired.allocation_ids,[legacyAllocation]);
+  assert.deepEqual(await trace(),{returns:1,reserved:1});
+  const {rows:[afterMetadata]}=await c.query('SELECT sheets_per_bundle,physical_status,location_id,net_weight FROM bundles WHERE id=$1',[legacyBundle.id]);
+  assert.deepEqual(afterMetadata,{sheets_per_bundle:beforeMetadata.sheets_per_bundle+1,physical_status:beforeMetadata.physical_status,
+   location_id:beforeMetadata.location_id,net_weight:beforeMetadata.net_weight});
+  const restoredLegacyBundle=(await api('/v261/lots/'+legacyAllocation)).items.find(row=>row.id===legacyBundle.id);
+  assert.equal(restoredLegacyBundle.seal_no,seal);
+  assert.equal(restoredLegacyBundle.seal_valid,false);
+  steps.push('an approved metadata correction preserves eligibility for an older copper return, while real later inventory evidence blocks recovery per bundle');
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
  }finally{await app?.close();await c.end();}
 });

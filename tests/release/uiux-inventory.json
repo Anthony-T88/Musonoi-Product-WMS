@@ -1046,7 +1046,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "posted stock issue, controlled physical return and preparation restoration",
+      "state": "posted stock issue, controlled physical return and itemized restoration blockers",
       "template": "/outbounds/loads/:id"
     },
     {

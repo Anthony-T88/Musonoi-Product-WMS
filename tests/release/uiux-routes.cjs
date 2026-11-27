@@ -182,7 +182,7 @@ function pages(ids){
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);
  add('cu-load-new','/outbounds/loads/new',[CU]);
- add('cu-load-detail','/outbounds/loads/:id',[CU],{example:'cuLoad',screenshot:true,state:'posted stock issue, controlled physical return and preparation restoration'});
+ add('cu-load-detail','/outbounds/loads/:id',[CU],{example:'cuLoad',screenshot:true,state:'posted stock issue, controlled physical return and itemized restoration blockers'});
  add('cu-load-matching','/outbounds/loads/:id/matching',[CU],{example:'cuLoadPending',state:'pending'});
  add('cu-outbound-detail','/outbounds/:id',[CU],{example:'cuOutbound'});
  add('co-outbound-detail','/outbounds/:id',[CO],{example:'coLoad',screenshot:true,state:'posted stock issue and date correction with administrator self-review'});

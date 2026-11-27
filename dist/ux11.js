@@ -48,11 +48,31 @@ window.LoadCorrections={
    RETURNED_STOCK_CHANGED:['返厂捆包已有后续流转或库存状态变化。','Returned bundles have subsequent movement or inventory changes.'],
    OTHER_LOADING:['原批次还有其他有效装车业务。','The original lot has another active loading operation.'],
    ORIGINAL_BATCH_PARTIAL:['原批次有未核实去向的捆包，须先核对。','Some bundles in the original lot require verification.'],
-   LOCATION_CONFLICT:['原备货货位不可用或已被其他货物占用。','The original preparation location is unavailable or occupied.']};
+   LOCATION_CONFLICT:['原备货货位不可用或已被其他货物占用。','The original preparation location is unavailable or occupied.'],
+   RETURN_EVIDENCE_MISSING:['缺少本次冲销的库存退回凭证，请核对冲销记录。','The stock return record is missing. Check the reversal history.'],
+   STOCK_NOT_ON_SITE:['捆包当前不在库，请核对实物及库存状态。','The bundle is out of stock. Check its physical location and stock status.'],
+   RETURN_LOCATION_CHANGED:['捆包当前货位与冲销登记不符，请核对移库记录。','The bundle is away from its recorded return location. Check its transfer history.'],
+   ACTIVE_RESERVATION:['捆包已有有效库存占用，请核对当前占用。','The bundle has an active reservation. Check its current allocation.'],
+   ACTIVE_LOADING:['捆包已分配给其他装车作业，请核对装车记录。','The bundle is assigned to an active loading operation. Check its loading record.'],
+   STOCK_ADJUSTMENT_PENDING:['捆包有待处理的库存调整，请先办理。','The bundle has a pending stock adjustment. Resolve it first.'],
+   SUBSEQUENT_STOCK_ACTIVITY:['冲销后已有库存流转，请核对后续库存记录。','Stock movements were recorded after the reversal. Check the movement history.'],
+   BUNDLE_DATA_CHANGED:['捆包资料或重量与退回记录不一致，请核对捆包档案。','The bundle details or weight differ from the return record. Check its inventory record.']};
   return this.t(...(messages[blocker]||['请核对返厂捆包和原备货单后再试。','Verify the returned bundles and original preparation, then try again.']));
  },
- async show(id){
-  const c=await API.request('/v27/corrections/'+id),root=document.querySelector('[data-correction-body="'+CSS.escape(id)+'"]');
+ blockedRecovery(recovery){
+  const t=this.t,items=(recovery.stock_blockers||[]).filter(item=>item?.bundle_no&&item.reason);
+  const detailed=recovery.return_area_unavailable||items.length>0;
+  const summary=t('出库已冲销，暂不能恢复原备货单。','Stock issue was reversed. The original preparation cannot be restored yet.');
+  const reason=recovery.blocker==='RETURNED_STOCK_CHANGED'&&detailed?'':' '+this.recoveryMessage(recovery.blocker);
+  const area=recovery.return_area_unavailable?'<p data-return-area-unavailable>'+esc(t('登记的退回临时堆存区不可用，请核对货位及仓库是否启用。',
+   'The recorded temporary return location is unavailable. Check whether the location and warehouse are active.'))+'</p>':'';
+  const stock=items.length?'<details data-return-stock-blockers open><summary>'+esc(t('需核对的原单捆包','Original Bundles to Check'))+
+   '</summary><ul>'+items.map(item=>'<li><strong data-no-i18n>'+esc(item.bundle_no)+'</strong> · '+
+    esc(this.recoveryMessage(item.reason))+'</li>').join('')+'</ul></details>':'';
+  return '<p class="dialog-notice" data-return-preparation-notice tabindex="-1">'+esc(summary+reason)+'</p>'+area+stock;
+ },
+ async show(id,correction){
+  const c=correction||await API.request('/v27/corrections/'+id),root=document.querySelector('[data-correction-body="'+CSS.escape(id)+'"]');
   if(!root)return;
   const t=this.t,actions=[],recovery=c.preparation_recovery;
   if(Business.can('outbound:approve')){
@@ -69,8 +89,7 @@ window.LoadCorrections={
    (Business.can('allocation:read')?recovery.allocation_ids.map(id=>'<a href="/preparation/'+esc(id)+'">'+
     t('查看备货单','View Preparation')+'</a>').join(' · '):'')+'</p>';
   if(recovery?.state==='READY')notice='<p class="dialog-notice">'+t('出库已冲销，原备货单待恢复。','Stock issue was reversed. The original preparation awaits restoration.')+'</p>';
-  if(recovery?.state==='BLOCKED')notice='<p class="dialog-notice">'+t('出库已冲销，暂不能恢复原备货单。','Stock issue was reversed. The original preparation cannot be restored yet.')+' '+
-   esc(this.recoveryMessage(recovery.blocker))+'</p>';
+  if(recovery?.state==='BLOCKED')notice=this.blockedRecovery(recovery);
   root.innerHTML='<p data-no-i18n>'+esc(c.reason)+'</p>'+notice+'<div class="business-toolbar">'+actions.map(([a,z,e])=>
    '<button type="button" class="button secondary" data-ux11-correction-action="'+a+'">'+t(z,e)+'</button>').join('')+'</div>'+
    '<h3>'+t('审批与执行历史','Review and Execution History')+'</h3>'+c.steps.map(s=>'<p data-no-i18n>'+
@@ -79,7 +98,11 @@ window.LoadCorrections={
     esc(JSON.stringify({original:c.original_snapshot,proposed:c.proposed_data,bundles:c.bundle_snapshot},null,2))+'</pre></details>';
   for(const b of root.querySelectorAll('[data-ux11-correction-action]'))b.onclick=()=>V27Counts.reasonForm(b.textContent,async reason=>{
    const result=await API.request('/v27/corrections/'+id+'/'+b.dataset.ux11CorrectionAction,{method:'POST',body:{version:c.version,reason}});
-   if(result.state==='BLOCKED')throw Error(this.recoveryMessage(result.blocker));
+   if(result.state==='BLOCKED'){
+    await this.show(id,{...c,preparation_recovery:result});
+    requestAnimationFrame(()=>root.querySelector('[data-return-preparation-notice]')?.focus());
+    return;
+   }
    ProductContext.dirty=false;
    await Router.go('/outbounds/loads/'+c.loading_id+'?correction='+c.id);
   });

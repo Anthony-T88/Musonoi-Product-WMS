@@ -917,6 +917,10 @@
     {
       "version": "229_v490_copper_return_close_loading_plan.sql",
       "checksum": "afe93c7647c41010430224e500bcbf496a2f48e2d400e699e86fa888a78e6ad3"
+    },
+    {
+      "version": "230_v490_return_stock_evidence.sql",
+      "checksum": "4e24c2a851df551fefe2051405a322d2cfa7762fbe9a735848346f0994b56784"
     }
   ]
 }
