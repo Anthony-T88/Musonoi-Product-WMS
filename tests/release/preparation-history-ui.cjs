@@ -898,6 +898,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await filter.locator('[name=document_no]').fill('QA-PL-');
     await state.selectOption('VOIDED');
     await filter.locator('button[type="submit"]').click();
+    await filter.locator('select[name=state] option[value=VOIDED][selected]').waitFor({state:'attached'});
     await page.locator('#historical-ledger [data-import-state="voided"]').first().waitFor();
     assert.equal(await page.locator('#historical-bulk-void').count(),0);
     await state.selectOption('ACTIVE');

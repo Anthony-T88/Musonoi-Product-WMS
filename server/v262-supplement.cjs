@@ -16,15 +16,17 @@ async function reopenedPlan(c,req,a){
 async function eligibility(c,req,a){
  const {rows:[facts]}=await c.query(`SELECT EXISTS(SELECT 1 FROM workflow_reviews WHERE allocation_id=$1 AND action='APPROVE') was_approved,
   v262_lot_approval_active($1) has_active_approval,
-  (EXISTS(SELECT 1 FROM loading_orders WHERE allocation_id=$1)
-   OR EXISTS(SELECT 1 FROM loading_plan_lot_locks WHERE allocation_id=$1)) has_loading,
+  v262_lot_has_blocking_loading($1) has_loading,
+  EXISTS(SELECT 1 FROM copper_outbound_return_preparations r WHERE $1=ANY(r.allocation_ids)) restored_after_return,
   EXISTS(SELECT 1 FROM preparation_reversals WHERE allocation_id=$1 AND state='PENDING') has_pending_reversal,
   (EXISTS(SELECT 1 FROM lot_work_history WHERE allocation_id=$1 AND action IN('WEIGH','SAMPLE-STAGE','SEAL','INHERIT'))
    OR EXISTS(SELECT 1 FROM inventory_events e JOIN allocation_items ai ON ai.bundle_id=e.bundle_id
     WHERE ai.allocation_id=$1 AND e.event_type IN('MOVE','ADJUST_LOCATION') AND e.occurred_at>=$2)) has_operations,
-  EXISTS(SELECT 1 FROM lot_work_items WHERE allocation_id=$1 AND sample_stage='IN_PROGRESS') sampling,
+  EXISTS(SELECT 1 FROM lot_work_items WHERE allocation_id=$1 AND sample_stage='IN_PROGRESS'
+   AND copper_return_preparation_item_current($1,bundle_id)) sampling,
   EXISTS(SELECT 1 FROM allocation_items i JOIN bundles b ON b.id=i.bundle_id JOIN locations l ON l.id=b.location_id
-   WHERE i.allocation_id=$1 AND (NOT l.active OR l.map_usage='REVIEW')) unverified_location,
+   WHERE i.allocation_id=$1 AND copper_return_preparation_item_current($1,i.bundle_id)
+    AND (NOT l.active OR l.map_usage='REVIEW')) unverified_location,
   EXISTS(SELECT 1 FROM preparation_plans p JOIN sales_plans s ON s.id=p.cu_sales_plan_id
    WHERE p.allocation_id=$1 AND p.state='APPROVED' AND s.status='OPEN') has_plan`,[a.id,a.created_at]);
  const owns=a.created_by===req.user.id,canWrite=req.user.permissions.includes('allocation:write');

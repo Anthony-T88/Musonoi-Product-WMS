@@ -988,8 +988,56 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   const restoredLegacyBundle=(await api('/v261/lots/'+legacyAllocation)).items.find(row=>row.id===legacyBundle.id);
   assert.equal(restoredLegacyBundle.seal_no,seal);
   assert.equal(restoredLegacyBundle.seal_valid,false);
+  const activeLot=await api(lotPath,'logistics_field_operator');
+  assert.equal(activeLot.preapproval.has_loading,true);
+  assert.equal(activeLot.preapproval.can_revoke,false);
+
+  const restoredPath='/v261/lots/'+legacyAllocation;
+  const restored=await api(restoredPath,'logistics_field_operator');
+  assert.equal(restored.preapproval.was_approved,true);
+  assert.equal(restored.preapproval.has_active_approval,false);
+  assert.equal(restored.preapproval.has_loading,false);
+  assert.equal(restored.preapproval.can_reselect,true);
+  const {rows:[workPlan]}=await c.query('SELECT id FROM preparation_plans WHERE allocation_id=$1',[legacyAllocation]);
+  const issueHistory=async()=>(await c.query(`SELECT
+   (SELECT to_jsonb(l) FROM loading_orders l WHERE l.id=$1) load,
+   (SELECT to_jsonb(q) FROM outbound_corrections q WHERE q.id=$2) correction,
+   (SELECT jsonb_agg(to_jsonb(i) ORDER BY i.bundle_id) FROM loading_items i WHERE i.loading_id=$1) items`,
+   [legacyLoad.id,legacyApplied.id])).rows[0];
+  const originalIssueHistory=await issueHistory();
+  const revokePath='/v262/lots/'+legacyAllocation+'/revoke';
+  const revoke={version:restored.version,reason:'Synthetic wrong bundle in restored lot',work_stopped:true,
+   physical_state_verified:true,observation:'Checked the returned bundle at its current physical location'};
+  await api(revokePath,'production_operator',revoke,403);
+  await api(revokePath,'logistics_field_operator',{...revoke,physical_state_verified:false},409);
+  assert.deepEqual(await trace(),{returns:1,reserved:1});
+  const cancelledReturn=await api(revokePath,'logistics_field_operator',revoke);
+  assert.equal(cancelledReturn.reopened_preparation_plan_id,workPlan.id);
+  assert.equal(cancelledReturn.workflow_state,'CANCELLED');
+  await api(revokePath,'logistics_field_operator',revoke,409);
+  assert.deepEqual(await trace(),{returns:1,reserved:0});
+  const eventsAfterRevoke=(await c.query('SELECT * FROM inventory_events WHERE bundle_id=$1 ORDER BY id',[legacyBundle.id])).rows;
+  assert.deepEqual(eventsAfterRevoke.slice(0,-1),eventsAfter);
+  assert.equal(eventsAfterRevoke.at(-1).event_type,'UNLOCK');
+  assert.equal(Number(eventsAfterRevoke.at(-1).physical_delta),0);
+  assert(eventsAfterRevoke.at(-1).after_data.return_reservation_id);
+
+  const candidate={...E.receiptBundle(today,seq,6),sheets_per_bundle:48,inbound_at:new Date().toISOString()};
+  const rightReceipt=await api('/receipts','production_operator',{project_id:f.project,lines:[candidate]});
+  const rightSubmitted=await api('/receipts/'+rightReceipt.id+'/submit','production_operator',{version:rightReceipt.version});
+  await api('/receipts/'+rightReceipt.id+'/confirm','production_manager',{version:rightSubmitted.version});
+  const {rows:[rightBundle]}=await c.query('SELECT id FROM bundles WHERE bundle_no=$1',[candidate.bundle_no]);
+  const replacement=await api('/v261/lots','logistics_field_operator',{preparation_plan_id:workPlan.id,
+   planned_location_id:returnLot.planned_location_id,items:[{bundle_id:rightBundle.id,sample_required:false}]});
+  assert.notEqual(replacement.id,legacyAllocation);
+  assert.equal(replacement.lot_no,restored.lot_no);
+  assert.deepEqual((await api('/v261/lots/'+replacement.id)).items.map(row=>row.id),[rightBundle.id]);
+  assert.deepEqual(await issueHistory(),originalIssueHistory);
+  assert.deepEqual((await c.query('SELECT sheets_per_bundle,physical_status,location_id,net_weight FROM bundles WHERE id=$1',
+   [legacyBundle.id])).rows[0],afterMetadata);
   steps.push('an approved metadata correction preserves eligibility for an older copper return, while real later inventory evidence blocks recovery per bundle');
   steps.push('revoked later preparation requires measured evidence, separate review and a fresh stock check before one audited restore');
+  steps.push('a restored return can release the wrong bundle and reuse the lot number, while active loading remains protected');
  // The browser creates a new lot and must have its own vacant formal slot.
  const {rows:[uiLocation]}=await c.query(`INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage)
   VALUES($1,$2,'P1-04','P1-04','FORMAL') RETURNING id`,[f.project,f.warehouse]);

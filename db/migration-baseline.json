@@ -929,6 +929,10 @@
     {
       "version": "232_v491_dispatch_history_matching.sql",
       "checksum": "51ce83334d9371dd559ba64b0cf7dcaa689802965b5003c16c8ab4517c48d151"
+    },
+    {
+      "version": "233_v491_returned_lot_reselection.sql",
+      "checksum": "e1ca6ba91405f7e92c3127b9045ce27eff071231fd868d5a8d0aba8e5f3405cc"
     }
   ]
 }

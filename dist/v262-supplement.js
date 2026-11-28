@@ -75,6 +75,7 @@ function openLotPreapproval(kind,a){
   (withdraw?'<p class="work-notice">撤回后恢复备货作业，保留现有捆包和货位锁定。</p>':
    '<div id="lot-revoke-fields"><p class="work-notice">'+(reselect?'<span>确认后从原备货计划进入选货。原作业记录保留。</span> ':'')+
    '<span>系统按核对结果释放备货锁定，捆包仍在当前实物货位。</span></p>'+
+   (p.restored_after_return?'<p class="quiet-note">保留原出库、返厂冲销及备货流水。重选后须重新提交备货审核。</p>':'')+
    '<label>撤销原因<textarea name="reason" maxlength="1000" rows="2" required></textarea></label>'+
    '<label class="check-label"><input type="checkbox" name="work_stopped" required>已停止原备货作业</label>'+
    '<label class="check-label"><input type="checkbox" name="physical_state_verified" required>已逐捆核实当前实物位置</label>'+

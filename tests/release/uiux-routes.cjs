@@ -143,7 +143,7 @@ function pages(ids){
  add('co-work-plan-detail','/preparation/work-plans/:id',[CO],{example:'coApprovedWork',screenshot:true,state:'approved with approval history'});
  add('cu-preparation-from-plan','/preparation/new',[CU],{query:'?preparation_plan=:id',example:'cuApprovedWork',screenshot:true,state:'approved plan'});
  add('co-preparation-from-plan','/receipts/new',[CO],{query:'?preparation_plan=:id',example:'coApprovedWork',screenshot:true,state:'approved plan'});
- add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true,state:'preparation detail, reselection, whole-batch reversal, and work restored after outbound return',roles:['site_supervisor','logistics_manager','logistics_field_operator']});
+ add('cu-lot','/preparation/:id',[CU],{example:'cuLot',screenshot:true,state:'preparation detail, reselection after stock issue reversal, and whole-batch reversal',roles:['site_supervisor','logistics_manager','logistics_field_operator']});
  add('co-preparation-alias','/preparation/:id',[CO],{example:'coPrep'});
  add('co-work-alias','/preparation/:id/work',[CO],{example:'coPrepEditable'});
  add('cu-sampling','/preparation/history-sampling',[CU],{state:'retired permission'});

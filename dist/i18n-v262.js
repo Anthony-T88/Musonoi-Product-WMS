@@ -2,6 +2,7 @@
 // Extends the existing catalog; one language state and one DOM translator are retained.
 Object.assign(TRANSLATIONS.en,{
  '重选捆包':'Reselect Bundles',
+ '保留原出库、返厂冲销及备货流水。重选后须重新提交备货审核。':'The original Stock Issue, return reversal and preparation records are kept. Submit the reselected bundles for preparation review.',
  '撤销备货':'Cancel Preparation',
  '按原计划重选捆包':'Reselect Bundles for the Original Plan',
  '撤回备货审核':'Withdraw Preparation Review',
