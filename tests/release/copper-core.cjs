@@ -1027,11 +1027,11 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   const rightSubmitted=await api('/receipts/'+rightReceipt.id+'/submit','production_operator',{version:rightReceipt.version});
   await api('/receipts/'+rightReceipt.id+'/confirm','production_manager',{version:rightSubmitted.version});
   const {rows:[rightBundle]}=await c.query('SELECT id FROM bundles WHERE bundle_no=$1',[candidate.bundle_no]);
-  const replacement=await api('/v261/lots','logistics_field_operator',{preparation_plan_id:workPlan.id,
+  const reselectedLot=await api('/v261/lots','logistics_field_operator',{preparation_plan_id:workPlan.id,
    planned_location_id:returnLot.planned_location_id,items:[{bundle_id:rightBundle.id,sample_required:false}]});
-  assert.notEqual(replacement.id,legacyAllocation);
-  assert.equal(replacement.lot_no,restored.lot_no);
-  assert.deepEqual((await api('/v261/lots/'+replacement.id)).items.map(row=>row.id),[rightBundle.id]);
+  assert.notEqual(reselectedLot.id,legacyAllocation);
+  assert.equal(reselectedLot.lot_no,restored.lot_no);
+  assert.deepEqual((await api('/v261/lots/'+reselectedLot.id)).items.map(row=>row.id),[rightBundle.id]);
   assert.deepEqual(await issueHistory(),originalIssueHistory);
   assert.deepEqual((await c.query('SELECT sheets_per_bundle,physical_status,location_id,net_weight FROM bundles WHERE id=$1',
    [legacyBundle.id])).rows[0],afterMetadata);

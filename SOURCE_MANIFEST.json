@@ -2529,7 +2529,7 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "sha256": "916d086afe7945ecf41d66bb75df6fd9590f9ca1df2db1d23e931d850f2e344d"
+      "sha256": "a2dd2ac34ff9df33abc4a10f8f1879ed11629c8eec0e50ada9b839443648f13f"
     },
     {
       "path": "tests/release/bp-customer.test.cjs",
