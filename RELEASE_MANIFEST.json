@@ -3874,7 +3874,7 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "sha256": "f99830492e90e8d201742c515238b81700a487baf0aaaefe8cd64634fac65bb8",
+      "sha256": "abbba9a4a982939a98bad86ca08dad8d8e87c40126adbcb476a2b3ad4da295d4",
       "bytes": 110390
     },
     {
@@ -3979,8 +3979,8 @@
     },
     {
       "path": "tests/release/copper-core.cjs",
-      "sha256": "a7c0d4cf2e110be3fda6f3f00dc1a40f0a54abb7c1190e02ab4b2cc28ca7a306",
-      "bytes": 91511
+      "sha256": "ea3090d878ed3be415cf60382f595a894cbfa7507399e83890c8a6c9cea0b44b",
+      "bytes": 91788
     },
     {
       "path": "tests/release/bp-customer.test.cjs",

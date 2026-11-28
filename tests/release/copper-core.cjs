@@ -990,6 +990,9 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   assert.equal(restoredLegacyBundle.seal_valid,false);
   steps.push('an approved metadata correction preserves eligibility for an older copper return, while real later inventory evidence blocks recovery per bundle');
   steps.push('revoked later preparation requires measured evidence, separate review and a fresh stock check before one audited restore');
- E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
+ // The browser creates a new lot and must have its own vacant formal slot.
+ const {rows:[uiLocation]}=await c.query(`INSERT INTO locations(project_id,warehouse_id,code,map_cell_code,map_usage)
+  VALUES($1,$2,'P1-04','P1-04','FORMAL') RETURNING id`,[f.project,f.warehouse]);
+ E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:uiLocation.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
  }finally{await app?.close();await c.end();}
 });
