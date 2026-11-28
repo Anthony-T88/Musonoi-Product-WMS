@@ -21,7 +21,7 @@ window.UnifiedOutbound={
    <div class="wms-filter-actions"><button class="button primary">${t('查询','Search')}</button><a class="button secondary" data-wms-reset href="/outbounds">${t('重置','Reset')}</a></div></form>`;
  },
  async list(){const co=this.co(),t=this.t,q=new URLSearchParams(location.search);if(q.get('view')==='shipments'){q.delete('view');q.set('state','OUTBOUND');history.replaceState({},'','/outbounds?'+q);}const query=this.query(q,co),d=await API.request(this.base()+'?'+query),states=co?['WAITING','LOADING','REVIEW_PENDING','LOADED','DEPARTED','OUTBOUND_PENDING','LOGISTICS_APPROVED','OUTBOUND_CORRECTION','OUTBOUND','CANCELLED']:['PENDING','REJECTED','READY','DEPARTED_PENDING','DEPARTED_CORRECTION','OUTBOUND','REVERSED','CANCELLED'],state=s=>co?CobaltExecutionUI.state(s):I18n.translate(V26.states[s]||Flow.names[s]||s,true);
- Router.page(t('出库管理','Stock Issue'),'<div class="ux11-outbound">'+this.toolbar()+this.filter(q,d,states.map(s=>[s,state(s)]))+CobaltSalesUI.table([['装车单号','Loading Order'],['装箱单号','Packing List No.'],['Lot / 备货批次','Lot / Preparation Batch'],['客户','Customer'],['合同号','Contract'],['车牌','Truck'],[co?'袋数':'捆包数',co?'Bags':'Bundles'],['净重（MT）','Net (MT)'],['业务状态','Workflow Status'],['单证状态','Document Status'],['操作','Actions']],d.items.map(r=>{const id=co?r.order_id:r.id,s=co?r.state:r.workflow_state||r.status,detail=r.historical_import?r.href:co?'/outbounds/'+id:'/outbounds/loads/'+id,revision=co?r.packing_revision:r.revision;return '<tr><td><a data-no-i18n href="'+detail+'">'+esc(r.code)+'</a></td><td data-no-i18n>'+esc(r.packing_list_no||r.document_no||'—')+'</td><td data-no-i18n>'+esc(co?r.preparation_batch_no:r.lot_no||'—')+'</td><td data-no-i18n>'+esc(r.customer_name)+'</td><td data-no-i18n>'+esc(r.contract_no||'—')+'</td><td data-no-i18n>'+esc(co?r.transport_snapshot.truck_no:r.shipping_vehicle_no||r.vehicle_no)+'</td><td>'+(co?r.bag_count:r.bundle_count)+'</td><td>'+(co?CobaltLoadingUI.mt(r.actual_net_kg):r.total_net_weight===null?'—':Tonnes.format(r.total_net_weight))+'</td><td>'+state(s)+'</td><td>'+(r.historical_import?'—':revision?t('已生成','Generated')+' · r'+revision:t('未生成','Not Generated'))+'</td><td class="ux11-row-actions"><a class="button secondary compact" href="'+detail+'">'+(r.historical_import?t('查看详情','View Details'):t('详情 / 审批 / 更正','Details / Review / Correct'))+'</a>'+'</td></tr>';}),'ux11-outbound-table')+CobaltStockUI.pager(d.page,d.total,d.page_size||50)+'</div>');
+ Router.page(t('出库管理','Stock Issue'),'<div class="ux11-outbound">'+this.toolbar()+this.filter(q,d,states.map(s=>[s,state(s)]))+CobaltSalesUI.table([['装车单号','Loading Order'],['装箱单号','Packing List No.'],['Lot / 备货批次','Lot / Preparation Batch'],['客户','Customer'],['合同号','Contract'],['车牌','Truck'],[co?'袋数':'捆包数',co?'Bags':'Bundles'],['净重（MT）','Net (MT)'],['业务状态','Workflow Status'],['操作','Actions']],d.items.map(r=>{const id=co?r.order_id:r.id,s=co?r.state:r.workflow_state||r.status,detail=r.historical_import?r.href:co?'/outbounds/'+id:'/outbounds/loads/'+id;return '<tr><td><a data-no-i18n href="'+detail+'">'+esc(r.code)+'</a></td><td data-no-i18n>'+esc(r.packing_list_no||r.document_no||'—')+'</td><td data-no-i18n>'+esc(co?r.preparation_batch_no:r.lot_no||'—')+'</td><td data-no-i18n>'+esc(r.customer_name)+'</td><td data-no-i18n>'+esc(r.contract_no||'—')+'</td><td data-no-i18n>'+esc(co?r.transport_snapshot.truck_no:r.shipping_vehicle_no||r.vehicle_no)+'</td><td>'+(co?r.bag_count:r.bundle_count)+'</td><td>'+(co?CobaltLoadingUI.mt(r.actual_net_kg):r.total_net_weight===null?'—':Tonnes.format(r.total_net_weight))+'</td><td>'+(s==='REVERSED'?'<span class="op-badge reversed">'+state(s)+'</span>':state(s))+'</td><td class="ux11-row-actions"><a class="button secondary compact" href="'+detail+'">'+(r.historical_import?t('查看详情','View Details'):t('详情 / 审批 / 更正','Details / Review / Correct'))+'</a>'+'</td></tr>';}),'ux11-outbound-table')+CobaltStockUI.pager(d.page,d.total,d.page_size||50)+'</div>');
  $('ux11-outbound-table').dataset.v34Server='true';$('ux11-outbound-filter').onsubmit=e=>{e.preventDefault();Router.go('/outbounds?'+new URLSearchParams(new FormData(e.target)));};CobaltStockUI.bindPager({...d,page_size:d.page_size||50});ProductContext.dirty=false;
  },
  async templates(){if(!this.co())return OutboundCenter.templates();const t=this.t,d=await API.request(this.base()+'/templates');this.templateData=d;Router.page(t('装箱单模板修改','Packing List Template'),CustomsWorkspace.nav('templates')+`<p>${t('当前模板版本','Current Template Revision')}：r${d.revision}</p><form id="ux11-template-form" class="user-form"><div class="form-grid">${d.fields.map(f=>'<label>'+esc(I18n.translate(f.label,true))+'<small data-no-i18n>'+f.address+'</small><textarea name="cell_'+f.address+'" maxlength="2000">'+esc(f.value)+'</textarea></label>').join('')}</div><label>${t('修改原因','Reason')}<textarea name="reason" required minlength="5" maxlength="1000"></textarea></label><p class="error" id="ux11-settings-error" role="alert"></p><div class="business-toolbar"><button type="button" id="ux11-template-preview" class="button secondary">${t('预览模板','Preview Template')}</button><button class="button primary">${t('保存并启用','Save and Activate')}</button><button type="button" id="ux11-template-reset" class="button secondary">${t('恢复原始模板','Restore Original Template')}</button></div></form><details><summary>${t('模板修改历史','Template History')}</summary>${d.history.map(h=>'<p data-no-i18n>r'+h.revision+' · '+esc(h.created_by_name)+' · '+esc(h.reason)+' <button class="button secondary" data-ux11-restore="'+h.id+'">'+t('恢复此版本','Restore This Revision')+'</button></p>').join('')||t('暂无修改','No Changes')}</details><div id="packing-list-preview" class="packing-list-preview"></div>`);const form=$('ux11-template-form'),values=()=>Object.fromEntries(d.fields.map(f=>[f.address,form.elements['cell_'+f.address].value])),save=async(extra,b)=>{b.disabled=true;try{const reason=form.elements.reason.value;if(reason.trim().length<5)throw Error(t('修改原因至少5个字','Enter at least 5 characters for the reason'));if(!await OperationConfirm.ask({title:t('启用本产品模板','Activate Product Template'),note:reason}))return;await API.request(this.base()+'/templates',{method:'POST',body:{version:this.templateData.version,reason,...extra}});ProductContext.dirty=false;await this.templates();}catch(e){$('ux11-settings-error').textContent=e.message;}finally{if(b.isConnected)b.disabled=false;}};form.onsubmit=e=>{e.preventDefault();save({fields:values()},e.submitter);};$('ux11-template-reset').onclick=e=>save({restore_original:true},e.target);for(const b of document.querySelectorAll('[data-ux11-restore]'))b.onclick=()=>save({restore_id:b.dataset.ux11Restore},b);$('ux11-template-preview').onclick=async()=>{try{const r=await API.request(this.base()+'/templates/preview',{method:'POST',body:{version:this.templateData.version,fields:values()}});Shipping.drawPreview(r.layout);}catch(e){$('ux11-settings-error').textContent=e.message;}};ProductContext.dirty=false;
@@ -71,10 +71,78 @@ window.LoadCorrections={
     esc(this.recoveryMessage(item.reason))+'</li>').join('')+'</ul></details>':'';
   return '<p class="dialog-notice" data-return-preparation-notice tabindex="-1">'+esc(summary+reason)+'</p>'+area+stock;
  },
+ recheckRecords(recheck){
+  const t=this.t;
+  return (recheck?.requests||[]).map(r=>{
+   const readings=new Map(r.measurements.map(row=>[row.bundle_id,row]));
+   const columns=[t('捆包编号','Bundle Number'),t('已撤销备货单','Revoked Preparation'),
+    t('核验货位','Verified Location'),t('核验净重（吨）','Verified Net Weight (MT)')];
+   const rows=r.evidence.bundles.map(b=>{
+    const m=readings.get(b.bundle_id);
+    return '<tr data-no-i18n><td>'+esc(b.bundle_no)+'</td><td>'+esc(b.cycles.map(c=>c.lot_no).join(' / '))+
+     '</td><td>'+esc(m.location_code)+'</td><td>'+esc(m.net_weight)+'</td></tr>';
+   }).join('');
+   const table=UI46Pages.table('<div class="business-table"><table><thead><tr>'+columns.map(name=>'<th>'+esc(name)+'</th>').join('')+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>',{responsive:true,numeric:[3]});
+   const status=t(...({PENDING:['重新核验待审批','Reverification Awaiting Approval'],
+    APPROVED:['重新核验已批准','Reverification Approved'],REJECTED:['重新核验已驳回','Reverification Rejected']}[r.state]));
+   return '<details '+(r.state==='PENDING'?'open ':'')+'data-return-recheck-record="'+esc(r.id)+'"><summary>'+esc(status)+
+    ' · <span data-no-i18n>'+esc(BusinessTime.display(r.requested_at))+'</span></summary>'+
+    '<p>'+t('原备货单','Original Preparation')+' <strong data-no-i18n>'+esc(r.evidence.originals.map(l=>l.lot_no).join(' / '))+'</strong></p>'+
+    table+'<p data-no-i18n>'+esc(r.requester+' · '+r.reason)+'</p>'+
+    (r.reviewer?'<p data-no-i18n>'+esc(BusinessTime.display(r.reviewed_at)+' · '+r.reviewer+' · '+r.review_reason)+'</p>':'')+
+    (r.state==='PENDING'&&!recheck.evidence_current?'<p class="wms-feedback" role="status">'+
+     t('送审后库存或原单已变化，请驳回后重新核验。','Inventory or the original preparation changed after submission. Reject and reverify.')+'</p>':'')+
+    '</details>';
+  }).join('');
+ },
+ recheckForm(c,decision){
+  const t=this.t,offer=c.preparation_recheck.offer,pending=c.preparation_recheck.requests.find(r=>r.state==='PENDING');
+  const title=decision==='APPROVED'?t('批准并恢复原备货单','Approve and Restore Original Preparation'):
+   decision==='REJECTED'?t('驳回重新核验','Reject Reverification'):
+    t('重新核验后恢复原备货单','Reverify to Restore Original Preparation');
+  const originals=(offer?.evidence||pending.evidence).originals.map(l=>l.lot_no).join(' / ');
+  const bundleFields=decision?'':offer.evidence.bundles.map(b=>`<fieldset class="wms-return-bundle" data-return-bundle="${esc(b.bundle_id)}">
+   <legend data-no-i18n>${esc(b.bundle_no)}</legend>
+   <p>${t('已撤销备货单','Revoked Preparation')} <strong data-no-i18n>${esc(b.cycles.map(c=>c.lot_no).join(' / '))}</strong></p>
+   <p>${t('系统退回记录','Recorded Return')} <span data-no-i18n>${esc(b.location_code)} · ${esc(b.net_weight)} MT</span></p>
+   <div class="form-grid wms-field-grid">
+    <label class="wms-field">${t('实物货位编号','Physical Location Code')}<input data-return-location required maxlength="160" autocomplete="off"></label>
+    <label class="wms-field">${t('实物净重（吨）','Physical Net Weight (MT)')}<input data-return-weight required inputmode="decimal" pattern="[0-9]{1,8}([.][0-9]{1,6})?" maxlength="15" autocomplete="off"></label>
+   </div></fieldset>`).join('');
+  const check=decision==='REJECTED'?'':'<label class="check-label"><input name="confirmed" type="checkbox" required> '+
+   t('已核实后续备货单已撤销、未再次装车或出库，并核对实物货位和净重。',
+    'I checked the later preparation was revoked, the bundles were never loaded or issued again, and their physical locations and net weights match.')+'</label>';
+  dialog(title,`<form id="ux11-recheck-form" class="user-form" data-no-i18n data-wms-validation>
+   <p>${t('原备货单','Original Preparation')} <strong>${esc(originals)}</strong></p>
+   ${bundleFields}${check}
+   <label class="wms-field">${t('核验或审批依据','Verification or Review Evidence')}<textarea name="reason" required minlength="5" maxlength="2000"></textarea></label>
+   <p class="error" role="alert"></p>
+   <button class="button primary">${decision?esc(title):t('提交审批','Submit for Approval')}</button>
+  </form>`,{protectForm:'#ux11-recheck-form'});
+  const form=$('ux11-recheck-form');
+  form.onsubmit=event=>UI46Pages.submit(event,async()=>{
+   const body={version:c.version,reason:form.elements.reason.value.trim(),confirmed:form.elements.confirmed?.checked===true};
+   let path='/v27/corrections/'+c.id+'/preparation-rechecks';
+   if(decision){
+    path+='/'+pending.id+'/review';
+    body.decision=decision;
+   }else{
+    body.token=offer.token;
+    body.measurements=Object.fromEntries([...form.querySelectorAll('[data-return-bundle]')].map(el=>[el.dataset.returnBundle,
+     {location_code:el.querySelector('[data-return-location]').value.trim(),net_weight:el.querySelector('[data-return-weight]').value.trim()}]));
+   }
+   try{await API.request(path,{method:'POST',body});}
+   catch(err){err.message=I18n.translate(err.message,true);throw err;}
+   $('dialog').close();
+   ProductContext.dirty=false;
+   await Router.go('/outbounds/loads/'+c.loading_id+'?correction='+c.id);
+  });
+ },
  async show(id,correction){
   const c=correction||await API.request('/v27/corrections/'+id),root=document.querySelector('[data-correction-body="'+CSS.escape(id)+'"]');
   if(!root)return;
-  const t=this.t,actions=[],recovery=c.preparation_recovery;
+  const t=this.t,actions=[],recovery=c.preparation_recovery,recheck=c.preparation_recheck;
   if(Business.can('outbound:approve')){
    if(c.status==='REQUESTED')actions.push(['authorize','授权更正','Authorize']);
    if(c.status==='RETURN_VERIFIED'||c.status==='AUTHORIZED'&&c.kind==='VEHICLE')
@@ -90,12 +158,26 @@ window.LoadCorrections={
     t('查看备货单','View Preparation')+'</a>').join(' · '):'')+'</p>';
   if(recovery?.state==='READY')notice='<p class="dialog-notice">'+t('出库已冲销，原备货单待恢复。','Stock issue was reversed. The original preparation awaits restoration.')+'</p>';
   if(recovery?.state==='BLOCKED')notice=this.blockedRecovery(recovery);
+  if(recheck?.offer)notice='<p class="dialog-notice">'+t('后续备货锁定已撤销，现场重新核验并审批后可恢复原备货单。',
+   'The later preparation locks were revoked. Reverify the stock and obtain approval to restore the original preparation.')+'</p>';
+  const recheckActions=(recheck?.offer?'<button type="button" class="button secondary" data-return-recheck-action="REQUEST">'+
+   t('重新核验后恢复原备货单','Reverify to Restore Original Preparation')+'</button>':'')+
+   (recheck?.can_review?(recheck.evidence_current?'<button type="button" class="button primary" data-return-recheck-action="APPROVED">'+
+    t('批准并恢复原备货单','Approve and Restore Original Preparation')+'</button>':'')+
+    '<button type="button" class="button secondary" data-return-recheck-action="REJECTED">'+t('驳回重新核验','Reject Reverification')+'</button>':'');
+  const steps={'request-preparation-recheck':['提交重新核验','Submit Reverification'],
+   'approve-preparation-recheck':['批准重新核验','Approve Reverification'],
+   'reject-preparation-recheck':['驳回重新核验','Reject Reverification'],
+   'restore-preparation':['恢复备货单','Restore Preparation']};
   root.innerHTML='<p data-no-i18n>'+esc(c.reason)+'</p>'+notice+'<div class="business-toolbar">'+actions.map(([a,z,e])=>
-   '<button type="button" class="button secondary" data-ux11-correction-action="'+a+'">'+t(z,e)+'</button>').join('')+'</div>'+
+   '<button type="button" class="button secondary" data-ux11-correction-action="'+a+'">'+t(z,e)+'</button>').join('')+recheckActions+'</div>'+
+   this.recheckRecords(recheck)+
    '<h3>'+t('审批与执行历史','Review and Execution History')+'</h3>'+c.steps.map(s=>'<p data-no-i18n>'+
-    esc(BusinessTime.display(s.occurred_at)+' · '+s.actor_name+' · '+s.action+' · '+s.reason)+'</p>').join('')+
+    esc(BusinessTime.display(s.occurred_at)+' · '+s.actor_name+' · '+(steps[s.action]?t(...steps[s.action]):s.action)+' · '+s.reason)+'</p>').join('')+
    '<details><summary>'+t('原单据及更正依据','Original Record and Evidence')+'</summary><pre data-no-i18n>'+
     esc(JSON.stringify({original:c.original_snapshot,proposed:c.proposed_data,bundles:c.bundle_snapshot},null,2))+'</pre></details>';
+  for(const b of root.querySelectorAll('[data-return-recheck-action]'))b.onclick=()=>this.recheckForm(c,
+   b.dataset.returnRecheckAction==='REQUEST'?null:b.dataset.returnRecheckAction);
   for(const b of root.querySelectorAll('[data-ux11-correction-action]'))b.onclick=()=>V27Counts.reasonForm(b.textContent,async reason=>{
    const result=await API.request('/v27/corrections/'+id+'/'+b.dataset.ux11CorrectionAction,{method:'POST',body:{version:c.version,reason}});
    if(result.state==='BLOCKED'){

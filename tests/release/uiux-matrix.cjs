@@ -2,7 +2,7 @@
 
 const R=require('./uiux-routes.cjs');
 const inventory=require('./uiux-inventory.json');
-const languages=['zh-CN','en'];
+const languages=['zh-CN','en','fr'];
 const desktop={width:1366,height:768},large={width:1440,height:900},wide={width:1920,height:1080},phone={width:390,height:844};
 const compact={width:1280,height:800};
 const fullSizes=[desktop,compact,large,wide],allSizes=[...fullSizes,phone];

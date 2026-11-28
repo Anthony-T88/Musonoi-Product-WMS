@@ -75,8 +75,13 @@ function updateMetrics(t=I.totals(filtered)){
   const stats=t.stock_categories;
   const other=stats.other?.bundles||0;
   $('metrics').innerHTML=categories.map(([key,label,icon],i)=>{
-   const row=stats[key],weight=i>=3&&row?.known_net_weight!=null?'<span data-i18n>已知净重</span> '+format(row.known_net_weight)+' MT':'';
-   return `<article class="metric"><div class="metric-top"><span data-i18n>${label}</span><span class="metric-icon" aria-hidden="true">${icon}</span></div><div class="metric-value">${row?.bundles||0}<small data-i18n>捆</small></div>${weight?'<div class="metric-bottom">'+weight+'</div>':''}</article>`;
+   const row=stats[key],count=row?.bundles||0;
+   const net=row?.known_net_weight==null?(count?'—':format(0)):format(row.known_net_weight);
+   const value=i<3?count+'<small data-i18n>捆</small>':
+    '<span>'+count+'<small data-i18n>捆</small></span><small data-no-i18n>/</small><span>'+esc(net)+'<small data-i18n>吨</small></span>';
+   return `<article class="metric"><div class="metric-top"><span data-i18n>${label}</span><span class="metric-icon" aria-hidden="true">${icon}</span></div>
+    <div class="metric-value${i>=3?' metric-quantity-weight':''}">${value}</div>
+    ${i>=3&&row?.unknown_weights?'<div class="metric-bottom" data-no-i18n>'+row.unknown_weights+' '+I18n.label('捆重量待核实','bundles with weight to verify')+'</div>':''}</article>`;
   }).join('')+(other?`<p class="inventory-other-stock"><span data-i18n>其他锁定库存（如待处理库存调整）</span> · ${other} <span data-i18n>捆</span></p>`:'');
   return;
  }

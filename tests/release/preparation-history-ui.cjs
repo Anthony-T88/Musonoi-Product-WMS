@@ -235,15 +235,15 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const trip=await importTrip('FIRST'),other=await importTrip('SECOND'),older=await importTrip('OLDER','2020-03-05');
    const sales=prefix(product)+'/sales-workflow/plans/';
    const matches=(await api('admin',product,sales+plan+'/historical-matches')).items;
-   assert.deepEqual(new Set(matches.map(row=>row.source_id)),new Set([trip.id,other.id]));
-   assert(matches.every(row=>row.dispatch_id===first.id&&row.dispatch_matches===2&&row.source_matches===2));
+   assert.deepEqual(new Set(matches.map(row=>row.source_id)),new Set([trip.id,other.id,older.id]));
+   assert(matches.every(row=>row.dispatch_id===first.id&&row.dispatch_matches===2&&row.source_matches===3));
    const archivedArrival='HISTORICAL_ARRIVED',arrivalBase=co?'/cobalt/sales/arrivals':'/loading-plans/arrivals';
    const arrivals=async (truck,state='',when=month)=>{
     const filters={shipment_month:when,truck_no:truck,...(state?{[co?'arrival_state':'status']:state}:{})};
     return (await api('admin',product,arrivalBase+'?'+new URLSearchParams(filters))).items;
    };
    assert.deepEqual(await api('admin',product,sales+plan+'/historical-matches',{automatic:true}),
-    {linked:0,ambiguous:2,invoice_confirmed:0,invoice_missing:0});
+    {linked:0,ambiguous:3,invoice_confirmed:0,invoice_missing:0});
    assert.equal((await arrivals(plate,'WAITING_ARRIVAL')).length,2);
    const choice={source_id:trip.id,dispatch_id:first.id};
    await api('admin',product,sales+plan+'/historical-matches',choice,409);
@@ -252,7 +252,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.equal(matchedViaReview.historical_source_id,trip.id);
    assert.equal(matchedViaReview.arrived_at,null);
    assert.equal((await arrivals(plate,'WAITING_ARRIVAL')).length,1);
-   await api('admin',product,sales+alternate+'/historical-matches',{source_id:older.id,dispatch_id:second.id,verified_trip:true},409);
+   await api('admin',product,sales+alternate+'/historical-matches',{source_id:older.id,dispatch_id:second.id},409);
    fixtures[product].historicalTrip={alternate,other,older};
    let detail=await api('admin',product,sales+plan);
    const batch=detail.posted_batches.find(row=>row.historical_source_id===trip.id);
@@ -358,9 +358,9 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    const duplicatePlate=plate+'-DUPLICATE',secondSheetPlate=plate+'-SECOND-SHEET';
    const duplicateWorkbook=dispatchFile(duplicatePlate,'Synthetic Destination',secondSheetPlate);
    const octoberTrip=await importTrip('OCTOBER',october+'-02',duplicatePlate);
-   const novemberTrip=await importTrip('NOVEMBER',november+'-02',duplicatePlate);
    const octoberVehicle=await dispatch(octoberPlan,duplicatePlate,'admin',duplicateWorkbook);
    assert.equal(octoberVehicle.historical_source_id,octoberTrip.id);
+   const novemberTrip=await importTrip('NOVEMBER',november+'-02',duplicatePlate);
    const novemberBase=dispatchBase(novemberPlan);
    const renamed=await dispatchPayload(novemberPlan,{...duplicateWorkbook,file_name:'renamed-dispatch.xlsx'});
    const digest=crypto.createHash('sha256').update(Buffer.from(renamed.file_base64,'base64')).digest('hex');
@@ -405,6 +405,24 @@ test('copper and cobalt preparation batches and historical navigation on indepen
    assert.match(unlink.after_data.reason,/wrong sales plan/);
    const secondSheet={...renamed,mapping:{...renamed.mapping,sheet:'Second Dispatch'}};
    assert.equal((await dispatch(novemberPlan,secondSheetPlate,'admin',secondSheet)).truck_no,secondSheetPlate);
+
+   const rolloverPlate=plate+'-ROLLOVER';
+   const rollover=await importTrip('CROSS-MONTH',november+'-04',rolloverPlate);
+   const obsoleteVehicle=await dispatch(novemberPlan,rolloverPlate);
+   assert.equal(obsoleteVehicle.historical_source_id,rollover.id);
+   // Model a deletion by a release that left its automatic association behind.
+   if(co)await c.query("UPDATE co_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason='Synthetic legacy cancellation',version=version+1,updated_at=clock_timestamp() WHERE id=$1",[obsoleteVehicle.id]);
+   else await c.query("UPDATE sales_dispatch_vehicles SET cancelled_at=clock_timestamp(),cancellation_reason='MANUAL_DELETE' WHERE id=$1",[obsoleteVehicle.id]);
+   assert(!(await api('admin',product,sales+novemberPlan)).posted_batches.some(row=>row.historical_source_id===rollover.id));
+   assert((await c.query('SELECT 1 FROM historical_sales_dispatch_links WHERE source_id=$1',[rollover.id])).rowCount);
+   const relinked=await dispatch(octoberPlan,rolloverPlate,'logistics_manager');
+   assert.equal(relinked.historical_source_id,rollover.id);
+   assert.equal((await arrivals(rolloverPlate,archivedArrival,october))[0].historical_source_id,rollover.id);
+   assert.equal((await arrivals(rolloverPlate,archivedArrival,november)).length,0);
+   const {rows:[reconciled]}=await c.query("SELECT before_data,after_data FROM audit_logs WHERE action='historical_sales_dispatch_unlinked' AND entity_id=$1",[rollover.id]);
+   assert.equal(reconciled.before_data.automatic_invoice.invoice_no,rollover.tag+'-INV');
+   assert.equal(reconciled.after_data.dispatch_id,obsoleteVehicle.id);
+   assert.equal(reconciled.after_data.reason,'RELINK_CANCELLED_DISPATCH');
 
    if(!co){
     const obsolete=await dispatch(novemberPlan,plate+'-OBSOLETE-PLAN');
@@ -520,6 +538,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
      previous.set(proof.kept,await confirmed(proof.kept));
      await c.query('DELETE FROM sales_invoice_confirmations WHERE loading_id=$1',[proof.backfill]);
     }
+    await c.query('CREATE OR REPLACE VIEW sales_invoice_shipments AS SELECT s.*,NULL::uuid historical_source_id FROM sales_invoice_live_shipments s');
     await c.query('DROP VIEW historical_sales_arrivals');
    const completionMigration=require('../../scripts/migration-chain.cjs').load()
     .find(entry=>entry.version==='207_v488_historical_dispatch_completion.sql');
@@ -884,7 +903,7 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     await state.selectOption('ACTIVE');
     await filter.locator('button[type="submit"]').click();
     const selected=page.locator('#historical-ledger [data-historical-select]');
-    await selected.first().waitFor();
+    await page.waitForFunction(()=>document.querySelectorAll('#historical-ledger [data-historical-select]').length===2);
     assert.equal(await selected.count(),2);
     const bulk=page.locator('#historical-bulk-void');
     assert(await bulk.isDisabled());
@@ -952,11 +971,24 @@ test('copper and cobalt preparation batches and historical navigation on indepen
     const edit=()=>row.locator('a[href*="vehicle_id"]').click();
     const form=page.locator(co?'#co-arrival-form':'#yard-arrival-form');
     const confirmed=()=>row.locator('a[href^="/loading-plans/new"]').waitFor();
+    const month=page.locator((co?'#co-arrival-filter':'#yard-filter')+' select[name=shipment_month]');
+    await confirmed();
+    await month.selectOption('');
+    await page.locator((co?'#co-arrival-filter':'#yard-filter')+' button[type=submit], '+(co?'#co-arrival-filter':'#yard-filter')+' button:not([type])').first().click();
+    await page.waitForURL(url=>url.searchParams.has('shipment_month')&&!url.searchParams.get('shipment_month'));
+    await confirmed();await edit();
+    await form.getByRole('link',{name:/返回车辆列表|Back to Vehicles/}).click();
+    await confirmed();
+    assert.equal(await month.inputValue(),'');
+    await month.selectOption(preview.shipment_month);
+    await page.locator((co?'#co-arrival-filter':'#yard-filter')+' button[type=submit], '+(co?'#co-arrival-filter':'#yard-filter')+' button:not([type])').first().click();
+    await page.waitForURL(url=>url.searchParams.get('shipment_month')===preview.shipment_month);
     await confirmed();await edit();
     assert.equal(await form.locator('[name=trailer_two]').inputValue(),'N/A');
     await form.locator('[name=driver_name]').fill('');
     await form.locator('[data-arrival-save]').click();
     await row.getByText(/待修改确认|Pending Confirmation/).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('shipment_month'),preview.shipment_month);
     assert.equal(await row.count(),1);
     assert.equal(await page.locator('[data-document-draft-row]').count(),0);
     assert.equal(await row.locator('a[href^="/loading-plans/new"]').count(),0);

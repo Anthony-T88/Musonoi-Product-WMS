@@ -76,13 +76,13 @@ window.SalesReviewUI={
    const rows=items.map((item,index)=>{
     const ambiguous=item.dispatch_matches>1||item.source_matches>1;
     return '<tr><td>'+esc(item.document_no)+'<small>'+esc(item.batch_no||'—')+'</small></td><td>'+esc(item.shipping_date)+
-     '</td><td>'+esc(item.source_truck)+' / '+esc(item.source_trailer||'—')+'</td><td>'+esc(item.shipment_month)+' / '+esc(item.trailer_no||'—')+
+     '</td><td>'+esc(item.source_truck)+' / '+esc([item.source_trailer,item.source_trailer_two].filter(Boolean).join(' / ')||'—')+'</td><td>'+esc(item.shipment_month)+' / '+esc(item.trailer_no||'—')+
      '</td><td><button type="button" class="button secondary" data-history-match="'+index+'">'+
      t(ambiguous?'核对趟次并关联':'确认关联',ambiguous?'Verify and Link Trip':'Confirm Link')+'</button></td></tr>';
    });
    dialog(t('历史装箱单匹配结果','Historical Packing List Matches'),'<div data-no-i18n>'+
     (rows.length?ExportLicenses.table(headings,rows,'sales-history-table',true,{actions:[4]}):
-     '<p>'+t('没有找到符合车牌、发运月份和客户或合同的未关联单据。','No unlinked documents match the plate, shipment month and customer or contract.')+'</p>')+
+     '<p>'+t('没有找到与车头、挂车及客户或合同相符、可关联的历史装箱单。','No available historical packing list matches the vehicle and customer or contract.')+'</p>')+
     '<p class="error" id="sales-history-error" role="alert"></p></div>');
    for(const action of document.querySelectorAll('[data-history-match]'))action.onclick=async()=>{
     const row=items[Number(action.dataset.historyMatch)],error=$('sales-history-error');

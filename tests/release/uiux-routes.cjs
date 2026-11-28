@@ -82,7 +82,7 @@ function pages(ids){
  const keyRoles=['sales_operator','logistics_manager','logistics_field_operator','site_supervisor','production_manager','production_operator','customer_admin'];
  add('login','/',[],{screenshot:true});
  add('register-dialog','/',[],{state:'registration dialog with 10–48 character password validation'});
- add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles,state:'current and pre-inventory-history period layout'});
+ add('overview','/overview',BOTH,{screenshot:true,roles:keyRoles,state:'current and pre-inventory-history period layout, plan execution shipment month'});
  add('password-dialog','/overview',BOTH,{state:'self-service dialog with 10–48 character new password validation',screenshot:true,roles:['production_operator']});
  add('todo','/overview',BOTH,{query:'?management=todos',roles:['sales_operator','logistics_manager'],state:'document-specific review stages and preparation or stock issue batch identifiers'});
  add('overview-detail','/overview/details',BOTH,{query:'?metric=physical'});
@@ -135,7 +135,7 @@ function pages(ids){
  add('co-prep-work','/receipts/:id',[CO],{example:'coPrepEditable',screenshot:true,state:'editable',roles:['logistics_field_operator','site_supervisor']});
  add('co-prep-draft','/receipts/:id',[CO],{example:'coDraft',state:'draft'});
  add('co-prep-alias','/receipts/:id/work',[CO],{example:'coPrepEditable'});
- add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor'],state:'scoped pending-plan and all-order counts'});
+ add('preparation','/preparation',BOTH,{screenshot:true,roles:['logistics_field_operator','site_supervisor'],state:'scoped borderless pending-plan and all-order counts'});
  add('preparation-new','/preparation/new',BOTH,{state:'select approved preparation plan'});
  add('preparation-plans','/preparation/work-plans',BOTH,{screenshot:true,roles:['export_supervisor','logistics_manager','logistics_field_operator'],state:'scoped approval badge, status-only waiting orders and live preparation status'});
  add('preparation-batch','/preparation/work-plans/new',BOTH,{screenshot:true,roles:['export_supervisor','production_operator'],state:'batch draft entry'});
@@ -151,7 +151,7 @@ function pages(ids){
  add('cu-weighings','/outbounds/weighings',[CU],{state:'retired permission'});
  add('cu-weigh-new','/outbounds/weighings/new',[CU]);
  add('cu-weigh','/outbounds/weighings/:id',[CU],{example:'cuWeigh',state:'retired permission'});
- add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'plate search, optional second trailer and historical arrivals'});
+ add('arrivals','/loading-plans',BOTH,{screenshot:true,roles:['logistics_field_operator','logistics_manager'],state:'plate search, all shipment months, return to applied filters and historical arrivals'});
  for(const [product,key,example] of [[CU,'cu-arrival','cuArrivalPending'],[CO,'co-arrival','coArrival']]){
   add(key,'/loading-plans',[product],{example,state:'waiting-arrival'});
   const entry=cases.at(-1);
@@ -169,7 +169,7 @@ function pages(ids){
  add('co-loading-plan','/loading-plans/orders/:id',[CO],{example:'coPlanDoc',state:'loading plan details with cancellation and history',screenshot:true});
  add('co-loading-edit','/loading-plans/:id/edit',[CO],{example:'coDraftPlan',state:'draft'});
  add('co-loading-execution','/loading-plans/execution/:id',[CO],{example:'coLoad'});
- add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'loading order preview with detail and correction links'});
+ add('outbounds','/outbounds',BOTH,{screenshot:true,roles:['logistics_manager','production_manager'],state:'business status, reversed stock issue filter and correction links'});
  add('outbound-vehicles','/outbounds',BOTH,{query:'?view=departures',screenshot:true,roles:['sales_operator','sales_manager'],state:'single-row desktop filters, dated permit print and exited history'});
  add('customs-entry','/customs',BOTH,{state:'default to commercial invoice and packing list'});
  add('customs','/customs/bp',BOTH,{screenshot:true,roles:['production_operator'],state:'pending lots, default BP template with issuer details and scoped template controls'});
@@ -182,7 +182,7 @@ function pages(ids){
  add('weight-settings','/outbounds/weight-settings',BOTH);
  add('cu-loads','/outbounds/loads',[CU]);
  add('cu-load-new','/outbounds/loads/new',[CU]);
- add('cu-load-detail','/outbounds/loads/:id',[CU],{example:'cuLoad',screenshot:true,state:'posted stock issue, controlled physical return and itemized restoration blockers'});
+ add('cu-load-detail','/outbounds/loads/:id',[CU],{example:'cuLoad',screenshot:true,state:'posted stock issue, controlled physical return, itemized blockers and pending reverification'});
  add('cu-load-matching','/outbounds/loads/:id/matching',[CU],{example:'cuLoadPending',state:'pending'});
  add('cu-outbound-detail','/outbounds/:id',[CU],{example:'cuOutbound'});
  add('co-outbound-detail','/outbounds/:id',[CO],{example:'coLoad',screenshot:true,state:'posted stock issue and date correction with administrator self-review'});

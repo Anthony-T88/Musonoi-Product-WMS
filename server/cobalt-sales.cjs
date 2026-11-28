@@ -50,7 +50,7 @@ async function importPlan(c,req,plan,body,parsed){
   }
  }
  const {new_count:added_count,...results}=tally;
- const historical=await History.afterDispatchImport(c,req,plan,month,dispatchIds);
+ const historical=await History.afterDispatchImport(c,req,plan,dispatchIds);
  return {id:plan.id,...metadata(plan),import_id:imported?.id||null,added_count,...results,cancelled_count,...(historical?{historical}:{})};
 }
 const transferHistory=`EXISTS(SELECT 1 FROM co_vehicle_arrivals a WHERE a.dispatch_vehicle_id=v.id)
@@ -119,12 +119,19 @@ async function arrivals(c,req,all=false){
   ${plansSql} JOIN co_dispatch_vehicles v ON v.sales_plan_id=p.id LEFT JOIN co_vehicle_arrivals a ON a.dispatch_vehicle_id=v.id
   LEFT JOIN historical_sales_arrivals h ON h.co_dispatch_id=v.id
   ${plan} WHERE ${f.where}`;
+ if(q.vehicle_id&&!all){
+  const items=(await c.query(rows,f.values)).rows;
+  return {items,total:items.length,page:1,page_size:50};
+ }
  const counts=(await c.query('SELECT registration_state,count(*)::int n FROM ('+rows+') r GROUP BY registration_state',f.values)).rows;
  const state_counts=Object.fromEntries(counts.map(r=>[r.registration_state,r.n]));
  const args=[...f.values],stateColumn=registrationStates.includes(q.arrival_state)?'registration_state':'arrival_state';
  const filtered=' FROM ('+rows+') r'+(q.arrival_state?' WHERE '+stateColumn+'=$'+args.push(q.arrival_state):'');
  const options=await filter(c,{...req,query:{}},true);
- return {state_counts,customer_options:(await c.query('SELECT DISTINCT p.customer_id id,c.name '+plansSql+' WHERE '+options.where+' ORDER BY c.name',options.values)).rows,
+ const month_options=all?[]:(await c.query('SELECT DISTINCT v.shipment_month '+plansSql+
+  " JOIN co_dispatch_vehicles v ON v.sales_plan_id=p.id WHERE v.cancellation_reason IS DISTINCT FROM 'MANUAL_DELETE' AND "+
+  options.where+' ORDER BY v.shipment_month DESC',options.values)).rows.map(row=>row.shipment_month);
+ return {state_counts,month_options,customer_options:(await c.query('SELECT DISTINCT p.customer_id id,c.name '+plansSql+' WHERE '+options.where+' ORDER BY c.name',options.values)).rows,
   items:(await c.query('SELECT *'+filtered+' ORDER BY '+B.documentOrder({pending:"registration_state IN('WAITING_ARRIVAL','PENDING_CONFIRMATION','WAITING_PLAN')"})+(all?' LIMIT 10001':' LIMIT 50 OFFSET '+((f.page-1)*50)),args)).rows,
   total:Number((await c.query('SELECT count(*)'+filtered,args)).rows[0].count),page:f.page,page_size:50};
 }

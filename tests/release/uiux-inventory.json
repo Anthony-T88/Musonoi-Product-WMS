@@ -182,7 +182,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "current and pre-inventory-history period layout",
+      "state": "current and pre-inventory-history period layout, plan execution shipment month",
       "template": "/overview"
     },
     {
@@ -677,7 +677,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "scoped pending-plan and all-order counts",
+      "state": "scoped borderless pending-plan and all-order counts",
       "template": "/preparation"
     },
     {
@@ -809,7 +809,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "plate search, optional second trailer and historical arrivals",
+      "state": "plate search, all shipment months, return to applied filters and historical arrivals",
       "template": "/loading-plans"
     },
     {
@@ -932,7 +932,7 @@
         "CU_CATHODE",
         "CO_HYDROXIDE"
       ],
-      "state": "loading order preview with detail and correction links",
+      "state": "business status, reversed stock issue filter and correction links",
       "template": "/outbounds"
     },
     {
@@ -1046,7 +1046,7 @@
       "products": [
         "CU_CATHODE"
       ],
-      "state": "posted stock issue, controlled physical return and itemized restoration blockers",
+      "state": "posted stock issue, controlled physical return, itemized blockers and pending reverification",
       "template": "/outbounds/loads/:id"
     },
     {

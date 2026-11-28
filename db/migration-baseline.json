@@ -921,6 +921,14 @@
     {
       "version": "230_v490_return_stock_evidence.sql",
       "checksum": "4e24c2a851df551fefe2051405a322d2cfa7762fbe9a735848346f0994b56784"
+    },
+    {
+      "version": "231_v490_return_preparation_recheck.sql",
+      "checksum": "e36e740dab67db5eacad852e6b4f0e853e7d5ac82661945d1d9a797d139f94d1"
+    },
+    {
+      "version": "232_v491_dispatch_history_matching.sql",
+      "checksum": "51ce83334d9371dd559ba64b0cf7dcaa689802965b5003c16c8ab4517c48d151"
     }
   ]
 }

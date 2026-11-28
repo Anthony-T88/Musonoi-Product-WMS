@@ -1,7 +1,48 @@
 'use strict';
 const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATION:'待修改确认',WAITING_PLAN:'等待创建装车计划',PLANNED:'已创建装车计划',HISTORICAL_ARRIVED:'已到场（历史）',CANCELLED:'已取消'},fields:{trailer_one:'挂车1车牌号',trailer_two:'挂车2车牌号（选填）',driver_name:'司机全名',passport_no:'司机护照号',container_no:'集装箱号（选填）'},
- async page(){const q=new URLSearchParams(location.search),month=q.get('shipment_month')||new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Lubumbashi',year:'numeric',month:'2-digit'}).format(new Date()).slice(0,7),query=new URLSearchParams({shipment_month:month,...(q.get('customer_id')?{customer_id:q.get('customer_id')}: {}),...(q.get('sales_plan_id')?{sales_plan_id:q.get('sales_plan_id')}:{}),...(q.get('status')?{status:q.get('status')}: {}),...(q.get('arrival_date')?{arrival_date:q.get('arrival_date')}:{}),...(q.get('truck_no')?{truck_no:q.get('truck_no')}: {})}),data=await API.request('/loading-plans/arrivals?'+query);if(q.has('vehicle_id'))return this.form(data.items.find(r=>r.dispatch_vehicle_id===q.get('vehicle_id')));const master=await Business.load();Router.page('车辆到厂登记',`<div class="business-toolbar yard-tabs"><a class="button primary" href="/loading-plans">车辆到厂登记</a><a class="button secondary" href="/loading-plans/query">装车计划查询</a><span class="yard-step">派车单 → 到厂登记 → 装车计划 → 装车及出库</span></div><div class="yard-counts">${Object.entries(this.states).map(([k,v])=>`<article><span>${v}</span><strong data-no-i18n>${data.items.filter(r=>r.arrival_state===k).length}</strong></article>`).join('')}</div><form id="yard-filter" class="filters"><div class="form-grid"><label>发运月份<input name="shipment_month" type="month" value="${esc(month)}" required></label><label>客户名称<select name="customer_id"><option value="">全部客户</option>${Business.options(master.customers,q.get('customer_id'),'name')}</select></label><label>状态<select name="status"><option value="">全部状态</option>${Object.entries(this.states).map(([key,label])=>`<option value="${key}" ${q.get('status')===key?'selected':''}>${label}</option>`).join('')}</select></label></div><button class="button secondary">查询</button>${Business.can('inventory:export')?'<button type="button" id="yard-export" class="button secondary">导出Excel</button>':''}</form><div class="business-table yard-arrival-table"><table id="cu-arrivals-table"><thead><tr><th>客户 / 销售计划</th><th>发运月份</th><th>车头号</th><th>载重（吨）</th><th>到达时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${data.items.map(r=>`<tr class="${r.arrival_id||r.historical_source_id?'yard-arrived':''}"><td data-no-i18n>${esc(r.customer_name)}<br>${esc(r.sales_plan_code)}</td><td data-no-i18n>${esc(r.shipment_month)}</td><td data-no-i18n>${esc(r.truck_no)}</td><td>${r.capacity_tonnes?Tonnes.format(r.capacity_tonnes):'未提供'}</td><td data-no-i18n>${r.arrived_at?BusinessTime.display(r.arrived_at):'—'}</td><td>${this.states[r.arrival_state]}</td><td>${['WAITING_ARRIVAL','PENDING_CONFIRMATION','WAITING_PLAN'].includes(r.arrival_state)&&Business.can('vehicle-arrival:write')?`<a class="button secondary" href="/loading-plans?tab=arrivals&${query}&vehicle_id=${r.dispatch_vehicle_id}">${r.arrival_id&&r.registration_phase!=='CLEARED'||r.arrival_state==='PENDING_CONFIRMATION'?'编辑到厂登记':'登记车辆到厂'}</a>`:''}${r.arrival_state==='WAITING_PLAN'&&Business.can('loading-plan:write')?`<a class="button primary" href="/loading-plans/new?sales_plan_id=${r.sales_plan_id}&arrival_id=${r.arrival_id}">创建装车计划</a>`:''}${r.plan_document_id?`<a class="button secondary" href="/loading-plans/orders/${r.plan_document_id}">查看装车计划</a>`:''}</td></tr>`).join('')||'<tr><td colspan="7">该客户发运月份暂无有效派车车辆，请先上传派车单。</td></tr>'}</tbody></table></div>`);LoadingFiltersR9.arrivals($('yard-filter'),master.customers,false,query);$('yard-filter').onsubmit=e=>{e.preventDefault();Router.go('/loading-plans?tab=arrivals&'+new URLSearchParams(new FormData(e.target)));};},
- async export(query,b=$('yard-export')){b.disabled=true;try{const r=await API.request('/loading-plans/arrivals/export',{method:'POST',body:Object.fromEntries(query),binary:true}),a=document.createElement('a'),url=URL.createObjectURL(r.blob);a.href=url;a.download=r.filename||'Vehicle_Arrivals_CU.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch(e){notify(e.message);}finally{if(b.isConnected)b.disabled=false;}},
+ defaultMonth(q){if(q.has('shipment_month'))return q.get('shipment_month');const {year,month}=BusinessTime.parts(new Date());q.set('shipment_month',year+'-'+month);return q.get('shipment_month');},
+ listUrl(filters,fallbackMonth){
+  const q=new URLSearchParams(filters);q.delete('vehicle_id');q.set('tab','arrivals');
+  if(!q.has('shipment_month')&&fallbackMonth)q.set('shipment_month',fallbackMonth);
+  return '/loading-plans?'+q;
+ },
+ async page(){
+  const route=new URLSearchParams(location.search),selected=route.get('vehicle_id');
+  if(selected){
+   const data=await API.request('/loading-plans/arrivals?'+new URLSearchParams({vehicle_id:selected}));
+   const r=data.items.find(row=>row.dispatch_vehicle_id===selected);
+   return this.form(r,r?this.listUrl(route,r.shipment_month):null);
+  }
+  const month=this.defaultMonth(route),query=new URLSearchParams({shipment_month:month,page:route.get('page')||1});
+  for(const key of ['customer_id','sales_plan_id','status','arrival_date','truck_no'])if(route.get(key))query.set(key,route.get(key));
+  const [data,master]=await Promise.all([API.request('/loading-plans/arrivals?'+query),Business.load()]);
+  const states=Object.entries(this.states);
+  const cards=states.map(([key,label])=>'<article><span>'+label+'</span><strong data-no-i18n>'+(data.state_counts[key]||0)+'</strong></article>').join('');
+  const rows=data.items.map(r=>{
+   const params=new URLSearchParams(query);params.set('vehicle_id',r.dispatch_vehicle_id);params.set('tab','arrivals');
+   const isEdit=r.arrival_id&&r.registration_phase!=='CLEARED'||r.arrival_state==='PENDING_CONFIRMATION';
+   const register=['WAITING_ARRIVAL','PENDING_CONFIRMATION','WAITING_PLAN'].includes(r.arrival_state)&&Business.can('vehicle-arrival:write')?
+    '<a class="button secondary" href="/loading-plans?'+esc(params)+'">'+(isEdit?'编辑到厂登记':'登记车辆到厂')+'</a>':'';
+   const plan=r.arrival_state==='WAITING_PLAN'&&Business.can('loading-plan:write')?
+    '<a class="button primary" href="/loading-plans/new?sales_plan_id='+r.sales_plan_id+'&arrival_id='+r.arrival_id+'">创建装车计划</a>':'';
+   const detail=r.plan_document_id?'<a class="button secondary" href="/loading-plans/orders/'+r.plan_document_id+'">查看装车计划</a>':'';
+   return `<tr class="${r.arrival_id||r.historical_source_id?'yard-arrived':''}"><td data-no-i18n>${esc(r.customer_name)}<br>${esc(r.sales_plan_code)}</td>
+    <td data-no-i18n>${esc(r.shipment_month)}</td><td data-no-i18n>${esc(r.truck_no)}</td><td>${r.capacity_tonnes?Tonnes.format(r.capacity_tonnes):'未提供'}</td>
+    <td data-no-i18n>${r.arrived_at?BusinessTime.display(r.arrived_at):'—'}</td><td>${this.states[r.arrival_state]}</td><td>${register+plan+detail}</td></tr>`;
+  }).join('');
+  Router.page('车辆到厂登记',`<div class="business-toolbar yard-tabs"><a class="button primary" href="/loading-plans">车辆到厂登记</a>
+   <a class="button secondary" href="/loading-plans/query">装车计划查询</a><span class="yard-step">派车单 → 到厂登记 → 装车计划 → 装车及出库</span></div>
+   <div class="yard-counts">${cards}</div><form id="yard-filter" class="filters"><div class="form-grid"><label>状态<select name="status">
+   <option value="">全部状态</option>${states.map(([key,label])=>`<option value="${key}" ${route.get('status')===key?'selected':''}>${label}</option>`).join('')}
+   </select></label></div><button class="button secondary">查询</button></form>
+   <div class="business-table yard-arrival-table"><table id="cu-arrivals-table" data-v34-server="true"><thead><tr><th>客户 / 销售计划</th><th>发运月份</th><th>车头号</th>
+   <th>载重（吨）</th><th>到达时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="7">当前筛选范围内没有车辆。</td></tr>'}</tbody></table></div>
+   ${CobaltStockUI.pager(data.page,data.total,data.page_size)}`);
+  const form=$('yard-filter');LoadingFiltersR9.arrivals(form,master.customers,false,query,data.month_options);
+  form.onsubmit=e=>{e.preventDefault();const filters=new URLSearchParams(new FormData(form));if(route.get('sales_plan_id'))filters.set('sales_plan_id',route.get('sales_plan_id'));Router.go(this.listUrl(filters));};
+  CobaltStockUI.bindPager(data);
+ },
+ async export(query,b=$('yard-export')){b.disabled=true;try{const r=await API.request('/loading-plans/arrivals/export',{method:'POST',body:Object.fromEntries([...query].filter(([key])=>key!=='page')),binary:true}),a=document.createElement('a'),url=URL.createObjectURL(r.blob);a.href=url;a.download=r.filename||'Vehicle_Arrivals_CU.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch(e){notify(e.message);}finally{if(b.isConnected)b.disabled=false;}},
  t:(zh,en)=>I18n.label(zh,en),
  arrivalActions(back,confirm,r){
   const t=this.t;
@@ -49,7 +90,7 @@ const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATIO
      }});
     }else if(error.statusCode===409&&/版本已变化|CO_SALES_STALE/.test([error.code,error.message].join(' '))){
      WmsException.arrival(form,'conflict',{latest:async()=>{
-      const filter=route.startsWith('/cobalt/')?{vehicle_id:vehicleId}:{shipment_month:r.shipment_month};
+      const filter={vehicle_id:vehicleId};
       const data=await API.request(route.slice(0,route.lastIndexOf('/'))+'?'+new URLSearchParams(filter));
       const latest=data.items.find(item=>(item.dispatch_vehicle_id||item.id)===vehicleId);
       if(!latest)return t('已无法找到此车辆的登记记录。','The latest arrival record could not be found.');
@@ -68,11 +109,11 @@ const LoadingYard={states:{WAITING_ARRIVAL:'待到厂登记',PENDING_CONFIRMATIO
   form.querySelector('[data-arrival-save]').onclick=()=>save('DRAFT');
   const clear=form.querySelector('[data-arrival-clear]');if(clear)clear.onclick=()=>save('CLEAR');
  },
- async form(r){
+ async form(r,back){
   if(!Business.can('vehicle-arrival:write'))throw Error('没有车辆到厂登记权限');
   if(!r||r.cancelled_at||r.plan_document_id)throw Error('车辆已取消、已创建计划或不在当前筛选范围');
   if(r.historical_source_id)throw Error(this.t('该车辆已依据关联历史出库单登记到场','The linked historical stock issue already records this vehicle’s arrival.'));
-  const back='/loading-plans?tab=arrivals&shipment_month='+r.shipment_month,hasRecord=!!r.registration_phase;
+  const hasRecord=!!r.registration_phase;
   const fields=Object.entries(this.fields).map(([k,label])=>'<label class="wms-field">'+label+
    '<input name="'+k+'" value="'+esc(hasRecord?r[k]||'':k==='trailer_one'?r.trailer_no||'':'')+'" maxlength="'+
    (k==='driver_name'?160:k==='container_no'?40:80)+'" '+(['trailer_one','driver_name','passport_no'].includes(k)?'required':'')+'></label>').join('');

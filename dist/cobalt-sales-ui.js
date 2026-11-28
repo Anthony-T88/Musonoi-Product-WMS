@@ -49,7 +49,7 @@ window.CobaltSalesUI={
    if(!row)throw Error(t('车辆不在授权范围，请返回列表查询。','Vehicle is outside scope. Return to the list.'));
    return this.arrivalForm(row,saved);
   }
-  if(!q.has('shipment_month')){const day=BusinessTime.parts(new Date());q.set('shipment_month',day.year+'-'+day.month);}
+  LoadingYard.defaultMonth(q);
   const d=await API.request(this.base+'/arrivals?'+q),states=[
    ['WAITING_ARRIVAL','待到厂登记','Awaiting Arrival'],['PENDING_CONFIRMATION','待修改确认','Pending Confirmation'],['WAITING_PLAN','等待创建装车计划','Awaiting Loading Plan'],
    ['PLANNED','已创建装车计划','Loading Plan Created'],['HISTORICAL_ARRIVED','已到场（历史）','Arrived (Historical)'],['CANCELLED','已取消','Cancelled']];
@@ -74,14 +74,14 @@ window.CobaltSalesUI={
    </div><div class="business-toolbar"><button class="button secondary">${t('查询','Search')}</button>${CobaltUI.can('inventory:export')?'<button type="button" id="co-arrival-export" class="button secondary">'+t('导出Excel','Export Excel')+'</button>':''}</div></form>
    ${this.table([['客户 / 销售计划','Customer / Sales Plan'],['发运月份','Shipment Month'],['车头号','Truck Plate'],['载重（MT）','Capacity (MT)'],
     ['到达时间','Arrival Time'],['状态','Status'],['操作','Actions']],rows,'co-arrivals-table')}${CobaltStockUI.pager(d.page,d.total,50)}</div>`);
-  const form=$('co-arrival-filter');LoadingFiltersR9.arrivals(form,d.customer_options||[],true,q);
-  form.onsubmit=e=>{e.preventDefault();Router.go('/loading-plans?'+new URLSearchParams(new FormData(form)));};
+  const form=$('co-arrival-filter');LoadingFiltersR9.arrivals(form,d.customer_options||[],true,q,d.month_options);
+  form.onsubmit=e=>{e.preventDefault();const filters=new URLSearchParams(new FormData(form));if(q.get('sales_plan_id'))filters.set('sales_plan_id',q.get('sales_plan_id'));Router.go(LoadingYard.listUrl(filters));};
   CobaltStockUI.bindPager(d);ProductContext.dirty=false;
  },
  async exportArrivals(q,b=$('co-arrival-export')){b.disabled=true;try{const filters=Object.fromEntries([...q].filter(([k])=>!['page','page_size','vehicle_id','tab'].includes(k))),r=await API.request(this.base+'/arrivals/export',{method:'POST',body:filters,binary:true}),a=document.createElement('a'),url=URL.createObjectURL(r.blob);a.href=url;a.download=r.filename||'Vehicle_Arrivals_CO.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}catch(e){notify(this.error(e));}finally{if(b.isConnected)b.disabled=false;}},
  async arrivalForm(r,saved){
   if(r.historical_source_id)throw Error(this.t('该车辆已依据关联历史出库单登记到场','The linked historical stock issue already records this vehicle’s arrival.'));if(r.loading_plan_id||r.cancelled_at)throw Error(this.t('车辆已取消或已创建装车计划','Vehicle is cancelled or already has a loading plan'));
- const back=new URLSearchParams(location.search);back.delete('vehicle_id');const backUrl='/loading-plans'+(back.size?'?'+back:'');
+ const backUrl=LoadingYard.listUrl(location.search,r.shipment_month);
  if(r.plan_status==='CLOSED'||r.cancelled_at||r.loading_plan_id)throw Error(this.t('到场登记已锁定','Arrival registration is locked'));
   if(!this.can('vehicle-arrival:write'))throw Error(this.t('无到场登记权限','No arrival registration permission'));
   this.arrivalRow=r;

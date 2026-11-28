@@ -266,3 +266,15 @@ Object.assign(TRANSLATIONS.en,{'备货单批次号':'Preparation Order Lot Numbe
 Object.assign(TRANSLATIONS.en,{'库存明细':'Inventory Details','当前筛选结果 · 库存明细 · 净重单位：吨':'Current filters · Inventory details · Net weight in MT','分配客户':'Assigned Customer','批次号':'Lot Number','数据库库存明细，点击列标题排序':'Database inventory details; click column headings to sort'});
 
 Object.assign(TRANSLATIONS.en,{'统计仅计在库；明细与导出按当前筛选条件显示，可包含已出库记录。':'Statistics include in-stock inventory only; details and exports follow the current filters and may include stock issue records.'});
+
+const returnRecheckErrors={
+ V27_RETURN_RECHECK_PENDING:['已有重新核验待审批，请刷新更正记录。','A reverification is awaiting approval. Refresh the correction.'],
+ V27_RETURN_RECHECK_STALE:['库存流水、货位或原备货单已变化，请刷新后重新核验。','The stock history, location or original preparation changed. Refresh and reverify.'],
+ V27_RETURN_RECHECK_MEASUREMENTS:['请确认核验，并逐捆填写与退回记录一致的实物货位和净重。','Confirm the verification and enter the recorded return location and matching physical net weight for each bundle.'],
+ V27_RETURN_RECHECK_RESTORE_BLOCKED:['恢复时发现库存或销售计划约束冲突，请核对原备货单后重试。','A stock or sales plan constraint prevented restoration. Check the original preparation and retry.'],
+ V27_RETURN_RECHECK_SCOPE:['该更正记录超出你的仓库或客户授权范围。','This correction is outside your warehouse or customer scope.']
+};
+for(const [code,[zh,en]] of Object.entries(returnRecheckErrors)){
+ TRANSLATIONS.errorKeys[code]=zh;
+ TRANSLATIONS.en[zh]=en;
+}

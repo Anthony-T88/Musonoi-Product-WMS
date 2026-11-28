@@ -837,7 +837,7 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
   assert.equal((await evidenceState()).state,'READY');
   assert.deepEqual(await trace(),{returns:1,reserved:0});
 
-  async function expectUnchangedBlocked(change,reason){
+  async function expectUnchangedBlocked(change,reason,recheckable=false){
    await c.query('BEGIN');
    try{
     await change();
@@ -850,6 +850,8 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
      [repairActor,legacyApplied.id,legacyApplied.version,'Synthetic blocked recovery diagnostic']);
     assert.deepEqual(attempt.recovery,state);
     assert.deepEqual(await trace(),initial);
+    const {rows:[{evidence}]}=await c.query('SELECT copper_return_recheck_evidence($1) evidence',[legacyApplied.id]);
+    assert.equal(!!evidence,recheckable);
    }finally{await c.query('ROLLBACK');}
   }
   const {rows:[returnLot]}=await c.query('SELECT planned_location_id FROM allocations WHERE id=$1',[legacyAllocation]);
@@ -861,13 +863,17 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
     await c.query('SELECT confirm_stock_move($1,$2)',[repairActor,move.id]);
    }
   },'SUBSEQUENT_STOCK_ACTIVITY');
-  await expectUnchangedBlocked(async()=>{
+  async function cancelLaterLot(withWeighing){
    const {rows:[newLot]}=await c.query('SELECT * FROM v261_create($1,$2,$3,$4,$5)',
     [repairActor,plan.id,blockedWork.batch_no,returnLot.planned_location_id,JSON.stringify([{bundle_id:legacyBundle.id,sample_required:false}])]);
+   if(withWeighing)await c.query("INSERT INTO lot_work_history(allocation_id,bundle_id,action,actor_id) VALUES($1,$2,'WEIGH',$3)",
+    [newLot.id,legacyBundle.id,repairActor]);
    await c.query("SELECT v261_lot_action($1,$2,$3,'cancel',$4)",[repairActor,newLot.id,newLot.version,
     {note:'Synthetic later preparation cancelled',current_state_verified:true,observation:'Original physical return location unchanged'}]);
    assert.equal((await trace()).reserved,0);
-  },'SUBSEQUENT_STOCK_ACTIVITY');
+  }
+  await expectUnchangedBlocked(()=>cancelLaterLot(false),'SUBSEQUENT_STOCK_ACTIVITY',true);
+  await expectUnchangedBlocked(()=>cancelLaterLot(true),'SUBSEQUENT_STOCK_ACTIVITY');
   await expectUnchangedBlocked(async()=>{
    const {rows:[exception]}=await c.query(`INSERT INTO inventory_exceptions(project_id,warehouse_id,customer_id,bundle_no,
     category,source_key,related_kind,description,responsible_id,created_by)
@@ -906,19 +912,84 @@ test('native copper receipt, preparation, sampling, weighing and formal outbound
    changes:{seal_no:seal},reason:'Synthetic approved seal correction after return'});
   await api(bundleCorrectionPath+'/'+sealCorrection.id+'/review','admin',{decision:'APPROVED',note:'Verified corrected seal label'});
   assert.equal((await api(legacyCorrectionPath)).preparation_recovery.state,'READY');
-  const repaired=await api(legacyCorrectionPath+'/restore-preparation','admin',{
-   version:legacyApplied.version,reason:'Synthetic recovery from old applied stock issue return'
+  const later=await api('/v261/lots','logistics_field_operator',{preparation_plan_id:blockedWork.id,
+   planned_location_id:returnLot.planned_location_id,items:[{bundle_id:legacyBundle.id,sample_required:false}]});
+  assert.equal((await api(legacyCorrectionPath)).preparation_recheck.offer,null);
+  const revoked=await api('/v262/lots/'+later.id+'/revoke','logistics_field_operator',{version:later.version,
+   reason:'Synthetic unused preparation cancellation',work_stopped:true,physical_state_verified:true,
+   observation:'Inherited weighing only. No physical movement or loading.'});
+  assert.equal(revoked.workflow_state,'CANCELLED');
+  const getRecheck=role=>api(legacyCorrectionPath,role);
+  const route=legacyCorrectionPath+'/preparation-rechecks';
+  const draft=await getRecheck('site_supervisor'),offer=draft.preparation_recheck.offer;
+  assert.equal(draft.preparation_recovery.state,'BLOCKED');
+  assert(offer,JSON.stringify(draft.preparation_recovery));
+  assert.equal(offer.evidence.bundles[0].bundle_no,legacyBundle.bundle_no);
+  assert.deepEqual(offer.evidence.bundles[0].cycles.map(cycle=>cycle.allocation_id),[later.id]);
+  assert.equal(offer.evidence.originals[0].id,legacyAllocation);
+  const originalEvents=(await c.query('SELECT * FROM inventory_events WHERE bundle_id=$1 ORDER BY id',[legacyBundle.id])).rows;
+  const laterReservation=(await c.query('SELECT * FROM reservations WHERE allocation_id=$1 AND bundle_id=$2',[later.id,legacyBundle.id])).rows[0];
+  const requestBody=(doc,expected=doc.preparation_recheck.offer.evidence.bundles[0])=>({
+   version:doc.version,reason:'Physical location and net weight verified',confirmed:true,token:doc.preparation_recheck.offer.token,
+   measurements:{[expected.bundle_id]:{location_code:expected.location_code,net_weight:expected.net_weight}}
   });
+  const draftBody=requestBody(draft);
+  await api(route,'production_operator',draftBody,403);
+  const weight=offer.evidence.bundles[0],wrongWeight=requestBody(draft,{...weight,net_weight:'999'});
+  assert.equal((await api(route,'site_supervisor',wrongWeight,409)).code,'V27_RETURN_RECHECK_MEASUREMENTS');
+  const wrongLocation=requestBody(draft,{...weight,location_code:'Another stock location'});
+  assert.equal((await api(route,'site_supervisor',wrongLocation,409)).code,'V27_RETURN_RECHECK_MEASUREMENTS');
+  await api(route,'site_supervisor',{...draftBody,confirmed:false},400);
+  const oldAttempt=await api(route,'site_supervisor',draftBody);
+  assert.equal(oldAttempt.state,'PENDING');
+  assert.deepEqual(await trace(),{returns:1,reserved:0});
+  const recheckReviewPath=id=>route+'/'+id+'/review';
+  const reviewBody=(doc,decision='APPROVED')=>({version:doc.version,decision,confirmed:true,reason:'Reviewed physical checks and movement history'});
+  const reviewed=await getRecheck('production_manager');
+  assert.equal(reviewed.preparation_recheck.can_review,true);
+  assert.equal(reviewed.preparation_recheck.evidence_current,true);
+  assert((await api('/v34/ui461/tasks','production_manager')).pending.some(task=>task.id===oldAttempt.recheck_id&&task.kind==='RETURN_PREPARATION_REVIEW'));
+  await api(recheckReviewPath(oldAttempt.recheck_id),'site_supervisor',reviewBody(reviewed),403);
+  const correctedSheets=await api(bundleCorrectionPath,'admin',{version:beforeMetadata.version+2,
+   changes:{sheets_per_bundle:beforeMetadata.sheets_per_bundle+2},reason:'Synthetic metadata changed while recovery was awaiting approval'});
+  await api(bundleCorrectionPath+'/'+correctedSheets.id+'/review','admin',{decision:'APPROVED',note:'Confirmed actual sheet count'});
+  const stale=await getRecheck('production_manager');
+  assert.equal(stale.preparation_recheck.evidence_current,false);
+  assert.equal((await api(recheckReviewPath(oldAttempt.recheck_id),'production_manager',reviewBody(stale),409)).code,'V27_RETURN_RECHECK_STALE');
+  assert.equal((await api(recheckReviewPath(oldAttempt.recheck_id),'production_manager',reviewBody(stale,'REJECTED'))).state,'REJECTED');
+  assert.deepEqual(await trace(),{returns:1,reserved:0});
+
+  const nextRequest=await api(route,'site_supervisor',requestBody(await getRecheck('site_supervisor')));
+  const waiting=await getRecheck('production_manager'),decision=reviewBody(waiting),reviewKey=crypto.randomUUID();
+  await api(recheckReviewPath(nextRequest.recheck_id),'production_manager',{...decision,confirmed:false},400);
+  const replies=await Promise.all([request(recheckReviewPath(nextRequest.recheck_id),'production_manager',decision,reviewKey),
+   request(recheckReviewPath(nextRequest.recheck_id),'production_manager',decision,reviewKey)]);
+  assert.deepEqual(replies.map(r=>r.statusCode),[200,200],replies.map(r=>r.body).join(' '));
+  assert.deepEqual(replies[0].json(),replies[1].json());
+  const {state:approvalState,preparation_recovery:repaired}=replies[0].json();
+  assert.equal(approvalState,'APPROVED');
   assert.equal(repaired.state,'RESTORED');
   assert.deepEqual(repaired.allocation_ids,[legacyAllocation]);
   assert.deepEqual(await trace(),{returns:1,reserved:1});
+  await api(recheckReviewPath(nextRequest.recheck_id),'production_manager',decision,409);
+  assert.equal((await api('/v261/lots/'+legacyAllocation)).workflow_state,'RECTIFY');
+  assert.deepEqual((await c.query('SELECT * FROM reservations WHERE id=$1',[laterReservation.id])).rows[0],laterReservation);
+  const eventsAfter=(await c.query('SELECT * FROM inventory_events WHERE bundle_id=$1 ORDER BY id',[legacyBundle.id])).rows;
+  assert.deepEqual(eventsAfter.slice(0,-1),originalEvents);
+  assert.equal(eventsAfter.at(-1).event_type,'LOCK');
+  assert.equal(Number(eventsAfter.at(-1).physical_delta),0);
+  const history=await getRecheck('admin');
+  assert.deepEqual(history.preparation_recheck.requests.map(r=>r.state),['APPROVED','REJECTED']);
+  assert(history.steps.some(s=>s.action==='approve-preparation-recheck'));
+  assert(!(await api('/v34/ui461/tasks','production_manager')).pending.some(task=>task.id===nextRequest.recheck_id));
   const {rows:[afterMetadata]}=await c.query('SELECT sheets_per_bundle,physical_status,location_id,net_weight FROM bundles WHERE id=$1',[legacyBundle.id]);
-  assert.deepEqual(afterMetadata,{sheets_per_bundle:beforeMetadata.sheets_per_bundle+1,physical_status:beforeMetadata.physical_status,
+  assert.deepEqual(afterMetadata,{sheets_per_bundle:beforeMetadata.sheets_per_bundle+2,physical_status:beforeMetadata.physical_status,
    location_id:beforeMetadata.location_id,net_weight:beforeMetadata.net_weight});
   const restoredLegacyBundle=(await api('/v261/lots/'+legacyAllocation)).items.find(row=>row.id===legacyBundle.id);
   assert.equal(restoredLegacyBundle.seal_no,seal);
   assert.equal(restoredLegacyBundle.seal_valid,false);
   steps.push('an approved metadata correction preserves eligibility for an older copper return, while real later inventory evidence blocks recovery per bundle');
+  steps.push('revoked later preparation requires measured evidence, separate review and a fresh stock check before one audited restore');
  E.save('rc2-copper-results.json',{status:'PASS',steps,syntheticOnly:true,database:f.database,plan:plan.id,plannedLocation:location.id,remainingBundle:other.id,uiWorkPlan:uiWorkPlan.id,uiBatch:uiWorkPlan.batch_no});
  }finally{await app?.close();await c.end();}
 });

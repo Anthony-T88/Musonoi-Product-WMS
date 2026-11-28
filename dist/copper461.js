@@ -92,6 +92,7 @@ window.Copper461={
  kind(k){return ({SALES_REVIEW:['销售经理审批','Sales Review'],COMMERCE_REVIEW:['商务部经理审批','Commercial Review'],SALES_EDIT:['销售计划修改','Revise Sales Plan'],GATE_EXIT:['车辆出厂办理','Gate Exit'],HANDLED:['已办理','Handled'],PREPARATION_REVERSAL_REVIEW:['整批撤销备货','Whole-Batch Preparation Reversal'],BUNDLE_CORRECTION:['捆包信息更正','Bundle Correction'],OUTBOUND_DATE_LOGISTICS_REVIEW:['出库日期更正','Stock Issue Date Correction'],OUTBOUND_DATE_PRODUCTION_REVIEW:['出库日期更正','Stock Issue Date Correction']})[k]||[ManagementLabels.names[k]||k,ManagementLabels.en[ManagementLabels.names[k]]||ManagementLabels.names[k]||k];},
  taskReviewStages:{
   RECEIPT_REVIEW:['待入库审核','Pending Stock Entry Review'],
+  RETURN_PREPARATION_REVIEW:['待审批返厂恢复备货','Pending Approval to Restore Returned Preparation'],
   LOT_REVIEW:['待备货审核','Pending Preparation Review'],
   PREPARATION_REVERSAL_REVIEW:['待物流经理审核整批撤销','Whole-Batch Reversal Awaiting Logistics Manager Review'],
   BUNDLE_CORRECTION:['待生产管理部经理审核捆包更正','Bundle Correction Awaiting Production Manager Review'],

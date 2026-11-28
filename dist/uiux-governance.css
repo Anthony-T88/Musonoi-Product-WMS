@@ -930,7 +930,7 @@ html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-pag
   color: var(--uix-success);
   background: var(--uix-success-soft);
 }
-html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) .status-pill.tone-pending {
+html[data-release-ui="46"] body:not([data-ui46-page="copper-map"],[data-ui46-page="stock-map"]) :is(.workspace,dialog) :is(.status-pill.tone-pending,.op-badge.reversed) {
   color: var(--uix-warning);
   background: var(--uix-warning-soft);
 }
@@ -1169,3 +1169,6 @@ html[data-release-ui="46"] #customs-bp-form .bp-review-footer dl.wms-facts{grid-
 @media(min-width:1000px){
  #preparation-plan-filter{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;align-items:end}
 }
+:is(.op-stats,.v34-kpi-grid) .v34-kpi[data-pending-preparation-plans]{border:0;box-shadow:none}
+html[data-release-ui="46"] #metrics .metric-quantity-weight{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:0 var(--uix-gap-xs);font-size:var(--uix-section)}
+html[data-release-ui="46"] #metrics .metric-quantity-weight span{display:inline-flex;align-items:baseline}

@@ -26,5 +26,11 @@ window.LoadingFiltersR9={
   totals.innerHTML=cards.map(([label,count])=>'<article><span>'+esc(label)+'</span><strong>'+count+'</strong></article>').join('');
   form.before(totals);
  },
- arrivals(form,customers,co,applied){this.fields(form,customers,co,false);this.actions(form,co,false,applied);}
+ arrivals(form,customers,co,applied,months=[]){
+  this.fields(form,customers,co,false);this.actions(form,co,false,applied);
+  const t=this.t,selected=applied.get('shipment_month')||'',label=form.elements.shipment_month.closest('label');
+  const options=[...new Set([selected,...months].filter(Boolean))].sort().reverse();
+  label.innerHTML=t('发运月份','Shipment Month')+'<select name="shipment_month"><option value="">'+t('全部月份','All Months')+'</option>'+
+   options.map(month=>'<option value="'+esc(month)+'" '+(month===selected?'selected':'')+'>'+esc(month)+'</option>').join('')+'</select>';
+ }
 };

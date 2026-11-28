@@ -71,12 +71,26 @@ async function transaction(pool,fn){const c=await pool.connect();try{await c.que
 function inventoryInput(input={}){if(!input||typeof input!=='object'||Array.isArray(input))invalid('筛选结构无效');return {...input,lifecycle:input.lifecycle||(Object.hasOwn(input,'status')?'ALL':'CURRENT')};}
 async function listing(c,uid,input){const filters=inventoryInput(input),w=where(uid,filters,undefined,{history:true}),source=inventorySource(filters),metricsWhere=where(uid,{...input,status:'CURRENT',lifecycle:'CURRENT'}),sort=order(input),page=Number(input.page||1),size=Number(input.page_size||10);if(!Number.isInteger(page)||page<1||page>1000000||![10,20,50].includes(size))invalid('分页参数无效');
  const count=(await c.query(`SELECT count(*)::int n FROM ${source} v WHERE ${w.text}`,w.values)).rows[0].n;
- const summary=(await c.query(`SELECT count(*)::int AS stock_count,sum(sheets_per_bundle) FILTER(WHERE status IN('在库','已预留'))::text AS total_sheets,count(*) FILTER(WHERE status IN('在库','已预留') AND sheets_per_bundle IS NULL)::int AS missing_sheets_count,coalesce(sum(weight) FILTER(WHERE status IN('在库','已预留')),0)::text AS weight,coalesce(sum(weight) FILTER(WHERE status IN('在库','已预留') AND coalesce(v.on_site,true)),0)::text AS physical_weight,coalesce(sum(weight) FILTER(WHERE status='已预留'),0)::text AS locked_weight,coalesce(sum(weight) FILTER(WHERE status='在库'),0)::text AS available_weight,count(*) FILTER(WHERE status='在库')::int AS available,count(*) FILTER(WHERE status='已预留')::int AS reserved,count(*) FILTER(WHERE status='已出库')::int AS outbound,count(*) FILTER(WHERE status IN('在库','已预留') AND (${samplingSql}) IN('未取样','取样/待取样'))::int AS pending,count(*) FILTER(WHERE status IN('在库','已预留') AND weight IS NULL)::int AS unweighed_count FROM inventory_view v WHERE ${metricsWhere.text}`,metricsWhere.values)).rows[0];summary.count=count;
- const stock=(await c.query(`SELECT ${stockCategorySql} AS state,count(*)::int AS bundles,
+ const {rows:[totals,...stock]}=await c.query(`SELECT category AS state,count(*)::int AS stock_count,
+  sum(sheets_per_bundle) FILTER(WHERE status IN('在库','已预留'))::text AS total_sheets,
+  count(*) FILTER(WHERE status IN('在库','已预留') AND sheets_per_bundle IS NULL)::int AS missing_sheets_count,
+  coalesce(sum(weight) FILTER(WHERE status IN('在库','已预留')),0)::text AS weight,
+  coalesce(sum(weight) FILTER(WHERE status IN('在库','已预留') AND coalesce(v.on_site,true)),0)::text AS physical_weight,
+  coalesce(sum(weight) FILTER(WHERE status='已预留'),0)::text AS locked_weight,
+  coalesce(sum(weight) FILTER(WHERE status='在库'),0)::text AS available_weight,
+  count(*) FILTER(WHERE status='在库')::int AS available,count(*) FILTER(WHERE status='已预留')::int AS reserved,
+  count(*) FILTER(WHERE status='已出库')::int AS outbound,
+  count(*) FILTER(WHERE status IN('在库','已预留') AND (${samplingSql}) IN('未取样','取样/待取样'))::int AS pending,
+  count(*) FILTER(WHERE status IN('在库','已预留') AND weight IS NULL)::int AS unweighed_count,
   sum(v.weight) FILTER(WHERE v.final_weighed IS DISTINCT FROM false)::text AS known_net_weight,
   count(*) FILTER(WHERE v.weight IS NULL OR v.final_weighed IS FALSE)::int AS unknown_weights
-  FROM inventory_view v WHERE ${metricsWhere.text} GROUP BY 1`,metricsWhere.values)).rows;
- summary.stock_categories=Object.fromEntries(stock.map(({state,...values})=>[state,values]));
+  FROM inventory_view v CROSS JOIN LATERAL (VALUES(${stockCategorySql})) stock_category(category)
+  WHERE ${metricsWhere.text}
+  GROUP BY GROUPING SETS ((),(category)) ORDER BY GROUPING(category) DESC`,metricsWhere.values);
+ const {state,known_net_weight,unknown_weights,...summary}=totals;
+ summary.count=count;
+ summary.stock_categories=Object.fromEntries(stock.map(({state,stock_count,known_net_weight,unknown_weights})=>
+  [state,{bundles:stock_count,known_net_weight,unknown_weights}]));
  const effectivePage=Math.min(page,Math.max(1,Math.ceil(summary.count/size)));
  const items=(await c.query(`SELECT v.*,CASE WHEN v.p3_area THEN 'P3-LEFTOVER' WHEN v.p5_area THEN '临时堆存区' ELSE v.location END AS location,coalesce(CASE WHEN v.p3_area THEN v.p3_customer_name END,v.current_customer,v.customer) current_customer FROM ${source} v WHERE ${w.text} ORDER BY ${sort} LIMIT $${w.values.length+1} OFFSET $${w.values.length+2}`,[...w.values,size,(effectivePage-1)*size])).rows;
  return {items:items.map(row=>({...row,business_status:businessStatus(row)})),total:summary.count,page:effectivePage,page_size:size,summary,snapshot_at:(await c.query('SELECT transaction_timestamp() AS at')).rows[0].at};

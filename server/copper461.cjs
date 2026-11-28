@@ -51,6 +51,7 @@ async function tasks(c,req,context=null){const x=context||await M.context(c,req,
  }
  pending.push(...await require('./sales-close.cjs').pending(c,req),...await require('./preparation-plans.cjs').pending(c,req),...await require('./preparation-reversals.cjs').pending(c,req),...await require('./registration-requests.cjs').pending(c,req),...await require('./export-licenses.cjs').pending(c,req),...await require('./bundle-corrections.cjs').pending(c,req));
  pending.push(...await require('./outbound-date-corrections.cjs').pending(c,req));
+ pending.push(...await require('./copper-return-rechecks.cjs').pending(c,req));
  pending=[...new Map(pending.map(t=>[t.kind+'|'+t.id,t])).values()];
  const ids=all.map(d=>d.id),audit=ids.length?(await c.query(`SELECT a.entity_id,a.entity_type,a.action,a.occurred_at,a.after_data->>'product_code' product_code,u.display_name actor_name FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id
   WHERE a.actor_id=$1 AND a.entity_id=ANY($2::text[]) ORDER BY a.occurred_at DESC,a.id DESC`,[req.user.id,ids])).rows:[];

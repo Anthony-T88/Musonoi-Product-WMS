@@ -139,7 +139,7 @@ async function register({app,pool,permitted,csrf}){
     }
    }
    const {new_count:added_count,...results}=tally;
-   const historical=await History.afterDispatchImport(c,req,plan,month,dispatchIds);
+   const historical=await History.afterDispatchImport(c,req,plan,dispatchIds);
    const result={...imported,...results,added_count,cancelled_count:body.transport_only?0:parsed.cancelled_count,
     cancelled_existing_count,summary:await summary(c,plan.id,month),...(historical?{historical}:{})};
    if(imported)await B.audit(c,req,'sales_dispatch_imported','sales_dispatch',imported.id,null,result);
